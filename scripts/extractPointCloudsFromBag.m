@@ -86,7 +86,7 @@ frameTemplate = struct( ...
     "range", [], ...
     "timestamp", []);
 
-pointClouds(1, numToProcess) = frameTemplate; %#ok<NASGU>
+pointClouds(1, numToProcess) = frameTemplate;
 
 organizedHeight = [];
 organizedWidth = [];

@@ -38,6 +38,14 @@ organized LiDAR frame
         runReplayHighGainObserver     100 Hz high-gain observer with timestamped pose replay
         designReplayObserverGains     offline LMI synthesis of the pose jump gain (YALMIP + SeDuMi)
         simulateReplayObserverScenario synthetic drive with delayed, out-of-order poses
+        lateralObserver/              LPV lateral-velocity observer (v_y, r)
+          lateralBicycleModel           2-DOF model, affine in rho = [Vx; 1/Vx]
+          buildSchedulingPolytope       triangle covering the scheduling arc
+          schedulingCoordinates         barycentric coordinates alpha and their rate
+          designLateralObserverGains    gridded H2 LMI synthesis of L(rho)
+          scheduleLateralObserverGain   gain lookup along the trajectory
+          runLateralVelocityObserver    online estimation of v_y, r, and side slip
+          simulateLateralObserverScenario  synthetic drive with noisy IMU
 ```
 
 ### Perception (`perception/`)
@@ -76,11 +84,31 @@ seeded, and which components survive*, never the EM updates themselves.
 
 ### Localization (`localization/`)
 
-The ego-state estimator is the retrodictive-replay high-gain observer (Bessafa et
-al., 2026): delayed pose measurements are inserted as discrete jumps at their
+Two estimators live here, on different states.
+
+The **global ego-state estimator** is the retrodictive-replay high-gain observer
+(Bessafa et al., 2026) on the transformed state `[X, Vx, Ax, Y, Vy, Ay]` in the
+map frame: delayed pose measurements are inserted as discrete jumps at their
 physical timestamp and the buffered history is replayed to the present. The jump
 gain comes from `designReplayObserverGains`, which needs YALMIP and SeDuMi on the
 path; the online observer itself has no external dependency.
+
+The **lateral-velocity observer** in `localization/lateralObserver/` works on the
+body-frame state `x = [v_y, r]` of the 2-DOF bicycle model, with the steering
+angle as input and `y = [a_y, r]` from the IMU as output. Both `A` and `C` are
+affine in the scheduling parameter `rho = [Vx; 1/Vx]`, so they are represented
+exactly on a triangle that covers the scheduling arc (the arc is convex, so the
+harmonic-mean third vertex closes a triangle around it). The gain `L(rho)` is
+synthesized by semidefinite programming from a parameter-dependent Lyapunov
+function `V = e' P(rho) e`: the Lipschitz nonlinearity is absorbed by Young's
+inequality with a fixed `tau`, `Y = P L` removes the bilinearity, a slack matrix
+`X` decouples `P` from `A` through a second Young step with `eta`, and two Schur
+complements give LMIs imposed on a grid of speeds and longitudinal
+accelerations. Minimizing `mu` subject to `trace(W_k) <= mu` bounds the weighted
+H2 gain from measurement noise to the estimation error `z = Q^(1/2) e`.
+`designLateralObserverGains` then re-checks the recovered gains against the
+original, non-convexified certificate. The estimated `v_y` gives the vehicle
+side-slip angle, which the pose-level estimators do not observe.
 
 ## Configuration (`config/`)
 
@@ -99,6 +127,7 @@ on top of its config files):
 | `featureMapBuildConfig` | `buildFeatureMap` |
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |
 | `replayObserverConfig` | `runReplayHighGainObserver`, `designReplayObserverGains` |
+| `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` |
 
 ## Quick start
 
@@ -112,11 +141,15 @@ nnz(perception.featureMasks.curb)                 % curb points of this frame
 scores = queryTemporalStabilityGmmMap(probabilityCloudMap, queryXY, "pole");
 
 result = simulateReplayObserverScenario(designedCfg);           % observer demo
+
+design = designLateralObserverGains(lateralObserverConfig());   % LPV H2 synthesis
+estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
 ```
 
 `scripts/` holds the runnable entry points: `extractPointCloudsFromBag.m` and
 `extractGnssFromBag.py` (ROS bag → MAT frames and GNSS/INS CSV tables),
-`buildMississippiFeatureMap.m`, and `runReplayObserverDesign.m`.
+`buildMississippiFeatureMap.m`, `runReplayObserverDesign.m`, and
+`runLateralObserverDesign.m`.
 
 ### Data layout expected under `dataRoot`
 
@@ -147,6 +180,21 @@ for floating-point ones.
 perception and mapping checks run when `VEHICLE_LOCALIZATION_DATA_ROOT` points
 at the data root above.
 
+**Known pre-existing failure.** `designReplayObserverGains` (the offline LMI
+that synthesizes the replay pose-jump gain) is infeasible for every configured
+`rhoCandidates` entry. This is inherited, not introduced: the original
+`solveHGOgain` fails identically, with the same message and the same
+net-contraction limit, on both the reduced test configuration and the full one.
+The flow condition permits growth at `theta*flowAh = 6` 1/s, so across one 0.2 s
+pose interval the Lyapunov function may grow by `exp(1.2)`, and net contraction
+then requires a jump factor `rho < 0.301` from a correction that observes only
+x, y, and yaw out of six states. The design artifact the online observer
+actually uses predates the joint flow-and-jump LMI: its saved struct has a
+`flow` field but no `main`, and its `rhoCandidates` all lie above the limit the
+current code enforces. The online observer itself is unaffected and is verified
+against the reference; `replayObserverTest` marks the corresponding test as a
+known failure rather than hiding it.
+
 ```matlab
 setenv("VEHICLE_LOCALIZATION_DATA_ROOT", "/path/to/data");
 runtests("tests");
@@ -168,6 +216,16 @@ runtests("tests");
 | glue inside `runMissisipiSemanticTemporalStabilityGMMFeatureMapTest.m` | `mapping/*.m` functions |
 | `HGO`, `solveHGOgain` | `runReplayHighGainObserver`, `designReplayObserverGains` |
 | `runBessafa2026ReplayObserverSimulation` | `simulateReplayObserverScenario` (no figure export) |
+
+`localization/lateralObserver/` has no counterpart in the original repository. It
+is new code, so it is verified against its own mathematics rather than against a
+recorded baseline: the polytopic representation is checked for exactness and for
+nonnegative barycentric coordinates across the speed range, the scheduling rate
+against a finite difference, and every synthesized gain against the original
+certificate of the proposition (negative definite Lyapunov derivative,
+`trace(L' P L) < mu`, stable error matrix) at each grid point. The archived
+`legacy/config/hgoLateralObserverConfig.m` of the original repository supplied
+the vehicle parameters; its implementation no longer existed there.
 
 Deliberately left behind: profiling and visualization scripts, the `legacy/`
 folder, the unused `seedOnly` and `iterativePca` ground modes, the

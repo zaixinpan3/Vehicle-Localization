@@ -2,7 +2,8 @@ function rootDir = setupVehicleLocalization()
 % setupVehicleLocalization: Add the vehicleLocalization modules to the MATLAB
 % path in pipeline order: configuration, perception (with its ground and
 % off-ground feature branches and the semantic product), mapping (with the
-% temporal-stability Gaussian support map), and localization.
+% temporal-stability Gaussian support map), and localization (with the LPV
+% lateral-velocity observer).
 %
 % Input:
 %   none
@@ -19,4 +20,5 @@ function rootDir = setupVehicleLocalization()
     addpath(fullfile(rootDir, "mapping"));
     addpath(fullfile(rootDir, "mapping", "temporalStabilityGmm"));
     addpath(fullfile(rootDir, "localization"));
+    addpath(fullfile(rootDir, "localization", "lateralObserver"));
 end
