@@ -29,9 +29,12 @@ The archive root is intentionally not under version control (user decision,
 `2026-09-03`): write its records directly, take no archive commit, and do not
 report the absence of one as a blocker.
 
-The standing `20.0` weekly hours are **per person per week across both
-projects**, never per project. Never derive hours from commit timestamps,
-agent runtime, or file mtimes.
+The standing weekly hours are **`20.0` per active project**: from week
+`2026-W36` both projects are active, so the weekly total is `40.0`, entered as
+one row per project. Earlier single-project weeks stand at `20.0` and are not
+restated. Never derive hours from commit timestamps, agent runtime, or file
+mtimes, and ask the user for the new total whenever the number of active
+projects changes.
 
 ## Documentation language
 

@@ -53,12 +53,22 @@ conclusion about immigration compliance.
 - `Pan Dynamics Research LLC` is the legal entity through which the documented
   internal research and development project is conducted.
 - The documented self-employment start date is `2026-07-12`.
-- The user has provided standing confirmation that each active project work
-  week is exactly `20.0` actual hours. This total is **per person per week,
-  across all projects**, not per project. When both projects are active in one
-  week, they appear as separate rows of the same weekly report and the total
-  stays `20.0`. This standing confirmation does not authorize an invented daily
-  distribution, an invented per-project split, or a signature.
+- The user has provided standing confirmation that each **active project**
+  work week is exactly `20.0` actual hours. The weekly total is therefore
+  `20.0` multiplied by the number of projects active that week. Both projects
+  became active together in week `2026-W36` (`08/30/2026`--`09/05/2026`), so
+  from that week the standing weekly total is `40.0`: `20.0` for Project A and
+  `20.0` for Project B, entered as separate rows of the same weekly report.
+  Weeks before `2026-W36` had one active project and stand at `20.0`; do not
+  restate them.
+- The signed `2026-07-27` Weekly Hours and Work Pattern Statement describes a
+  `20`-hour regular schedule and certifies Week 1 and Week 2 only. It is a
+  signed record: do not edit it. A later change to the schedule is recorded as
+  a new dated fact, and a superseding statement is written only when the user
+  asks for one.
+- This standing confirmation does not authorize an invented daily distribution,
+  an invented split of a project's `20.0` hours among its own operations, or a
+  signature.
 - The degree field is Mechanical Engineering.
 - This is ordinary post-completion OPT, not a STEM OPT extension. Do not create
   Form I-983 records or apply STEM OPT employer rules unless the user's status
@@ -170,8 +180,8 @@ Each ledger object must contain:
 - Never convert agent runtime, terminal elapsed time, file timestamps, commit
   timestamps, or an estimated task duration into the user's OPT work hours.
 - Leave per-operation `actual_user_hours` as `null` unless the user supplies
-  operation-specific time. Do not divide or allocate the standing weekly
-  `20.0` hours among individual operations or between the two projects.
+  operation-specific time. Do not divide or allocate a project's standing
+  weekly `20.0` hours among its individual operations.
 - Earlier ledger entries are append-only. Correct an error with a new entry
   containing a `correction_of` reference; do not silently rewrite history.
 
@@ -204,24 +214,28 @@ Use concrete descriptions that another person can verify:
 - One weekly report covers the person, not a project. Both active projects are
   recorded in the same report, each as its own row of the hours-reconciliation
   table and its own rows of the work table. Do not open a second weekly series
-  for Project A. Name new weekly reports without a single-project label; leave
-  reports created before `2026-09-03` under the names they already have.
+  for Project A. Name new weekly reports without a single-project label, and
+  keep the hours token in the file name equal to the weekly total the report
+  actually states. Rename an existing report only to correct a name that has
+  become factually wrong, and record any such rename in the activity ledger.
 - Add substantive activity to the current unsigned weekly work log as the work
   occurs. The entry must identify the specific work, actual output, and related
   ledger record.
 - Weekly and monthly records are internal activity summaries, not evidence
   items. Do not assign them Evidence IDs, add them to an evidence index or
   evidence manifest, or calculate or list hashes solely for those records.
-- Enter the standing confirmed weekly total of `20.0` hours automatically, once
-  per week across all projects. Flexible daily distribution is acceptable;
-  leave it, and the per-project split, unspecified unless the user supplies the
-  actual figures.
+- Enter the standing confirmed weekly total automatically: `20.0` hours for
+  each project active that week, so `40.0` for a week in which both projects
+  are active. Record it as one row per project plus a total. Flexible daily
+  distribution is acceptable; leave the daily split unspecified unless the user
+  supplies the actual figures.
 - Repository history and technical artifacts may support the nature and
   continuity of the work, but they do not independently prove how many hours
   the user worked.
 - At weekly close, reconcile the weekly report with the activity ledger and
-  actual artifacts. The standing `20.0`-hour confirmation does not need to be
-  requested again.
+  actual artifacts. The standing per-project `20.0`-hour confirmation does not
+  need to be requested again. If the number of active projects changes, ask the
+  user for the new weekly total rather than deriving it.
 - Build monthly summaries from the completed weekly records. Do not introduce
   new hours or activities during monthly aggregation.
 - On `2026-07-27`, the user granted standing authorization to electronically
