@@ -22,8 +22,12 @@ Standing closure for every substantive task, in this order:
    `project` = `Pan Dynamics Vehicle Localization Research`, `record_id` prefix
    `PDVL-`, and `actual_user_hours` = `null`.
 4. Update the current unsigned weekly work log under
-   `../Pan_Dynamics_OPT_Archive_Kit/03_Weekly_Records/`.
-5. Commit the archive changes as a separate archive commit.
+   `../Pan_Dynamics_OPT_Archive_Kit/03_Weekly_Records/`. One report covers both
+   projects; add a Project A row rather than starting a second series.
+
+The archive root is intentionally not under version control (user decision,
+`2026-09-03`): write its records directly, take no archive commit, and do not
+report the absence of one as a blocker.
 
 The standing `20.0` weekly hours are **per person per week across both
 projects**, never per project. Never derive hours from commit timestamps,

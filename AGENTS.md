@@ -72,9 +72,16 @@ conclusion about immigration compliance.
 
 Use `../Pan_Dynamics_OPT_Archive_Kit/` as the archive root.
 
+- The archive root is deliberately **not** under version control. The user
+  decided on `2026-09-03` that archive records are written directly in place.
+  Do not initialize a repository there, do not create an archive commit, and do
+  not record the absence of one as a blocker or a `partial` outcome.
 - Maintain
   `Pan_Dynamics_OPT_Archive_Kit/00_Project_Activity_Ledger.jsonl` as the
-  append-only, machine-readable activity ledger.
+  append-only, machine-readable activity ledger. Append-only discipline is
+  enforced by the writing procedure, not by Git: never rewrite or delete an
+  existing line, and correct an earlier record only with a new entry carrying a
+  `correction_of` reference.
 - Use the existing current weekly and monthly report templates. Do not create a
   competing report series or evidence index when a current one already exists.
 - Treat
@@ -97,6 +104,9 @@ GitHub remote**, and archiving the resulting Git commit record. A substantive
 task is not complete until this commit-push-and-record closure has been
 performed.
 
+Git closure applies to this repository only. The archive root is not versioned
+and takes no commit of its own.
+
 The GitHub remote is `origin`
 (`https://github.com/zaixinpan3/Vehicle-Localization`), default branch `main`.
 
@@ -111,19 +121,13 @@ The GitHub remote is `origin`
 3. Capture the full commit SHA, subject, committed file scope or diffstat, the
    push result, and the checks actually run and their outcomes.
 4. Append the technical operation to the activity ledger and update the current
-   weekly log. Include the full project commit SHA in the ledger's
-   `versions_or_hashes` field and describe its scope, validation, and
-   deliberate exclusions. Do not add that hash to the weekly log.
-5. Commit the resulting ledger and weekly-log changes in a separate archive
-   commit so that the archived commit record is itself preserved in Git.
+   weekly log, writing both directly in the unversioned archive root. Include
+   the full project commit SHA in the ledger's `versions_or_hashes` field and
+   describe its scope, validation, and deliberate exclusions. Do not add that
+   hash to the weekly log.
 
-If a substantive task produces no non-archive project artifact, do not invent
-one merely to create a project commit; create only the truthful archive update
-and its archive commit. The archive commit cannot contain its own final SHA
-without a self-reference cycle. Report that SHA in the final response and, when
-material, record it in the next append-only archive operation; never amend or
-rewrite an earlier archival record solely to embed the hash of the commit that
-contains it.
+If a substantive task produces no project artifact, do not invent one merely to
+create a project commit; write only the truthful archive update.
 
 Edits limited to `AGENTS.md`, `CLAUDE.md`, or other agent-operation instruction
 files are administrative agent configuration, not project research activity.
@@ -197,6 +201,11 @@ Use concrete descriptions that another person can verify:
 
 ### Weekly and Monthly Records
 
+- One weekly report covers the person, not a project. Both active projects are
+  recorded in the same report, each as its own row of the hours-reconciliation
+  table and its own rows of the work table. Do not open a second weekly series
+  for Project A. Name new weekly reports without a single-project label; leave
+  reports created before `2026-09-03` under the names they already have.
 - Add substantive activity to the current unsigned weekly work log as the work
   occurs. The entry must identify the specific work, actual output, and related
   ledger record.
@@ -263,10 +272,9 @@ Use concrete descriptions that another person can verify:
 - At the end of every substantive task, update the activity ledger and current
   unsigned weekly log. Update the evidence index only if new evidence was
   admitted.
-- Complete the Git closure in this order: project commit, push to `origin`,
-  archival record of that commit, then archive-record commit. Do not leave
-  substantive in-scope changes uncommitted unless a concrete blocker is
-  recorded and reported.
+- Complete the closure in this order: project commit, push to `origin`, then
+  the archival record of that commit. Do not leave substantive in-scope changes
+  uncommitted unless a concrete blocker is recorded and reported.
 - In the final response, state which archive records were updated, whether the
   standing `20.0` weekly hours were applied, and whether any document still
   requires review or signature.
