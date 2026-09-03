@@ -42,7 +42,8 @@ function truth = simulateTruth(design, cfg)
 %
 % Output:
 %   truth: struct with time, speed and acceleration profiles, steering,
-%       state, lateral acceleration, and side-slip angle
+%       state, lateral acceleration, the longitudinal specific force the IMU
+%       would report, and the side-slip angle with its rate
     sampleTime = double(cfg.simulation.sampleTime);
     numSteps = round(double(cfg.simulation.tFinal) ./ sampleTime);
     time = (0:numSteps).' .* sampleTime;
@@ -63,10 +64,19 @@ function truth = simulateTruth(design, cfg)
     end
 
     lateralAcceleration = zeros(numel(time), 1);
+    lateralVelocityRate = zeros(numel(time), 1);
     for sampleIdx = 1:numel(time)
         [~, C] = evaluateLateralModel(model, [longitudinalSpeed(sampleIdx); 1.0 ./ longitudinalSpeed(sampleIdx)]);
         lateralAcceleration(sampleIdx) = (C(1, :) * state(sampleIdx, :).') + (model.D(1) .* steeringAngle(sampleIdx));
+        derivative = plantDerivative(state(sampleIdx, :).', sampleIdx, 0.0, longitudinalSpeed, steeringAngle, model, nonlinearity);
+        lateralVelocityRate(sampleIdx) = derivative(1);
     end
+
+    % The IMU reports the inertial specific force, not the speed derivative
+    longitudinalSpecificForce = longitudinalAcceleration - (state(:, 1) .* state(:, 2));
+    sideSlipAngle = atan2(state(:, 1), longitudinalSpeed);
+    sideSlipAngleRate = ((lateralVelocityRate .* longitudinalSpeed) - ...
+        (state(:, 1) .* longitudinalAcceleration)) ./ ((longitudinalSpeed.^2) + (state(:, 1).^2));
 
     truth = struct();
     truth.time = time;
@@ -77,7 +87,10 @@ function truth = simulateTruth(design, cfg)
     truth.lateralVelocity = state(:, 1);
     truth.yawRate = state(:, 2);
     truth.lateralAcceleration = lateralAcceleration;
-    truth.sideSlipAngle = atan2(state(:, 1), longitudinalSpeed);
+    truth.lateralVelocityRate = lateralVelocityRate;
+    truth.longitudinalSpecificForce = longitudinalSpecificForce;
+    truth.sideSlipAngle = sideSlipAngle;
+    truth.sideSlipAngleRate = sideSlipAngleRate;
 end
 
 function derivative = plantDerivative(state, sampleIdx, stepFraction, longitudinalSpeed, steeringAngle, model, nonlinearity)
@@ -169,7 +182,7 @@ function measurements = buildMeasurements(truth, design, cfg)
     measurements.time = truth.time;
     measurements.steeringAngle = truth.steeringAngle;
     measurements.longitudinalSpeed = truth.longitudinalSpeed;
-    measurements.longitudinalAcceleration = truth.longitudinalAcceleration;
+    measurements.longitudinalAcceleration = truth.longitudinalSpecificForce;
     measurements.lateralAcceleration = truth.lateralAcceleration + ...
         (double(cfg.simulation.lateralAccelerationNoiseStd) .* randn(numSamples, 1));
     measurements.yawRate = truth.yawRate + ...
@@ -193,6 +206,7 @@ function metrics = computeMetrics(truth, estimate, cfg)
     lateralVelocityError = estimate.lateralVelocity - truth.lateralVelocity;
     yawRateError = estimate.yawRate - truth.yawRate;
     sideSlipError = estimate.sideSlipAngle - truth.sideSlipAngle;
+    sideSlipRateError = estimate.sideSlipAngleRate - truth.sideSlipAngleRate;
 
     metrics = struct();
     metrics.lateralVelocityRmse = sqrt(mean(lateralVelocityError.^2));
@@ -200,6 +214,8 @@ function metrics = computeMetrics(truth, estimate, cfg)
     metrics.settledLateralVelocityRmse = sqrt(mean(lateralVelocityError(settledMask).^2));
     metrics.settledYawRateRmse = sqrt(mean(yawRateError(settledMask).^2));
     metrics.settledSideSlipRmse = sqrt(mean(sideSlipError(settledMask).^2));
+    metrics.settledSideSlipRateRmse = sqrt(mean(sideSlipRateError(settledMask).^2));
+    metrics.peakSideSlipAngleRate = max(abs(truth.sideSlipAngleRate));
     metrics.maxSettledLateralVelocityError = max(abs(lateralVelocityError(settledMask)));
     metrics.peakLateralVelocity = max(abs(truth.lateralVelocity));
     metrics.peakSideSlipAngle = max(abs(truth.sideSlipAngle));

@@ -10,17 +10,30 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
 % directly, so the estimator effectively reconstructs the lateral velocity
 % and, with it, the vehicle side-slip angle.
 %
+% This block supplies the side-slip interface that the ego-state observer
+% consumes: the side-slip angle and, crucially, its rate, which enters the
+% track-angle rate as thetaDot = yawRate + sideSlipRate. The rate is taken
+% analytically from the first row of the observer right-hand side, never by
+% differentiating the estimate numerically. Below cfg.observer.minimumSpeed
+% the side-slip outputs are held at zero, because atan2(vy, Vx) and its rate
+% lose meaning as the speed vanishes.
+%
 % Input:
 %   measurements: struct with column series time, steeringAngle,
 %       longitudinalSpeed, longitudinalAcceleration, lateralAcceleration,
-%       and yawRate
+%       and yawRate. longitudinalAcceleration is the inertial longitudinal
+%       specific force ax measured by the IMU, not the derivative of the
+%       speed: the speed rate is reconstructed internally as
+%       VxDot = ax + vy r, and it is that rate, not ax, that schedules the
+%       gain and enters the side-slip rate.
 %   design: struct from designLateralObserverGains
 %   cfg: optional struct from lateralObserverConfig
 %
 % Output:
 %   estimate: struct with time, state [N x 2] of lateral velocity and yaw
-%       rate, lateralVelocity, yawRate, sideSlipAngle, innovation [N x 2],
-%       gainNorm, and the scheduling series actually used
+%       rate, lateralVelocity, yawRate, lateralVelocityRate, sideSlipAngle,
+%       sideSlipAngleRate, longitudinalSpeedRate, lowSpeedHold, innovation
+%       [N x 2], gainNorm, and the scheduling series actually used
     if nargin < 3 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
@@ -43,14 +56,20 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     innovation = zeros(numSamples, 2);
     gainNorm = zeros(numSamples, 1);
     scheduledSpeed = zeros(numSamples, 1);
+    lateralVelocityRate = zeros(numSamples, 1);
+    longitudinalSpeedRate = zeros(numSamples, 1);
+    lowSpeedHold = false(numSamples, 1);
     stateHistory(1, :) = state.';
 
     for sampleIdx = 1:numSamples
         sample = sampleAt(measurements, sampleIdx, 0.0, minimumSpeed);
-        [derivative, sampleInnovation, L] = observerDerivative(state, sample, design, nonlinearity);
+        [derivative, sampleInnovation, L, speedRate] = observerDerivative(state, sample, design, nonlinearity);
         innovation(sampleIdx, :) = sampleInnovation.';
         gainNorm(sampleIdx) = norm(L);
         scheduledSpeed(sampleIdx) = sample.longitudinalSpeed;
+        lateralVelocityRate(sampleIdx) = derivative(1);
+        longitudinalSpeedRate(sampleIdx) = speedRate;
+        lowSpeedHold(sampleIdx) = sample.belowMinimumSpeed;
         stateHistory(sampleIdx, :) = state.';
         if sampleIdx == numSamples
             break;
@@ -72,22 +91,38 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
         assert(all(isfinite(state)), "The lateral observer diverged at sample %d.", sampleIdx);
     end
 
+    % Side-slip angle and its analytic rate, both held at zero below the
+    % minimum scheduling speed where they lose meaning
+    lateralVelocity = stateHistory(:, 1);
+    sideSlipAngle = atan2(lateralVelocity, scheduledSpeed);
+    sideSlipDenominator = (scheduledSpeed.^2) + (lateralVelocity.^2);
+    sideSlipAngleRate = ((lateralVelocityRate .* scheduledSpeed) - ...
+        (lateralVelocity .* longitudinalSpeedRate)) ./ sideSlipDenominator;
+    sideSlipAngle(lowSpeedHold) = 0.0;
+    sideSlipAngleRate(lowSpeedHold) = 0.0;
+
     estimate = struct();
     estimate.time = measurements.time;
     estimate.state = stateHistory;
-    estimate.lateralVelocity = stateHistory(:, 1);
+    estimate.lateralVelocity = lateralVelocity;
     estimate.yawRate = stateHistory(:, 2);
-    estimate.sideSlipAngle = atan2(stateHistory(:, 1), scheduledSpeed);
+    estimate.lateralVelocityRate = lateralVelocityRate;
+    estimate.sideSlipAngle = sideSlipAngle;
+    estimate.sideSlipAngleRate = sideSlipAngleRate;
+    estimate.longitudinalSpeedRate = longitudinalSpeedRate;
+    estimate.lowSpeedHold = lowSpeedHold;
     estimate.innovation = innovation;
     estimate.gainNorm = gainNorm;
     estimate.scheduledSpeed = scheduledSpeed;
     estimate.measurements = measurements;
 end
 
-function [derivative, innovation, L] = observerDerivative(state, sample, design, nonlinearity)
+function [derivative, innovation, L, speedRate] = observerDerivative(state, sample, design, nonlinearity)
 % observerDerivative: Evaluate the observer vector field at one operating
 % point: the LPV model prediction, the copied nonlinearity, and the
-% gain-weighted output innovation.
+% gain-weighted output innovation. The scheduling rate is the speed
+% derivative VxDot = ax + vy r reconstructed from the measured longitudinal
+% specific force and the current estimate, not the specific force itself.
 %
 % Input:
 %   state: [2 x 1] current estimate of [lateral velocity; yaw rate]
@@ -99,10 +134,12 @@ function [derivative, innovation, L] = observerDerivative(state, sample, design,
 %   derivative: [2 x 1] state derivative
 %   innovation: [2 x 1] output innovation
 %   L: [2 x 2] scheduled observer gain
+%   speedRate: scalar reconstructed longitudinal speed derivative
     model = design.model;
     rho = [sample.longitudinalSpeed; 1.0 ./ sample.longitudinalSpeed];
     [A, C] = evaluateLateralModel(model, rho);
-    L = scheduleLateralObserverGain(design, sample.longitudinalSpeed, sample.longitudinalAcceleration);
+    speedRate = sample.longitudinalAcceleration + (state(1) .* sample.yawRate);
+    L = scheduleLateralObserverGain(design, sample.longitudinalSpeed, speedRate);
 
     measuredOutput = [sample.lateralAcceleration; sample.yawRate];
     predictedOutput = (C * state) + (model.D .* sample.steeringAngle);
@@ -135,6 +172,7 @@ function sample = sampleAt(measurements, sampleIdx, stepFraction, minimumSpeed)
         series = measurements.(fieldName);
         sample.(fieldName) = ((1.0 - stepFraction) .* series(sampleIdx)) + (stepFraction .* series(nextIdx));
     end
+    sample.belowMinimumSpeed = sample.longitudinalSpeed < minimumSpeed;
     sample.longitudinalSpeed = max(sample.longitudinalSpeed, minimumSpeed);
 end
 

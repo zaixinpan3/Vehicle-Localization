@@ -175,6 +175,65 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(all(isfinite(result.estimate.state(:))));
         end
 
+        function sideSlipRateIsConsistentWithTheSideSlipAngle(testCase)
+        % sideSlipRateIsConsistentWithTheSideSlipAngle: The analytic side-slip
+        % rate, taken from the first row of the observer right-hand side rather
+        % than by differentiating the estimate, agrees with a finite difference
+        % of the reported side-slip angle. This is the signal the ego-state
+        % observer consumes as part of the track-angle rate.
+            design = testCase.StoredDesign;
+            result = simulateLateralObserverScenario(design, design.cfg);
+            estimate = result.estimate;
+
+            sampleTime = design.cfg.simulation.sampleTime;
+            numericalRate = gradient(estimate.sideSlipAngle, sampleTime);
+            settled = estimate.time >= 0.25 .* design.cfg.simulation.tFinal;
+            rateDeviation = estimate.sideSlipAngleRate(settled) - numericalRate(settled);
+
+            testCase.verifyLessThan(sqrt(mean(rateDeviation.^2)), ...
+                0.05 .* max(abs(estimate.sideSlipAngleRate(settled))));
+            testCase.verifyTrue(all(isfinite(estimate.sideSlipAngleRate)));
+        end
+
+        function speedRateIsReconstructedFromTheSpecificForce(testCase)
+        % speedRateIsReconstructedFromTheSpecificForce: The observer treats the
+        % longitudinal measurement as the inertial specific force and rebuilds
+        % the speed derivative as ax + vy r, which is the quantity that
+        % schedules the gain and enters the side-slip rate.
+            design = testCase.StoredDesign;
+            result = simulateLateralObserverScenario(design, design.cfg);
+
+            expectedRate = result.measurements.longitudinalAcceleration + ...
+                (result.estimate.lateralVelocity .* result.measurements.yawRate);
+            testCase.verifyEqual(result.estimate.longitudinalSpeedRate, expectedRate, AbsTol=1.0e-12);
+            testCase.verifyGreaterThan(max(abs(result.estimate.longitudinalSpeedRate - ...
+                result.measurements.longitudinalAcceleration)), 0, ...
+                "The scenario should exercise a nonzero vy*r correction.");
+        end
+
+        function lowSpeedHoldZeroesTheSideSlipOutputs(testCase)
+        % lowSpeedHoldZeroesTheSideSlipOutputs: Below the minimum scheduling
+        % speed the side-slip angle and its rate lose meaning, so both are held
+        % at zero and the hold is reported.
+            design = testCase.StoredDesign;
+            cfg = design.cfg;
+            numSamples = 200;
+            measurements = struct();
+            measurements.time = (0:(numSamples - 1)).' .* 0.01;
+            measurements.steeringAngle = zeros(numSamples, 1);
+            measurements.longitudinalSpeed = 0.25 .* cfg.observer.minimumSpeed .* ones(numSamples, 1);
+            measurements.longitudinalAcceleration = zeros(numSamples, 1);
+            measurements.lateralAcceleration = 0.2 .* ones(numSamples, 1);
+            measurements.yawRate = 0.05 .* ones(numSamples, 1);
+
+            estimate = runLateralVelocityObserver(measurements, design, cfg);
+
+            testCase.verifyTrue(all(estimate.lowSpeedHold));
+            testCase.verifyEqual(estimate.sideSlipAngle, zeros(numSamples, 1), AbsTol=0);
+            testCase.verifyEqual(estimate.sideSlipAngleRate, zeros(numSamples, 1), AbsTol=0);
+            testCase.verifyTrue(all(isfinite(estimate.state(:))));
+        end
+
         function synthesisReproducesTheStoredDesign(testCase)
         % synthesisReproducesTheStoredDesign: Re-running the LMI synthesis
         % reproduces the stored gain schedule. Needs YALMIP and an SDP solver.

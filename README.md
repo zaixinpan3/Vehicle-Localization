@@ -107,8 +107,34 @@ complements give LMIs imposed on a grid of speeds and longitudinal
 accelerations. Minimizing `mu` subject to `trace(W_k) <= mu` bounds the weighted
 H2 gain from measurement noise to the estimation error `z = Q^(1/2) e`.
 `designLateralObserverGains` then re-checks the recovered gains against the
-original, non-convexified certificate. The estimated `v_y` gives the vehicle
-side-slip angle, which the pose-level estimators do not observe.
+original, non-convexified certificate.
+
+This block is not an end in itself. It is block 1 of the improved ego-state
+observer architecture set out in `localization/improved_observer_derivation.md`,
+which extends the Bessafa framework rather than replacing it: the same
+Zemouche-Boutayeb LPV decomposition, the same Theorem 5 LMI shape, the same
+high-gain scaling and ISS bound. In that architecture the lateral block runs
+open of the high-gain observer, taking only wheel speed, steering angle and the
+gyro, and hands over the side-slip angle and its rate; the high-gain observer
+consumes them as exogenous known signals through the track-angle rate
+`thetaDot = r_m + betaDot`, so the two stages cascade without a loop. The
+interface is therefore what matters here, and
+`runLateralVelocityObserver` supplies exactly it:
+
+* `sideSlipAngle` and `sideSlipAngleRate`, the rate taken analytically from the
+  first row of the observer right-hand side, never by differentiating the
+  estimate;
+* `longitudinalSpeedRate`, rebuilt as `ax + vy*r` because the IMU reports a
+  specific force and not the speed derivative, and it is that rate which both
+  schedules the gain and enters the side-slip rate;
+* `lowSpeedHold`, which zeroes both side-slip outputs below the minimum
+  scheduling speed where they lose meaning.
+
+Not yet built, and needed before the architecture is complete: the seven-state
+augmented observer with heading as its own block, the gyro-as-input rewrite of
+`f` that removes the `v = 0` singularity, the invariant outputs with their
+block-coupling constraint, and the Lyapunov-shaped lidar channel weighted by the
+scan-matching information matrix.
 
 ## Configuration (`config/`)
 
