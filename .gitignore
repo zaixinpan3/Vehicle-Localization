@@ -1,0 +1,37 @@
+# MATLAB
+*.asv
+*.autosave
+*.m~
+*.mex*
+*.slxc
+*.mlappinstall
+*.mltbx
+slprj/
+sccprj/
+codegen/
+*.mlx.bak
+
+# MATLAB project / session artifacts
+resources/project/
+*.prj.bak
+octave-workspace
+
+# Python (scripts/)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local outputs (data, maps, figures) — keep tests/reference tracked
+output/
+results/
+data/
+*.bag
+*.pcap
