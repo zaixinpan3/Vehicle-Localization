@@ -55,12 +55,13 @@ conclusion about immigration compliance.
 - The documented self-employment start date is `2026-07-12`.
 - The user has provided standing confirmation that each **active project**
   work week is exactly `20.0` actual hours. The weekly total is therefore
-  `20.0` multiplied by the number of projects active that week. Both projects
-  became active together in week `2026-W36` (`08/30/2026`--`09/05/2026`), so
-  from that week the standing weekly total is `40.0`: `20.0` for Project A and
-  `20.0` for Project B, entered as separate rows of the same weekly report.
-  Weeks before `2026-W36` had one active project and stand at `20.0`; do not
-  restate them.
+  `20.0` multiplied by the number of projects active that week. Project B was
+  already active, and Project A joined it in week `2026-W36`
+  (`08/30/2026`--`09/05/2026`); both projects are active together from that
+  week. The standing weekly total from `2026-W36` is therefore `40.0`:
+  `20.0` for Project A and `20.0` for Project B, entered as separate rows of
+  the same weekly report. Weeks before `2026-W36` had one active project and
+  stand at `20.0`; do not restate them.
 - The signed `2026-07-27` Weekly Hours and Work Pattern Statement describes a
   `20`-hour regular schedule and certifies Week 1 and Week 2 only. It is a
   signed record: do not edit it. A later change to the schedule is recorded as
@@ -87,7 +88,7 @@ Use `../Pan_Dynamics_OPT_Archive_Kit/` as the archive root.
   Do not initialize a repository there, do not create an archive commit, and do
   not record the absence of one as a blocker or a `partial` outcome.
 - Maintain
-  `Pan_Dynamics_OPT_Archive_Kit/00_Project_Activity_Ledger.jsonl` as the
+  `../Pan_Dynamics_OPT_Archive_Kit/00_Project_Activity_Ledger.jsonl` as the
   append-only, machine-readable activity ledger. Append-only discipline is
   enforced by the writing procedure, not by Git: never rewrite or delete an
   existing line, and correct an earlier record only with a new entry carrying a
@@ -95,7 +96,7 @@ Use `../Pan_Dynamics_OPT_Archive_Kit/` as the archive root.
 - Use the existing current weekly and monthly report templates. Do not create a
   competing report series or evidence index when a current one already exists.
 - Treat
-  `Pan_Dynamics_OPT_Archive_Kit/05_Evidence_Response_Packet_Index.csv` as the
+  `../Pan_Dynamics_OPT_Archive_Kit/05_Evidence_Response_Packet_Index.csv` as the
   canonical EV-number index unless a later archive status file expressly names
   a replacement.
 - Keep operational code, configurations, and research data in their normal
@@ -133,8 +134,10 @@ The GitHub remote is `origin`
 4. Append the technical operation to the activity ledger and update the current
    weekly log, writing both directly in the unversioned archive root. Include
    the full project commit SHA in the ledger's `versions_or_hashes` field and
-   describe its scope, validation, and deliberate exclusions. Do not add that
-   hash to the weekly log.
+   describe its scope, validation, and deliberate exclusions. The weekly log
+   may cite that Git commit SHA, or hashes of other independent technical
+   artifacts, when they materially support the reported work. Never calculate,
+   cite, or record a hash of the weekly report source or PDF itself.
 
 If a substantive task produces no project artifact, do not invent one merely to
 create a project commit; write only the truthful archive update.
@@ -211,6 +214,10 @@ Use concrete descriptions that another person can verify:
 
 ### Weekly and Monthly Records
 
+- Write every weekly report entirely in English as a standalone LaTeX source
+  and compile a matching PDF with the same base name in the same weekly
+  directory. A weekly report is not complete as an archive artifact until both
+  the `.tex` source and readable `.pdf` exist.
 - One weekly report covers the person, not a project. Both active projects are
   recorded in the same report, each as its own row of the hours-reconciliation
   table and its own rows of the work table. Do not open a second weekly series
@@ -223,7 +230,21 @@ Use concrete descriptions that another person can verify:
   ledger record.
 - Weekly and monthly records are internal activity summaries, not evidence
   items. Do not assign them Evidence IDs, add them to an evidence index or
-  evidence manifest, or calculate or list hashes solely for those records.
+  evidence manifest, or calculate, store, refresh, or list hashes for their
+  source or PDF files. A report must never cite its own hash as evidence.
+- A weekly report may cite Git commit SHAs and hashes of independent source
+  files, datasets, tests, papers, videos, and other technical artifacts. Keep
+  the distinction explicit: those hashes identify supporting artifacts, not
+  the report itself and not the user's hours.
+- If a weekly report is written after the covered week, label it explicitly as
+  a retrospective late entry. State the actual preparation date, the factual
+  reason for the delay, the evidence limitations, and whether hours remain
+  pending. Never backdate it. For Week 07, the recorded reason is that after
+  moving, the desktop computer storing the weekly-report archive was
+  temporarily unavailable for work; work continued from a laptop without that
+  archive, preventing timely recordkeeping until archive access was restored.
+  Week 07 is not a format exception: it requires the same English standalone
+  `.tex` source and matching readable PDF as every other weekly report.
 - Enter the standing confirmed weekly total automatically: `20.0` hours for
   each project active that week, so `40.0` for a week in which both projects
   are active. Record it as one row per project plus a total. Flexible daily
@@ -266,6 +287,10 @@ Use concrete descriptions that another person can verify:
 - Every EV entry must identify the file name, evidence date, archive location,
   concise description, project, applicable week, whether it is an original or
   export copy, and a Git hash, version, or SHA-256 when applicable.
+- Weekly and monthly reports are excluded from EV admission and hashing. If a
+  legacy index still contains a report row, treat its hash field as not
+  applicable and do not refresh, cite, or propagate the historical report
+  hash. Correct current indexes without rewriting append-only ledger history.
 - An EV number must resolve to an existing file. A blank template is not
   evidence.
 - Do not alter file metadata or Git history to make evidence appear older.
@@ -290,7 +315,8 @@ Use concrete descriptions that another person can verify:
   the archival record of that commit. Do not leave substantive in-scope changes
   uncommitted unless a concrete blocker is recorded and reported.
 - In the final response, state which archive records were updated, whether the
-  standing `20.0` weekly hours were applied, and whether any document still
-  requires review or signature.
+  applicable standing total was applied (`20.0` per active project and `40.0`
+  when both projects are active), and whether any document still requires
+  review or signature.
 - Report facts only. Do not state that the archive guarantees OPT compliance or
   that DHS, USCIS, SEVP, a DSO, or a court will accept a particular document.
