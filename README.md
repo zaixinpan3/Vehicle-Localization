@@ -35,9 +35,6 @@ organized LiDAR frame
    │    buildSemanticNdtGridMap                   per-frame semantic NDT cells (local frame)
    │
    └─ localization/ ────────────────────────────────────────────────────── §III.C
-        runReplayHighGainObserver     100 Hz high-gain observer with timestamped pose replay
-        designReplayObserverGains     offline LMI synthesis of the pose jump gain (YALMIP + SeDuMi)
-        simulateReplayObserverScenario synthetic drive with delayed, out-of-order poses
         lateralObserver/              LPV lateral-velocity observer (v_y, r)
           lateralBicycleModel           2-DOF model, affine in rho = [Vx; 1/Vx]
           buildSchedulingPolytope       triangle covering the scheduling arc
@@ -89,15 +86,7 @@ seeded, and which components survive*, never the EM updates themselves.
 
 ### Localization (`localization/`)
 
-Three estimator components live here. The improved observer composes the two
-state estimators as a one-way cascade.
-
-The **global ego-state estimator** is the retrodictive-replay high-gain observer
-(Bessafa et al., 2026) on the transformed state `[X, Vx, Ax, Y, Vy, Ay]` in the
-map frame: delayed pose measurements are inserted as discrete jumps at their
-physical timestamp and the buffered history is replayed to the present. The jump
-gain comes from `designReplayObserverGains`, which needs YALMIP and SeDuMi on the
-path; the online observer itself has no external dependency.
+Two estimator stages live here and form the current one-way cascade.
 
 The **lateral-velocity observer** in `localization/lateralObserver/` has a
 division-free master state `[v_y, b_ay]`. It propagates
@@ -162,7 +151,6 @@ on top of its config files):
 | `temporalStabilityMapConfig` | `buildTemporalStabilityGmmMap` |
 | `featureMapBuildConfig` | `buildFeatureMap` |
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |
-| `replayObserverConfig` | `runReplayHighGainObserver`, `designReplayObserverGains` |
 | `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` |
 | `improvedObserverConfig` | `designImprovedObserverGains`, `runImprovedVehicleObserver` |
 
@@ -177,8 +165,6 @@ nnz(perception.featureMasks.curb)                 % curb points of this frame
 [probabilityCloudMap, featureData] = buildFeatureMap("data");   % offline map
 scores = queryTemporalStabilityGmmMap(probabilityCloudMap, queryXY, "pole");
 
-result = simulateReplayObserverScenario(designedCfg);           % observer demo
-
 design = designLateralObserverGains(lateralObserverConfig());   % LPV H2 synthesis
 estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
 
@@ -190,8 +176,8 @@ result = simulateImprovedObserverScenario( ...
 
 `scripts/` holds the runnable entry points: `extractPointCloudsFromBag.m` and
 `extractGnssFromBag.py` (ROS bag → MAT frames and GNSS/INS CSV tables),
-`buildMississippiFeatureMap.m`, `runReplayObserverDesign.m`, and
-`runLateralObserverDesign.m`, and `runImprovedObserverDesign.m`.
+`buildMississippiFeatureMap.m`, `runLateralObserverDesign.m`, and
+`runImprovedObserverDesign.m`.
 
 ### Data layout expected under `dataRoot`
 
@@ -206,36 +192,22 @@ raw/Missisipi/gnss/<bag>_front_lidar_pose_match_1_1170.csv   from matchFramePose
 
 ## Verification
 
-The refactor was checked against the original code on real data: frames 260,
-300, and 326 of the Mississippi route and frame 400 of the Downtown route (with
-facades enabled), a 30-frame temporal-stability map with query scores, and the
-replay observer on a recorded 24 s scenario. All 206 comparisons (ground labels,
-every feature channel, energy maps, column maps, facade lines, semantic voxel
-tags, refined points, NDT components, registered observations, map input, GMM
-parameters and components, query scores, observer states) are equal to the
-original outputs, exactly for integer and logical products and to 1e-8 or better
-for floating-point ones.
+The perception and mapping refactor was checked against the original code on
+real data: frames 260, 300, and 326 of the Mississippi route and frame 400 of
+the Downtown route (with facades enabled), plus a 30-frame temporal-stability
+map with query scores. Ground labels, feature channels, energy maps, column
+maps, facade lines, semantic voxel tags, refined points, NDT components,
+registered observations, map input, GMM parameters and components, and query
+scores are equal to the original outputs, exactly for integer and logical
+products and to 1e-8 or better for floating-point ones.
 
-`tests/` contains the unit tests carried over from the original repository and
-`pipelineRegressionTest`, which reproduces `tests/reference/pipelineReference.mat`
-(captured from the original code). The observer check always runs; the
-perception and mapping checks run when `VEHICLE_LOCALIZATION_DATA_ROOT` points
-at the data root above.
-
-**Known pre-existing failure.** `designReplayObserverGains` (the offline LMI
-that synthesizes the replay pose-jump gain) is infeasible for every configured
-`rhoCandidates` entry. This is inherited, not introduced: the original
-`solveHGOgain` fails identically, with the same message and the same
-net-contraction limit, on both the reduced test configuration and the full one.
-The flow condition permits growth at `theta*flowAh = 6` 1/s, so across one 0.2 s
-pose interval the Lyapunov function may grow by `exp(1.2)`, and net contraction
-then requires a jump factor `rho < 0.301` from a correction that observes only
-x, y, and yaw out of six states. The design artifact the online observer
-actually uses predates the joint flow-and-jump LMI: its saved struct has a
-`flow` field but no `main`, and its `rhoCandidates` all lie above the limit the
-current code enforces. The online observer itself is unaffected and is verified
-against the reference; `replayObserverTest` marks the corresponding test as a
-known failure rather than hiding it.
+`tests/` contains the retained unit tests and `pipelineRegressionTest`, which
+reproduces the perception and mapping portions of
+`tests/reference/pipelineReference.mat` (captured from the original code). Those
+data-dependent checks run when `VEHICLE_LOCALIZATION_DATA_ROOT` points at the
+data root above. The current lateral and improved observers have independent
+mathematical and end-to-end tests that use stored certified gains and do not
+require the recorded point-cloud datasets.
 
 ```matlab
 setenv("VEHICLE_LOCALIZATION_DATA_ROOT", "/path/to/data");
@@ -256,9 +228,6 @@ runtests("tests");
 | `querySemanticTemporalStabilityGMMFeatureMap` | `temporalStabilityGmm/queryTemporalStabilityGmmMap` |
 | `buildSemanticNDTGridMap` | `buildSemanticNdtGridMap` |
 | glue inside `runMissisipiSemanticTemporalStabilityGMMFeatureMapTest.m` | `mapping/*.m` functions |
-| `HGO`, `solveHGOgain` | `runReplayHighGainObserver`, `designReplayObserverGains` |
-| `runBessafa2026ReplayObserverSimulation` | `simulateReplayObserverScenario` (no figure export) |
-
 `localization/lateralObserver/` has no counterpart in the original repository. It
 is new code, so it is verified against its own mathematics rather than against a
 recorded baseline: the polytopic representation is checked for exactness and for

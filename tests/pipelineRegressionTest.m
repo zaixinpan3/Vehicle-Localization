@@ -1,10 +1,9 @@
 classdef pipelineRegressionTest < matlab.unittest.TestCase
 % pipelineRegressionTest: Reproduce the reference outputs captured from the
-% RobustVehicleLocalization code before the refactor. The observer check
-% always runs; the perception and mapping checks need the recorded datasets
-% and are skipped when the data root is unavailable. Set the environment
-% variable VEHICLE_LOCALIZATION_DATA_ROOT to the folder holding
-% raw/MissisipiPointClouds.mat and raw/downTownPointClouds.mat.
+% RobustVehicleLocalization code before the refactor. The perception and
+% mapping checks need the recorded datasets and are skipped when the data
+% root is unavailable. Set VEHICLE_LOCALIZATION_DATA_ROOT to the folder
+% holding raw/MissisipiPointClouds.mat and raw/downTownPointClouds.mat.
 
     properties (Access = private)
         Reference
@@ -86,20 +85,6 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
             end
             scores = queryTemporalStabilityGmmMap(probabilityCloudMap, reference.queryPoints);
             testCase.verifyEqual(scores, reference.queryScores, AbsTol=1.0e-8);
-        end
-
-        function observerReproducesReferenceTrajectory(testCase)
-        % observerReproducesReferenceTrajectory: The replay observer reproduces
-        % the reference transformed-state history on the recorded inputs.
-            reference = testCase.Reference.observer;
-            cfg = replayObserverConfig();
-            cfg.observer = reference.observer;
-            cfg.replay.Kd = reference.Kd;
-            cfg.replayDesign.poseCorrectionOutputs = reference.poseCorrectionOutputs;
-            estimate = runReplayHighGainObserver(reference.highRateMeasurements, reference.poseMeasurements, cfg);
-            testCase.verifyEqual(estimate.z, reference.z, AbsTol=1.0e-10);
-            testCase.verifyEqual(estimate.onlineZ, reference.onlineZ, AbsTol=1.0e-10);
-            testCase.verifyEqual(estimate.yaw, reference.yaw, AbsTol=1.0e-10);
         end
     end
 

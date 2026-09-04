@@ -11,7 +11,8 @@ Pole-like Feature, and Building Facade*. Three modules mirror the paper:
   semantic voxel product.
 - `mapping/` — semantic NDT grid map, temporal-stability GMM map, sliding
   window map, frame-pose matching, and global registration.
-- `localization/` — replay high-gain observer design and simulation.
+- `localization/` — cascaded lateral-velocity and seven-state global observer
+  design, delayed-pose replay, and simulation.
 - `config/` — one parameter entry point per stage.
 - `tests/` — unit tests plus `pipelineRegressionTest.m` against the stored
   reference `tests/reference/pipelineReference.mat`.
