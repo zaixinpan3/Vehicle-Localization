@@ -390,6 +390,13 @@ function highRate = normalizeHighRate(highRate)
             "sensorData.highRate.%s must be a finite aligned series.", fieldName);
         highRate.(fieldName) = values;
     end
+    if isfield(highRate, "dynamicValid")
+        dynamicValid = highRate.dynamicValid(:);
+        assert((islogical(dynamicValid) || isnumeric(dynamicValid)) && ...
+            numel(dynamicValid) == sampleCount && all(isfinite(double(dynamicValid))), ...
+            "sensorData.highRate.dynamicValid must be a finite aligned logical series.");
+        highRate.dynamicValid = logical(dynamicValid);
+    end
     assert(all(diff(highRate.time) > 0.0), "sensorData.highRate.time must be strictly increasing.");
     assert(all(highRate.longitudinalSpeed >= 0.0), ...
         "sensorData.highRate.longitudinalSpeed must be nonnegative.");

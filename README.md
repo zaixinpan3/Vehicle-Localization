@@ -99,21 +99,24 @@ physical timestamp and the buffered history is replayed to the present. The jump
 gain comes from `designReplayObserverGains`, which needs YALMIP and SeDuMi on the
 path; the online observer itself has no external dependency.
 
-The **lateral-velocity observer** in `localization/lateralObserver/` works on the
-body-frame state `x = [v_y, r]` of the 2-DOF bicycle model, with the steering
-angle as input and `y = [a_y, r]` from the IMU as output. Both `A` and `C` are
-affine in the scheduling parameter `rho = [Vx; 1/Vx]`, so they are represented
-exactly on a triangle that covers the scheduling arc (the arc is convex, so the
-harmonic-mean third vertex closes a triangle around it). The gain `L(rho)` is
-synthesized by semidefinite programming from a parameter-dependent Lyapunov
-function `V = e' P(rho) e`: the Lipschitz nonlinearity is absorbed by Young's
-inequality with a fixed `tau`, `Y = P L` removes the bilinearity, a slack matrix
-`X` decouples `P` from `A` through a second Young step with `eta`, and two Schur
-complements give LMIs imposed on a grid of speeds and longitudinal
-accelerations. Minimizing `mu` subject to `trace(W_k) <= mu` bounds the weighted
-H2 gain from measurement noise to the estimation error `z = Q^(1/2) e`.
-`designLateralObserverGains` then re-checks the recovered gains against the
-original, non-convexified certificate.
+The **lateral-velocity observer** in `localization/lateralObserver/` has a
+division-free master state `[v_y, b_ay]`. It propagates
+`vyDot = ay_m - b_ay - r_m*vx` at every speed. A hidden LPV observer retains the
+body-frame bicycle state `[v_y, r]`, with steering as input and `[a_y, r]` from
+the IMU as output, but is evaluated only inside its certified positive-speed
+interval. Both LPV matrices are affine in `rho = [Vx; 1/Vx]` and are represented
+exactly on a triangle around the scheduling arc. Its gain is synthesized from a
+parameter-dependent Lyapunov function by `designLateralObserverGains`, which
+also re-checks the recovered gains against the original certificate.
+
+Stationary zero-velocity information, a soft crawl-speed kinematic constraint,
+and the hidden LPV lateral-velocity estimate enter the master through separate
+persistent correction-injection states. Discrete mode labels never select an
+output or reset a state. Ordinary participation changes use quintic `C2`
+weights; abrupt invalidation sets only the corresponding correction target to
+zero, so the stored injection fades without evaluating the invalid dynamic
+model. This makes the exported master state and its derivative bumpless for
+continuous physical inputs.
 
 This block is block 1 of the improved ego-state observer. It runs open of the
 global observer, taking only wheel speed, steering angle, and IMU signals. It
@@ -121,14 +124,15 @@ hands over the side-slip angle and its rate as exogenous known signals through
 the track-angle rate `q = r_m + betaDot`, so the two stages cascade without a
 loop. `runLateralVelocityObserver` supplies exactly this interface:
 
-* `sideSlipAngle` and `sideSlipAngleRate`, the rate taken analytically from the
-  first row of the observer right-hand side, never by differentiating the
-  estimate;
+* `sideSlipAngle` and `sideSlipAngleRate`, supplied by one persistent
+  second-order interface state whose command blends smoothly between zero and
+  the valid `atan2(vy,vx)` value;
 * `longitudinalSpeedRate`, rebuilt as `ax + vy*r` because the IMU reports a
-  specific force and not the speed derivative, and it is that rate which both
-  schedules the gain and enters the side-slip rate;
-* `lowSpeedHold`, which zeroes the exported lateral velocity and both side-slip
-  outputs below the minimum scheduling speed where they lose meaning.
+  specific force and not the speed derivative;
+* `mode`, correction-channel histories, and `dynamicModelEvaluated`, which make
+  the hybrid information flow auditable;
+* `lowSpeedHold`, retained as a compatibility flag indicating that the raw
+  side-slip direction is invalid; it no longer hard-zeroes the master state.
 
 The completed global stage is in `localization/improvedObserver/`. Its state is
 `[X,Vx,Ax,Y,Vy,Ay,phi]`; it uses the nonsingular known-input model

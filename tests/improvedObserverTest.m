@@ -166,11 +166,40 @@ classdef improvedObserverTest < matlab.unittest.TestCase
                 testCase.ObserverDesign, cfg);
 
             testCase.verifyTrue(all(isfinite(estimate.z), "all"));
-            testCase.verifyEqual(estimate.lateral.lateralVelocity, ...
-                zeros(size(estimate.time)), AbsTol=0);
+            testCase.verifyFalse(any(estimate.lateral.diagnostics.dynamicModelEvaluated));
+            testCase.verifyEqual(estimate.lateral.lateralVelocity(1), 1.0, AbsTol=0.0);
+            testCase.verifyLessThan(abs(estimate.lateral.lateralVelocity(end)), ...
+                abs(estimate.lateral.lateralVelocity(1)));
             testCase.verifyEqual(estimate.sideSlipAngle, zeros(size(estimate.time)), AbsTol=0);
             testCase.verifyEqual(estimate.sideSlipAngleRate, zeros(size(estimate.time)), AbsTol=0);
             testCase.verifyEqual(estimate.trackAngleRate, zeros(size(estimate.time)), AbsTol=0);
+        end
+
+        function completeCascadeRemainsFiniteThroughStopGoModes(testCase)
+        % completeCascadeRemainsFiniteThroughStopGoModes Exercise stationary,
+        % crawl, dynamic, and braking transitions through the public cascade.
+            cfg = improvedObserverConfig();
+            cfg.observer.initialState = zeros(7, 1);
+            sensorData = testCase.stopGoSensorData();
+            externallyInvalid = sensorData.highRate.time >= 2.50 & ...
+                sensorData.highRate.time < 2.75;
+            sensorData.highRate.dynamicValid = ~externallyInvalid;
+            lateralDesign = testCase.LateralDesign;
+            lateralDesign.cfg.observer.initialState = [0.80; 0.10];
+
+            estimate = runImprovedVehicleObserver(sensorData, lateralDesign, ...
+                testCase.ObserverDesign, cfg);
+
+            testCase.verifyTrue(all(isfinite(estimate.z), "all"));
+            testCase.verifyTrue(any(estimate.lateral.mode == "stationary"));
+            testCase.verifyTrue(any(estimate.lateral.mode == "crawl"));
+            testCase.verifyTrue(any(estimate.lateral.mode == "dynamic"));
+            testCase.verifyGreaterThanOrEqual(nnz(estimate.lateral.modeChanged), 4);
+            testCase.verifyFalse(any(estimate.lateral.diagnostics.dynamicModelEvaluated( ...
+                externallyInvalid)));
+            testCase.verifyFalse(any(estimate.diagnostics.outsideTrackRateEnvelope));
+            testCase.verifyLessThan(max(abs(estimate.trackAngleRate)), ...
+                cfg.operating.maximumTrackAngleRate);
         end
 
         function wrappedHeadingInnovationUsesTheShortestArc(testCase)
@@ -234,6 +263,27 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             highRate = struct("time", time, "steeringAngle", zeros(sampleCount, 1), ...
                 "longitudinalSpeed", zeros(sampleCount, 1), ...
                 "longitudinalAcceleration", zeros(sampleCount, 1), ...
+                "lateralAcceleration", zeros(sampleCount, 1), ...
+                "yawRate", zeros(sampleCount, 1));
+            sensorData = struct("highRate", highRate);
+        end
+
+        function sensorData = stopGoSensorData()
+        % stopGoSensorData Build a straight stop--launch--cruise--stop drive.
+            sampleTime = 0.01;
+            time = (0:sampleTime:6.0).';
+            riseFraction = min(max((time - 0.50) ./ 1.50, 0.0), 1.0);
+            fallFraction = min(max((time - 4.00) ./ 1.50, 0.0), 1.0);
+            rise = 6.0 .* riseFraction.^5 - 15.0 .* riseFraction.^4 + ...
+                10.0 .* riseFraction.^3;
+            fall = 6.0 .* fallFraction.^5 - 15.0 .* fallFraction.^4 + ...
+                10.0 .* fallFraction.^3;
+            speed = 8.0 .* rise .* (1.0 - fall);
+            sampleCount = numel(time);
+            highRate = struct("time", time, ...
+                "steeringAngle", zeros(sampleCount, 1), ...
+                "longitudinalSpeed", speed, ...
+                "longitudinalAcceleration", gradient(speed, sampleTime), ...
                 "lateralAcceleration", zeros(sampleCount, 1), ...
                 "yawRate", zeros(sampleCount, 1));
             sensorData = struct("highRate", highRate);

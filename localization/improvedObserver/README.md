@@ -13,9 +13,9 @@ z = [X, Vx, Ax, Y, Vy, Ay, phi]'
 ```
 
 where the velocity and acceleration components are expressed in the map frame.
-The lateral observer supplies the body-frame lateral velocity `vy`, side-slip
-angle `beta`, and analytic side-slip rate `betaDot`. The gyro supplies `r_m`,
-and the known track-angle rate is
+The lateral stage supplies the division-free master lateral velocity `vy` and
+the persistent side-slip interface states `beta` and `betaDot`. The gyro
+supplies `r_m`, and the known track-angle rate is
 
 ```text
 q = r_m + betaDot.
@@ -30,9 +30,13 @@ z3Dot = q^2 z2 - 2 q z6     z6Dot = q^2 z5 + 2 q z3
 phiDot = r_m
 ```
 
-`runLateralVelocityObserver` holds its exported `vy`, `beta`, and `betaDot` at
-zero below the minimum scheduling speed, so the cascade remains finite at
-standstill while the internal lateral-observer state remains continuous.
+`runLateralVelocityObserver` never switches or resets an exported estimate. Its
+common `[vy,b_ay]` state runs at every speed; stationary, crawl, and certified
+LPV information enter through persistent correction-injection states. The LPV
+reciprocal-speed model is not evaluated outside its certificate. A second-order
+interface state tracks a `C2`-weighted `atan2(vy,vx)` command when the velocity
+direction is valid and tracks zero otherwise, so `beta` and `betaDot` remain
+continuous through stop--go transitions.
 The runtime preserves `q = r_m + betaDot` exactly and flags samples outside the
 certified track-rate envelope; it does not silently clip the physical input.
 It also reports when the estimated velocity or acceleration components leave
@@ -124,6 +128,7 @@ sensorData.highRate.longitudinalSpeed
 sensorData.highRate.longitudinalAcceleration
 sensorData.highRate.lateralAcceleration
 sensorData.highRate.yawRate
+sensorData.highRate.dynamicValid          % optional LPV-channel validity flag
 
 sensorData.gps.timestamp
 sensorData.gps.arrivalTime       % optional; defaults to timestamp

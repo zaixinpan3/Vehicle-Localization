@@ -176,11 +176,10 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         end
 
         function sideSlipRateIsConsistentWithTheSideSlipAngle(testCase)
-        % sideSlipRateIsConsistentWithTheSideSlipAngle: The analytic side-slip
-        % rate, taken from the first row of the observer right-hand side rather
-        % than by differentiating the estimate, agrees with a finite difference
-        % of the reported side-slip angle. This is the signal the ego-state
-        % observer consumes as part of the track-angle rate.
+        % sideSlipRateIsConsistentWithTheSideSlipAngle: The persistent
+        % side-slip interface state's rate agrees with a finite difference of
+        % its reported angle. This is the signal the ego-state observer
+        % consumes as part of the track-angle rate.
             design = testCase.StoredDesign;
             result = simulateLateralObserverScenario(design, design.cfg);
             estimate = result.estimate;
@@ -212,9 +211,9 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         end
 
         function lowSpeedHoldZeroesTheSideSlipOutputs(testCase)
-        % lowSpeedHoldZeroesTheSideSlipOutputs: Below the minimum scheduling
-        % speed the side-slip angle and its rate lose meaning, so both are held
-        % at zero and the hold is reported.
+        % lowSpeedHoldZeroesTheSideSlipOutputs: Below the valid side-slip speed
+        % the persistent interface tracks zero while the common lateral state
+        % remains free to converge continuously.
             design = testCase.StoredDesign;
             cfg = design.cfg;
             numSamples = 200;
@@ -234,6 +233,77 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(all(isfinite(estimate.state(:))));
         end
 
+        function zeroSpeedNeverEvaluatesTheReciprocalModel(testCase)
+        % zeroSpeedNeverEvaluatesTheReciprocalModel Corrupt the reciprocal
+        % coefficients and prove that the zero-speed execution path does not
+        % access them.
+            design = testCase.StoredDesign;
+            design.model.A2(:) = NaN;
+            design.model.C2(:) = NaN;
+            cfg = lateralObserverConfig();
+            cfg.observer.initialState = [1.0; 0.2];
+            cfg.hybrid.initialMasterState = [1.0; 0.0];
+            measurements = testCase.zeroMotionMeasurements(2.0);
+
+            estimate = runLateralVelocityObserver(measurements, design, cfg);
+
+            testCase.verifyFalse(any(estimate.diagnostics.dynamicModelEvaluated));
+            testCase.verifyTrue(all(isfinite(estimate.state), "all"));
+            testCase.verifyTrue(all(isfinite(estimate.dynamicState), "all"));
+            testCase.verifyEqual(estimate.lateralVelocity(1), 1.0, AbsTol=0.0);
+            testCase.verifyLessThan(abs(estimate.lateralVelocity(end)), 0.05);
+            testCase.verifyEqual(estimate.sideSlipAngle, ...
+                zeros(size(estimate.sideSlipAngle)), AbsTol=0.0);
+            testCase.verifyEqual(estimate.sideSlipAngleRate, ...
+                zeros(size(estimate.sideSlipAngleRate)), AbsTol=0.0);
+        end
+
+        function abruptValidityLossFadesTheStoredCorrection(testCase)
+        % abruptValidityLossFadesTheStoredCorrection A one-edge validity loss
+        % removes the raw target immediately but not the injected correction.
+            cfg = lateralObserverConfig();
+            cfg.observer.initialState = [0.0; 0.0];
+            cfg.hybrid.initialMasterState = [1.0; 0.0];
+            measurements = testCase.constantSpeedMeasurements(3.0, 10.0);
+            measurements.dynamicValid = measurements.time < 1.5;
+            firstInvalid = find(~measurements.dynamicValid, 1, "first");
+
+            estimate = runLateralVelocityObserver(measurements, testCase.StoredDesign, cfg);
+
+            testCase.verifyFalse(estimate.diagnostics.dynamicModelEvaluated(firstInvalid));
+            testCase.verifyEqual(estimate.correctionTarget.dynamic(firstInvalid, :), ...
+                zeros(1, 2), AbsTol=0.0);
+            testCase.verifyGreaterThan(norm( ...
+                estimate.correctionInjection.dynamic(firstInvalid, :)), 1.0e-6);
+            testCase.verifyLessThan(norm(estimate.correctionInjection.dynamic(end, :)), ...
+                norm(estimate.correctionInjection.dynamic(firstInvalid, :)));
+            testCase.verifyLessThan(abs(estimate.lateralVelocity(firstInvalid) - ...
+                estimate.lateralVelocity(firstInvalid - 1)), 1.0e-3);
+            testCase.verifyTrue(all(isfinite(estimate.sideSlipAngleRate)));
+        end
+
+        function stopGoModesShareOneContinuousOutputPath(testCase)
+        % stopGoModesShareOneContinuousOutputPath Exercise both speed edges,
+        % the stationary detector, and a deliberately mismatched hidden state.
+            cfg = lateralObserverConfig();
+            cfg.observer.initialState = [0.0; 0.10];
+            cfg.hybrid.initialMasterState = [0.80; 0.0];
+            measurements = testCase.stopGoMeasurements();
+
+            estimate = runLateralVelocityObserver(measurements, testCase.StoredDesign, cfg);
+            transitionStep = [0.0; abs(diff(estimate.lateralVelocity))];
+            transitionRateStep = [0.0; abs(diff(estimate.sideSlipAngleRate))];
+
+            testCase.verifyTrue(any(estimate.mode == "stationary"));
+            testCase.verifyTrue(any(estimate.mode == "crawl"));
+            testCase.verifyTrue(any(estimate.mode == "dynamic"));
+            testCase.verifyGreaterThanOrEqual(nnz(estimate.modeChanged), 4);
+            testCase.verifyLessThan(max(transitionStep(estimate.modeChanged)), 0.10);
+            testCase.verifyLessThan(max(transitionRateStep(estimate.modeChanged)), 0.10);
+            testCase.verifyTrue(all(isfinite(estimate.state), "all"));
+            testCase.verifyTrue(all(isfinite(estimate.sideSlipAngleRate)));
+        end
+
         function synthesisReproducesTheStoredDesign(testCase)
         % synthesisReproducesTheStoredDesign: Re-running the LMI synthesis
         % reproduces the stored gain schedule. Needs YALMIP and an SDP solver.
@@ -246,6 +316,52 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(resolved.h2Bound, design.h2Bound, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.gains, design.gains, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.certified);
+        end
+    end
+
+    methods (Static, Access = private)
+        function measurements = zeroMotionMeasurements(finalTime)
+        % zeroMotionMeasurements Build a stationary public-interface input.
+            time = (0:0.01:finalTime).';
+            sampleCount = numel(time);
+            measurements = struct("time", time, ...
+                "steeringAngle", zeros(sampleCount, 1), ...
+                "longitudinalSpeed", zeros(sampleCount, 1), ...
+                "longitudinalAcceleration", zeros(sampleCount, 1), ...
+                "lateralAcceleration", zeros(sampleCount, 1), ...
+                "yawRate", zeros(sampleCount, 1));
+        end
+
+        function measurements = constantSpeedMeasurements(finalTime, speed)
+        % constantSpeedMeasurements Build a straight constant-speed input.
+            time = (0:0.01:finalTime).';
+            sampleCount = numel(time);
+            measurements = struct("time", time, ...
+                "steeringAngle", zeros(sampleCount, 1), ...
+                "longitudinalSpeed", speed .* ones(sampleCount, 1), ...
+                "longitudinalAcceleration", zeros(sampleCount, 1), ...
+                "lateralAcceleration", zeros(sampleCount, 1), ...
+                "yawRate", zeros(sampleCount, 1));
+        end
+
+        function measurements = stopGoMeasurements()
+        % stopGoMeasurements Build dwell, smooth launch, cruise, and stop.
+            sampleTime = 0.01;
+            time = (0:sampleTime:6.0).';
+            riseFraction = min(max((time - 0.50) ./ 1.50, 0.0), 1.0);
+            fallFraction = min(max((time - 4.00) ./ 1.50, 0.0), 1.0);
+            rise = 6.0 .* riseFraction.^5 - 15.0 .* riseFraction.^4 + ...
+                10.0 .* riseFraction.^3;
+            fall = 6.0 .* fallFraction.^5 - 15.0 .* fallFraction.^4 + ...
+                10.0 .* fallFraction.^3;
+            speed = 8.0 .* rise .* (1.0 - fall);
+            sampleCount = numel(time);
+            measurements = struct("time", time, ...
+                "steeringAngle", zeros(sampleCount, 1), ...
+                "longitudinalSpeed", speed, ...
+                "longitudinalAcceleration", gradient(speed, sampleTime), ...
+                "lateralAcceleration", zeros(sampleCount, 1), ...
+                "yawRate", zeros(sampleCount, 1));
         end
     end
 end

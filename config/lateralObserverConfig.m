@@ -4,8 +4,10 @@ function cfg = lateralObserverConfig()
 % group defines the speed range covered by the polytope and the design grid
 % over speed and longitudinal acceleration; the synthesis group holds the
 % Lipschitz bound, the error weighting, and the LMI solver settings; the
-% observer group configures the online integration; the simulation group
-% defines the synthetic scenario used to exercise the observer.
+% observer group configures the online integration; the hybrid group defines
+% the division-free master estimator and its bumpless correction channels;
+% the simulation group defines the synthetic scenario used to exercise the
+% observer.
 %
 % The vehicle parameters are the archived lateral-observer values of the
 % original repository. They are a plausible mid-size sedan, not identified
@@ -64,7 +66,74 @@ function cfg = lateralObserverConfig()
     cfg.observer.integrationMethod = "rk4";
     cfg.observer.nonlinearity = @(x) zeros(2, 1);
     cfg.observer.initialState = [0.0; 0.0];
+    % Retained for compatibility. The hybrid side-slip interface uses the
+    % corresponding validSpeed field below and never hard-zeroes an estimate.
     cfg.observer.minimumSpeed = 1.0;
+
+    % Hybrid runtime. The common master state is [lateral velocity;
+    % lateral-accelerometer bias]. The LPV state above remains a hidden,
+    % continuously evolving information source and is evaluated only inside
+    % its certified speed interval. Mode logic changes correction targets,
+    % never the common state or an exported value.
+    cfg.hybrid = struct();
+    cfg.hybrid.initialMasterState = [];
+    cfg.hybrid.initialCorrectionState = zeros(2, 3);
+    cfg.hybrid.accelerometerBiasTimeConstant = 60.0;
+
+    cfg.hybrid.stationary = struct();
+    cfg.hybrid.stationary.entrySpeed = 0.10;
+    cfg.hybrid.stationary.exitSpeed = 0.20;
+    cfg.hybrid.stationary.maximumYawRate = 0.03;
+    cfg.hybrid.stationary.maximumLongitudinalAcceleration = 0.15;
+    cfg.hybrid.stationary.maximumLateralAcceleration = 0.15;
+    cfg.hybrid.stationary.minimumDwellTime = 0.10;
+
+    cfg.hybrid.crawl = struct();
+    cfg.hybrid.crawl.enabled = true;
+    cfg.hybrid.crawl.maximumSteeringAngle = 0.60;
+
+    % Each pseudo-measurement acts through a persistent correction-injection
+    % state. A positive biasGain is applied with a negative sign so a positive
+    % lateral-velocity residual reduces the estimated accelerometer bias.
+    cfg.hybrid.correction = struct();
+    cfg.hybrid.correction.stationary = struct( ...
+        "timeConstant", 0.08, "velocityGain", 12.0, "biasGain", 2.0);
+    cfg.hybrid.correction.crawl = struct( ...
+        "timeConstant", 0.15, "velocityGain", 2.0, "biasGain", 0.20);
+    cfg.hybrid.correction.dynamic = struct( ...
+        "timeConstant", 0.08, "velocityGain", 12.0, "biasGain", 0.50);
+
+    % The dynamic correction reaches full participation above the lower
+    % transition band and fades back to zero before either speed-certificate
+    % boundary. Residual scores use quintic smooth steps, so their first two
+    % derivatives vanish at the edges of every ordinary transition band.
+    cfg.hybrid.dynamic = struct();
+    cfg.hybrid.dynamic.fullParticipationSpeed = 6.0;
+    cfg.hybrid.dynamic.upperFullParticipationSpeed = 29.0;
+    cfg.hybrid.dynamic.fullLateralAcceleration = 4.0;
+    cfg.hybrid.dynamic.zeroLateralAcceleration = 7.0;
+    cfg.hybrid.dynamic.fullLateralInnovation = 2.0;
+    cfg.hybrid.dynamic.zeroLateralInnovation = 8.0;
+    cfg.hybrid.dynamic.fullYawInnovation = 0.05;
+    cfg.hybrid.dynamic.zeroYawInnovation = 0.40;
+
+    % Outside the LPV certificate the hidden state follows the common master
+    % and measured yaw rate through a nonsingular shadow model. No reciprocal
+    % speed is formed in this branch.
+    cfg.hybrid.shadow = struct();
+    cfg.hybrid.shadow.lateralVelocityTrackingGain = 8.0;
+    cfg.hybrid.shadow.yawRateTrackingGain = 15.0;
+
+    % A persistent second-order interface state exports beta and betaDot.
+    % It tracks zero while the velocity direction is undefined and tracks the
+    % wrapped atan2 command when it is valid; the state is never reset.
+    cfg.hybrid.sideSlip = struct();
+    cfg.hybrid.sideSlip.validSpeed = cfg.observer.minimumSpeed;
+    cfg.hybrid.sideSlip.fullParticipationSpeed = ...
+        cfg.hybrid.dynamic.fullParticipationSpeed;
+    cfg.hybrid.sideSlip.naturalFrequency = 12.0;
+    cfg.hybrid.sideSlip.dampingRatio = 1.0;
+    cfg.hybrid.sideSlip.initialState = [];
 
     % Synthetic scenario: sinusoidal longitudinal acceleration so the
     % scheduling parameter and its rate are both exercised, with a
