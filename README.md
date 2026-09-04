@@ -19,6 +19,7 @@ organized LiDAR frame
    │    offGroundFeatures/extractOffGroundFeatures P_ng → poles, facades, traffic signs
    │    buildFeaturePointMasks         one full-frame mask per feature class
    │    semanticProduct/               optional fused 3D semantic voxel grid and refined points
+   │    perceiveCoarseProbabilityCloud optional voxel-only sparse 2D semantic NDT cloud
    │
    ├─ mapping/buildFeatureMap ──────────────────────────────────────────── §III.B
    │    readFramePoseTable, matchFramePoses      high-precision GNSS/INS pose per frame
@@ -75,6 +76,11 @@ organized LiDAR frame
 * `semanticProduct/` fuses both branches into semantic tags on the 3D voxel grid
   (`buildSemanticVoxelGrid`) and recovers refined per-class points
   (`refineSemanticPoints`); `mapping/buildSemanticNdtGridMap` consumes it.
+* `perceiveCoarseProbabilityCloud` is the low-latency alternative for online
+  coarse validation. It retains curb/marking decisions on the ground raster and
+  pole decisions on sparse vertical-column statistics, skips point-semantic and
+  dense 3D semantic products, and emits 0.9 m aligned 2D Gaussian components
+  with semantic-evidence, hit-support, and mixture probabilities.
 
 ### Mapping (`mapping/`)
 
@@ -144,6 +150,7 @@ on top of its config files):
 | config | consumed by |
 | --- | --- |
 | `perceptionConfig` | `perceiveFrame` (aggregates the four below) |
+| `coarseSemanticProbabilityCloudConfig` | `perceiveCoarseProbabilityCloud`, `buildCoarseSemanticProbabilityCloud` |
 | `frameVoxelizationConfig` | `voxelizePointCloud` |
 | `groundSegmentationConfig` | `segmentGround` |
 | `groundFeatureConfig` (`.curb`, `.road`, `.roadMarking`) | `extractGroundFeatures` |
@@ -161,6 +168,10 @@ setupVehicleLocalization();                       % add modules to the path
 frame = loadPointCloudFrame("data/raw/MissisipiPointClouds.mat", 260);
 perception = perceiveFrame(frame, perceptionConfig());
 nnz(perception.featureMasks.curb)                 % curb points of this frame
+
+localCloud = perceiveCoarseProbabilityCloud(frame, perceptionConfig());
+selfScore = scoreSemanticProbabilityCloudAlignment( ...
+    localCloud, localCloud, [0, 0, 0]);           % semantic D2D-NDT score
 
 [probabilityCloudMap, featureData] = buildFeatureMap("data");   % offline map
 scores = queryTemporalStabilityGmmMap(probabilityCloudMap, queryXY, "pole");

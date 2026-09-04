@@ -8,11 +8,13 @@ function cfg = perceptionConfig()
 %   none
 %
 % Output:
-%   cfg: struct with fields voxel, groundSegmentation, groundFeatures, and
-%       offGroundFeatures, each produced by the matching stage config
+%   cfg: struct with fields executionMode, voxel, groundSegmentation,
+%       groundFeatures, offGroundFeatures, and coarseProbabilityCloud
     cfg = struct();
+    cfg.executionMode = "full";
     cfg.voxel = frameVoxelizationConfig();
     cfg.groundSegmentation = groundSegmentationConfig();
     cfg.groundFeatures = groundFeatureConfig();
     cfg.offGroundFeatures = offGroundFeatureConfig();
+    cfg.coarseProbabilityCloud = coarseSemanticProbabilityCloudConfig();
 end

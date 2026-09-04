@@ -696,8 +696,9 @@ function filteredMask = filterPoleCandidatesByObjectLayerSupport(componentMask, 
 %
 % Input:
 %   componentMask: [Ny x Nx] logical raw pole-candidate mask
-%   fineVoxelGrid: struct with count3D in the same [Ny x Nx x Nz] layout
-%       as componentMask and occupiedLayerMinPoints metadata
+%   fineVoxelGrid: struct with either count3D in the same [Ny x Nx x Nz]
+%       layout as componentMask or sparse voxel column/z/count arrays, plus
+%       occupiedLayerMinPoints metadata
 %   params: struct from resolvePoleDetectionParams with
 %       minCandidateSliceCount and occupiedLayerMinPoints
 %
@@ -708,8 +709,16 @@ function filteredMask = filterPoleCandidatesByObjectLayerSupport(componentMask, 
     if ~any(componentMask(:))
         return;
     end
-    if ~isstruct(fineVoxelGrid) || ~isfield(fineVoxelGrid, "count3D") || isempty(fineVoxelGrid.count3D) || ...
-            ndims(fineVoxelGrid.count3D) ~= 3 || ~isequal(size(componentMask), [size(fineVoxelGrid.count3D, 1), size(fineVoxelGrid.count3D, 2)])
+    hasDenseGrid = isstruct(fineVoxelGrid) && isfield(fineVoxelGrid, "count3D") && ...
+        ~isempty(fineVoxelGrid.count3D) && ndims(fineVoxelGrid.count3D) == 3 && ...
+        isequal(size(componentMask), ...
+        [size(fineVoxelGrid.count3D, 1), size(fineVoxelGrid.count3D, 2)]);
+    hasSparseGrid = isstruct(fineVoxelGrid) && ...
+        all(isfield(fineVoxelGrid, ["sparseVoxelColumnLinIdx", ...
+        "sparseVoxelZBin", "sparseVoxelCount", "sparseMapSize", ...
+        "sparseNumZLayers"])) && ...
+        isequal(double(fineVoxelGrid.sparseMapSize(:).'), double(size(componentMask)));
+    if ~hasDenseGrid && ~hasSparseGrid
         filteredMask = logical(componentMask);
         return;
     end
@@ -735,22 +744,36 @@ function filteredMask = filterPoleCandidatesByObjectLayerSupport(componentMask, 
         componentIdMap(cc.PixelIdxList{iComp}) = uint32(iComp);
     end
 
-    count3D = fineVoxelGrid.count3D;
-    nonzeroVoxelIdx = find(count3D > 0);
-    if isempty(nonzeroVoxelIdx)
-        return;
+    if hasDenseGrid
+        count3D = fineVoxelGrid.count3D;
+        nonzeroVoxelIdx = find(count3D > 0);
+        if isempty(nonzeroVoxelIdx)
+            return;
+        end
+        [yBin, xBin, zBin] = ind2sub(size(count3D), nonzeroVoxelIdx);
+        xyLinIdx = sub2ind(size(componentMask), yBin, xBin);
+        voxelCount = double(count3D(nonzeroVoxelIdx));
+        numZLayers = size(count3D, 3);
+    else
+        xyLinIdx = double(fineVoxelGrid.sparseVoxelColumnLinIdx(:));
+        zBin = double(fineVoxelGrid.sparseVoxelZBin(:));
+        voxelCount = double(fineVoxelGrid.sparseVoxelCount(:));
+        numZLayers = double(fineVoxelGrid.sparseNumZLayers);
+        validSparseVoxel = isfinite(xyLinIdx) & xyLinIdx >= 1 & ...
+            xyLinIdx <= numel(componentMask) & xyLinIdx == floor(xyLinIdx) & ...
+            isfinite(zBin) & zBin >= 1 & zBin <= numZLayers & ...
+            zBin == floor(zBin) & isfinite(voxelCount) & voxelCount > 0;
+        xyLinIdx = xyLinIdx(validSparseVoxel);
+        zBin = zBin(validSparseVoxel);
+        voxelCount = voxelCount(validSparseVoxel);
     end
-
-    [yBin, xBin, zBin] = ind2sub(size(count3D), nonzeroVoxelIdx);
-    xyLinIdx = sub2ind(size(componentMask), yBin, xBin);
     componentId = double(componentIdMap(xyLinIdx));
     validVoxel = componentId > 0;
     if ~any(validVoxel)
         return;
     end
-
     layerCounts = accumarray([componentId(validVoxel), double(zBin(validVoxel))], ...
-        double(count3D(nonzeroVoxelIdx(validVoxel))), [cc.NumObjects, size(count3D, 3)], @sum, 0);
+        voxelCount(validVoxel), [cc.NumObjects, numZLayers], @sum, 0);
     keepComponent = sum(layerCounts >= occupiedLayerMinPoints, 2) >= minCandidateSliceCount;
     if any(keepComponent)
         filteredMask = ismember(componentIdMap, uint32(find(keepComponent)));

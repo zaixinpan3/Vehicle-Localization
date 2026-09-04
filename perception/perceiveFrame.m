@@ -23,15 +23,39 @@ function perception = perceiveFrame(frame, cfg)
 %       ground: struct returned by extractGroundFeatures
 %       offGround: struct returned by extractOffGroundFeatures
 %       featureMasks: struct of full-frame logical masks (groundPoint, curb,
-%           roadMarking, pole, trafficSign, facade)
+%           roadMarking, pole, trafficSign, facade). When executionMode is
+%           "coarseProbabilityCloud", the function instead returns a compact
+%           wrapper used by perceiveCoarseProbabilityCloud and does not run
+%           point-level feature refinement.
     assert(isstruct(frame) && all(isfield(frame, ["x", "y", "z"])), ...
         "frame must be an organized point-cloud struct with x, y, and z fields.");
     assert(isstruct(cfg) && all(isfield(cfg, ["voxel", "groundSegmentation", "groundFeatures", "offGroundFeatures"])), ...
         "cfg must be a struct from perceptionConfig.");
 
+    coarseMode = isCoarseProbabilityCloudMode(cfg);
     voxelGrid = voxelizePointCloud(frame, cfg.voxel);
     groundPointIdx = segmentGround(voxelGrid, cfg.groundSegmentation);
-    [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2));
+    [groundContext, offGroundVoxelGrid] = buildBranchInputs( ...
+        frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2), ~coarseMode);
+
+    if coarseMode
+        coarseCfg = resolveCoarseProbabilityCloudConfig(cfg);
+        ground = extractCoarseGroundVoxelFeatures(groundContext, cfg.groundFeatures, coarseCfg);
+        offGround = extractCoarseOffGroundVoxelFeatures(offGroundVoxelGrid, cfg.offGroundFeatures, coarseCfg);
+        probabilityCloud = buildCoarseSemanticProbabilityCloud(ground, offGround, coarseCfg);
+        perception = struct();
+        perception.executionMode = "coarseProbabilityCloud";
+        perception.probabilityCloud = probabilityCloud;
+        perception.sourceSummary = struct( ...
+            "numFramePoints", double(numel(frame.x)), ...
+            "numRetainedPoints", double(voxelGrid.numFilteredPoints), ...
+            "numGroundPoints", double(size(groundContext.groundPoints, 1)), ...
+            "numOffGroundPoints", double(size(offGroundVoxelGrid.points, 1)));
+        if logical(coarseCfg.storeDiagnostics)
+            perception.diagnostics = struct("ground", ground, "offGround", offGround);
+        end
+        return;
+    end
 
     ground = extractGroundFeatures(groundContext, frame, cfg.groundFeatures);
     offGround = extractOffGroundFeatures(offGroundVoxelGrid, cfg.offGroundFeatures);
@@ -46,7 +70,7 @@ function perception = perceiveFrame(frame, cfg)
     perception.featureMasks = buildFeaturePointMasks(frame, ground, offGround, offGroundVoxelGrid, groundPointIdx);
 end
 
-function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGrid, groundPointIdx, cellSizeXY)
+function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGrid, groundPointIdx, cellSizeXY, storeDenseOffGroundCount)
 % buildBranchInputs: Split the voxelized frame at the ground segmentation
 % into the inputs of the two feature branches: the ground context (ground
 % points, their XY raster cells, and reflectivity) and the canonical voxel
@@ -58,10 +82,15 @@ function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGri
 %   voxelGrid: canonical voxel grid of the frame
 %   groundPointIdx: original point indices returned by segmentGround
 %   cellSizeXY: [1 x 2] XY cell size of the ground raster in meters
+%   storeDenseOffGroundCount: logical scalar selecting the dense 3D count
+%       tensor required by the full point-refinement branch
 %
 % Output:
 %   groundContext: struct accepted by extractGroundFeatures
 %   offGroundVoxelGrid: canonical off-ground voxel grid
+    if nargin < 5
+        storeDenseOffGroundCount = true;
+    end
     groundXYView = buildGroundXYView(voxelGrid, cellSizeXY);
     pointIndices = double(voxelGrid.pointIndices(:));
     pointCellLinIdx = double(groundXYView.pointCellLinIdx(:));
@@ -83,7 +112,8 @@ function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGri
     groundContext.groundReflectivity = extractFrameScalar(frame, voxelGrid.pointIndices, validGroundMap, "reflectivity", "intensity");
     groundContext.groundCellLinIdx = double(pointCellLinIdx(validGroundMap));
 
-    offGroundVoxelGrid = deriveOffGroundVoxelGrid(voxelGrid, find(offGroundPointMask));
+    offGroundVoxelGrid = deriveOffGroundVoxelGrid( ...
+        voxelGrid, find(offGroundPointMask), logical(storeDenseOffGroundCount));
 end
 
 function xyView = buildGroundXYView(voxelGrid, cellSizeXY)
@@ -214,7 +244,7 @@ function scalarValues = extractFrameScalar(frame, pointIndices, pointMask, prima
     scalarValues = double(scalarValues(:));
 end
 
-function offGroundVoxelGrid = deriveOffGroundVoxelGrid(sourceVoxelGrid, sourceLocalIdx)
+function offGroundVoxelGrid = deriveOffGroundVoxelGrid(sourceVoxelGrid, sourceLocalIdx, storeDenseCount)
 % deriveOffGroundVoxelGrid: Build a compact canonical voxel grid for
 % selected off-ground points by cropping and reindexing the source frame
 % voxel grid.
@@ -222,9 +252,14 @@ function offGroundVoxelGrid = deriveOffGroundVoxelGrid(sourceVoxelGrid, sourceLo
 % Input:
 %   sourceVoxelGrid: canonical voxelizePointCloud output for the frame
 %   sourceLocalIdx: [K x 1] local retained-point indices to keep
+%   storeDenseCount: logical scalar; false keeps only sparse point/voxel
+%       lookup arrays for the coarse probability-cloud path
 %
 % Output:
 %   offGroundVoxelGrid: canonical voxelizePointCloud-compatible subset
+    if nargin < 3
+        storeDenseCount = true;
+    end
     sourceLocalIdx = double(sourceLocalIdx(:));
     sourceLocalIdx = sourceLocalIdx(isfinite(sourceLocalIdx) & sourceLocalIdx >= 1 & sourceLocalIdx <= size(sourceVoxelGrid.points, 1) & sourceLocalIdx == floor(sourceLocalIdx));
     sourceLocalIdx = unique(sourceLocalIdx, "stable");
@@ -240,7 +275,11 @@ function offGroundVoxelGrid = deriveOffGroundVoxelGrid(sourceVoxelGrid, sourceLo
     dims = maxSub - minSub + 1;
     shiftedSub = sourceSub - minSub + 1;
     pointVoxelLinIdx = sub2ind(double(dims), shiftedSub(:, 1), shiftedSub(:, 2), shiftedSub(:, 3));
-    count = single(accumarray(shiftedSub, 1, double(dims), @sum, 0));
+    if storeDenseCount
+        count = single(accumarray(shiftedSub, 1, double(dims), @sum, 0));
+    else
+        count = zeros(0, 0, 0, "single");
+    end
     [occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets, voxelPointLocalIdx] = buildDerivedVoxelPointMapping(pointVoxelLinIdx, dims);
     selectedPointIndices = int32(sourceVoxelGrid.pointIndices(sourceLocalIdx));
     voxelPointIndices = int32(selectedPointIndices(double(voxelPointLocalIdx(:))));
@@ -367,4 +406,21 @@ function [occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets, voxelPointLo
     voxelPointOffsets = int32([occupiedStartIdx; numel(sortedLinIdx) + 1]);
     [xSub, ySub, zSub] = ind2sub(double(dims), double(occupiedVoxelLinIdx));
     occupiedVoxelSub = int32([xSub(:), ySub(:), zSub(:)]);
+end
+
+function coarseMode = isCoarseProbabilityCloudMode(cfg)
+% isCoarseProbabilityCloudMode: Resolve the explicit execution-mode switch
+% used only by the dedicated coarse probability-cloud entry point.
+    coarseMode = isfield(cfg, "executionMode") && ...
+        lower(strtrim(string(cfg.executionMode))) == "coarseprobabilitycloud";
+end
+
+function coarseCfg = resolveCoarseProbabilityCloudConfig(cfg)
+% resolveCoarseProbabilityCloudConfig: Select the configured coarse product
+% settings or their repository defaults.
+    if isfield(cfg, "coarseProbabilityCloud") && isstruct(cfg.coarseProbabilityCloud)
+        coarseCfg = cfg.coarseProbabilityCloud;
+    else
+        coarseCfg = coarseSemanticProbabilityCloudConfig();
+    end
 end
