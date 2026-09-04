@@ -3,7 +3,7 @@ function rootDir = setupVehicleLocalization()
 % path in pipeline order: configuration, perception (with its ground and
 % off-ground feature branches and the semantic product), mapping (with the
 % temporal-stability Gaussian support map), and localization (with the LPV
-% lateral-velocity observer).
+% lateral-velocity observer and the seven-state improved observer).
 %
 % Input:
 %   none
@@ -21,4 +21,5 @@ function rootDir = setupVehicleLocalization()
     addpath(fullfile(rootDir, "mapping", "temporalStabilityGmm"));
     addpath(fullfile(rootDir, "localization"));
     addpath(fullfile(rootDir, "localization", "lateralObserver"));
+    addpath(fullfile(rootDir, "localization", "improvedObserver"));
 end

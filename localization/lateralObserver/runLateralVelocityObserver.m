@@ -14,9 +14,9 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
 % consumes: the side-slip angle and, crucially, its rate, which enters the
 % track-angle rate as thetaDot = yawRate + sideSlipRate. The rate is taken
 % analytically from the first row of the observer right-hand side, never by
-% differentiating the estimate numerically. Below cfg.observer.minimumSpeed
-% the side-slip outputs are held at zero, because atan2(vy, Vx) and its rate
-% lose meaning as the speed vanishes.
+% differentiating the estimate numerically. Below cfg.observer.minimumSpeed,
+% the exported lateral velocity and side-slip signals are held at zero because
+% they lose meaning as the speed vanishes; the internal state remains continuous.
 %
 % Input:
 %   measurements: struct with column series time, steeringAngle,
@@ -91,9 +91,10 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
         assert(all(isfinite(state)), "The lateral observer diverged at sample %d.", sampleIdx);
     end
 
-    % Side-slip angle and its analytic rate, both held at zero below the
-    % minimum scheduling speed where they lose meaning
+    % Hold the exported cascade interface at zero below the minimum speed;
+    % retain stateHistory as the continuous internal observer state.
     lateralVelocity = stateHistory(:, 1);
+    lateralVelocity(lowSpeedHold) = 0.0;
     sideSlipAngle = atan2(lateralVelocity, scheduledSpeed);
     sideSlipDenominator = (scheduledSpeed.^2) + (lateralVelocity.^2);
     sideSlipAngleRate = ((lateralVelocityRate .* scheduledSpeed) - ...
@@ -200,5 +201,6 @@ function measurements = normalizeMeasurements(measurements)
         measurements.(fieldName) = series;
     end
     assert(all(diff(measurements.time) > 0), "measurements.time must be strictly increasing.");
-    assert(all(measurements.longitudinalSpeed > 0), "measurements.longitudinalSpeed must be strictly positive.");
+    assert(all(measurements.longitudinalSpeed >= 0), ...
+        "measurements.longitudinalSpeed must be nonnegative.");
 end

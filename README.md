@@ -46,6 +46,11 @@ organized LiDAR frame
           scheduleLateralObserverGain   gain lookup along the trajectory
           runLateralVelocityObserver    online estimation of v_y, r, and side slip
           simulateLateralObserverScenario  synthetic drive with noisy IMU
+        improvedObserver/             complete cascaded seven-state observer
+          runImprovedVehicleObserver    delayed GPS/lidar fusion and replay
+          designImprovedObserverGains   robust LMI synthesis over 65,536 vertices
+          verifyImprovedObserverDesign  exhaustive numerical certificate check
+          simulateImprovedObserverScenario  delay, dropout, and degeneracy scenario
 ```
 
 ### Perception (`perception/`)
@@ -84,7 +89,8 @@ seeded, and which components survive*, never the EM updates themselves.
 
 ### Localization (`localization/`)
 
-Two estimators live here, on different states.
+Three estimator components live here. The improved observer composes the two
+state estimators as a one-way cascade.
 
 The **global ego-state estimator** is the retrodictive-replay high-gain observer
 (Bessafa et al., 2026) on the transformed state `[X, Vx, Ax, Y, Vy, Ay]` in the
@@ -109,17 +115,11 @@ H2 gain from measurement noise to the estimation error `z = Q^(1/2) e`.
 `designLateralObserverGains` then re-checks the recovered gains against the
 original, non-convexified certificate.
 
-This block is not an end in itself. It is block 1 of the improved ego-state
-observer architecture set out in `localization/improved_observer_derivation.md`,
-which extends the Bessafa framework rather than replacing it: the same
-Zemouche-Boutayeb LPV decomposition, the same Theorem 5 LMI shape, the same
-high-gain scaling and ISS bound. In that architecture the lateral block runs
-open of the high-gain observer, taking only wheel speed, steering angle and the
-gyro, and hands over the side-slip angle and its rate; the high-gain observer
-consumes them as exogenous known signals through the track-angle rate
-`thetaDot = r_m + betaDot`, so the two stages cascade without a loop. The
-interface is therefore what matters here, and
-`runLateralVelocityObserver` supplies exactly it:
+This block is block 1 of the improved ego-state observer. It runs open of the
+global observer, taking only wheel speed, steering angle, and IMU signals. It
+hands over the side-slip angle and its rate as exogenous known signals through
+the track-angle rate `q = r_m + betaDot`, so the two stages cascade without a
+loop. `runLateralVelocityObserver` supplies exactly this interface:
 
 * `sideSlipAngle` and `sideSlipAngleRate`, the rate taken analytically from the
   first row of the observer right-hand side, never by differentiating the
@@ -127,14 +127,20 @@ interface is therefore what matters here, and
 * `longitudinalSpeedRate`, rebuilt as `ax + vy*r` because the IMU reports a
   specific force and not the speed derivative, and it is that rate which both
   schedules the gain and enters the side-slip rate;
-* `lowSpeedHold`, which zeroes both side-slip outputs below the minimum
-  scheduling speed where they lose meaning.
+* `lowSpeedHold`, which zeroes the exported lateral velocity and both side-slip
+  outputs below the minimum scheduling speed where they lose meaning.
 
-Not yet built, and needed before the architecture is complete: the seven-state
-augmented observer with heading as its own block, the gyro-as-input rewrite of
-`f` that removes the `v = 0` singularity, the invariant outputs with their
-block-coupling constraint, and the Lyapunov-shaped lidar channel weighted by the
-scan-matching information matrix.
+The completed global stage is in `localization/improvedObserver/`. Its state is
+`[X,Vx,Ax,Y,Vy,Ay,phi]`; it uses the nonsingular known-input model
+`z3Dot=q^2*z2-2*q*z6`, `z6Dot=q^2*z5+2*q*z3`, and `phiDot=r_m`. GPS position and
+lidar heading form the base output, lidar position receives the
+`T*P^-1*Cl'*W(t)` information-shaped correction, and four invariant outputs
+couple velocity, acceleration, heading, and side slip. The robust certificate
+enumerates all 65,536 combinations of the 13-coefficient output box, heading
+weight endpoints, and exact known-input vertices. Delayed or out-of-order poses
+are replayed at physical timestamps. See
+`localization/improvedObserver/README.md` for equations, data interfaces, and
+the precise certificate boundary.
 
 ## Configuration (`config/`)
 
@@ -154,6 +160,7 @@ on top of its config files):
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |
 | `replayObserverConfig` | `runReplayHighGainObserver`, `designReplayObserverGains` |
 | `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` |
+| `improvedObserverConfig` | `designImprovedObserverGains`, `runImprovedVehicleObserver` |
 
 ## Quick start
 
@@ -170,12 +177,17 @@ result = simulateReplayObserverScenario(designedCfg);           % observer demo
 
 design = designLateralObserverGains(lateralObserverConfig());   % LPV H2 synthesis
 estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
+
+lateral = load("tests/reference/lateralObserverDesign.mat");
+improved = improvedObserverReferenceDesign();
+result = simulateImprovedObserverScenario( ...
+    improved, lateral.design, improvedObserverConfig());        % complete cascade
 ```
 
 `scripts/` holds the runnable entry points: `extractPointCloudsFromBag.m` and
 `extractGnssFromBag.py` (ROS bag → MAT frames and GNSS/INS CSV tables),
 `buildMississippiFeatureMap.m`, `runReplayObserverDesign.m`, and
-`runLateralObserverDesign.m`.
+`runLateralObserverDesign.m`, and `runImprovedObserverDesign.m`.
 
 ### Data layout expected under `dataRoot`
 
@@ -252,6 +264,12 @@ certificate of the proposition (negative definite Lyapunov derivative,
 `trace(L' P L) < mu`, stable error matrix) at each grid point. The archived
 `legacy/config/hgoLateralObserverConfig.m` of the original repository supplied
 the vehicle parameters; its implementation no longer existed there.
+
+`localization/improvedObserver/` is likewise new code. Its tests independently
+check the nonsingular model and invariant equations, directional lidar weights,
+zero-speed and wrapped-angle behavior, bounded replay rejection, all 65,536
+robust-LMI combinations, and a deterministic end-to-end case containing pose
+delay, out-of-order delivery, GPS dropout, and lidar degeneracy.
 
 Deliberately left behind: profiling and visualization scripts, the `legacy/`
 folder, the unused `seedOnly` and `iterativePca` ground modes, the
