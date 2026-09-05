@@ -1,0 +1,4 @@
+frameIndex,retainedPoints,occupiedPillars,xyMilliseconds,xyzMilliseconds,additionalMilliseconds,maximumXYMeanError,maximumXYScatterError
+260,51577,10366,1.1768565,1.7808565,0.604,0,0
+550,51237,15210,1.2008565,1.8798565,0.679,0,0
+900,53451,13745,1.2308565,1.9418565,0.711,0,0
