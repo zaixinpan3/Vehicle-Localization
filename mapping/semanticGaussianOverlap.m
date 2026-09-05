@@ -3,6 +3,10 @@ function [energy, gradient] = semanticGaussianOverlap(fixed, moving, pose)
 % Integral N(x;a,A) N(x;b,B) dx = N(a;b,A+B). Covariance is
 % rotated with the mean; derivatives include the rotating covariance term.
 % Inputs are component structs already validated at the API boundary.
+    if size(fixed.mean,2)==3
+        [energy,gradient]=spatialGaussianOverlap(fixed,moving,pose);
+        return;
+    end
     c = cos(pose(3)); s = sin(pose(3));
     rotation = [c -s; s c];
     means = moving.mean*rotation.' + pose(1:2);

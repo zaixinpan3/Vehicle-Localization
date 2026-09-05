@@ -13,4 +13,11 @@ function cfg = distributionRegistrationConfig()
     cfg.minimumComponents = 3;
     cfg.minimumScaledCurvature = 1e-5;
     cfg.minimumCurvatureRatio = 1e-4;
+    % Height is retained by default, but XYZ matching is opt-in until its
+    % coarse/fine vertical sampling mismatch is calibrated on independent data.
+    cfg.heightMode = "xy";
+    cfg.heightTranslation = NaN; % Moving origin in map Z; never assume zero.
+    % Engineering uncertainty defaults, not calibrated sensor specifications.
+    cfg.heightStandardDeviation = 0.20;
+    cfg.tiltStandardDeviation = deg2rad(0.5);
 end

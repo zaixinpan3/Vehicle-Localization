@@ -1,9 +1,11 @@
-function [pose, tiltRotation] = poseRowToPlanarPose(row)
+function [pose, tiltRotation, heightTranslation] = poseRowToPlanarPose(row)
 % poseRowToPlanarPose: Split a mapping pose into SE(2) and known IMU tilt.
 % Uses the same vehicle x-forward/y-left/z-up convention and quaternion as
 % registerPointsToGlobalFrame. R_global = R_yaw * tiltRotation. Applying
 % tiltRotation to source moments before XY projection makes D2D consistent
 % with the full 3D offline map transform. Azimuth-only records have zero tilt.
+% Third output heightTranslation is the moving-origin map Z, or NaN when
+% absent. It is an external reference, not an estimated registration state.
     fields=["odom_qw" "odom_qx" "odom_qy" "odom_qz"];
     rotation=[];
     if all(ismember(fields,string(row.Properties.VariableNames)))
@@ -24,4 +26,8 @@ function [pose, tiltRotation] = poseRowToPlanarPose(row)
         tiltRotation=r.'*rotation;
     end
     pose=[double(row.odom_x_m(1)),double(row.odom_y_m(1)),yaw];
+    heightTranslation = NaN;
+    if ismember("odom_z_m",string(row.Properties.VariableNames))
+        heightTranslation = double(row.odom_z_m(1));
+    end
 end

@@ -1,5 +1,5 @@
 function mapInput = assembleMapInput(featureData, cfg)
-% assembleMapInput: Assemble BEV [x y] map-builder inputs from
+% assembleMapInput: Assemble XYZ observations and compatible BEV inputs from
 % per-feature/per-frame semantic point clouds, excluding facade by
 % construction and only passing classes with enough points across at least
 % two frame bins to the fail-fast GMM builder.
@@ -9,7 +9,7 @@ function mapInput = assembleMapInput(featureData, cfg)
 %   cfg: test configuration struct with map-input thresholds
 %
 % Output:
-%   mapInput: struct with points, labels, timestamps, allFeatureNames,
+%   mapInput: struct with points (XY), pointsXYZ, labels, timestamps, allFeatureNames,
 %       buildFeatureNames, pointsByFeature, timestampsByFeature, and counts
     featureNames = string(featureData.featureNames(:));
     frameIndices = double(featureData.frameIndices(:).');
@@ -41,6 +41,7 @@ function mapInput = assembleMapInput(featureData, cfg)
     buildFeatureNames = featureNames(buildFeatureMask);
     totalBuildPointCount = sum(buildPointCounts(buildFeatureMask));
     points = zeros(totalBuildPointCount, 2);
+    pointsXYZ = zeros(totalBuildPointCount, 3);
     labels = strings(totalBuildPointCount, 1);
     timestamps = zeros(totalBuildPointCount, 1);
     writeIdx = 1;
@@ -51,6 +52,7 @@ function mapInput = assembleMapInput(featureData, cfg)
         pointCount = size(featurePoints, 1);
         rangeIdx = writeIdx:(writeIdx + pointCount - 1);
         points(rangeIdx, :) = featurePoints(:, 1:2);
+        pointsXYZ(rangeIdx, :) = featurePoints(:, 1:3);
         labels(rangeIdx, 1) = repmat(featureNames(featureIdx), pointCount, 1);
         timestamps(rangeIdx, 1) = featureTimestamps(:);
         writeIdx = writeIdx + pointCount;
@@ -58,6 +60,7 @@ function mapInput = assembleMapInput(featureData, cfg)
 
     mapInput = struct();
     mapInput.points = points;
+    mapInput.pointsXYZ = pointsXYZ;
     mapInput.labels = labels;
     mapInput.timestamps = timestamps;
     mapInput.allFeatureNames = featureNames;

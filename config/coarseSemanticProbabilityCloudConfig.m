@@ -2,7 +2,7 @@ function cfg = coarseSemanticProbabilityCloudConfig()
 % coarseSemanticProbabilityCloudConfig: Parameters for the fast, strictly
 % pillar-classified 2D semantic probability cloud. Feature decisions stay on
 % the ground-cell and vertical-column rasters; selected cell geometry is
-% accumulated into regularized 2D NDT components for distribution-to-
+% accumulated into regularized XYZ components with an XY marginal for distribution-to-
 % distribution matching.
 %
 % Input:
@@ -40,5 +40,6 @@ function cfg = coarseSemanticProbabilityCloudConfig()
     cfg.minCovarianceEigenvalue = 1.0e-2;
     cfg.maxCovarianceEigenvalue = 4.0;
     cfg.regularizationVariance = 1.0e-4;
+    cfg.minimumConditionalHeightVariance = 1.0e-4;
     cfg.storeDiagnostics = false;
 end

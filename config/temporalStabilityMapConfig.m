@@ -19,6 +19,7 @@ function cfg = temporalStabilityMapConfig()
     cfg = struct();
     cfg.classes = strings(0, 1);
     cfg.pcaEpsilon = 1.0e-6;
+    cfg.minimumConditionalHeightVariance = 1.0e-4;
     cfg.logEnabled = false;
     cfg.defaultParams = classParameters("", 3.0, 1.0, 16, 2.5, 8.0, 2);
     cfg.classParams = [

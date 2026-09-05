@@ -21,9 +21,12 @@ function gmmMap = buildTemporalStabilityGmmMap(points, labels, timestamps, cfg)
 % conditions. Temporal information may affect sampling, initialization,
 % component pruning, and support amplitude, but not EM responsibility
 % normalization, M-step parameter updates, or convergence objective.
+% XYZ input additionally fits a responsibility-weighted conditional Gaussian
+% p(z|XY,component) on the same resampled returns after the XY model is final.
+% This retains full XYZ covariance and leaves the XY fit and query unchanged.
 %
 % Input:
-%   points: [N x 2] numeric BEV feature point coordinates
+%   points: [N x 2] BEV or [N x 3] global XYZ feature point coordinates
 %   labels: [N x 1] semantic class labels convertible to string
 %   timestamps: [N x 1] frame ids, keyframe ids, traversal ids, or categorical
 %       observation ids. Standard low-frequency point-cloud data should provide
@@ -39,8 +42,8 @@ function gmmMap = buildTemporalStabilityGmmMap(points, labels, timestamps, cfg)
 %       and post-hoc temporal support diagnostics
     assert(nargin >= 4 && ~isempty(cfg), ...
         "cfg must be provided explicitly; use temporalStabilityMapConfig outside the builder to create defaults.");
-    assert(isnumeric(points) && ismatrix(points) && size(points, 2) == 2, ...
-        "points must be an [N x 2] numeric array.");
+    assert(isnumeric(points) && ismatrix(points) && ismember(size(points, 2), [2 3]), ...
+        "points must be an [N x 2] or [N x 3] numeric array.");
     assert(numel(labels) == size(points, 1), ...
         "labels must contain one class label per point.");
     assert(numel(timestamps) == size(points, 1), ...
@@ -51,6 +54,13 @@ function gmmMap = buildTemporalStabilityGmmMap(points, labels, timestamps, cfg)
     points = double(points);
     assert(all(isfinite(points), "all"), ...
         "points must contain only finite numeric values.");
+    sourcePoints = points;
+    points = points(:, 1:2);
+    heightVarianceFloor = 1.0e-4;
+    if isfield(cfg, "minimumConditionalHeightVariance")
+        heightVarianceFloor = cfg.minimumConditionalHeightVariance;
+    end
+    assert(isscalar(heightVarianceFloor) && isfinite(heightVarianceFloor) && heightVarianceFloor > 0);
     assert(isfield(cfg, "pcaEpsilon") && isscalar(cfg.pcaEpsilon) && isnumeric(cfg.pcaEpsilon) && isfinite(cfg.pcaEpsilon) && cfg.pcaEpsilon > 0, ...
         "cfg.pcaEpsilon must be a positive finite numeric scalar.");
     labelKeys = string(labels(:));
@@ -129,6 +139,12 @@ function gmmMap = buildTemporalStabilityGmmMap(points, labels, timestamps, cfg)
         layers(classIdx).posthocTemporalSupportResponsibilities = storedResponsibilities(supportDiagnostics.responsibilities, params);
         layers(classIdx).componentMeans = componentMeans;
         layers(classIdx).componentCovariances = componentCovariances;
+        if size(sourcePoints, 2) == 3
+            [meansXYZ, covariancesXYZ] = fitConditionalHeight( ...
+                sourcePoints(sampledSourceIndices, :), components, heightVarianceFloor);
+            layers(classIdx).componentMeansXYZ = meansXYZ;
+            layers(classIdx).componentCovariancesXYZ = covariancesXYZ;
+        end
         layers(classIdx).componentBoundingBoxes = componentBoundingBoxes;
         layers(classIdx).componentPointCounts = componentPointCounts;
         layers(classIdx).componentPatchBoundingBoxes = componentPatchBoundingBoxes;
@@ -207,6 +223,11 @@ function gmmMap = buildTemporalStabilityGmmMap(points, labels, timestamps, cfg)
     gmmMap.pcaEpsilon = cfg.pcaEpsilon;
     gmmMap.sourcePointCount = size(points, 1);
     gmmMap.layers = layers;
+    gmmMap.spatialDimension = size(sourcePoints, 2);
+    gmmMap.heightModel = "unavailable";
+    if size(sourcePoints, 2) == 3
+        gmmMap.heightModel = "conditionalGaussianGivenXY";
+    end
 end
 
 function timestampBins = binTimestamps(timestamps)

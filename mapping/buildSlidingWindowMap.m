@@ -32,7 +32,7 @@ function probabilityCloudMap = buildSlidingWindowMap(featureData, cfg)
             gmmCfg = resolveWindowMapConfig(mapInput.buildFeatureNames, batchCfg);
             logStep(cfg, "batch.gmm.build", "idx=%d/%d | sourcePoints=%d | classes=%s", batchIdx, numel(batchFrameWindows), ...
                 size(mapInput.points, 1), strjoin(mapInput.buildFeatureNames, ", "));
-            gmmMap = buildTemporalStabilityGmmMap(mapInput.points, mapInput.labels, mapInput.timestamps, gmmCfg);
+            gmmMap = buildTemporalStabilityGmmMap(mapInput.pointsXYZ, mapInput.labels, mapInput.timestamps, gmmCfg);
             logGmmMapSummary(cfg, gmmMap);
         else
             logStep(cfg, "batch.gmm.skip", "idx=%d/%d | no class met map input thresholds", batchIdx, numel(batchFrameWindows));
@@ -46,6 +46,8 @@ function probabilityCloudMap = buildSlidingWindowMap(featureData, cfg)
     probabilityCloudMap.mapType = "missisipiSlidingWindowIntegratedTemporalGMMProbabilityCloudMap";
     probabilityCloudMap.queryFunction = "queryTemporalStabilityGmmMap";
     probabilityCloudMap.queryBatchFusion = "maxEnvelope";
+    probabilityCloudMap.spatialDimension = 3;
+    probabilityCloudMap.heightModel = "conditionalGaussianGivenXY";
     probabilityCloudMap.createdAt = string(datetime("now"));
     probabilityCloudMap.sourceFrameCount = round(double(featureData.numFrames));
     probabilityCloudMap.frameIndices = frameIndices;

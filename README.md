@@ -53,12 +53,16 @@ rejects all points. The modern pipeline supports curb, roadMarking, and pole.
 Facade and traffic-sign detectors and the dense semantic product remain in the
 explicit historical path.
 
-The coarse product contains normalized mixture weights and empirical planar
-means/covariances, aggregated into 0.9 m output cells with eigenvalue safeguards.
+The coarse product contains normalized mixture weights and empirical XYZ
+means/covariances, aggregated into 0.9 m XY output cells with covariance safeguards.
+`components.meanXYZ`, `covarianceXYZ`, and `heightAvailable` retain height and
+its xz/yz coupling. Existing `mean` and `covariance` fields remain the exact XY
+marginal. `projectSemanticProbabilityCloud(cloud,3)` returns standard XYZ
+component arrays; dimension 2 selects the marginal without changing weights.
 `semanticProbability` and `occupancyProbability` are compatibility field names
 for **uncalibrated evidence and hit support**, not Bayesian semantic or free-space
 occupancy posteriors. Known IMU tilt can be supplied through
-`cfg.coarseProbabilityCloud.projectionRotation` before statistical XY projection.
+`cfg.coarseProbabilityCloud.projectionRotation` before moment accumulation.
 
 See [the design and measured limitations](research/pillar_perception_and_d2d.md).
 The [runtime optimization study](research/coarse_perception_runtime_optimization.md)
@@ -79,6 +83,11 @@ sliding-window probability-cloud map. The temporal-stability GMM in
 `mapping/temporalStabilityGmm/` keeps the design rule of the original code:
 temporal information decides *which points are sampled, how the mixture is
 seeded, and which components survive*, never the EM updates themselves.
+New maps preserve XYZ observations and fit a conditional Gaussian height model
+after the XY mixture is finalized. The XY map and original noisy-OR/max query
+remain unchanged. Existing saved XY maps have no recoverable height; rebuild
+from XYZ observations to obtain it. The conditional height density integrates
+to one, so adding it does not reweight landmarks by their vertical extent.
 
 ### Localization (`localization/`)
 
@@ -206,6 +215,17 @@ conversion is an explicit sum-of-Gaussian-support surrogate for registration.
 Class-conditional overlap balances curb, marking, and pole contributions. Both
 means and covariances rotate. Curvature and convergence gates reject unusable
 solutions; the curvature is not a calibrated sensor information matrix.
+
+Height is retained by default, while `distributionRegistrationConfig` keeps
+`heightMode="xy"`. Experimental `"xyz"` matching requires height in both
+clouds and `heightTranslation`, the moving sensor/vehicle origin's map Z.
+`poseRowToPlanarPose` returns that height as its third output for recorded data.
+`"auto"` is also opt-in and falls back to XY when height or its reference is
+unavailable. `diagnostic.height` records the selected behavior. Height/tilt
+uncertainty settings are engineering defaults, not calibrated sensor confidence.
+Recorded tests found that direct XYZ matching can increase pose error and
+accept incorrect alignments under vertical perturbations, so it is not the
+production default. See [implementation and experiments](research/height_probability_cloud_implementation.md).
 
 ### Data layout expected under `dataRoot`
 

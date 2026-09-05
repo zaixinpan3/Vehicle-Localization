@@ -3,6 +3,10 @@
 Date: 2026-09-04. Decision study at production baseline
 `61e70b54ead9aa8050f6fb59644a3b5d972afb37`.
 
+Follow-on implementation and its negative XYZ-matching findings are recorded
+in [the implementation study](height_probability_cloud_implementation.md).
+The measurements and proposal below describe the original decision study.
+
 ## Decision
 
 Retain three-dimensional first and second moments of the returns supporting

@@ -8,8 +8,7 @@ function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, init
     if nargin < 4 || isempty(cfg)
         cfg = distributionRegistrationConfig();
     end
-    fixed = validateSemanticProbabilityCloud(fixedCloud);
-    moving = validateSemanticProbabilityCloud(movingCloud);
+    [fixed, moving, heightDetails] = prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
     initialPose = double(initialPose(:).');
     assert(numel(initialPose)==3 && all(isfinite(initialPose)), 'Expected finite initial [x y yaw].');
     assert(isscalar(cfg.yawLeverArm) && cfg.yawLeverArm>0 && isfinite(cfg.yawLeverArm), 'Invalid yaw scale.');
@@ -22,13 +21,18 @@ function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, init
         'similarity',0,'initialSimilarity',0,'iterations',0,'converged',false, ...
         'scaledCurvature',nan(3),'curvatureEigenvalues',nan(3,1), ...
         'curvatureSemantics',"uncalibratedNegativeSimilarityHessian");
+    result.height = heightDetails;
     common = intersect(unique(fixed.semanticName),unique(moving.semanticName));
     if nnz(ismember(fixed.semanticName,common) & fixed.mixtureWeight>0)<cfg.minimumComponents || ...
             nnz(ismember(moving.semanticName,common) & moving.mixtureWeight>0)<cfg.minimumComponents
         return;
     end
     % Recenter the map once to avoid cancellation at UTM-sized coordinates.
-    fixed.mean = fixed.mean-initialPose(1:2);
+    fixed.mean(:,1:2) = fixed.mean(:,1:2)-initialPose(1:2);
+    if heightDetails.heightUsed
+        fixed.mean(:,3)=fixed.mean(:,3)-heightDetails.heightTranslation;
+        moving.mean(:,3)=moving.mean(:,3)-heightDetails.heightTranslation;
+    end
     rawFixed = fixed; rawMoving = moving;
     [fixed,moving] = balanceSemanticDistributions(rawFixed,rawMoving);
     parameterScale = [1;1;1/cfg.yawLeverArm];

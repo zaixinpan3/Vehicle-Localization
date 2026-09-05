@@ -1,10 +1,10 @@
-function [similarity, details] = scoreSemanticProbabilityCloudAlignment(fixedCloud, movingCloud, poseXYTheta)
+function [similarity, details] = scoreSemanticProbabilityCloudAlignment(fixedCloud, movingCloud, poseXYTheta, cfg)
 % scoreSemanticProbabilityCloudAlignment: Mean normalized per-class D2D overlap.
 % Components are planar Gaussians in meters; pose is moving-to-fixed [x,y,yaw]
 % with yaw in radians. Both means and covariances transform. Empty clouds
 % return zero similarity. gradient is with respect to the three pose entries.
-    fixed = validateSemanticProbabilityCloud(fixedCloud);
-    moving = validateSemanticProbabilityCloud(movingCloud);
+    if nargin<4, cfg=distributionRegistrationConfig(); end
+    [fixed,moving,heightDetails] = prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
     [fixed,moving] = balanceSemanticDistributions(fixed,moving);
     pose = double(poseXYTheta(:).');
     assert(numel(pose)==3 && all(isfinite(pose)), 'Expected finite [x y yaw].');
@@ -22,4 +22,5 @@ function [similarity, details] = scoreSemanticProbabilityCloudAlignment(fixedClo
     details = struct('crossEnergy',crossEnergy,'fixedSelfEnergy',fixedSelf, ...
         'movingSelfEnergy',movingSelf,'squaredL2Distance',max(fixedSelf+movingSelf-2*crossEnergy,0), ...
         'poseXYTheta',pose,'gradient',gradient);
+    details.height=heightDetails;
 end

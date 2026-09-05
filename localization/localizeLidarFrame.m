@@ -6,6 +6,10 @@ function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initia
 % IMU tilt in cfg.perception.coarseProbabilityCloud.projectionRotation when
 % required by the map convention. poseRowToPlanarPose supplies this rotation
 % for recorded mapping poses. This routine does not estimate extrinsics/tilt.
+% Set cfg.registration.heightTranslation to the sensor/vehicle origin in map
+% Z (third output of poseRowToPlanarPose for recorded data). Auto mode uses
+% XYZ only with a known vertical reference and height in both clouds;
+% result.height describes the chosen mode. The event pose remains [x y yaw].
 % An accepted event has timestamp, arrivalTime, pose fields consumed by
 % runImprovedVehicleObserver. The caller sets arrivalTime when it is delivered.
 % Empty measurement means rejection. Curvature is deliberately not exported

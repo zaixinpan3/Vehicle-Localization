@@ -1,6 +1,7 @@
 function probabilityCloud = buildCoarseSemanticProbabilityCloud(coarseGround, coarseOffGround, cfg)
 % buildCoarseSemanticProbabilityCloud: Aggregate pillar-classified curb,
-% road-marking, and pole support into a sparse 2D semantic NDT cloud. Each
+% road-marking, and pole support into a sparse semantic cloud with XYZ
+% moments and an exact XY marginal. Each
 % component stores a regularized Gaussian, semantic evidence probability,
 % hit-based occupancy probability, and normalized mixture weight without
 % allocating dense semantic layers.
@@ -11,7 +12,8 @@ function probabilityCloud = buildCoarseSemanticProbabilityCloud(coarseGround, co
 %   cfg: struct from coarseSemanticProbabilityCloudConfig
 %
 % Output:
-%   probabilityCloud: sparse semantic NDT component representation
+%   probabilityCloud: mean/covariance are XY; meanXYZ/covarianceXYZ retain
+%       height in components for which heightAvailable is true
     cfg = validateConfig(cfg);
     geometry = buildGeometry(cfg);
     semanticNames = string(cfg.semanticNames(:));
@@ -38,8 +40,11 @@ function probabilityCloud = buildCoarseSemanticProbabilityCloud(coarseGround, co
     probabilityCloud.representation = "sparseGaussianMixture";
     probabilityCloud.classificationStage = "pillarOnlyCoarseValidation";
     probabilityCloud.coordinateFrame = string(cfg.coordinateFrame);
+    probabilityCloud.spatialCoordinateFrame = "projectionRotationAppliedToSensorXYZ";
     probabilityCloud.projectionRotation = cfg.projectionRotation;
     probabilityCloud.dimension = 2;
+    probabilityCloud.spatialDimension = 3;
+    probabilityCloud.heightModel = "jointGaussianWithExactXYMarginal";
     probabilityCloud.weightSemantics = "normalizedSemanticEvidenceTimesHitSupport";
     probabilityCloud.probabilityCalibration = "uncalibratedEvidence";
     probabilityCloud.geometry = geometry;
@@ -61,6 +66,11 @@ end
 
 function cfg = validateConfig(cfg)
 % validateConfig: Normalize the required probability-cloud settings.
+    if ~isfield(cfg, "minimumConditionalHeightVariance")
+        cfg.minimumConditionalHeightVariance = 1.0e-4;
+    end
+    assert(isscalar(cfg.minimumConditionalHeightVariance) && ...
+        isfinite(cfg.minimumConditionalHeightVariance) && cfg.minimumConditionalHeightVariance > 0);
     requiredFields = ["xMin", "xMax", "yMin", "yMax", "resolution", ...
         "coordinateFrame", "semanticNames", "minimumSemanticProbability", ...
         "occupancySaturationPointCount", "minimumPointsPerComponent", ...
@@ -125,11 +135,14 @@ function observations = selectGroundCells(ground, cellMask, probabilityMap)
 % hit count, evidence probability, and uniform-cell covariance.
     mapSize = size(cellMask);
     selectedCell = find(logical(cellMask));
+    selectedCell = selectedCell(:);
     [row, col] = ind2sub(mapSize, selectedCell);
+    row = row(:); col = col(:);
     meanXY = [ground.cellOrigin(1) + ((double(col) - 0.5) .* ground.cellSize(1)), ...
         ground.cellOrigin(2) + ((double(row) - 0.5) .* ground.cellSize(2))];
     count = double(ground.stats.countMap(selectedCell));
     probability = double(probabilityMap(selectedCell));
+    count = count(:); probability = probability(:);
     valid = count > 0 & all(isfinite(meanXY), 2) & isfinite(probability);
     observations = observationStruct( ...
         meanXY(valid, :), count(valid), probability(valid), ground.cellSize);
@@ -143,9 +156,11 @@ function observations = selectOffGroundColumns(offGround, cellMask, probabilityM
 % sufficient statistics rather than point labels.
     selectedCell = find(logical(cellMask));
     maps = offGround.columnMaps;
-    meanXY = [double(maps.xMap(selectedCell)), double(maps.yMap(selectedCell))];
+    x = double(maps.xMap(selectedCell)); y = double(maps.yMap(selectedCell));
+    meanXY = [x(:), y(:)];
     count = double(maps.pillarCounts(selectedCell));
     probability = double(probabilityMap(selectedCell));
+    count = count(:); probability = probability(:);
     valid = count > 0 & all(isfinite(meanXY), 2) & isfinite(probability);
     observations = observationStruct( ...
         meanXY(valid, :), count(valid), probability(valid), [maps.dx, maps.dy]);
@@ -160,6 +175,11 @@ function observations = useEmpiricalMoments(observations, moments, rows)
     observations.covarianceXX = moments.covariance(rows, 1);
     observations.covarianceXY = moments.covariance(rows, 2);
     observations.covarianceYY = moments.covariance(rows, 3);
+    if isfield(moments, "meanZ")
+        observations.meanZ = moments.meanZ(rows);
+        observations.heightCovariance = moments.heightCovariance(rows, :);
+        observations.heightAvailable(:) = true;
+    end
 end
 
 function observations = observationStruct(meanXY, count, probability, cellSize)
@@ -172,6 +192,9 @@ function observations = observationStruct(meanXY, count, probability, cellSize)
     observations.covarianceXX = repmat((double(cellSize(1)).^2) ./ 12, numObservations, 1);
     observations.covarianceXY = zeros(numObservations, 1);
     observations.covarianceYY = repmat((double(cellSize(2)).^2) ./ 12, numObservations, 1);
+    observations.meanZ = zeros(numObservations, 1);
+    observations.heightCovariance = zeros(numObservations, 3);
+    observations.heightAvailable = false(numObservations, 1);
 end
 
 function components = aggregateComponents(observations, semanticName, semanticId, geometry, cfg)
@@ -243,6 +266,37 @@ function components = aggregateComponents(observations, semanticName, semanticId
     components.unnormalizedWeight = unnormalizedWeight(:);
     components.mixtureWeight = zeros(numComponents, 1);
     components.numComponents = double(numComponents);
+    % Recenter source means at the output mean before accumulating height
+    % scatter; this avoids subtracting large squared map coordinates.
+    countHeight = accumarray(cellLinIdx, sourceCount.*observations.heightAvailable(inGrid), [numCells, 1]);
+    z = observations.meanZ(inGrid);
+    zSum = accumarray(cellLinIdx, sourceCount.*z, [numCells, 1]);
+    zMean = zSum./max(countVector, 1);
+    xMean = sumX./max(countVector, 1);
+    yMean = sumY./max(countVector, 1);
+    dz = z-zMean(cellLinIdx);
+    hc = observations.heightCovariance(inGrid, :);
+    values = [hc(:, 1)+(meanXY(:, 1)-xMean(cellLinIdx)).*dz, ...
+        hc(:, 2)+(meanXY(:, 2)-yMean(cellLinIdx)).*dz, hc(:, 3)+dz.^2];
+    heightScatter = zeros(numComponents, 3);
+    for entry = 1:3
+        sums = accumarray(cellLinIdx, sourceCount.*values(:, entry), [numCells, 1]);
+        heightScatter(:, entry) = sums(validCell)./count;
+    end
+    cross = heightScatter(:, 1:2);
+    ia = reshape(inverseCovariance(1, 1, :), [], 1);
+    ib = reshape(inverseCovariance(1, 2, :), [], 1);
+    id = reshape(inverseCovariance(2, 2, :), [], 1);
+    explained = ia.*cross(:, 1).^2+2*ib.*cross(:, 1).*cross(:, 2)+id.*cross(:, 2).^2;
+    varianceZ = max(heightScatter(:, 3)+cfg.regularizationVariance, ...
+        explained+cfg.minimumConditionalHeightVariance);
+    components.meanXYZ = [components.mean, zMean(validCell)];
+    components.covarianceXYZ = zeros(3, 3, numComponents);
+    components.covarianceXYZ(1:2, 1:2, :) = covariance;
+    components.covarianceXYZ(1:2, 3, :) = reshape(cross.', 2, 1, []);
+    components.covarianceXYZ(3, 1:2, :) = reshape(cross.', 1, 2, []);
+    components.covarianceXYZ(3, 3, :) = reshape(varianceZ, 1, 1, []);
+    components.heightAvailable = countHeight(validCell) == count;
 end
 
 function [cellLinIdx, inGrid] = assignToGrid(pointsXY, geometry)
@@ -299,6 +353,9 @@ function components = concatenateComponents(componentSets)
     components.cellSub = zeros(totalComponents, 2, "int32");
     components.count = zeros(totalComponents, 1, "uint32");
     components.mean = zeros(totalComponents, 2);
+    components.meanXYZ = zeros(totalComponents, 3);
+    components.covarianceXYZ = zeros(3, 3, totalComponents);
+    components.heightAvailable = false(totalComponents, 1);
     components.covariance = zeros(2, 2, totalComponents);
     components.invCovariance = zeros(2, 2, totalComponents);
     components.determinant = zeros(totalComponents, 1);
@@ -321,6 +378,9 @@ function components = concatenateComponents(componentSets)
         components.cellSub(writeIdx, :) = source.cellSub;
         components.count(writeIdx) = source.count;
         components.mean(writeIdx, :) = source.mean;
+        components.meanXYZ(writeIdx, :) = source.meanXYZ;
+        components.covarianceXYZ(:, :, writeIdx) = source.covarianceXYZ;
+        components.heightAvailable(writeIdx) = source.heightAvailable;
         components.covariance(:, :, writeIdx) = source.covariance;
         components.invCovariance(:, :, writeIdx) = source.invCovariance;
         components.determinant(writeIdx) = source.determinant;
@@ -378,6 +438,9 @@ function components = emptyComponents()
     components.cellSub = zeros(0, 2, "int32");
     components.count = zeros(0, 1, "uint32");
     components.mean = zeros(0, 2);
+    components.meanXYZ = zeros(0, 3);
+    components.covarianceXYZ = zeros(3, 3, 0);
+    components.heightAvailable = false(0, 1);
     components.covariance = zeros(2, 2, 0);
     components.invCovariance = zeros(2, 2, 0);
     components.determinant = zeros(0, 1);

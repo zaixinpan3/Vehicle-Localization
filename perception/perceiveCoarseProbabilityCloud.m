@@ -1,6 +1,6 @@
 function [probabilityCloud, diagnostics] = perceiveCoarseProbabilityCloud(frame, cfg)
 % perceiveCoarseProbabilityCloud: Run the fast pillar-only perception path
-% and return a sparse 2D semantic NDT probability cloud. Curb and marking
+% and return a sparse semantic cloud with XYZ statistics and an XY marginal. Curb and marking
 % decisions are made on ground cells, pole decisions on vertical columns,
 % and no point-level semantic refinement or dense semantic volume is built.
 %
