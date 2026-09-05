@@ -89,6 +89,25 @@ remain unchanged. Existing saved XY maps have no recoverable height; rebuild
 from XYZ observations to obtain it. The conditional height density integrates
 to one, so adding it does not reweight landmarks by their vertical extent.
 
+The mapping entry points are grouped by task:
+
+| Task | Functions |
+| --- | --- |
+| Build an offline map | `buildFeatureMap`, `buildSlidingWindowMap` |
+| Read and align observations | `loadPointCloudFrame`, `matchFramePoses`, `readFramePoseTable`, `collectFeatureObservations`, `registerPointsToGlobalFrame` |
+| Build and query the temporal GMM | `buildTemporalStabilityGmmMap`, `queryTemporalStabilityGmmMap` |
+| Build an NDT grid | `buildSemanticNdtGridMap` |
+| Export, project, and validate distributions | `temporalMapToProbabilityCloud`, `projectSemanticProbabilityCloud`, `validateSemanticProbabilityCloud` |
+| Register and score distributions | `registerSemanticProbabilityCloud`, `scoreSemanticProbabilityCloudAlignment` |
+| Calibrate and prepare registration | `fitLidarPitchCalibration`, `poseRowToPlanarPose`, `prepareSemanticRegistration`, `balanceSemanticDistributions`, `semanticGaussianOverlap` |
+
+Helpers used by one caller live as local functions in that caller's file.
+Larger internal stages and shared helpers live in `mapping/private/` or
+`mapping/temporalStabilityGmm/private/`; these directories must not be added
+to the MATLAB path. `registerSemanticProbabilityCloud` selects the private
+geometric registration backend through its existing configuration. Existing
+map formats, configuration fields, and numerical algorithms are preserved.
+
 ### Localization (`localization/`)
 
 Two estimator stages live here and form the current one-way cascade.

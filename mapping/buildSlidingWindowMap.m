@@ -68,13 +68,6 @@ function gmmCfg = resolveWindowMapConfig(buildFeatureNames, batchCfg)
 % resolveWindowMapConfig: Configure the temporal-stability GMM builder for
 % one frame window: the retained semantic classes, the logging switch, and
 % the temporal diversity saturation capped by the window frame count.
-%
-% Input:
-%   buildFeatureNames: [C x 1] semantic class labels retained for this window
-%   batchCfg: window-adjusted struct from featureMapBuildConfig
-%
-% Output:
-%   gmmCfg: struct accepted by buildTemporalStabilityGmmMap
     gmmCfg = temporalStabilityMapConfig();
     gmmCfg.classes = string(buildFeatureNames(:));
     gmmCfg.logEnabled = isLogEnabled(batchCfg);
@@ -91,13 +84,6 @@ function batchFrameWindows = resolveBatchFrameWindows(frameIndices, cfg)
 % batches over the covered frame range. Window starts advance by
 % batchFrameStride, and the final window is clipped at the requested last frame
 % so every neighboring batch pair keeps the configured transition overlap.
-%
-% Input:
-%   frameIndices: [1 x F] covered contiguous frame indices
-%   cfg: test configuration struct with batchFrameCount and batchFrameStride
-%
-% Output:
-%   batchFrameWindows: [B x 1] cell array of frame-index row vectors
     frameIndices = double(frameIndices(:).');
     batchFrameCount = round(double(cfg.batchFrameCount));
     batchFrameStride = round(double(cfg.batchFrameStride));
@@ -124,13 +110,6 @@ function batchFeatureData = subsetFeatureDataByFrames(featureData, batchFrameInd
 % subsetFeatureDataByFrames: Select a contiguous frame subset from the
 % already extracted per-feature/per-frame global point clouds while preserving
 % feature names, display names, frame poses, and count matrices.
-%
-% Input:
-%   featureData: full covered-range feature data struct
-%   batchFrameIndices: [1 x B] frame indices to retain
-%
-% Output:
-%   batchFeatureData: feature data struct restricted to batchFrameIndices
     allFrameIndices = double(featureData.frameIndices(:).');
     [isMember, keepIdx] = ismember(double(batchFrameIndices(:).'), allFrameIndices);
     assert(all(isMember), "Batch frame window contains frames missing from featureData.");
@@ -147,12 +126,6 @@ function layerSummaryTable = buildLayerSummaryTable(batchMaps)
 % buildLayerSummaryTable: Build a compact table of
 % per-batch/per-class GMM layer counts and support amplitude summaries for
 % quick inspection of a saved probability-cloud map.
-%
-% Input:
-%   batchMaps: [B x 1] lightweight batch map struct array
-%
-% Output:
-%   layerSummaryTable: table with one row per saved semantic GMM layer
     rowCount = 0;
     for batchIdx = 1:numel(batchMaps)
         if ~isempty(batchMaps(batchIdx).gmmMap) && isfield(batchMaps(batchIdx).gmmMap, "layers")
@@ -207,14 +180,6 @@ end
 function [minValue, medianValue, maxValue] = finiteSummary(values)
 % finiteSummary: Compute min, median, and max over finite numeric values
 % for compact diagnostic logging.
-%
-% Input:
-%   values: numeric vector or array
-%
-% Output:
-%   minValue: scalar minimum finite value or NaN
-%   medianValue: scalar median finite value or NaN
-%   maxValue: scalar maximum finite value or NaN
     values = double(values(:));
     values = values(isfinite(values));
     if isempty(values)
@@ -231,13 +196,6 @@ end
 function logGmmMapSummary(cfg, gmmMap)
 % logGmmMapSummary: Print one map-level and one layer-level diagnostic
 % summary after semantic temporal-stability GMM map construction completes.
-%
-% Input:
-%   cfg: test configuration struct with logging controls
-%   gmmMap: map struct returned by buildSemanticTemporalStabilityGMMFeatureMap
-%
-% Output:
-%   none
     if isempty(gmmMap)
         logStep(cfg, "gmm.summary", "map is empty");
         return;
@@ -251,5 +209,115 @@ function logGmmMapSummary(cfg, gmmMap)
         logStep(cfg, "gmm.layer", "class=%s | points=%d | components=%d | emIter=%d | converged=%d | pruned=%d | patchPoints[min/med/max]=%.4g/%.4g/%.4g | support[min/med/max]=%.4g/%.4g/%.4g", ...
             char(string(layer.classLabel)), layer.pointCount, numel(layer.components), layer.emIterationCount, logical(layer.emConverged), layer.integratedSupportPrunedComponentCount, ...
             minPatch, medianPatch, maxPatch, minAmp, medianAmp, maxAmp);
+    end
+end
+
+function mapInput = assembleMapInput(featureData, cfg)
+% assembleMapInput: Assemble XYZ observations and compatible BEV inputs from
+% per-feature/per-frame semantic point clouds, excluding facade by
+% construction and only passing classes with enough points across at least
+% two frame bins to the fail-fast GMM builder.
+    featureNames = string(featureData.featureNames(:));
+    frameIndices = double(featureData.frameIndices(:).');
+    numFeatures = numel(featureNames);
+    pointsByFeature = cell(numFeatures, 1);
+    timestampsByFeature = cell(numFeatures, 1);
+    buildFeatureMask = false(numFeatures, 1);
+    rawPointCounts = zeros(numFeatures, 1);
+    buildPointCounts = zeros(numFeatures, 1);
+    timestampBinCounts = zeros(numFeatures, 1);
+
+    logStep(cfg, "mapinput.start", "features=%d | maxPointsPerClass=%g | minPoints=%d | minTimestampBins=%d", ...
+        numFeatures, double(cfg.maxMapPointsPerClass), round(double(cfg.minMapPointsPerClass)), round(double(cfg.minMapTimestampBinsPerClass)));
+    for featureIdx = 1:numFeatures
+        [featurePoints, featureTimestamps] = concatenateFeatureFrames(featureData.pointsByFeatureFrame(featureIdx, :), frameIndices);
+        rawPointCounts(featureIdx) = size(featurePoints, 1);
+        [featurePoints, featureTimestamps] = reduceMapFeaturePoints(featurePoints, featureTimestamps, cfg);
+        pointsByFeature{featureIdx} = featurePoints;
+        timestampsByFeature{featureIdx} = featureTimestamps;
+        buildPointCounts(featureIdx) = size(featurePoints, 1);
+        timestampBinCounts(featureIdx) = numel(unique(featureTimestamps));
+        if buildPointCounts(featureIdx) >= cfg.minMapPointsPerClass && timestampBinCounts(featureIdx) >= cfg.minMapTimestampBinsPerClass
+            buildFeatureMask(featureIdx) = true;
+        end
+        logStep(cfg, "mapinput.feature", "feature=%s | rawPoints=%d | buildPoints=%d | timestampBins=%d | build=%d", ...
+            char(featureNames(featureIdx)), rawPointCounts(featureIdx), buildPointCounts(featureIdx), timestampBinCounts(featureIdx), buildFeatureMask(featureIdx));
+    end
+
+    buildFeatureNames = featureNames(buildFeatureMask);
+    totalBuildPointCount = sum(buildPointCounts(buildFeatureMask));
+    points = zeros(totalBuildPointCount, 2);
+    pointsXYZ = zeros(totalBuildPointCount, 3);
+    labels = strings(totalBuildPointCount, 1);
+    timestamps = zeros(totalBuildPointCount, 1);
+    writeIdx = 1;
+    buildFeatureIdx = find(buildFeatureMask).';
+    for featureIdx = buildFeatureIdx
+        featurePoints = pointsByFeature{featureIdx};
+        featureTimestamps = timestampsByFeature{featureIdx};
+        pointCount = size(featurePoints, 1);
+        rangeIdx = writeIdx:(writeIdx + pointCount - 1);
+        points(rangeIdx, :) = featurePoints(:, 1:2);
+        pointsXYZ(rangeIdx, :) = featurePoints(:, 1:3);
+        labels(rangeIdx, 1) = repmat(featureNames(featureIdx), pointCount, 1);
+        timestamps(rangeIdx, 1) = featureTimestamps(:);
+        writeIdx = writeIdx + pointCount;
+    end
+
+    mapInput = struct();
+    mapInput.points = points;
+    mapInput.pointsXYZ = pointsXYZ;
+    mapInput.labels = labels;
+    mapInput.timestamps = timestamps;
+    mapInput.allFeatureNames = featureNames;
+    mapInput.buildFeatureNames = buildFeatureNames;
+    mapInput.pointsByFeature = pointsByFeature;
+    mapInput.timestampsByFeature = timestampsByFeature;
+    mapInput.rawPointCounts = rawPointCounts;
+    mapInput.buildPointCounts = buildPointCounts;
+    mapInput.timestampBinCounts = timestampBinCounts;
+    logStep(cfg, "mapinput.done", "totalBuildPoints=%d | buildClasses=%s", totalBuildPointCount, strjoin(buildFeatureNames, ", "));
+end
+
+function [featurePoints, featureTimestamps] = concatenateFeatureFrames(pointsByFrame, frameIndices)
+% concatenateFeatureFrames: Concatenate one feature's per-frame point
+% clouds and generate one timestamp value per retained point using the
+% original frame index.
+    totalCount = 0;
+    for frameListIdx = 1:numel(pointsByFrame)
+        totalCount = totalCount + size(pointsByFrame{frameListIdx}, 1);
+    end
+    featurePoints = zeros(totalCount, 3);
+    featureTimestamps = zeros(totalCount, 1);
+    writeIdx = 1;
+    for frameListIdx = 1:numel(pointsByFrame)
+        framePoints = double(pointsByFrame{frameListIdx});
+        pointCount = size(framePoints, 1);
+        if pointCount > 0
+            rangeIdx = writeIdx:(writeIdx + pointCount - 1);
+            featurePoints(rangeIdx, :) = framePoints;
+            featureTimestamps(rangeIdx, 1) = frameIndices(frameListIdx);
+            writeIdx = writeIdx + pointCount;
+        end
+    end
+end
+
+function [featurePoints, featureTimestamps] = reduceMapFeaturePoints(featurePoints, featureTimestamps, cfg)
+% reduceMapFeaturePoints: Apply deterministic finite-point filtering
+% and optional point-count capping before map construction.
+    if isempty(featurePoints)
+        featurePoints = zeros(0, 3);
+        featureTimestamps = zeros(0, 1);
+        return;
+    end
+    validMask = all(isfinite(featurePoints(:, 1:3)), 2) & isfinite(featureTimestamps(:));
+    featurePoints = featurePoints(validMask, :);
+    featureTimestamps = featureTimestamps(validMask);
+    maxPoints = double(cfg.maxMapPointsPerClass);
+    if isfinite(maxPoints) && size(featurePoints, 1) > maxPoints
+        maxPoints = max(1, round(maxPoints));
+        keepIdx = unique(round(linspace(1, size(featurePoints, 1), maxPoints))).';
+        featurePoints = featurePoints(keepIdx, :);
+        featureTimestamps = featureTimestamps(keepIdx);
     end
 end

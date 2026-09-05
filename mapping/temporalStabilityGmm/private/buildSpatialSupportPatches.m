@@ -32,14 +32,6 @@ function patchLocalIndices = buildMutualKnnPatches(points, params, pcaEpsilon)
 % components of the mutual-kNN graph with radius pruning, then recursively
 % split each component along its dominant PCA axis until every final patch
 % satisfies the configured Euclidean diameter bound.
-%
-% Input:
-%   points: [N x 2] class-local BEV feature point coordinates
-%   params: class parameter struct with k, radius, and maxDiameter fields
-%   pcaEpsilon: scalar covariance diagonal regularization
-%
-% Output:
-%   patchLocalIndices: cell array of class-local point index vectors
     pointCount = size(points, 1);
 
     if pointCount == 0
@@ -83,14 +75,6 @@ end
 function [neighborIdx, neighborDistance] = knnSearchExcludingSelf(points, kEff)
 % knnSearchExcludingSelf: Query a KD-tree for each point's nearest
 % spatial neighbors while removing the point itself from its neighbor list.
-%
-% Input:
-%   points: [N x 2] point coordinates
-%   kEff: scalar number of non-self neighbors to return
-%
-% Output:
-%   neighborIdx: [N x kEff] neighbor point indices, zero where unavailable
-%   neighborDistance: [N x kEff] Euclidean neighbor distances
     pointCount = size(points, 1);
     assert(exist("KDTreeSearcher", "class") == 8, ...
         "KDTreeSearcher is required for optimized mutual-kNN patch construction.");
@@ -117,15 +101,6 @@ function splitPatches = splitPatchByDiameter(points, localIndices, maxDiameter, 
 % splitPatchByDiameter: Recursively split a candidate patch along the
 % patch dominant PCA axis at the median projection until each output patch
 % has diameter less than or equal to the configured maximum.
-%
-% Input:
-%   points: [N x 2] class-local BEV feature point coordinates
-%   localIndices: vector of indices for one candidate patch
-%   maxDiameter: scalar Euclidean patch diameter limit
-%   pcaEpsilon: scalar covariance diagonal regularization
-%
-% Output:
-%   splitPatches: cell array of class-local index vectors after splitting
     maxQueueLength = max(1, 2 .* numel(localIndices) - 1);
     queue = cell(maxQueueLength, 1);
     queue{1} = localIndices(:);
@@ -168,12 +143,6 @@ end
 function diameter = patchDiameter(points)
 % patchDiameter: Compute the bounding-box diagonal upper bound for a
 % candidate patch diameter, returning zero for singleton or empty patches.
-%
-% Input:
-%   points: [N x 2] patch point coordinates
-%
-% Output:
-%   diameter: scalar bounding-box diagonal upper bound
     if size(points, 1) <= 1
         diameter = 0;
     else
@@ -186,14 +155,6 @@ function [patchLocalIndices, removedPatchCount] = filterBuildablePatches(patchLo
 % filterBuildablePatches: Remove initialization patches whose point
 % count is too small to construct the PCA-oriented covariance used by
 % EM GMM component initialization.
-%
-% Input:
-%   patchLocalIndices: cell array of class-local patch index vectors
-%   minPatchPointCount: scalar minimum retained patch point count
-%
-% Output:
-%   patchLocalIndices: retained cell array of buildable patch index vectors
-%   removedPatchCount: scalar number of removed patches
     if isempty(patchLocalIndices)
         removedPatchCount = 0;
         return;
@@ -211,16 +172,6 @@ function component = buildComponent(points, sourceIndices, timestampBins, params
 % diagnostics are retained only for debugging and do not affect the integrated
 % likelihood, responsibilities, M-step, covariance update, mixture-weight
 % update, or convergence logic.
-%
-% Input:
-%   points: [Q x 2] patch point coordinates
-%   sourceIndices: [Q x 1] original input indices for patch points
-%   timestampBins: [Q x 1] discrete observation bin labels for the patch
-%   params: validated class parameter struct
-%   pcaEpsilon: scalar covariance diagonal regularization
-%
-% Output:
-%   component: scalar structured Gaussian support component
     [t, n] = pcaDirections(points, pcaEpsilon);
     centroid = mean(points, 1);
     minPoint = min(points, [], 1);
@@ -298,17 +249,6 @@ function [temporalDiversity, timestampBinCount, effectiveFrameCount, frameCounts
 % diversity from distinct frame-bin coverage. When frameCountSaturation is
 % configured, the score uses a saturated effective-frame count; otherwise it
 % uses the distinct frame-bin count.
-%
-% Input:
-%   timestampBins: [Q x 1] string frame-bin labels for one patch
-%   params: class parameter struct with timestampMaxBins and
-%       frameCountSaturation
-%
-% Output:
-%   temporalDiversity: scalar score in [0, 1]
-%   timestampBinCount: scalar number of distinct frame bins in patch
-%   effectiveFrameCount: scalar effective count used for diversity scaling
-%   frameCounts: [B x 1] point counts per timestamp bin
     [~, ~, groupIdx] = unique(timestampBins(:));
     timestampBinCount = max(groupIdx);
     frameCounts = accumarray(groupIdx, 1, [timestampBinCount, 1]);
@@ -327,17 +267,6 @@ function [normalStability, normalDispersion] = patchNormalStability(points, time
 % projecting patch points onto the local PCA normal direction, reducing each
 % frame bin to a median normal coordinate, and converting robust MAD
 % dispersion across bins into a bounded support multiplier.
-%
-% Input:
-%   points: [Q x 2] patch point coordinates in global/map BEV frame
-%   timestampBins: [Q x 1] discrete frame-bin labels for the patch
-%   centroid: [1 x 2] patch centroid used as the normal-coordinate origin
-%   n: [2 x 1] patch normal PCA direction
-%   params: class parameter struct with normalStabilityLength
-%
-% Output:
-%   normalStability: scalar stability score in [0, 1]
-%   normalDispersion: robust cross-bin normal-coordinate dispersion
     [~, ~, groupIdx] = unique(timestampBins(:));
     timestampBinCount = max(groupIdx);
     if timestampBinCount < 2
@@ -351,4 +280,19 @@ function [normalStability, normalDispersion] = patchNormalStability(points, time
     medianNormalCoordinate = median(binNormalCoordinates);
     normalDispersion = 1.4826 .* median(abs(binNormalCoordinates - medianNormalCoordinate));
     normalStability = exp(-0.5 .* (normalDispersion ./ params.normalStabilityLength).^2);
+end
+
+function [t, n] = pcaDirections(points, pcaEpsilon)
+% pcaDirections: Estimate patch-level dominant and minor PCA directions
+% from the regularized two-dimensional covariance matrix. Degenerate patches
+% without a well-defined dominant direction are invalid under fail-fast
+% construction.
+    if size(points, 1) <= 1
+        error("buildTemporalStabilityGmmMap:DegeneratePatchPca", ...
+            "Patch PCA requires at least two points with a well-defined dominant direction.");
+    end
+
+    centeredPoints = points - mean(points, 1);
+    covarianceMatrix = (centeredPoints.' * centeredPoints) ./ size(points, 1) + pcaEpsilon .* eye(2);
+    [t, n] = covarianceDirections(covarianceMatrix);
 end

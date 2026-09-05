@@ -235,14 +235,6 @@ function timestampBins = binTimestamps(timestamps)
 % ids, or categorical observation ids into discrete observation-bin labels.
 % Numeric and nonnumeric values are treated as already-discrete frame-bin
 % identifiers, so different frame ids are never merged by this builder.
-%
-% Input:
-%   timestamps: [N x 1] raw frame id, keyframe id, traversal id, or
-%       observation id values
-%
-% Output:
-%   timestampBins: [N x 1] string frame-bin labels used for cross-frame
-%       temporal diversity and normal-position stability grouping
     if isnumeric(timestamps) || islogical(timestamps)
         timestampValues = double(timestamps(:));
         assert(all(isfinite(timestampValues)), ...
@@ -256,12 +248,6 @@ end
 function classLabels = resolveClassLabels(cfg)
 % resolveClassLabels: Validate and return the explicit semantic class
 % labels configured for fail-fast map construction.
-%
-% Input:
-%   cfg: map configuration struct with a nonempty classes field
-%
-% Output:
-%   classLabels: [C x 1] configured string labels for semantic map layers
     if ~isfield(cfg, "classes") || isempty(cfg.classes)
         error("buildTemporalStabilityGmmMap:MissingConfiguredClasses", ...
             "cfg.classes must be explicitly provided and nonempty; the builder does not infer semantic classes from observed labels.");
@@ -281,13 +267,6 @@ function params = resolveClassParams(cfg, classLabel)
 % evaluation.
 % The builder never fills missing class-parameter defaults; defaults must be produced by the external
 % configuration constructor before this function is called.
-%
-% Input:
-%   cfg: map configuration struct with defaultParams and classParams fields
-%   classLabel: string scalar semantic class label
-%
-% Output:
-%   params: validated scalar parameter struct for one semantic class
     rejectRemovedModeFields(cfg.defaultParams, "cfg.defaultParams");
     params = cfg.defaultParams;
     params.classLabel = string(classLabel);
@@ -467,13 +446,6 @@ function rejectRemovedModeFields(params, contextName)
 % previously selected alternate map-building behavior. The builder now exposes
 % temporal-reliability resampling followed by ordinary full-covariance Gaussian
 % mixture EM and post-hoc temporal support diagnostics.
-%
-% Input:
-%   params: scalar parameter struct to inspect
-%   contextName: character vector used in diagnostics
-%
-% Output:
-%   none
     removedFields = ["enableConstrainedEm", "enableComponentPruning", "useSampleSufficiency", "emCovarianceMode", "combineMode", "emMeanDriftLimit", "emCandidateComponentCount", "emCandidateRadius", "emGateThreshold", "emStudentTDegreesOfFreedom", "emUniformBackgroundEnabled", "emUniformBackgroundInitialWeight", "emUniformBackgroundBevBounds"];
     for fieldName = removedFields
         if isfield(params, char(fieldName))
@@ -486,12 +458,6 @@ end
 function layer = emptyLayer()
 % emptyLayer: Create an empty semantic GMM layer struct with the
 % complete public field set produced by the map builder.
-%
-% Input:
-%   none
-%
-% Output:
-%   layer: scalar struct with initialized semantic layer fields
     layer = struct();
     layer.classLabel = "";
     layer.params = struct();
@@ -590,20 +556,6 @@ function [componentMeans, componentCovariances, componentBoundingBoxes, componen
 % buildComponentIndexData: Extract compact per-component metadata for
 % query-time candidate selection and diagnostics without changing stored
 % patch provenance or refined component support models.
-%
-% Input:
-%   components: struct array of structured Gaussian support components
-%
-% Output:
-%   componentMeans: [J x 2] component mean coordinates
-%   componentCovariances: [2 x 2 x J] component covariance matrices
-%   componentBoundingBoxes: [J x 4] refined support [minX minY maxX maxY] bounds
-%   componentPointCounts: [J x 1] effective support point counts
-%   componentSupportAmplitudes: [J x 1] component support amplitudes
-%   componentMixtureWeights: [J x 1] EM mixture weights preserved on
-%       retained support components
-%   componentPatchBoundingBoxes: [J x 4] original patch bounding boxes
-%   componentPatchPointCounts: [J x 1] original patch point counts
     componentCount = numel(components);
     componentMeans = zeros(componentCount, 2);
     componentCovariances = zeros(2, 2, componentCount);
@@ -630,12 +582,6 @@ function centroidSearcher = buildCentroidSearcher(componentMeans)
 % buildCentroidSearcher: Build a KD-tree over component means for
 % query-time component preselection. Empty retained component sets are invalid
 % under fail-fast map construction.
-%
-% Input:
-%   componentMeans: [J x 2] component mean coordinates
-%
-% Output:
-%   centroidSearcher: KDTreeSearcher object or empty array
     if isempty(componentMeans)
         error("buildTemporalStabilityGmmMap:EmptyCentroidIndex", ...
             "Cannot build a centroid searcher for an empty retained component set.");
@@ -650,12 +596,6 @@ function queryCandidateRadiusInflation = queryCandidateRadiusInflation(component
 % used by query-time centroid candidate retrieval so elongated or broad
 % components are not missed solely because their means are farther away in
 % Euclidean distance than the configured base candidate radius.
-%
-% Input:
-%   components: retained foreground support component struct array
-%
-% Output:
-%   queryCandidateRadiusInflation: scalar maximum component query support radius
     if isempty(components) || ~isfield(components, "querySupportRadius")
         queryCandidateRadiusInflation = 0;
         return;
@@ -671,13 +611,6 @@ end
 function storedResponsibilities = storedResponsibilities(responsibilities, params)
 % storedResponsibilities: Store dense EM responsibility-like matrices only
 % when requested by diagnostics configuration.
-%
-% Input:
-%   responsibilities: [N x K] final EM responsibility-like matrix
-%   params: class parameter struct with storeEmAssignments flag
-%
-% Output:
-%   storedResponsibilities: [N x K] responsibilities or an empty matrix
     if params.storeEmAssignments
         storedResponsibilities = responsibilities;
     else
@@ -688,13 +621,6 @@ end
 function storedValues = storedVector(values, params)
 % storedVector: Store a dense EM diagnostic vector only when
 % requested by diagnostics configuration.
-%
-% Input:
-%   values: [N x 1] diagnostic vector
-%   params: class parameter struct with storeEmAssignments flag
-%
-% Output:
-%   storedValues: [N x 1] diagnostic vector or an empty vector
     if params.storeEmAssignments
         storedValues = values(:);
     else
@@ -705,12 +631,6 @@ end
 function tf = isLogEnabled(cfg)
 % isLogEnabled: Resolve the optional command-window diagnostic logging
 % switch from the map builder configuration.
-%
-% Input:
-%   cfg: map builder configuration struct with optional logEnabled field
-%
-% Output:
-%   tf: logical scalar indicating whether structured builder logs are enabled
     tf = false;
     if isstruct(cfg) && isfield(cfg, "logEnabled") && isscalar(cfg.logEnabled)
         tf = logical(cfg.logEnabled);
@@ -720,15 +640,6 @@ end
 function logStep(logEnabled, logKey, message, varargin)
 % logStep: Print one structured command-window diagnostic line for the
 % semantic temporal-stability GMM builder when logging is enabled.
-%
-% Input:
-%   logEnabled: logical scalar diagnostic switch
-%   logKey: string scalar diagnostic key
-%   message: sprintf-compatible message format
-%   varargin: values consumed by the message format
-%
-% Output:
-%   none
     if ~logEnabled
         return;
     end
@@ -738,15 +649,6 @@ end
 function logPatchFilterSummary(logEnabled, classLabel, patchLocalIndices, removedPatchCount)
 % logPatchFilterSummary: Print the retained patch count after removing
 % patches that cannot support PCA-based component initialization.
-%
-% Input:
-%   logEnabled: logical scalar diagnostic switch
-%   classLabel: string scalar semantic class label
-%   patchLocalIndices: retained cell array of class-local patch index vectors
-%   removedPatchCount: scalar count of patches removed before component build
-%
-% Output:
-%   none
     patchSizes = cellfun(@numel, patchLocalIndices(:));
     [minPatchSize, medianPatchSize, maxPatchSize] = finiteSummary(patchSizes);
     logStep(logEnabled, "class.patches.filtered", "class=%s | retainedPatches=%d | removedPatches=%d | patchSize[min/med/max]=%.4g/%.4g/%.4g", ...
@@ -756,15 +658,6 @@ end
 function logAmplitudeSummary(logEnabled, classLabel, components, amplitudeDiagnostics)
 % logAmplitudeSummary: Print post-hoc temporal support amplitude
 % diagnostics for one semantic class before pruning.
-%
-% Input:
-%   logEnabled: logical scalar diagnostic switch
-%   classLabel: string scalar semantic class label
-%   components: struct array after ordinary GMM and post-hoc support scoring
-%   amplitudeDiagnostics: scalar post-hoc support diagnostics
-%
-% Output:
-%   none
     supportAmplitudes = [components.supportAmplitude].';
     effectiveSupportPointCounts = [components.effectiveSupportPointCount].';
     timestampBinCounts = [components.timestampBinCount].';
@@ -774,4 +667,194 @@ function logAmplitudeSummary(logEnabled, classLabel, components, amplitudeDiagno
     logStep(logEnabled, "class.temporalSupport", "class=%s | completed=%d | components=%d | support[min/med/max]=%.4g/%.4g/%.4g | effectivePoints[min/med/max]=%.4g/%.4g/%.4g | timestampBins[min/med/max]=%.4g/%.4g/%.4g", ...
         char(string(classLabel)), amplitudeDiagnostics.completed, numel(components), minSupport, medianSupport, maxSupport, ...
         minEffectivePoints, medianEffectivePoints, maxEffectivePoints, minTimestampBins, medianTimestampBins, maxTimestampBins);
+end
+
+function [sampledPoints, sampledSourceIndices, resampleDiagnostics] = resampleByTemporalReliability(points, sourceIndices, stability, params)
+% resampleByTemporalReliability: Convert temporal reliability scores into
+% normalized class-local sampling probabilities and draw an ordinary GMM
+% training set with independent Bernoulli sampling. A deterministic minimum
+% fill preserves a valid fixed-order GMM training set when a random draw is too
+% sparse.
+    pointCount = size(points, 1);
+    if numel(sourceIndices) ~= pointCount || numel(stability.scores) ~= pointCount
+        error("buildTemporalStabilityGmmMap:InvalidResampleInput", ...
+            "Temporal reliability resampling requires one source index and one reliability score per point.");
+    end
+    samplingWeights = params.temporalReliabilitySamplingFloor + stability.scores(:) .^ params.temporalReliabilityPower;
+    if any(~isfinite(samplingWeights)) || any(samplingWeights < 0) || sum(samplingWeights) <= 0
+        error("buildTemporalStabilityGmmMap:InvalidSamplingWeights", ...
+            "Temporal reliability sampling weights must be finite nonnegative values with positive total mass.");
+    end
+    samplingProbabilities = samplingWeights ./ sum(samplingWeights);
+    expectedSampleCount = pointCount .* params.temporalResampleExpectedCountMultiplier;
+    bernoulliProbabilities = min(1, expectedSampleCount .* samplingProbabilities);
+    stream = RandStream("mt19937ar", "Seed", params.temporalResampleRandomSeed);
+    sampleMask = rand(stream, pointCount, 1) <= bernoulliProbabilities;
+    minimumSampleCount = min(pointCount, max(2, min(numel(stability.patchScores), pointCount)));
+    deterministicFillCount = 0;
+    if nnz(sampleMask) < minimumSampleCount
+        missingCount = minimumSampleCount - nnz(sampleMask);
+        [~, fillOrder] = sort(bernoulliProbabilities, "descend");
+        fillOrder = fillOrder(~sampleMask(fillOrder));
+        fillIdx = fillOrder(1:min(missingCount, numel(fillOrder)));
+        sampleMask(fillIdx) = true;
+        deterministicFillCount = numel(fillIdx);
+    end
+    if ~any(sampleMask)
+        error("buildTemporalStabilityGmmMap:EmptyResample", ...
+            "Temporal reliability resampling produced an empty GMM training set.");
+    end
+    sampledPoints = points(sampleMask, :);
+    sampledSourceIndices = sourceIndices(sampleMask);
+    resampleDiagnostics = struct();
+    resampleDiagnostics.model = "independentBernoulliTemporalReliabilitySampling";
+    resampleDiagnostics.samplingProbabilities = samplingProbabilities(:);
+    resampleDiagnostics.bernoulliProbabilities = bernoulliProbabilities(:);
+    resampleDiagnostics.resampleCounts = double(sampleMask(:));
+    resampleDiagnostics.expectedSampleCount = expectedSampleCount;
+    resampleDiagnostics.selectedSampleCount = size(sampledPoints, 1);
+    resampleDiagnostics.deterministicFillCount = deterministicFillCount;
+end
+
+function seeds = initializeGaussianMixtureSeeds(points, patchLocalIndices, patchComponents, stability, resampleCounts, params)
+% initializeGaussianMixtureSeeds: Select and weight patch-initialized Gaussian
+% components before standard EM. Patch geometry and temporal reliability may
+% influence initialization and model order, but these seeds do not constrain
+% later ordinary EM updates.
+    patchCount = numel(patchComponents);
+    if patchCount < 1 || numel(patchLocalIndices) ~= patchCount || numel(stability.patchScores) ~= patchCount
+        error("buildTemporalStabilityGmmMap:InvalidGmmSeedInput", ...
+            "GMM seed construction requires matching nonempty patches, patch components, and patch scores.");
+    end
+    patchResampledMass = zeros(patchCount, 1);
+    for patchIdx = 1:patchCount
+        localIndices = patchLocalIndices{patchIdx}(:);
+        patchResampledMass(patchIdx) = sum(resampleCounts(localIndices));
+    end
+    keepMask = stability.patchScores(:) >= params.minPatchSupportForGmmSeed & patchResampledMass > 0;
+    if ~any(keepMask)
+        sampledPatchMask = patchResampledMass > 0;
+        if ~any(sampledPatchMask)
+            error("buildTemporalStabilityGmmMap:NoResampledSeedPatch", ...
+                "GMM seed construction requires at least one retained patch with resampled training mass.");
+        end
+        [~, bestPatchOffset] = max(stability.patchScores(sampledPatchMask));
+        sampledPatchIdx = find(sampledPatchMask);
+        keepMask(sampledPatchIdx(bestPatchOffset)) = true;
+    end
+    keptPatchIdx = find(keepMask);
+    patchMass = patchResampledMass + eps;
+    [~, orderIdx] = sort(patchMass(keptPatchIdx), "descend");
+    keptPatchIdx = keptPatchIdx(orderIdx);
+    maxSeedCount = min(numel(keptPatchIdx), max(1, nnz(resampleCounts)));
+    seeds = patchComponents(keptPatchIdx(1:maxSeedCount));
+    seedMass = patchMass(keptPatchIdx(1:maxSeedCount));
+    if any(~isfinite(seedMass)) || any(seedMass <= 0) || sum(seedMass) <= 0
+        error("buildTemporalStabilityGmmMap:InvalidGmmSeedMass", ...
+            "Patch-based GMM seed masses must be finite positive values.");
+    end
+    mixtureWeights = seedMass ./ sum(seedMass);
+    for componentIdx = 1:numel(seeds)
+        seeds(componentIdx).mixtureWeight = mixtureWeights(componentIdx);
+        seeds(componentIdx).initialMixtureWeight = mixtureWeights(componentIdx);
+        seeds(componentIdx).emMixtureWeightBeforePruning = mixtureWeights(componentIdx);
+        seeds(componentIdx).pointCount = size(points, 1) .* mixtureWeights(componentIdx);
+    end
+end
+
+function [components, pruningDiagnostics] = pruneComponentsByPosthocSupport(components, params)
+% pruneComponentsByPosthocSupport: Remove structured GMM components whose
+% post-hoc support amplitude, frame-bin count, point count, or geometric
+% stability is below configured class thresholds after ordinary EM has
+% completed.
+    pruningDiagnostics = struct();
+    pruningDiagnostics.appliedAfterIntegratedSupport = true;
+    pruningDiagnostics.appliedAfterPosthocSupport = true;
+    pruningDiagnostics.inputComponentCount = numel(components);
+    pruningDiagnostics.outputComponentCount = numel(components);
+    pruningDiagnostics.keepMask = false(numel(components), 1);
+    pruningDiagnostics.removedCount = 0;
+    pruningDiagnostics.inputSupportAmplitudes = zeros(numel(components), 1);
+    pruningDiagnostics.inputTimestampBinCounts = zeros(numel(components), 1);
+    pruningDiagnostics.inputEffectiveSupportPointCounts = zeros(numel(components), 1);
+    pruningDiagnostics.inputGeometricStability = zeros(numel(components), 1);
+
+    if isempty(components)
+        error("buildTemporalStabilityGmmMap:NoComponentsBeforePruning", ...
+            "No post-hoc temporal support components are available before pruning; empty component layers are invalid.");
+    end
+
+    keepMask = false(numel(components), 1);
+    for componentIdx = 1:numel(components)
+        pruningDiagnostics.inputSupportAmplitudes(componentIdx) = components(componentIdx).supportAmplitude;
+        pruningDiagnostics.inputTimestampBinCounts(componentIdx) = components(componentIdx).timestampBinCount;
+        pruningDiagnostics.inputEffectiveSupportPointCounts(componentIdx) = components(componentIdx).effectiveSupportPointCount;
+        pruningDiagnostics.inputGeometricStability(componentIdx) = components(componentIdx).geometricStability;
+        keepMask(componentIdx) = components(componentIdx).supportAmplitude >= params.minComponentSupport && ...
+            components(componentIdx).timestampBinCount >= params.minTimestampBins && ...
+            components(componentIdx).effectiveSupportPointCount >= params.minComponentPoints && ...
+            components(componentIdx).normalStability >= params.minNormalStability;
+    end
+    pruningDiagnostics.keepMask = keepMask;
+    components = components(keepMask);
+    pruningDiagnostics.outputComponentCount = numel(components);
+    pruningDiagnostics.removedCount = pruningDiagnostics.inputComponentCount - pruningDiagnostics.outputComponentCount;
+    if isempty(components)
+        error("buildTemporalStabilityGmmMap:NoRetainedComponents", ...
+            "Post-hoc temporal support pruning removed every component; empty retained component layers are invalid.");
+    end
+end
+
+function seeds = reseedFromRetainedComponents(components)
+% reseedFromRetainedComponents: Convert post-hoc retained components
+% into a normalized initialization for the final ordinary Gaussian EM refit.
+    if isempty(components)
+        error("buildTemporalStabilityGmmMap:InvalidRefitSeeds", ...
+            "Final standard GMM refit requires at least one retained component.");
+    end
+    seeds = components;
+    mixtureWeights = [seeds.mixtureWeight].';
+    if any(~isfinite(mixtureWeights)) || any(mixtureWeights <= 0) || sum(mixtureWeights) <= 0
+        mixtureWeights = max([seeds.supportAmplitude].', eps);
+    end
+    mixtureWeights = mixtureWeights ./ sum(mixtureWeights);
+    for componentIdx = 1:numel(seeds)
+        seeds(componentIdx).mixtureWeight = mixtureWeights(componentIdx);
+        seeds(componentIdx).initialMixtureWeight = mixtureWeights(componentIdx);
+    end
+end
+
+function [meansXYZ, covariancesXYZ] = fitConditionalHeight(points, components, varianceFloor)
+% fitConditionalHeight: Fit p(z|XY,k) after the XY temporal GMM is finalized.
+% Use the same temporally resampled returns and final XY responsibilities.
+% This conditional regression preserves the existing XY marginal exactly.
+    normalized = components;
+    mass = sum([normalized.mixtureWeight]);
+    for k = 1:numel(normalized)
+        normalized(k).mixtureWeight = normalized(k).mixtureWeight/mass;
+    end
+    responsibility = gaussianExpectation(points(:, 1:2), normalized);
+    meansXYZ = zeros(numel(components), 3);
+    covariancesXYZ = zeros(3, 3, numel(components));
+    for k = 1:numel(components)
+        weight = responsibility(:, k);
+        assert(sum(weight) > 0, 'Height component has no sample support.');
+        weight = weight/sum(weight);
+        origin = components(k).mean;
+        xy = points(:, 1:2)-origin;
+        meanXY = weight.'*xy;
+        zOrigin = points(1, 3);
+        z = points(:, 3)-zOrigin;
+        meanZ = weight.'*z;
+        dx = xy-meanXY;
+        dz = z-meanZ;
+        scatter = dx.'*(weight.*dx);
+        slope = pinv(scatter)*(dx.'*(weight.*dz));
+        residual = dz-dx*slope;
+        conditionalVariance = max(sum(weight.*residual.^2), varianceFloor);
+        covarianceXY = components(k).covariance;
+        cross = covarianceXY*slope;
+        meansXYZ(k, :) = [origin, zOrigin+meanZ-meanXY*slope];
+        covariancesXYZ(:, :, k) = [covarianceXY, cross; cross.', conditionalVariance+slope.'*cross];
+    end
 end
