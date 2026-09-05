@@ -173,8 +173,8 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
         end
         function [cfg,points,labels,frames]=mapFixture()
             cfg=temporalStabilityMapConfig(); cfg.classes="curb"; cfg.classParams=cfg.classParams([]);
-            cfg.defaultParams.k=4; cfg.defaultParams.radius=1.5; cfg.defaultParams.maxDiameter=10;
-            cfg.defaultParams.emMaxIterations=5; cfg.defaultParams.minComponentPoints=2;
+            cfg.defaultParams.maxComponentsPerTile=1;
+            cfg.defaultParams.minComponentPoints=2;
             x=repmat((0:0.75:3).',3,1); y=[zeros(5,1);0.05*ones(5,1);-0.04*ones(5,1)];
             points=[x,y,30+0.2*x-0.1*y]; labels=repmat("curb",15,1); frames=repelem((1:3).',5);
         end

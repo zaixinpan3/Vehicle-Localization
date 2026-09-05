@@ -1,93 +1,31 @@
 function cfg = temporalStabilityMapConfig()
-% temporalStabilityMapConfig: Parameters of the semantic temporal-stability
-% Gaussian support map. Per class, mutual-kNN patches propose spatial
-% support candidates, leave-one-bin-out cross-frame support scores point
-% reliability, reliability drives an independent Bernoulli resampling of the
-% EM training set, an ordinary full-covariance Gaussian mixture is fitted by
-% EM, and temporal support is recomputed post hoc for amplitude, pruning,
-% refit, and query-time weighting. The values are the effective parameters
-% used to build the saved Mississippi probability-cloud map: the shared
-% overrides applied by the original map-building script are folded into the
-% defaults, and traffic signs keep their broader patch settings.
-%
-% Input:
-%   none
-%
-% Output:
-%   cfg: struct with classes (set by the caller), pcaEpsilon, defaultParams,
-%       and classParams consumed by buildTemporalStabilityGmmMap
-    cfg = struct();
-    cfg.classes = strings(0, 1);
-    cfg.pcaEpsilon = 1.0e-6;
-    cfg.minimumConditionalHeightVariance = 1.0e-4;
-    cfg.logEnabled = false;
-    cfg.defaultParams = classParameters("", 3.0, 1.0, 16, 2.5, 8.0, 2);
-    cfg.classParams = [
-        classParameters("curb", 4.0, 0.7, 16, 2.5, 8.0, 2)
-        classParameters("roadMarking", 4.5, 0.8, 16, 2.5, 8.0, 2)
-        classParameters("facade", 6.0, 1.0, 16, 2.5, 8.0, 2)
-        classParameters("pole", 1.2, 1.2, 16, 2.5, 8.0, 2)
-        classParameters("trafficSign", 1.5, 1.5, 16, 4.0, 8.0, 20)
-    ];
+% temporalStabilityMapConfig: Repeated-observation Gaussian field parameters.
+% Lengths are meters, covariances are square meters, and reference mass is
+% occupied XY area. Defaults are engineering assumptions, not calibration.
+    cfg = struct('schemaVersion',2,'classes',strings(0,1), ...
+        'observationBlockSize',1,'blockOriginFrame',1, ...
+        'minimumConditionalHeightVariance',1e-4,'logEnabled',false);
+    cfg.defaultParams = parameters("");
+    cfg.classParams = arrayfun(@parameters, ...
+        ["curb";"roadMarking";"facade";"pole";"trafficSign"]);
 end
 
-function params = classParameters(classLabel, lengthParallel, lengthPerp, k, radius, maxDiameter, minComponentPoints)
-% classParameters: Package one complete semantic class parameter set.
-%
-% Input:
-%   classLabel: string scalar class key, or "" for the shared defaults
-%   lengthParallel, lengthPerp: patch-based initialization covariance
-%       lengths along and across the local PCA direction, in meters
-%   k, radius, maxDiameter: mutual-kNN neighbor count, pruning radius, and
-%       maximum patch diameter, in meters
-%   minComponentPoints: minimum points for a buildable patch or component
-%
-% Output:
-%   params: struct with the full parameter set validated by the map builder
-    params = struct();
-    params.classLabel = string(classLabel);
-
-    % Spatial support patches (mutual kNN graph, radius pruning, PCA splitting)
-    params.k = k;
-    params.radius = radius;
-    params.maxDiameter = maxDiameter;
-    params.lengthParallel = lengthParallel;
-    params.lengthPerp = lengthPerp;
-    params.minComponentPoints = minComponentPoints;
-    params.minPatchSupportForGmmSeed = 0.0;
-
-    % Temporal reliability scoring and Bernoulli resampling of the EM training set
-    params.timestampMaxBins = 10.0;
-    params.frameCountSaturation = 1.0;
-    params.effectiveFramePrior = 1.0;
-    params.normalStabilityLength = 1.5;
-    params.compactStabilityLength = 1.5;
-    params.geometricElongatedAnisotropyThreshold = 3.0;
-    params.temporalReliabilityKernelBandwidth = 2.5;
-    params.temporalReliabilityKernelRadiusMultiplier = 3.0;
-    params.temporalReliabilityPower = 2.0;
-    params.temporalReliabilitySamplingFloor = 0.05;
-    params.temporalResampleExpectedCountMultiplier = 1.0;
-    params.temporalResampleRandomSeed = 1;
-
-    % Ordinary Gaussian-mixture EM and covariance safeguards
-    params.emMaxIterations = 80;
-    params.emTolerance = 1.0e-2;
-    params.emMinEffectiveSupport = 1.0e-6;
-    params.emMinFrameWeight = 1.0e-9;
-    params.minCovarianceEigenvalue = 1.0e-6;
-    params.maxCovarianceEigenvalue = 1.0e4;
-    params.storeEmAssignments = false;
-
-    % Post-hoc temporal support pruning and refit
-    params.minComponentSupport = 0.0;
-    params.minTimestampBins = 2;
-    params.minNormalStability = 0.0;
-    params.refitAfterTemporalPruning = true;
-
-    % Query-time support evaluation
-    params.priorSupport = 0.05;
-    params.querySupportMahalanobisRadius = 3.0;
-    params.queryCandidateComponentCount = inf;
-    params.queryCandidateRadius = 1.0;
+function p = parameters(name)
+    p = struct('classLabel',name, ...
+        'representativeResolution',0.10,'referenceResolution',0.25, ...
+        'tileSize',8.0,'tileOrigin',[-4 -4],'contextHalo',2.0, ...
+        'maxComponentsPerTile',3,'minComponentPoints',2, ...
+        'minObservedBlocks',2,'minBlockEffectiveCount',0.5, ...
+        'repeatabilityPrior',0.5,'stableStandardDeviation',0.15, ...
+        'variableStandardDeviation',1.0,'tangentStandardDeviation',1.0, ...
+        'elongatedAnisotropyThreshold',4.0,'meanPriorStandardDeviation',8.0, ...
+        'minCovarianceEigenvalue',0.0025,'maxCovarianceEigenvalue',16.0, ...
+        'mixturePseudocount',0.1,'backgroundBetaPrior',[2 10], ...
+        'publishFalsePositiveCost',1.0,'publishFalseNegativeCost',1.0, ...
+        'emMaxIterations',80,'emTolerance',1e-5,'parameterTolerance',1e-3, ...
+        'selectionMinBlocks',3,'selectionHoldoutEvery',3, ...
+        'selectionMinGainPerPoint',0.01,'storeEmAssignments',false, ...
+        'clutterIntensity',0.05,'classImportance',1.0, ...
+        'queryIntensityTolerance',1e-7,'queryIndexCellSize',2.0, ...
+        'heightModeSeparation',0.75,'heightModeVarianceRatio',0.25);
 end

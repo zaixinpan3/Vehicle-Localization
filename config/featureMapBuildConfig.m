@@ -29,10 +29,8 @@ function cfg = featureMapBuildConfig()
     cfg.featureNames = ["curb", "roadMarking", "pole"];
     cfg.facadeDetectionEnabled = false;
 
-    % Per-class map input thresholds and the temporal diversity saturation cap
-    cfg.minMapPointsPerClass = 4;
-    cfg.minMapTimestampBinsPerClass = 2;
-    cfg.maxMapPointsPerClass = 2000;
-    cfg.timestampMaxBins = 10;
+    % Deterministic representatives, observation blocks, and tile inference.
+    % Sparse classes are retained as empty/unconfirmed layers.
+    cfg.temporalMap = temporalStabilityMapConfig();
     cfg.logEnabled = true;
 end

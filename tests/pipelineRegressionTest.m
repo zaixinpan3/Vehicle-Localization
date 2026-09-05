@@ -1,7 +1,8 @@
 classdef pipelineRegressionTest < matlab.unittest.TestCase
 % pipelineRegressionTest: Reproduce the reference outputs captured from the
 % RobustVehicleLocalization code before the refactor. The perception and
-% mapping checks need the recorded datasets and are skipped when the data
+% mapping checks validate the redesigned field on recorded observations and are
+% skipped when the data
 % root is unavailable. Set VEHICLE_LOCALIZATION_DATA_ROOT to the folder
 % holding raw/MissisipiPointClouds.mat and raw/downTownPointClouds.mat.
 
@@ -60,10 +61,9 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
             end
         end
 
-        function mappingReproducesReferenceMap(testCase)
-        % mappingReproducesReferenceMap: The sliding-window temporal-stability
-        % map built from the reference frame window reproduces the reference
-        % components and query scores.
+        function mappingBuildsRepeatableFieldFromReferenceObservations(testCase)
+        % The archived noisy-OR scores are a legacy baseline, not the target
+        % of the new model. Keep the original reference artifact unchanged.
             testCase.assumeDataAvailable();
             reference = testCase.Reference.map;
             matPath = fullfile(testCase.DataRoot, testCase.Reference.mississippi.matFile);
@@ -76,18 +76,19 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
             perceptionCfg.offGroundFeatures.facadeDetectionEnabled = cfg.facadeDetectionEnabled;
             featureData = collectFeatureObservations(matPath, reference.frameIndices, reference.poseTable, perceptionCfg, cfg);
             probabilityCloudMap = buildSlidingWindowMap(featureData, cfg);
-            gmmMap = probabilityCloudMap.batchMaps(1).gmmMap;
-            testCase.verifyEqual(gmmMap.classLabels, reference.classLabels);
-            for layerIdx = 1:numel(reference.layers)
-                layer = gmmMap.layers(layerIdx);
-                expected = reference.layers(layerIdx);
-                testCase.verifyEqual(layer.componentMeans, expected.componentMeans, AbsTol=1.0e-8);
-                testCase.verifyEqual(layer.componentCovariances, expected.componentCovariances, AbsTol=1.0e-8);
-                testCase.verifyEqual(layer.componentSupportAmplitudes, expected.componentSupportAmplitudes, AbsTol=1.0e-8);
-                testCase.verifyEqual(layer.componentMixtureWeights, expected.componentMixtureWeights, AbsTol=1.0e-8);
-            end
-            scores = queryTemporalStabilityGmmMap(probabilityCloudMap, reference.queryPoints);
-            testCase.verifyEqual(scores, reference.queryScores, AbsTol=1.0e-8);
+            gmmMap = probabilityCloudMap.canonicalMap;
+            cloud = temporalMapToProbabilityCloud(probabilityCloudMap);
+            [scores,details] = queryTemporalStabilityGmmMap(probabilityCloudMap,reference.queryPoints);
+            testCase.verifyEqual(gmmMap.classLabels,cfg.featureNames(:));
+            testCase.verifyEqual(probabilityCloudMap.frameIndices,reference.frameIndices(:).');
+            testCase.verifyGreaterThan(cloud.totalMass,0);
+            testCase.verifyGreaterThan(cloud.components.numComponents,0);
+            testCase.verifyEqual(sum(cloud.components.mixtureWeight),1,'AbsTol',1e-12);
+            testCase.verifyTrue(all(isfinite(scores(details.valid))));
+            testCase.verifyTrue(all(isnan(scores(~details.valid))));
+            testCase.verifyLessThanOrEqual(scores(details.valid),ones(nnz(details.valid),1));
+            testCase.verifyGreaterThanOrEqual(scores(details.valid),zeros(nnz(details.valid),1));
+            testCase.verifyEqual(cloud.queryRelationship,"exactIntensityNormalization");
         end
     end
 

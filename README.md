@@ -24,8 +24,8 @@ organized LiDAR frame (vehicle coordinates)
        +-> offline
             refinePerceptionCandidates: evaluate candidate members individually
             collectFeatureObservations: fine points -> global coordinates
-            buildSlidingWindowMap: temporal-stability Gaussian support map
-            temporalMapToProbabilityCloud: one window's D2D representation
+            buildSlidingWindowMap: canonical repeated-observation Gaussian field
+            temporalMapToProbabilityCloud: normalized field with retained mass
 ```
 
 ### Perception (`perception/`)
@@ -78,26 +78,36 @@ and build script are versioned; generated platform binaries are ignored.
 
 ### Mapping (`mapping/`)
 
-`buildFeatureMap(dataRoot)` runs the whole offline chain and saves the
-sliding-window probability-cloud map. The temporal-stability GMM in
-`mapping/buildTemporalStabilityGmmMap.m` keeps the design rule of the original code:
-temporal information decides *which points are sampled, how the mixture is
-seeded, and which components survive*, never the EM updates themselves.
-New maps preserve XYZ observations and fit a conditional Gaussian height model
-after the XY mixture is finalized. The XY map and original noisy-OR/max query
-remain unchanged. Existing saved XY maps have no recoverable height; rebuild
-from XYZ observations to obtain it. The conditional height density integrates
-to one, so adding it does not reweight landmarks by their vertical extent.
+`buildFeatureMap(dataRoot)` runs the offline chain and saves a schema-2
+repeated-observation Gaussian field. The builder uses deterministic per-block
+spatial representatives, structured variational inference with an explicit
+background, and unique spatial ownership. It separates within-block geometry,
+block displacement, repeatability, and reference area. Frame windows schedule
+observations; their union contributes evidence once to `canonicalMap`.
+
+Queries evaluate `Lambda/(Lambda+kappa)` and return coverage/status metadata.
+Gaussian-cloud exports normalize the same field and retain total and per-class
+mass, so queries can be reconstructed exactly before bounded index truncation.
+Conditional height preserves the XY marginal and mass; missing or inadequate
+height remains unavailable. Defaults use one frame per observation block;
+explicit IDs and fixed frame groups are supported. These probabilities describe
+model-conditional repeatability, not occupancy or permanent existence.
+
+See [the formulation and migration contract](research/repeated_observation_map_design.md)
+for priors, the ELBO, publication, mass allocation, held-out model selection,
+query error bounds, and current validation limits. Legacy saved maps retain
+labelled legacy query/export behavior. Rebuild them from observations to obtain
+the new semantics; old score thresholds require reevaluation.
 
 The directory contains only five map algorithms and one shared support file:
 
 | File | Purpose |
 | --- | --- |
 | `buildSemanticNdtGridMap.m` | Aggregate semantic observations into NDT cells |
-| `buildTemporalStabilityGmmMap.m` | Fit the temporal-stability GMM and conditional height model |
-| `buildSlidingWindowMap.m` | Build overlapping map windows from registered feature observations |
-| `queryTemporalStabilityGmmMap.m` | Evaluate Gaussian support and fuse overlapping windows |
-| `temporalMapToProbabilityCloud.m` | Export one map window as a Gaussian probability cloud |
+| `buildTemporalStabilityGmmMap.m` | Fit repeated-observation geometry and conditional height |
+| `buildSlidingWindowMap.m` | Ingest scheduled frames once and build canonical owned tiles |
+| `queryTemporalStabilityGmmMap.m` | Evaluate the Gaussian field against clutter with coverage and error bounds |
+| `temporalMapToProbabilityCloud.m` | Export the normalized field with retained mass; support legacy windows |
 | `mappingSupport.m` | Share logging, statistics, and numerical/schema validation |
 
 All six files are directly under `mapping/`, with no subdirectories. Internal
@@ -204,7 +214,8 @@ selfScore = scoreSemanticProbabilityCloudAlignment( ...
     localCloud, localCloud, [0, 0, 0]);           % semantic D2D-NDT score
 
 [probabilityCloudMap, featureData] = buildFeatureMap("data");   % offline map
-scores = queryTemporalStabilityGmmMap(probabilityCloudMap, queryXY, "pole");
+[scores, queryInfo] = queryTemporalStabilityGmmMap(probabilityCloudMap, queryXY, "pole");
+% queryInfo.valid identifies coverage; invalid scores are NaN.
 
 design = designLateralObserverGains(lateralObserverConfig());   % LPV H2 synthesis
 estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
@@ -220,13 +231,16 @@ result = simulateImprovedObserverScenario( ...
 `buildMississippiFeatureMap.m`, `runLateralObserverDesign.m`, and
 `runImprovedObserverDesign.m`. `evaluatePillarPerception` and
 `evaluatePillarRegistration` write reproducible comparison tables under `output/`.
+`evaluateRepeatedObservationMap` records actual construction, convergence and
+query/export consistency on Mississippi frames 260--289.
 `showMississippiPerception(260,"","coarseProbabilityCloud")` displays the complete
 cloud with candidate pillar members colored; `"offline"` displays accepted fine points.
 
-For D2D, select one local map window explicitly and cache its converted cloud:
+For D2D, cache the canonical field as a Gaussian cloud. Legacy saved maps still
+require selecting one window rather than concatenating overlapping windows:
 
 ```matlab
-mapCloud = temporalMapToProbabilityCloud(probabilityCloudMap, batchIndex);
+mapCloud = temporalMapToProbabilityCloud(probabilityCloudMap);
 [measurement, diagnostic] = localizeLidarFrame( ...
     frame, mapCloud, predictedPoseXYTheta, acquisitionTimestamp);
 % Empty measurement means rejected alignment. Set measurement.arrivalTime
@@ -234,7 +248,7 @@ mapCloud = temporalMapToProbabilityCloud(probabilityCloudMap, batchIndex);
 ```
 
 The localization state and every accepted measurement are **[X, Y, psi]** in
-meters/radians. The caller supplies a local prediction, a map window, and known
+meters/radians. The caller supplies a local prediction, a map cloud, and known
 IMU tilt. This is local SE(2) alignment. Online perception remains pillar-only;
 fine point verification is confined to offline mapping.
 
@@ -283,8 +297,11 @@ raw/Missisipi/gnss/<bag>_front_lidar_pose_match_1_1170.csv   from matchFramePose
 ## Verification
 
 `pipelineRegressionTest` explicitly selects `legacyFull` and preserves the
-original reference file unchanged. It verifies historical perception and map
-outputs. `pillarPerceptionTest` tests the new execution boundary, sparse storage,
+original reference file unchanged. It verifies historical perception outputs
+and the new map's field contracts on the same recorded observations.
+`temporalStabilityGmmMapTest` checks hierarchical inference, mass conservation,
+query/export consistency, coverage, height and canonical ownership.
+`pillarPerceptionTest` tests the new execution boundary, sparse storage,
 known-tilt moments, rejection behavior, and recorded point fidelity.
 `distributionRegistrationTest` checks analytic derivatives, anisotropic covariance
 rotation, semantic mass invariance, known-pose recovery, map support units, empty

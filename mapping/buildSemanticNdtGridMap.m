@@ -21,14 +21,14 @@ function ndtMap = buildSemanticNdtGridMap(frame, coarseProduct, cfg)
     semanticGrid = resolveSemanticGrid(coarseProduct);
     cfg = validateConfig(cfg);
     geometry = buildGridGeometry(cfg);
-    [pointsXY, pointTags, sourceSummary] = recoverTaggedPoints(frame, semanticGrid);
+    [pointsXY, pointTags, sourceSummary, blockIds] = recoverTaggedPoints(frame, semanticGrid);
     [selectedNames, selectedTagIds] = resolveSelectedSemantics(cfg.semanticNames, semanticGrid.semanticNames);
 
     layers = repmat(emptyLayer(geometry), numel(selectedNames), 1);
     for semanticIdx = 1:numel(selectedNames)
         semanticPointMask = pointTags == uint16(selectedTagIds(semanticIdx));
         layers(semanticIdx) = buildSemanticLayer(pointsXY(semanticPointMask, :), ...
-            selectedNames(semanticIdx), uint16(selectedTagIds(semanticIdx)), geometry, cfg);
+            selectedNames(semanticIdx), uint16(selectedTagIds(semanticIdx)), geometry, cfg, blockIds(semanticPointMask));
     end
 
     components = concatenateComponents(layers);
@@ -134,7 +134,7 @@ function geometry = buildGridGeometry(cfg)
     geometry.yCenters = double(yEdges(1:end-1) + (0.5 .* cfg.resolution));
 end
 
-function [pointsXY, pointTags, sourceSummary] = recoverTaggedPoints(frame, semanticGrid)
+function [pointsXY, pointTags, sourceSummary, blockIds] = recoverTaggedPoints(frame, semanticGrid)
 % recoverTaggedPoints: Recover original point XY coordinates and
 % corresponding coarse 3D voxel semantic tag ids from semanticGrid recovery
 % metadata.
@@ -164,6 +164,16 @@ function [pointsXY, pointTags, sourceSummary] = recoverTaggedPoints(frame, seman
     finiteXY = isfinite(pointX) & isfinite(pointY);
     pointsXY = [pointX(finiteXY), pointY(finiteXY)];
     pointTags = tagVolume(validVoxelLinIdx(finiteXY));
+    blockIds=repmat("unspecified",size(pointsXY,1),1);
+    if isfield(frame,'observationBlockId')
+        ids=string(frame.observationBlockId(:));
+        assert(all(~ismissing(ids) & strlength(ids)>0),'Invalid observation block IDs.');
+        if isscalar(ids), blockIds=repmat(ids,size(pointsXY,1),1);
+        else
+            assert(numel(ids)==numel(x),'One block ID is required per original point.');
+            blockIds=ids(validOriginalIdx(finiteXY));
+        end
+    end
     sourceSummary = struct();
     sourceSummary.numFramePoints = double(numel(x));
     sourceSummary.numRecoveredPoints = double(numel(originalPointIdx));
@@ -234,9 +244,11 @@ function layer = emptyLayer(geometry)
     layer.covariance = zeros(2, 2, 0);
     layer.invCovariance = zeros(2, 2, 0);
     layer.componentLogNormalizationConstant = zeros(0, 1);
+    layer.blockStatistics=struct('observationBlockId',strings(0,1),'cellLinIdx',zeros(0,1), ...
+        'count',zeros(0,1),'mean',zeros(0,2),'centeredScatter',zeros(2,2,0));
 end
 
-function layer = buildSemanticLayer(pointsXY, semanticName, semanticTagId, geometry, cfg)
+function layer = buildSemanticLayer(pointsXY, semanticName, semanticTagId, geometry, cfg, blockIds)
 % buildSemanticLayer: Aggregate one semantic class into fixed XY cells
 % and compute regularized 2D Gaussian statistics for valid cells.
 %
@@ -259,11 +271,16 @@ function layer = buildSemanticLayer(pointsXY, semanticName, semanticTagId, geome
     [cellLinIdx, inGrid] = assignPointsToCells(pointsXY, geometry);
     pointsXY = double(pointsXY(inGrid, :));
     cellLinIdx = double(cellLinIdx(inGrid));
+    blockIds=blockIds(inGrid);
     if isempty(cellLinIdx)
         return;
     end
 
     numCells = double(geometry.numCells);
+    layer.blockStatistics=aggregateBlocks(pointsXY,blockIds,cellLinIdx);
+    [cellRow,cellCol]=ind2sub(geometry.dims,cellLinIdx);
+    localOrigin=[geometry.xMin+(cellCol-1)*geometry.resolution,geometry.yMin+(cellRow-1)*geometry.resolution];
+    pointsXY=pointsXY-localOrigin;
     countVec = accumarray(cellLinIdx, 1, [numCells, 1], @sum, 0);
     sumX = accumarray(cellLinIdx, pointsXY(:, 1), [numCells, 1], @sum, 0);
     sumY = accumarray(cellLinIdx, pointsXY(:, 2), [numCells, 1], @sum, 0);
@@ -282,10 +299,26 @@ function layer = buildSemanticLayer(pointsXY, semanticName, semanticTagId, geome
     covarianceXX = (sumXX(validCellLinIdx) - (sumX(validCellLinIdx) .* sumX(validCellLinIdx) ./ count)) ./ max(count - 1, 1);
     covarianceXY = (sumXY(validCellLinIdx) - (sumX(validCellLinIdx) .* sumY(validCellLinIdx) ./ count)) ./ max(count - 1, 1);
     covarianceYY = (sumYY(validCellLinIdx) - (sumY(validCellLinIdx) .* sumY(validCellLinIdx) ./ count)) ./ max(count - 1, 1);
+    [cellRow,cellCol]=ind2sub(geometry.dims,validCellLinIdx);
+    meanX=meanX+geometry.xMin+(cellCol-1)*geometry.resolution;
+    meanY=meanY+geometry.yMin+(cellRow-1)*geometry.resolution;
     [covariance, invCovariance, determinant, logNorm] = regularizeCovariances( ...
         covarianceXX, covarianceXY, covarianceYY, cfg);
 
     layer = fillLayerMaps(layer, geometry, countVec, validCellLinIdx, meanX, meanY, covariance, invCovariance, determinant, logNorm);
+end
+
+function stats=aggregateBlocks(points,ids,cells)
+% Preserve unregularized centered sufficient statistics, including small cells.
+    [names,~,block]=unique(ids); [keys,~,group]=unique([block cells],'rows');
+    count=accumarray(group,1); means=zeros(size(keys,1),2); scatter=zeros(2,2,size(keys,1));
+    for j=1:size(keys,1)
+        values=points(group==j,:); origin=values(1,:); local=values-origin;
+        center=mean(local,1); residual=local-center;
+        means(j,:)=center+origin; scatter(:,:,j)=residual.'*residual;
+    end
+    stats=struct('observationBlockId',names(keys(:,1)),'cellLinIdx',keys(:,2), ...
+        'count',count,'mean',means,'centeredScatter',scatter);
 end
 
 function [cellLinIdx, inGrid] = assignPointsToCells(pointsXY, geometry)

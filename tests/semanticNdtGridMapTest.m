@@ -18,6 +18,20 @@ classdef semanticNdtGridMapTest < matlab.unittest.TestCase
     end
 
     methods (Test)
+        function preservesBlockStatisticsAndLargeCoordinatePrecision(testCase)
+            [frame,grid,cfg]=semanticNdtGridMapTest.syntheticFixture();
+            frame.observationBlockId=[1;1;2;1;1;2];
+            local=buildSemanticNdtGridMap(frame,grid,cfg);
+            frame.x=frame.x+700000; frame.y=frame.y+4300000;
+            cfg.xMin=cfg.xMin+700000; cfg.xMax=cfg.xMax+700000;
+            cfg.yMin=cfg.yMin+4300000; cfg.yMax=cfg.yMax+4300000;
+            globalMap=buildSemanticNdtGridMap(frame,grid,cfg);
+            testCase.verifyEqual(globalMap.components.covariance,local.components.covariance,'AbsTol',1e-9);
+            testCase.verifyEqual(local.layers(1).blockStatistics.count,[2;1]);
+            testCase.verifyEqual(local.layers(1).blockStatistics.observationBlockId,["1";"2"]);
+            testCase.verifyEqual(local.layers(1).blockStatistics.mean,[0.25 0.25;0.4 0.4],'AbsTol',1e-12);
+        end
+
         function coarseTagsProjectToSemanticNdtCells(testCase)
         % coarseTagsProjectToSemanticNdtCells: Coarse voxel tags are recovered
         % at the original points, projected into fixed 2D cells per class, and
