@@ -13,7 +13,7 @@ classdef temporalStabilityGmmMapTest < matlab.unittest.TestCase
         %   none
             projectFolder = fileparts(fileparts(mfilename("fullpath")));
             testCase.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(projectFolder, "config")));
-            testCase.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(projectFolder, "mapping", "temporalStabilityGmm")));
+            testCase.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(projectFolder, "mapping")));
         end
     end
 
@@ -83,6 +83,53 @@ classdef temporalStabilityGmmMapTest < matlab.unittest.TestCase
 
             testCase.verifyError(@() buildTemporalStabilityGmmMap(points, labels, timestamps, cfg), ...
                 "buildTemporalStabilityGmmMap:RemovedModeField");
+        end
+
+        function sharedLoggingKeepsStageSwitchesDistinct(testCase)
+            cfg = struct('stepLogsEnabled', true, 'logEnabled', false);
+            testCase.verifyTrue(mappingSupport.isLogEnabled(cfg));
+            testCase.verifyFalse(mappingSupport.isLogEnabled(cfg, "logEnabled"));
+            testCase.verifyFalse(mappingSupport.isLogEnabled(struct()));
+            testCase.verifyFalse(mappingSupport.isLogEnabled(struct('stepLogsEnabled', [true false])));
+            testCase.verifyEqual(string(mappingSupport.formatFrameIndexSet(260:289)), "260:289");
+            testCase.verifyEqual(mappingSupport.formatFrameIndexSet([260 300 326]), "[260 300 326]");
+        end
+
+        function sharedSummaryPreservesFiniteAndEmptyResults(testCase)
+            [minimum, medianValue, maximum] = mappingSupport.finiteSummary([NaN 4 1 Inf 2]);
+            testCase.verifyEqual([minimum medianValue maximum], [1 2 4], AbsTol=1.0e-12);
+            [minimum, medianValue, maximum] = mappingSupport.finiteSummary([NaN Inf]);
+            testCase.verifyTrue(all(isnan([minimum medianValue maximum])));
+        end
+
+        function sharedCovarianceChecksPreserveErrorIdentifiers(testCase)
+            testCase.verifyError(@() mappingSupport.validateCovarianceMatrix(nan(2), "fixture"), ...
+                "buildTemporalStabilityGmmMap:InvalidCovarianceMatrix");
+            testCase.verifyError(@() mappingSupport.validateCovarianceMatrix([1 1; 0 1], "fixture"), ...
+                "buildTemporalStabilityGmmMap:NonSymmetricCovariance");
+            testCase.verifyError(@() mappingSupport.validateCovarianceMatrix(diag([1 -1]), "fixture"), ...
+                "buildTemporalStabilityGmmMap:NonPositiveDefiniteCovariance");
+            testCase.verifyError(@() mappingSupport.validateCovarianceMatrix(nan(2), "fixture", ...
+                "queryTemporalStabilityGmmMap"), "queryTemporalStabilityGmmMap:InvalidCovarianceMatrix");
+            testCase.verifyError(@() mappingSupport.validateCovarianceMatrix([1 1; 0 1], "fixture", ...
+                "queryTemporalStabilityGmmMap"), "queryTemporalStabilityGmmMap:NonSymmetricCovariance");
+            testCase.verifyError(@() mappingSupport.validateCovarianceMatrix(diag([1 -1]), "fixture", ...
+                "queryTemporalStabilityGmmMap"), "queryTemporalStabilityGmmMap:NonPositiveDefiniteCovariance");
+        end
+
+        function sharedUnitChecksPreserveToleranceAndErrorIdentifiers(testCase)
+            testCase.verifyEqual(mappingSupport.clipUnit([-1.0e-13 0.5 1+1.0e-13]), ...
+                [0 0.5 1], AbsTol=1.0e-15);
+            testCase.verifyEqual(mappingSupport.clipUnit([-1.0e-13 0.5 1+1.0e-13], ...
+                "queryTemporalStabilityGmmMap"), [0 0.5 1], AbsTol=1.0e-15);
+            testCase.verifyError(@() mappingSupport.clipUnit(NaN), ...
+                "buildTemporalStabilityGmmMap:InvalidUnitValue");
+            testCase.verifyError(@() mappingSupport.clipUnit(1+1.0e-6), ...
+                "buildTemporalStabilityGmmMap:UnitValueOutOfRange");
+            testCase.verifyError(@() mappingSupport.clipUnit(NaN, "queryTemporalStabilityGmmMap"), ...
+                "queryTemporalStabilityGmmMap:InvalidUnitValue");
+            testCase.verifyError(@() mappingSupport.clipUnit(-1.0e-6, "queryTemporalStabilityGmmMap"), ...
+                "queryTemporalStabilityGmmMap:UnitValueOutOfRange");
         end
     end
 

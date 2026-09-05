@@ -19,7 +19,6 @@ function rootDir = setupVehicleLocalization()
     addpath(fullfile(rootDir, "perception", "offGroundFeatures"));
     addpath(fullfile(rootDir, "perception", "semanticProduct"));
     addpath(fullfile(rootDir, "mapping"));
-    addpath(fullfile(rootDir, "mapping", "temporalStabilityGmm"));
     addpath(fullfile(rootDir, "localization"));
     addpath(fullfile(rootDir, "localization", "lateralObserver"));
     addpath(fullfile(rootDir, "localization", "improvedObserver"));

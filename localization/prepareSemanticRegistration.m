@@ -3,8 +3,8 @@ function [fixed, moving, details] = prepareSemanticRegistration(fixedCloud, movi
 % A finite heightTranslation is moving-origin map Z in meters. Standard
 % deviations model vertical translation/tilt uncertainty in the moving cloud.
 % Auto uses the XY marginal if height or the reference is unavailable.
-    fixed = validateSemanticProbabilityCloud(fixedCloud);
-    moving = validateSemanticProbabilityCloud(movingCloud);
+    fixed = mappingSupport.validateSemanticProbabilityCloud(fixedCloud);
+    moving = mappingSupport.validateSemanticProbabilityCloud(movingCloud);
     calibrationStatus=validateRegistrationCalibration(fixedCloud,movingCloud);
     mode = "xy";
     translation = NaN;

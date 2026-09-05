@@ -3,7 +3,7 @@ function projected = projectSemanticProbabilityCloud(cloud, dimension)
 % Mixture mass is unchanged. Height is a normalized conditional density,
 % not a second peak amplitude or an extra length-dependent mixture weight.
     assert(isscalar(dimension) && ismember(dimension,[2 3]), 'Expected dimension 2 or 3.');
-    source = validateSemanticProbabilityCloud(cloud);
+    source = mappingSupport.validateSemanticProbabilityCloud(cloud);
     if dimension == 3 && size(source.mean,2)==2
         assert(isfield(source,'heightAvailable') && all(source.heightAvailable), ...
             'VehicleLocalization:HeightUnavailable','This cloud has no complete height model.');

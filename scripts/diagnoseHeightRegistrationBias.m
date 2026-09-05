@@ -198,7 +198,7 @@ function cloud=gridCloud(pointsByClass,cfg)
 end
 
 function out=transformCloud(cloud,pose,z)
-    cloud=validateSemanticProbabilityCloud(cloud);
+    cloud=mappingSupport.validateSemanticProbabilityCloud(cloud);
     out=cloud; r=yawRotation(pose(3));
     out.mean=cloud.mean*r.'+[pose(1:2),z];
     for j=1:cloud.numComponents, out.covariance(:,:,j)=r*cloud.covariance(:,:,j)*r.'; end
@@ -212,17 +212,17 @@ function r=yawRotation(yaw,dim)
 end
 
 function out=removeCross(cloud)
-    out=validateSemanticProbabilityCloud(projectSemanticProbabilityCloud(cloud,3));
+    out=mappingSupport.validateSemanticProbabilityCloud(projectSemanticProbabilityCloud(cloud,3));
     out.covariance(1:2,3,:)=0; out.covariance(3,1:2,:)=0;
     out=struct('components',out);
 end
 
 function out=selectClass(cloud,name)
-    c=validateSemanticProbabilityCloud(cloud);
+    c=mappingSupport.validateSemanticProbabilityCloud(cloud);
     % Return a minimal schema while retaining measured height for XY inputs.
     dim=2;
     if size(c.mean,2)==3 || (isfield(c,'heightAvailable') && all(c.heightAvailable)), dim=3; end
-    out=validateSemanticProbabilityCloud(projectSemanticProbabilityCloud(cloud,dim));
+    out=mappingSupport.validateSemanticProbabilityCloud(projectSemanticProbabilityCloud(cloud,dim));
     keep=out.semanticName==name | name=="all";
     out.semanticName=out.semanticName(keep); out.mean=out.mean(keep,:);
     out.covariance=out.covariance(:,:,keep); out.mixtureWeight=out.mixtureWeight(keep);

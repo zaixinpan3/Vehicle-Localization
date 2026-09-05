@@ -63,7 +63,7 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
                 'semanticName',c.semanticName(1),'mixtureWeight',1,'numComponents',1);
             testCase.verifyEqual(scoreSemanticProbabilityCloudAlignment(cloud,cloud,[0 0 0]),1,'AbsTol',1e-12);
             cloud.components.covariance=[1 2;2 1];
-            testCase.verifyError(@() validateSemanticProbabilityCloud(cloud),'VehicleLocalization:InvalidCovariance');
+            testCase.verifyError(@() mappingSupport.validateSemanticProbabilityCloud(cloud),'VehicleLocalization:InvalidCovariance');
         end
         function temporalExportUsesIntegratedSupportAndOneWindow(testCase)
             layer=struct('classLabel',"curb",'priorScore',0.5, ...

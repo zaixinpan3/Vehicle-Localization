@@ -25,18 +25,18 @@ function probabilityCloudMap = buildSlidingWindowMap(featureData, cfg)
         batchCfg = cfg;
         batchCfg.timestampMaxBins = min(double(cfg.timestampMaxBins), double(numel(batchFrameIndices)));
         batchFeatureData = subsetFeatureDataByFrames(featureData, batchFrameIndices);
-        logStep(cfg, "batch.start", "idx=%d/%d | frames=%s", batchIdx, numel(batchFrameWindows), char(formatFrameIndexSet(batchFrameIndices)));
+        mappingSupport.logStep(cfg, "batch.start", "idx=%d/%d | frames=%s", batchIdx, numel(batchFrameWindows), char(mappingSupport.formatFrameIndexSet(batchFrameIndices)));
         mapInput = assembleMapInput(batchFeatureData, batchCfg);
         gmmMap = [];
         if ~isempty(mapInput.buildFeatureNames)
             gmmCfg = resolveWindowMapConfig(mapInput.buildFeatureNames, batchCfg);
-            logStep(cfg, "batch.gmm.build", "idx=%d/%d | sourcePoints=%d | classes=%s", batchIdx, numel(batchFrameWindows), ...
+            mappingSupport.logStep(cfg, "batch.gmm.build", "idx=%d/%d | sourcePoints=%d | classes=%s", batchIdx, numel(batchFrameWindows), ...
                 size(mapInput.points, 1), strjoin(mapInput.buildFeatureNames, ", "));
             gmmMap = buildTemporalStabilityGmmMap(mapInput.pointsXYZ, mapInput.labels, mapInput.timestamps, gmmCfg);
             if isfield(featureData,'frameCalibration'), gmmMap.frameCalibration=featureData.frameCalibration; end
             logGmmMapSummary(cfg, gmmMap);
         else
-            logStep(cfg, "batch.gmm.skip", "idx=%d/%d | no class met map input thresholds", batchIdx, numel(batchFrameWindows));
+            mappingSupport.logStep(cfg, "batch.gmm.skip", "idx=%d/%d | no class met map input thresholds", batchIdx, numel(batchFrameWindows));
         end
         batchMaps(batchIdx).batchIndex = batchIdx;
         batchMaps(batchIdx).frameIndices = batchFrameIndices;
@@ -70,7 +70,7 @@ function gmmCfg = resolveWindowMapConfig(buildFeatureNames, batchCfg)
 % the temporal diversity saturation capped by the window frame count.
     gmmCfg = temporalStabilityMapConfig();
     gmmCfg.classes = string(buildFeatureNames(:));
-    gmmCfg.logEnabled = isLogEnabled(batchCfg);
+    gmmCfg.logEnabled = mappingSupport.isLogEnabled(batchCfg);
     gmmCfg.defaultParams.timestampMaxBins = double(batchCfg.timestampMaxBins);
     gmmCfg.defaultParams.minTimestampBins = round(double(batchCfg.minMapTimestampBinsPerClass));
     for idx = 1:numel(gmmCfg.classParams)
@@ -155,7 +155,7 @@ function layerSummaryTable = buildLayerSummaryTable(batchMaps)
         for layerIdx = 1:numel(batchMaps(batchIdx).gmmMap.layers)
             rowIdx = rowIdx + 1;
             layer = batchMaps(batchIdx).gmmMap.layers(layerIdx);
-            [supportMin, supportMedian, supportMax] = finiteSummary(layer.componentSupportAmplitudes);
+            [supportMin, supportMedian, supportMax] = mappingSupport.finiteSummary(layer.componentSupportAmplitudes);
             batchIndexValues(rowIdx) = batchMaps(batchIdx).batchIndex;
             firstFrameValues(rowIdx) = frameIndices(1);
             lastFrameValues(rowIdx) = frameIndices(end);
@@ -177,36 +177,20 @@ function layerSummaryTable = buildLayerSummaryTable(batchMaps)
         'emIterationCount', 'emConverged', 'integratedSupportPrunedComponentCount', 'supportMin', 'supportMedian', 'supportMax'});
 end
 
-function [minValue, medianValue, maxValue] = finiteSummary(values)
-% finiteSummary: Compute min, median, and max over finite numeric values
-% for compact diagnostic logging.
-    values = double(values(:));
-    values = values(isfinite(values));
-    if isempty(values)
-        minValue = NaN;
-        medianValue = NaN;
-        maxValue = NaN;
-        return;
-    end
-    minValue = min(values);
-    medianValue = median(values);
-    maxValue = max(values);
-end
-
 function logGmmMapSummary(cfg, gmmMap)
 % logGmmMapSummary: Print one map-level and one layer-level diagnostic
 % summary after semantic temporal-stability GMM map construction completes.
     if isempty(gmmMap)
-        logStep(cfg, "gmm.summary", "map is empty");
+        mappingSupport.logStep(cfg, "gmm.summary", "map is empty");
         return;
     end
-    logStep(cfg, "gmm.summary", "mapType=%s | classes=%d | sourcePointCount=%d", ...
+    mappingSupport.logStep(cfg, "gmm.summary", "mapType=%s | classes=%d | sourcePointCount=%d", ...
         char(string(gmmMap.mapType)), numel(gmmMap.layers), gmmMap.sourcePointCount);
     for layerIdx = 1:numel(gmmMap.layers)
         layer = gmmMap.layers(layerIdx);
-        [minAmp, medianAmp, maxAmp] = finiteSummary(layer.componentSupportAmplitudes);
-        [minPatch, medianPatch, maxPatch] = finiteSummary(layer.componentPatchPointCounts);
-        logStep(cfg, "gmm.layer", "class=%s | points=%d | components=%d | emIter=%d | converged=%d | pruned=%d | patchPoints[min/med/max]=%.4g/%.4g/%.4g | support[min/med/max]=%.4g/%.4g/%.4g", ...
+        [minAmp, medianAmp, maxAmp] = mappingSupport.finiteSummary(layer.componentSupportAmplitudes);
+        [minPatch, medianPatch, maxPatch] = mappingSupport.finiteSummary(layer.componentPatchPointCounts);
+        mappingSupport.logStep(cfg, "gmm.layer", "class=%s | points=%d | components=%d | emIter=%d | converged=%d | pruned=%d | patchPoints[min/med/max]=%.4g/%.4g/%.4g | support[min/med/max]=%.4g/%.4g/%.4g", ...
             char(string(layer.classLabel)), layer.pointCount, numel(layer.components), layer.emIterationCount, logical(layer.emConverged), layer.integratedSupportPrunedComponentCount, ...
             minPatch, medianPatch, maxPatch, minAmp, medianAmp, maxAmp);
     end
@@ -227,7 +211,7 @@ function mapInput = assembleMapInput(featureData, cfg)
     buildPointCounts = zeros(numFeatures, 1);
     timestampBinCounts = zeros(numFeatures, 1);
 
-    logStep(cfg, "mapinput.start", "features=%d | maxPointsPerClass=%g | minPoints=%d | minTimestampBins=%d", ...
+    mappingSupport.logStep(cfg, "mapinput.start", "features=%d | maxPointsPerClass=%g | minPoints=%d | minTimestampBins=%d", ...
         numFeatures, double(cfg.maxMapPointsPerClass), round(double(cfg.minMapPointsPerClass)), round(double(cfg.minMapTimestampBinsPerClass)));
     for featureIdx = 1:numFeatures
         [featurePoints, featureTimestamps] = concatenateFeatureFrames(featureData.pointsByFeatureFrame(featureIdx, :), frameIndices);
@@ -240,7 +224,7 @@ function mapInput = assembleMapInput(featureData, cfg)
         if buildPointCounts(featureIdx) >= cfg.minMapPointsPerClass && timestampBinCounts(featureIdx) >= cfg.minMapTimestampBinsPerClass
             buildFeatureMask(featureIdx) = true;
         end
-        logStep(cfg, "mapinput.feature", "feature=%s | rawPoints=%d | buildPoints=%d | timestampBins=%d | build=%d", ...
+        mappingSupport.logStep(cfg, "mapinput.feature", "feature=%s | rawPoints=%d | buildPoints=%d | timestampBins=%d | build=%d", ...
             char(featureNames(featureIdx)), rawPointCounts(featureIdx), buildPointCounts(featureIdx), timestampBinCounts(featureIdx), buildFeatureMask(featureIdx));
     end
 
@@ -276,7 +260,7 @@ function mapInput = assembleMapInput(featureData, cfg)
     mapInput.rawPointCounts = rawPointCounts;
     mapInput.buildPointCounts = buildPointCounts;
     mapInput.timestampBinCounts = timestampBinCounts;
-    logStep(cfg, "mapinput.done", "totalBuildPoints=%d | buildClasses=%s", totalBuildPointCount, strjoin(buildFeatureNames, ", "));
+    mappingSupport.logStep(cfg, "mapinput.done", "totalBuildPoints=%d | buildClasses=%s", totalBuildPointCount, strjoin(buildFeatureNames, ", "));
 end
 
 function [featurePoints, featureTimestamps] = concatenateFeatureFrames(pointsByFrame, frameIndices)

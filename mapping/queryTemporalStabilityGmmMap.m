@@ -83,14 +83,6 @@ function scores = evaluateSlidingWindowProbabilityCloudMap(probabilityCloudMap, 
 % max-envelope. Component-level query inside each batch still uses canonical
 % noisy-OR; the cross-batch max prevents overlap windows from double-counting
 % duplicated components for the same physical landmark.
-%
-% Input:
-%   probabilityCloudMap: saved map artifact with batchMaps and GMM batch maps
-%   queryPoints: [M x 2] numeric BEV query point coordinates
-%   requestedLabels: empty, scalar class label, or [M x 1] query labels
-%
-% Output:
-%   scores: [M x 1] or [M x C] support score array
     validateSlidingWindowProbabilityCloudMap(probabilityCloudMap);
     queryCount = size(queryPoints, 1);
     requestedLabels = string(requestedLabels);
@@ -120,12 +112,6 @@ function validateSlidingWindowProbabilityCloudMap(probabilityCloudMap)
 % validateSlidingWindowProbabilityCloudMap: Validate the saved
 % sliding-window probability-cloud artifact fields required for cross-batch
 % support query.
-%
-% Input:
-%   probabilityCloudMap: saved map artifact candidate
-%
-% Output:
-%   none
     requiredMapFields = ["mapType", "batchMaps"];
     if ~isstruct(probabilityCloudMap) || ~isscalar(probabilityCloudMap)
         error("queryTemporalStabilityGmmMap:InvalidMap", ...
@@ -167,12 +153,6 @@ function classLabels = resolveSlidingWindowClassLabels(probabilityCloudMap)
 % labels exposed by a saved sliding-window probability-cloud map, preferring
 % the artifact featureNames field and otherwise deriving labels from batch
 % layers.
-%
-% Input:
-%   probabilityCloudMap: validated saved sliding-window map artifact
-%
-% Output:
-%   classLabels: [C x 1] string vector of class labels
     if isfield(probabilityCloudMap, "featureNames") && ~isempty(probabilityCloudMap.featureNames)
         classLabels = string(probabilityCloudMap.featureNames(:));
     else
@@ -198,14 +178,6 @@ end
 function scores = evaluateSlidingWindowClass(probabilityCloudMap, queryPoints, classLabel)
 % evaluateSlidingWindowClass: Evaluate one semantic class across all
 % saved batch maps and fuse batch responses by max-envelope.
-%
-% Input:
-%   probabilityCloudMap: saved sliding-window map artifact
-%   queryPoints: [M x 2] numeric BEV query point coordinates
-%   classLabel: requested semantic class label
-%
-% Output:
-%   scores: [M x 1] max-envelope support scores in [0, 1]
     queryCount = size(queryPoints, 1);
     batchScores = zeros(queryCount, numel(probabilityCloudMap.batchMaps));
     contributingBatchCount = 0;
@@ -227,20 +199,14 @@ function scores = evaluateSlidingWindowClass(probabilityCloudMap, queryPoints, c
         error("queryTemporalStabilityGmmMap:MissingClassLayer", ...
             "Sliding-window probability-cloud map does not contain class label: %s.", char(string(classLabel)));
     end
-    scores = max(clipQueryUnit(batchScores(:, 1:contributingBatchCount)), [], 2);
-    scores = clipQueryUnit(scores);
+    scores = max(mappingSupport.clipUnit(batchScores(:, 1:contributingBatchCount), ...
+        "queryTemporalStabilityGmmMap"), [], 2);
+    scores = mappingSupport.clipUnit(scores, "queryTemporalStabilityGmmMap");
 end
 
 function layerIdx = findLayerIndex(gmmMap, classLabel)
 % findLayerIndex: Return the semantic layer index matching a requested
 % class label without erroring when a particular batch lacks that class.
-%
-% Input:
-%   gmmMap: current-builder structured GMM map
-%   classLabel: requested semantic class label
-%
-% Output:
-%   layerIdx: scalar positive layer index or zero when absent
     if ~isfield(gmmMap.layers, "classLabel")
         error("queryTemporalStabilityGmmMap:MissingLayerField", ...
             "Map layers must contain classLabel.");
@@ -256,14 +222,6 @@ end
 function scores = evaluateMap(gmmMap, queryPoints, requestedLabels)
 % evaluateMap: Evaluate a full structured semantic GMM map for one
 % requested class, per-query requested labels, or all semantic layers.
-%
-% Input:
-%   gmmMap: struct with layers produced by buildTemporalStabilityGmmMap
-%   queryPoints: [M x 2] numeric BEV query point coordinates
-%   requestedLabels: empty, scalar class label, or [M x 1] query labels
-%
-% Output:
-%   scores: [M x 1] or [M x C] support score array
     validateCurrentMap(gmmMap);
     queryCount = size(queryPoints, 1);
     requestedLabels = string(requestedLabels);
@@ -294,12 +252,6 @@ end
 function validateCurrentMap(gmmMap)
 % validateCurrentMap: Validate the top-level current-builder map fields
 % before layer selection or query evaluation.
-%
-% Input:
-%   gmmMap: structured semantic GMM map candidate
-%
-% Output:
-%   none
     requiredMapFields = ["mapType", "classLabels", "layers"];
     if ~isstruct(gmmMap)
         error("queryTemporalStabilityGmmMap:InvalidMap", ...
@@ -330,13 +282,6 @@ end
 function layer = selectLayer(gmmMap, classLabel)
 % selectLayer: Select one semantic layer from a full structured GMM map
 % using a class label convertible to string.
-%
-% Input:
-%   gmmMap: struct with layers produced by buildTemporalStabilityGmmMap
-%   classLabel: requested semantic class label
-%
-% Output:
-%   layer: semantic GMM layer for the requested class
     targetLabel = string(classLabel);
     layerLabels = string({gmmMap.layers.classLabel});
     layerIdx = find(layerLabels == targetLabel, 1);
@@ -350,13 +295,6 @@ end
 function scores = evaluateLayer(layer, queryPoints)
 % evaluateLayer: Evaluate one semantic GMM layer at query points using
 % stability-weighted support-map scoring.
-%
-% Input:
-%   layer: semantic GMM layer struct with components
-%   queryPoints: [M x 2] numeric BEV query point coordinates
-%
-% Output:
-%   scores: [M x 1] support scores in [0, 1]
     validateCurrentLayer(layer);
     queryCount = size(queryPoints, 1);
     scores = repmat(layer.priorScore, queryCount, 1);
@@ -374,18 +312,12 @@ function scores = evaluateLayer(layer, queryPoints)
             scores(queryIdx) = max(layer.priorScore, componentScore);
         end
     end
-    scores = clipQueryUnit(scores);
+    scores = mappingSupport.clipUnit(scores, "queryTemporalStabilityGmmMap");
 end
 
 function validateCurrentLayer(layer)
 % validateCurrentLayer: Validate that a query layer has the current
 % builder-produced structure required by fail-fast support evaluation.
-%
-% Input:
-%   layer: semantic GMM layer candidate
-%
-% Output:
-%   none
     requiredLayerFields = ["components", "priorScore", "queryCandidateComponentCount", ...
         "queryCandidateRadius", "queryCandidateRadiusInflation", "centroidSearcher"];
     if ~isstruct(layer)
@@ -414,12 +346,6 @@ end
 function validateCurrentComponent(component)
 % validateCurrentComponent: Validate one retained component from the
 % current support-map builder before query evaluation.
-%
-% Input:
-%   component: scalar retained semantic support component
-%
-% Output:
-%   none
     requiredComponentFields = ["mean", "covariance", "invCovariance", "supportAmplitude", ...
         "mixtureWeight"];
     for fieldName = requiredComponentFields
@@ -440,36 +366,10 @@ function validateCurrentComponent(component)
         error("queryTemporalStabilityGmmMap:InvalidEmMixtureWeight", ...
             "Component mixtureWeight must be a finite nonnegative EM mixture weight.");
     end
-    validateQueryCovarianceMatrix(component.covariance, "Query component covariance");
+    mappingSupport.validateCovarianceMatrix(component.covariance, "Query component covariance", "queryTemporalStabilityGmmMap");
     if ~isnumeric(component.invCovariance) || ~isequal(size(component.invCovariance), [2 2]) || any(~isfinite(component.invCovariance), "all")
         error("queryTemporalStabilityGmmMap:InvalidInverseCovariance", ...
             "Component invCovariance must be a finite [2 x 2] matrix.");
-    end
-end
-
-function validateQueryCovarianceMatrix(covariance, contextName)
-% validateQueryCovarianceMatrix: Validate finite symmetric positive definite
-% covariance matrices before support query evaluation.
-%
-% Input:
-%   covariance: [2 x 2] covariance matrix
-%   contextName: character vector identifying the validation context
-%
-% Output:
-%   none
-    if ~isnumeric(covariance) || ~isequal(size(covariance), [2 2]) || any(~isfinite(covariance), "all")
-        error("queryTemporalStabilityGmmMap:InvalidCovarianceMatrix", ...
-            "%s requires a finite [2 x 2] covariance matrix.", contextName);
-    end
-    if norm(covariance - covariance.', "fro") > 1.0e-10 .* max(1, norm(covariance, "fro"))
-        error("queryTemporalStabilityGmmMap:NonSymmetricCovariance", ...
-            "%s requires a symmetric covariance matrix.", contextName);
-    end
-    [~, cholFlag] = chol((covariance + covariance.') ./ 2);
-    covarianceDeterminant = det(covariance);
-    if cholFlag ~= 0 || ~isfinite(covarianceDeterminant) || covarianceDeterminant <= 0
-        error("queryTemporalStabilityGmmMap:NonPositiveDefiniteCovariance", ...
-            "%s requires a symmetric positive definite covariance matrix with a finite positive determinant.", contextName);
     end
 end
 
@@ -478,13 +378,6 @@ function candidateLists = findCandidateComponents(queryPoints, layer)
 % query point using the layer centroid KD-tree when configured, inflating finite
 % centroid radii by the builder's maximum covariance support extent, or use all
 % components when exact all-component support evaluation is requested.
-%
-% Input:
-%   queryPoints: [M x 2] numeric BEV query point coordinates
-%   layer: semantic GMM layer with components and optional centroidSearcher
-%
-% Output:
-%   candidateLists: [M x 1] cell array of component index vectors
     queryCount = size(queryPoints, 1);
     componentCount = numel(layer.components);
     candidateCount = resolveCandidateCount(layer, componentCount);
@@ -512,15 +405,6 @@ function candidateLists = rangeCandidateComponents(queryPoints, centroidSearcher
 % for each query point. Radius-limited retrieval intentionally keeps every
 % component in the inflated radius so anisotropic support components are not
 % dropped by a centroid-only nearest-count truncation.
-%
-% Input:
-%   queryPoints: [M x 2] numeric BEV query point coordinates
-%   centroidSearcher: KDTreeSearcher over component means
-%   candidateRadius: scalar centroid search radius
-%   candidateCount: scalar maximum number of candidate components or Inf
-%
-% Output:
-%   candidateLists: [M x 1] cell array of component index vectors
     [rangeIdx, ~] = rangesearch(centroidSearcher, queryPoints, candidateRadius);
     queryCount = size(queryPoints, 1);
     candidateLists = cell(queryCount, 1);
@@ -533,12 +417,6 @@ end
 function requireCentroidSearcher(layer)
 % requireCentroidSearcher: Require a current centroid searcher whenever
 % query candidate limits request indexed component preselection.
-%
-% Input:
-%   layer: semantic GMM layer
-%
-% Output:
-%   none
     if ~isfield(layer, "centroidSearcher") || isempty(layer.centroidSearcher)
         error("queryTemporalStabilityGmmMap:MissingCentroidSearcher", ...
             "Query candidate preselection requires a valid centroidSearcher from the current builder.");
@@ -552,13 +430,6 @@ end
 function candidateCount = resolveCandidateCount(layer, componentCount)
 % resolveCandidateCount: Resolve the configured maximum number of
 % centroid candidate components from the current builder layer.
-%
-% Input:
-%   layer: semantic GMM layer struct
-%   componentCount: scalar total component count
-%
-% Output:
-%   candidateCount: scalar candidate component count or Inf
     if ~isfield(layer, "queryCandidateComponentCount")
         error("queryTemporalStabilityGmmMap:MissingQueryCandidateComponentCount", ...
             "Current builder layers must contain queryCandidateComponentCount.");
@@ -581,12 +452,6 @@ end
 function candidateRadius = resolveCandidateRadius(layer)
 % resolveCandidateRadius: Resolve the configured centroid candidate
 % radius from the current builder layer.
-%
-% Input:
-%   layer: semantic GMM layer struct
-%
-% Output:
-%   candidateRadius: scalar positive radius or Inf
     if ~isfield(layer, "queryCandidateRadius")
         error("queryTemporalStabilityGmmMap:MissingQueryCandidateRadius", ...
             "Current builder layers must contain queryCandidateRadius.");
@@ -616,13 +481,6 @@ function support = componentSupport(component, queryPoint)
 % post-hoc temporal support amplitude only. GMM mixture weights do not modulate
 % support scores by default, so small but stable landmarks can still produce
 % strong support.
-%
-% Input:
-%   component: scalar structured Gaussian support component
-%   queryPoint: [1 x 2] numeric BEV query point coordinate
-%
-% Output:
-%   support: scalar amplitude-weighted component support in [0, 1]
     delta = queryPoint - component.mean;
     distanceSquared = delta * component.invCovariance * delta.';
     if ~isfinite(distanceSquared)
@@ -636,46 +494,17 @@ function support = componentSupport(component, queryPoint)
     if distanceSquared < 0
         distanceSquared = 0;
     end
-    support = clipQueryUnit(component.supportAmplitude .* exp(-0.5 .* distanceSquared));
+    support = mappingSupport.clipUnit(component.supportAmplitude .* exp(-0.5 .* distanceSquared), "queryTemporalStabilityGmmMap");
 end
 
 function score = combineComponentSupports(componentSupports)
 % combineComponentSupports: Combine candidate component supports into one
 % semantic support score using canonical noisy-OR.
-%
-% Input:
-%   componentSupports: [K x 1] amplitude-weighted component supports
-%
-% Output:
-%   score: scalar combined support score in [0, 1]
-    componentSupports = clipQueryUnit(componentSupports(:));
+    componentSupports = mappingSupport.clipUnit(componentSupports(:), "queryTemporalStabilityGmmMap");
     if isempty(componentSupports)
         score = 0;
     else
         score = 1 - prod(1 - componentSupports);
     end
-    score = clipQueryUnit(score);
-end
-
-function value = clipQueryUnit(value)
-% clipQueryUnit: Validate support values against the closed unit interval,
-% allowing only harmless round-off at the boundary.
-%
-% Input:
-%   value: numeric support value or array
-%
-% Output:
-%   value: numeric support value or array after boundary round-off correction
-    if any(~isfinite(value), "all")
-        error("queryTemporalStabilityGmmMap:InvalidUnitValue", ...
-            "Support values must be finite.");
-    end
-    lowerMask = value < 0;
-    upperMask = value > 1;
-    if any(value(lowerMask) < -1.0e-12, "all") || any(value(upperMask) > 1 + 1.0e-12, "all")
-        error("queryTemporalStabilityGmmMap:UnitValueOutOfRange", ...
-            "Support values must lie in [0, 1].");
-    end
-    value(lowerMask) = 0;
-    value(upperMask) = 1;
+    score = mappingSupport.clipUnit(score, "queryTemporalStabilityGmmMap");
 end

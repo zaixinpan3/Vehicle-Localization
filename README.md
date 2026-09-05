@@ -80,7 +80,7 @@ and build script are versioned; generated platform binaries are ignored.
 
 `buildFeatureMap(dataRoot)` runs the whole offline chain and saves the
 sliding-window probability-cloud map. The temporal-stability GMM in
-`mapping/temporalStabilityGmm/` keeps the design rule of the original code:
+`mapping/buildTemporalStabilityGmmMap.m` keeps the design rule of the original code:
 temporal information decides *which points are sampled, how the mixture is
 seeded, and which components survive*, never the EM updates themselves.
 New maps preserve XYZ observations and fit a conditional Gaussian height model
@@ -89,24 +89,30 @@ remain unchanged. Existing saved XY maps have no recoverable height; rebuild
 from XYZ observations to obtain it. The conditional height density integrates
 to one, so adding it does not reweight landmarks by their vertical extent.
 
-The mapping entry points are grouped by task:
+The directory contains only five map algorithms and one shared support file:
 
-| Task | Functions |
+| File | Purpose |
 | --- | --- |
-| Build an offline map | `buildFeatureMap`, `buildSlidingWindowMap` |
-| Read and align observations | `loadPointCloudFrame`, `matchFramePoses`, `readFramePoseTable`, `collectFeatureObservations`, `registerPointsToGlobalFrame` |
-| Build and query the temporal GMM | `buildTemporalStabilityGmmMap`, `queryTemporalStabilityGmmMap` |
-| Build an NDT grid | `buildSemanticNdtGridMap` |
-| Export, project, and validate distributions | `temporalMapToProbabilityCloud`, `projectSemanticProbabilityCloud`, `validateSemanticProbabilityCloud` |
-| Register and score distributions | `registerSemanticProbabilityCloud`, `scoreSemanticProbabilityCloudAlignment` |
-| Calibrate and prepare registration | `fitLidarPitchCalibration`, `poseRowToPlanarPose`, `prepareSemanticRegistration`, `balanceSemanticDistributions`, `semanticGaussianOverlap` |
+| `buildSemanticNdtGridMap.m` | Aggregate semantic observations into NDT cells |
+| `buildTemporalStabilityGmmMap.m` | Fit the temporal-stability GMM and conditional height model |
+| `buildSlidingWindowMap.m` | Build overlapping map windows from registered feature observations |
+| `queryTemporalStabilityGmmMap.m` | Evaluate Gaussian support and fuse overlapping windows |
+| `temporalMapToProbabilityCloud.m` | Export one map window as a Gaussian probability cloud |
+| `mappingSupport.m` | Share logging, statistics, and numerical/schema validation |
 
-Helpers used by one caller live as local functions in that caller's file.
-Larger internal stages and shared helpers live in `mapping/private/` or
-`mapping/temporalStabilityGmm/private/`; these directories must not be added
-to the MATLAB path. `registerSemanticProbabilityCloud` selects the private
-geometric registration backend through its existing configuration. Existing
-map formats, configuration fields, and numerical algorithms are preserved.
+All six files are directly under `mapping/`, with no subdirectories. Internal
+algorithm stages are local functions in the corresponding entry-point file.
+Common utilities have one implementation as static `mappingSupport` methods;
+for example, cloud validation is `mappingSupport.validateSemanticProbabilityCloud(cloud)`.
+This replaces the former standalone validation helper.
+
+Dataset loading, frame/pose matching, global coordinate transforms, feature
+collection, and the `buildFeatureMap` offline workflow live in `scripts/`.
+Cloud registration, registration preparation, projection, scoring, and pitch
+calibration live in `localization/`, alongside `poseRowToPlanarPose`. Their
+existing entry-point names are retained. Run `setupVehicleLocalization` to add
+all three modules. Existing map formats, configuration fields, numerical
+algorithms, and builder/query error identifiers are preserved.
 
 ### Localization (`localization/`)
 
@@ -308,8 +314,8 @@ runtests("tests");
 | `offGroundFeatureExtraction` | `offGroundFeatures/extractOffGroundFeatures` and its stage files |
 | `buildSemanticVoxelGridProduct`, `coarseGridValidation` | `semanticProduct/buildSemanticVoxelGrid` |
 | `finePointValidation`, `perceptionValidationPipeline` | `semanticProduct/refineSemanticPoints`, `perceiveFrame` |
-| `buildSemanticTemporalStabilityGMMFeatureMap` | `temporalStabilityGmm/buildTemporalStabilityGmmMap` and stage files |
-| `querySemanticTemporalStabilityGMMFeatureMap` | `temporalStabilityGmm/queryTemporalStabilityGmmMap` |
+| `buildSemanticTemporalStabilityGMMFeatureMap` | `buildTemporalStabilityGmmMap` with local stage functions |
+| `querySemanticTemporalStabilityGMMFeatureMap` | `queryTemporalStabilityGmmMap` |
 | `buildSemanticNDTGridMap` | `buildSemanticNdtGridMap` |
 | glue inside `runMissisipiSemanticTemporalStabilityGMMFeatureMapTest.m` | `mapping/*.m` functions |
 `localization/lateralObserver/` has no counterpart in the original repository. It

@@ -33,7 +33,7 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
     if string(perceptionCfg.executionMode) ~= "legacyFull"
         perceptionCfg.executionMode = "offline";
     end
-    logStep(cfg, "feature.collect", "frameCount=%d | featureCount=%d", numRequestedFrames, numFeatures);
+    mappingSupport.logStep(cfg, "feature.collect", "frameCount=%d | featureCount=%d", numRequestedFrames, numFeatures);
     for frameListIdx = 1:numRequestedFrames
         frameIdx = frameIndices(frameListIdx);
         [frame, currentNumFrames] = loadPointCloudFrame(matPath, frameIdx);
@@ -49,7 +49,7 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
             pointsByFeatureFrame{featureIdx, frameListIdx} = featurePoints;
             counts(frameListIdx, featureIdx) = size(featurePoints, 1);
         end
-        logStep(cfg, "frame.done", "frame=%d/%d | %s", frameIdx, currentNumFrames, ...
+        mappingSupport.logStep(cfg, "frame.done", "frame=%d/%d | %s", frameIdx, currentNumFrames, ...
             char(formatFrameCounts(featureNames, counts(frameListIdx, :))));
     end
 

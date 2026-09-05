@@ -44,7 +44,7 @@ function [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg)
             mkdir(mapOutputDir);
         end
         save(mapOutputPath, "probabilityCloudMap", "-v7.3");
-        logStep(cfg, "map.save", "path=%s | windows=%d | frames=%s", mapOutputPath, ...
-            numel(probabilityCloudMap.batchMaps), char(formatFrameIndexSet(frameIndices)));
+        mappingSupport.logStep(cfg, "map.save", "path=%s | windows=%d | frames=%s", mapOutputPath, ...
+            numel(probabilityCloudMap.batchMaps), char(mappingSupport.formatFrameIndexSet(frameIndices)));
     end
 end

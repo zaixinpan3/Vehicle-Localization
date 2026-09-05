@@ -135,7 +135,7 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             cloud.components.meanXYZ=[cloud.components.mean,zeros(6,1)];
             cloud.components.covarianceXYZ=repmat(diag([1 1 -1]),1,1,6);
             cloud.components.heightAvailable=true(6,1);
-            testCase.verifyError(@() validateSemanticProbabilityCloud(cloud),'VehicleLocalization:InvalidCovariance');
+            testCase.verifyError(@() mappingSupport.validateSemanticProbabilityCloud(cloud),'VehicleLocalization:InvalidCovariance');
         end
     end
     methods (Static)

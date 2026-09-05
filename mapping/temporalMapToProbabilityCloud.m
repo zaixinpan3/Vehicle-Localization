@@ -65,5 +65,5 @@ function cloud = temporalMapToProbabilityCloud(map, batchIndex)
     cloud.heightModel="unavailable";
     if ~isempty(calibration), cloud.frameCalibration=validateLidarFrameCalibration(calibration); end
     if any(heightAvailable), cloud.heightModel="conditionalGaussianGivenXY"; end
-    validateSemanticProbabilityCloud(cloud);
+    mappingSupport.validateSemanticProbabilityCloud(cloud);
 end
