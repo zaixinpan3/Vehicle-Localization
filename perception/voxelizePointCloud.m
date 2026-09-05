@@ -22,8 +22,8 @@ function voxelGrid = voxelizePointCloud(pointCloud, cfg)
 %       exclusionHalfSize: scalar XY exclusion half-width in meters
 %       minRange: scalar minimum range in meters
 %       maxRange: scalar maximum range in meters
-%       statisticsMode: "full" or "countOnly"; countOnly computes count
-%           and mapping fields while returning empty moment placeholders
+%       statisticsMode: "full", "countOnly", or "sparse". Sparse mode
+%           builds membership only; every dense 3D statistic is empty.
 %
 % Output:
 %   voxelGrid: struct with fields:
@@ -269,7 +269,7 @@ function voxelCfg = resolveVoxelConfig(cfg)
     if isfield(cfg, "statisticsMode") && ~isempty(cfg.statisticsMode)
         statisticsMode = lower(strtrim(string(cfg.statisticsMode)));
     end
-    if statisticsMode ~= "countonly"
+    if ~any(statisticsMode == ["countonly", "sparse"])
         statisticsMode = "full";
     end
     voxelCfg.statisticsMode = statisticsMode;
@@ -469,6 +469,10 @@ function [count, sumX, sumY, sumZ, sumXX, sumYY, sumZZ, sumXY, sumXZ, sumYZ] = .
     outSize = double(max(dims, 0));
     countOnlyMode = lower(strtrim(string(statisticsMode))) == "countonly";
     emptyMoment = zeros(0, 0, 0, "single");
+    if lower(strtrim(string(statisticsMode))) == "sparse"
+        [count, sumX, sumY, sumZ, sumXX, sumYY, sumZZ, sumXY, sumXZ, sumYZ] = deal(emptyMoment);
+        return;
+    end
     count = zeros(outSize(1), outSize(2), outSize(3), "single");
     if countOnlyMode
         sumX = emptyMoment;

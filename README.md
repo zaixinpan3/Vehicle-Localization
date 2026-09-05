@@ -1,86 +1,66 @@
 # vehicleLocalization
 
-MATLAB implementation of *Robust Vehicle Localization Fusing Road Curb, Pole-like
-Feature, and Building Facade*, refactored from `RobustVehicleLocalization` so that
-the code reads like the research: three modules (perception, mapping,
-localization), each a short sequence of named stages, each stage one file whose
-local functions are its sub-steps. Every algorithm is the one from the original
-codebase, verified output-for-output against it (see *Verification*).
+MATLAB research implementation of vehicle localization using road curbs,
+road markings, and pole-like features. Perception now has a shared XY-pillar
+front end: online localization consumes coarse Gaussian distributions, while
+offline mapping validates individual points only inside candidate pillars.
+Historical detectors remain available through `executionMode="legacyFull"`
+for comparisons with the stored reference.
 
-## The pipeline as the paper tells it
+## Pipeline
 
-```
-organized LiDAR frame
-   │
-   ├─ perception/perceiveFrame ─────────────────────────────────────────── §III.A
-   │    voxelizePointCloud            canonical 0.3 m fine voxel grid
-   │    groundSegmentation/segmentGround           P → P_g, P_ng   (slope-grid propagation)
-   │    groundFeatures/extractGroundFeatures       P_g  → curbs, road surface, road markings
-   │    offGroundFeatures/extractOffGroundFeatures P_ng → poles, facades, traffic signs
-   │    buildFeaturePointMasks         one full-frame mask per feature class
-   │    semanticProduct/               optional fused 3D semantic voxel grid and refined points
-   │    perceiveCoarseProbabilityCloud optional voxel-only sparse 2D semantic NDT cloud
-   │
-   ├─ mapping/buildFeatureMap ──────────────────────────────────────────── §III.B
-   │    readFramePoseTable, matchFramePoses      high-precision GNSS/INS pose per frame
-   │    collectFeatureObservations                perceive frames, register points globally
-   │    assembleMapInput                          per-class BEV points + frame ids
-   │    buildSlidingWindowMap                     one map per overlapping frame window
-   │       temporalStabilityGmm/buildTemporalStabilityGmmMap
-   │         buildSpatialSupportPatches           mutual-kNN patches (candidates, not constraints)
-   │         estimateTemporalReliability          leave-one-bin-out cross-frame support
-   │         resampleByTemporalReliability        Bernoulli resampling of the EM training set
-   │         fitGaussianMixture                   ordinary full-covariance GMM EM
-   │         computePosthocTemporalSupport        support amplitude, pruning, refit
-   │       temporalStabilityGmm/queryTemporalStabilityGmmMap   online support lookup
-   │    buildSemanticNdtGridMap                   per-frame semantic NDT cells (local frame)
-   │
-   └─ localization/ ────────────────────────────────────────────────────── §III.C
-        lateralObserver/              LPV lateral-velocity observer (v_y, r)
-          lateralBicycleModel           2-DOF model, affine in rho = [Vx; 1/Vx]
-          buildSchedulingPolytope       triangle covering the scheduling arc
-          schedulingCoordinates         barycentric coordinates alpha and their rate
-          designLateralObserverGains    gridded H2 LMI synthesis of L(rho)
-          scheduleLateralObserverGain   gain lookup along the trajectory
-          runLateralVelocityObserver    online estimation of v_y, r, and side slip
-          simulateLateralObserverScenario  synthetic drive with noisy IMU
-        improvedObserver/             complete cascaded seven-state observer
-          runImprovedVehicleObserver    delayed GPS/lidar fusion and replay
-          designImprovedObserverGains   robust LMI synthesis over 65,536 vertices
-          verifyImprovedObserverDesign  exhaustive numerical certificate check
-          simulateImprovedObserverScenario  delay, dropout, and degeneracy scenario
+```text
+organized LiDAR frame (vehicle coordinates)
+  -> pillarizePointCloud: XY membership + sparse height histograms, no 3D volume
+  -> segmentGround: common slope-grid terrain preprocessing
+  -> analyzeGroundPillars: curb geometry, road topology, reflectivity statistics
+  -> analyzeStructuralPillars: vertical support, compactness, neighbor contrast
+  -> buildPerceptionCandidates: semantic XY pillar IDs
+       |
+       +-> online (default)
+       |    buildCoarseSemanticProbabilityCloud: empirical means/covariances
+       |    localizeLidarFrame: semantic D2D -> accepted observer pose event
+       |
+       +-> offline
+            refinePerceptionCandidates: evaluate candidate members individually
+            collectFeatureObservations: fine points -> global coordinates
+            buildSlidingWindowMap: temporal-stability Gaussian support map
+            temporalMapToProbabilityCloud: one window's D2D representation
 ```
 
 ### Perception (`perception/`)
 
-* `voxelizePointCloud` bins the frame into the canonical grid shared by every stage
-  (`config/frameVoxelizationConfig`).
-* `groundSegmentation/segmentGround` is the slope-grid ground segmentation: robust
-  per-cell low height, sensor-height seed near the vehicle, slope-limited outward
-  propagation, smooth-component promotion and bridging, hole filling, residual
-  labeling.
-* `groundFeatures/` is the ground branch, in the order the orchestrator
-  `extractGroundFeatures` calls it: `buildCurbEnergyMaps` (height step, residual
-  slope, curvature, roughness, relative height, relief, line-shape gating),
-  `extractRoadSurface` (seeded growth with curb cells as barriers),
-  `refineCurbCellsByRoadAdjacency` (continuation, gap completion, shadow and
-  duplicate suppression, shoulder recovery), `selectCurbPointsFromCells`,
-  `thinCurbPointsToDominantBoundary`, `extractRoadMarkings`.
-* `offGroundFeatures/` is the non-ground branch, orchestrated by
-  `extractOffGroundFeatures`: `buildFineColumnFeatureMaps` and
-  `buildFineColumnShapeScores` (column occupancy, vertical run length, point-versus-
-  line shape), `extractTrafficSignChannel`, `extractFacadeFeatures`
-  (`detectFacadeLines` Hough → `assignFacadeColumnsToLines` → `refineFacadeWithFineGrid`
-  planarity), `detectPoleCandidates` (global column analysis) and
-  `refinePolesWithFineGrid` (local slice-density validation).
-* `semanticProduct/` fuses both branches into semantic tags on the 3D voxel grid
-  (`buildSemanticVoxelGrid`) and recovers refined per-class points
-  (`refineSemanticPoints`); `mapping/buildSemanticNdtGridMap` consumes it.
-* `perceiveCoarseProbabilityCloud` is the low-latency alternative for online
-  coarse validation. It retains curb/marking decisions on the ground raster and
-  pole decisions on sparse vertical-column statistics, skips point-semantic and
-  dense 3D semantic products, and emits 0.9 m aligned 2D Gaussian components
-  with semantic-evidence, hit-support, and mixture probabilities.
+`perceiveFrame(frame, perceptionConfig())` returns `probabilityCloud`,
+`candidates`, and compact source counts. The analysis unit is a 0.3 m XY pillar.
+Vertical structure uses sparse 0.3 m height-bin counts; no semantic label is
+assigned to a height bin. Reading returns, rejecting invalid measurements,
+separating terrain, and accumulating statistics are common preprocessing.
+There is no online point-level curb, pole, or marking refinement.
+
+Useful original ideas are retained: terrain-relative curb geometry, road-edge
+continuity and adjacency, road reflectivity contrast, and vertical pole support
+relative to neighboring pillars. Redundant final curb-energy and independent
+pole-column post-gates were removed from the defaults. In particular, a pole
+crossing an XY boundary retains its complete candidate footprint.
+
+Set `cfg.executionMode="offline"` to additionally return `featureMasks` and
+`refinement`. Each semantic audit contains candidate indices, evaluated indices,
+and an acceptance decision for every member. Curbs use the established residual
+and boundary filters; markings use the road-derived reflectivity threshold;
+poles use sparse height support and a robust vertical-line residual test.
+There is no fallback that republishes every candidate when fine validation
+rejects all points. The modern pipeline supports curb, roadMarking, and pole.
+Facade and traffic-sign detectors and the dense semantic product remain in the
+explicit historical path.
+
+The coarse product contains normalized mixture weights and empirical planar
+means/covariances, aggregated into 0.9 m output cells with eigenvalue safeguards.
+`semanticProbability` and `occupancyProbability` are compatibility field names
+for **uncalibrated evidence and hit support**, not Bayesian semantic or free-space
+occupancy posteriors. Known IMU tilt can be supplied through
+`cfg.coarseProbabilityCloud.projectionRotation` before statistical XY projection.
+
+See [the design and measured limitations](research/pillar_perception_and_d2d.md).
 
 ### Mapping (`mapping/`)
 
@@ -143,15 +123,17 @@ the precise certificate boundary.
 
 ## Configuration (`config/`)
 
-One config per stage, named after the stage, values identical to the tuned
-original setup (including the overrides the original map-building script applied
-on top of its config files):
+One config per stage. The geometric baseline is retained where experiments
+support it; coarse distribution, offline validation, and registration controls
+are explicit:
 
 | config | consumed by |
 | --- | --- |
 | `perceptionConfig` | `perceiveFrame` (aggregates the four below) |
 | `coarseSemanticProbabilityCloudConfig` | `perceiveCoarseProbabilityCloud`, `buildCoarseSemanticProbabilityCloud` |
-| `frameVoxelizationConfig` | `voxelizePointCloud` |
+| `frameVoxelizationConfig` | `pillarizePointCloud`, historical `voxelizePointCloud` |
+| `finePerceptionConfig` | `refinePerceptionCandidates` (offline only) |
+| `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` |
 | `groundSegmentationConfig` | `segmentGround` |
 | `groundFeatureConfig` (`.curb`, `.road`, `.roadMarking`) | `extractGroundFeatures` |
 | `offGroundFeatureConfig` | `extractOffGroundFeatures` (`facadeDetectionEnabled` is a dataset policy) |
@@ -166,8 +148,11 @@ on top of its config files):
 ```matlab
 setupVehicleLocalization();                       % add modules to the path
 frame = loadPointCloudFrame("data/raw/MissisipiPointClouds.mat", 260);
-perception = perceiveFrame(frame, perceptionConfig());
-nnz(perception.featureMasks.curb)                 % curb points of this frame
+cfg = perceptionConfig();
+coarse = perceiveFrame(frame, cfg);               % no point feature masks
+cfg.executionMode = "offline";
+fine = perceiveFrame(frame, cfg);
+nnz(fine.featureMasks.curb)                       % accepted offline curb points
 
 localCloud = perceiveCoarseProbabilityCloud(frame, perceptionConfig());
 selfScore = scoreSemanticProbabilityCloudAlignment( ...
@@ -188,7 +173,28 @@ result = simulateImprovedObserverScenario( ...
 `scripts/` holds the runnable entry points: `extractPointCloudsFromBag.m` and
 `extractGnssFromBag.py` (ROS bag → MAT frames and GNSS/INS CSV tables),
 `buildMississippiFeatureMap.m`, `runLateralObserverDesign.m`, and
-`runImprovedObserverDesign.m`.
+`runImprovedObserverDesign.m`. `evaluatePillarPerception` and
+`evaluatePillarRegistration` write reproducible comparison tables under `output/`.
+`showMississippiPerception(260,"","coarseProbabilityCloud")` displays the complete
+cloud with candidate pillar members colored; `"offline"` displays accepted fine points.
+
+For D2D, select one local map window explicitly and cache its converted cloud:
+
+```matlab
+mapCloud = temporalMapToProbabilityCloud(probabilityCloudMap, batchIndex);
+[measurement, diagnostic] = localizeLidarFrame( ...
+    frame, mapCloud, predictedPoseXYTheta, acquisitionTimestamp);
+% Empty measurement means rejected alignment. Set measurement.arrivalTime
+% to its actual delivery time before adding it to the observer lidar stream.
+```
+
+The caller supplies a local prediction, map-window selection, consistent sensor
+extrinsics, and known IMU tilt. This is SE(2) local alignment, not global place
+recognition. The original noisy-OR/max support query is unchanged; the map
+conversion is an explicit sum-of-Gaussian-support surrogate for registration.
+Class-conditional overlap balances curb, marking, and pole contributions. Both
+means and covariances rotate. Curvature and convergence gates reject unusable
+solutions; the curvature is not a calibrated sensor information matrix.
 
 ### Data layout expected under `dataRoot`
 
@@ -203,22 +209,19 @@ raw/Missisipi/gnss/<bag>_front_lidar_pose_match_1_1170.csv   from matchFramePose
 
 ## Verification
 
-The perception and mapping refactor was checked against the original code on
-real data: frames 260, 300, and 326 of the Mississippi route and frame 400 of
-the Downtown route (with facades enabled), plus a 30-frame temporal-stability
-map with query scores. Ground labels, feature channels, energy maps, column
-maps, facade lines, semantic voxel tags, refined points, NDT components,
-registered observations, map input, GMM parameters and components, and query
-scores are equal to the original outputs, exactly for integer and logical
-products and to 1e-8 or better for floating-point ones.
+`pipelineRegressionTest` explicitly selects `legacyFull` and preserves the
+original reference file unchanged. It verifies historical perception and map
+outputs. `pillarPerceptionTest` tests the new execution boundary, sparse storage,
+known-tilt moments, rejection behavior, and recorded point fidelity.
+`distributionRegistrationTest` checks analytic derivatives, anisotropic covariance
+rotation, semantic mass invariance, known-pose recovery, map support units, empty
+inputs, and degeneracy. Existing observer and temporal-map tests remain in the suite.
 
-`tests/` contains the retained unit tests and `pipelineRegressionTest`, which
-reproduces the perception and mapping portions of
-`tests/reference/pipelineReference.mat` (captured from the original code). Those
-data-dependent checks run when `VEHICLE_LOCALIZATION_DATA_ROOT` points at the
-data root above. The current lateral and improved observers have independent
-mathematical and end-to-end tests that use stored certified gains and do not
-require the recorded point-cloud datasets.
+Recorded fidelity uses the old detector as a behavioral baseline, not labeled
+truth. Current metrics and experiment identifiers are in the
+[redesign report](research/pillar_perception_and_d2d.md) and its CSV artifacts.
+Dataset-dependent tests require `VEHICLE_LOCALIZATION_DATA_ROOT`. Observer tests
+use the stored gains; optional synthesis tests require their solver dependencies.
 
 ```matlab
 setenv("VEHICLE_LOCALIZATION_DATA_ROOT", "/path/to/data");

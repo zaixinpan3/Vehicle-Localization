@@ -1,5 +1,5 @@
-function coarseGround = extractCoarseGroundVoxelFeatures(groundContext, groundCfg, coarseCfg)
-% extractCoarseGroundVoxelFeatures: Classify curb and road-marking support
+function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg)
+% analyzeGroundPillars: Classify curb and road-marking support
 % strictly on the 2D ground-cell raster. The function retains the tuned curb
 % energy and road-adjacency stages but skips curb point selection, dominant-
 % boundary thinning, and point-level semantic output.
@@ -67,14 +67,20 @@ function coarseGround = extractCoarseGroundVoxelFeatures(groundContext, groundCf
     coarseGround.roadMarkingReflectivityThreshold = double(reflectivityThreshold);
     coarseGround.maximumReflectivityMap = single(maximumReflectivityMap);
     coarseGround.stats = cellStats;
+    % Convert the internal [Nx Ny] ground indexing to the public [Ny Nx] layout.
+    dims = size(road.roadCellMask);
+    [xBin, yBin] = ind2sub(dims([2, 1]), pointCellLinIdx);
+    cellRows = sub2ind(dims, yBin, xBin);
+    coarseGround.moments = aggregatePlanarCellMoments( ...
+        groundContext.groundPoints, cellRows, prod(dims), coarseCfg.projectionRotation);
     coarseGround.energyMaps = energyMaps;
     coarseGround.initialRoadResult = initialRoad;
     coarseGround.roadResult = road;
 end
 
 function curbCfg = configureFastRefinement(curbCfg, coarseCfg)
-% configureFastRefinement: Disable empirically redundant full-refinement
-% stages while retaining the stages needed for high-recall voxel support.
+% configureFastRefinement: Apply optional research ablations. The production
+% default preserves every pillar topology stage; point refinement is separate.
     if ~isfield(coarseCfg, "curbDisabledRefinementStages")
         return;
     end

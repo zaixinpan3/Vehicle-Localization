@@ -25,7 +25,7 @@ function cfg = featureMapBuildConfig()
     cfg.batchFrameStride = 20;
 
     % Semantic feature classes registered into the map (facades are off on this route)
-    cfg.featureNames = ["curb", "roadMarking", "pole", "trafficSign"];
+    cfg.featureNames = ["curb", "roadMarking", "pole"];
     cfg.facadeDetectionEnabled = false;
 
     % Per-class map input thresholds and the temporal diversity saturation cap

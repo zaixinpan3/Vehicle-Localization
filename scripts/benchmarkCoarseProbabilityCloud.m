@@ -28,6 +28,7 @@ function results = benchmarkCoarseProbabilityCloud(dataRoot, frameIndices)
     assert(isfile(matPath), "Mississippi point-cloud MAT file was not found.");
 
     cfg = perceptionConfig();
+    cfg.executionMode = "legacyFull";
     numFrames = numel(frameIndices);
     fullPerceptionSeconds = zeros(numFrames, 1);
     denseProductSeconds = zeros(numFrames, 1);

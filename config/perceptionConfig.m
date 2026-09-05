@@ -1,20 +1,16 @@
 function cfg = perceptionConfig()
-% perceptionConfig: Aggregate configuration of the perception module in
-% pipeline order: frame voxelization, ground segmentation, the ground
-% feature branch (curbs, road surface, road markings), and the non-ground
-% feature branch (poles, facades, traffic signs).
-%
-% Input:
-%   none
-%
-% Output:
-%   cfg: struct with fields executionMode, voxel, groundSegmentation,
-%       groundFeatures, offGroundFeatures, and coarseProbabilityCloud
+% perceptionConfig: Shared pillar perception and offline point refinement.
+% Default mode returns a sparse semantic Gaussian cloud for localization.
+% Set executionMode="offline" for candidate-only fine masks used by mapping.
+% The voxel config names XY resolution and sparse height-bin resolution;
+% modern modes never allocate a dense 3D volume. Legacy knobs remain for
+% historical reproduction and the retained geometric feature rules.
     cfg = struct();
-    cfg.executionMode = "full";
+    cfg.executionMode = "coarseProbabilityCloud";
     cfg.voxel = frameVoxelizationConfig();
     cfg.groundSegmentation = groundSegmentationConfig();
     cfg.groundFeatures = groundFeatureConfig();
     cfg.offGroundFeatures = offGroundFeatureConfig();
     cfg.coarseProbabilityCloud = coarseSemanticProbabilityCloudConfig();
+    cfg.fine = finePerceptionConfig();
 end

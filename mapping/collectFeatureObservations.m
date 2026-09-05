@@ -28,6 +28,9 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
     counts = zeros(numRequestedFrames, numFeatures);
     numFrames = NaN;
 
+    if string(perceptionCfg.executionMode) ~= "legacyFull"
+        perceptionCfg.executionMode = "offline";
+    end
     logStep(cfg, "feature.collect", "frameCount=%d | featureCount=%d", numRequestedFrames, numFeatures);
     for frameListIdx = 1:numRequestedFrames
         frameIdx = frameIndices(frameListIdx);

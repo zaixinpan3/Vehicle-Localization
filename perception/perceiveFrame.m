@@ -1,73 +1,64 @@
 function perception = perceiveFrame(frame, cfg)
-% perceiveFrame: Run the perception module on one organized LiDAR frame and
-% return the semantic feature observations used by mapping and localization.
-% The frame is voxelized into the canonical fine grid, split into ground and
-% non-ground points by slope-grid ground segmentation, and processed by two
-% parallel feature branches: the ground branch extracts road curbs, the
-% road surface, and road markings; the non-ground branch extracts poles,
-% building facades, and traffic signs. Every channel is finally expressed as
-% a full-frame logical point mask so that downstream stages address the
-% source frame directly.
-%
-% Input:
-%   frame: organized point-cloud struct with [H x W] fields x, y, z, and
-%       optional range, intensity, and reflectivity
-%   cfg: struct from perceptionConfig
-%
-% Output:
-%   perception: struct with fields
-%       voxelGrid: canonical fine voxel grid of the frame
-%       groundPointIdx: original indices of the ground points
-%       groundContext: ground points, XY view, and reflectivity
-%       offGroundVoxelGrid: canonical voxel grid of the non-ground points
-%       ground: struct returned by extractGroundFeatures
-%       offGround: struct returned by extractOffGroundFeatures
-%       featureMasks: struct of full-frame logical masks (groundPoint, curb,
-%           roadMarking, pole, trafficSign, facade). When executionMode is
-%           "coarseProbabilityCloud", the function instead returns a compact
-%           wrapper used by perceiveCoarseProbabilityCloud and does not run
-%           point-level feature refinement.
+% perceiveFrame: Shared pillar analysis for online localization and mapping.
+% coarseProbabilityCloud (default) returns semantic pillar candidates and
+% empirical planar Gaussian components, without point feature refinement.
+% offline (alias full) recovers ground or structural members of candidate
+% pillars and explicitly evaluates each point for mapping. Its featureMasks
+% address the original organized frame. Ground segmentation is common
+% preprocessing in both modes, not point-level semantic feature refinement.
+% legacyFull reproduces historical outputs solely for baseline comparisons.
+% cfg is produced by perceptionConfig; frame requires x, y, z fields.
     assert(isstruct(frame) && all(isfield(frame, ["x", "y", "z"])), ...
         "frame must be an organized point-cloud struct with x, y, and z fields.");
     assert(isstruct(cfg) && all(isfield(cfg, ["voxel", "groundSegmentation", "groundFeatures", "offGroundFeatures"])), ...
         "cfg must be a struct from perceptionConfig.");
 
-    coarseMode = isCoarseProbabilityCloudMode(cfg);
-    voxelGrid = voxelizePointCloud(frame, cfg.voxel);
+    mode = string(cfg.executionMode);
+    legacyMode = mode == "legacyFull";
+    assert(any(mode == ["coarseProbabilityCloud", "offline", "full", "legacyFull"]), ...
+        "Unknown perception execution mode.");
+    if legacyMode
+        voxelGrid = voxelizePointCloud(frame, cfg.voxel);
+    else
+        voxelGrid = pillarizePointCloud(frame, cfg.voxel);
+    end
     groundPointIdx = segmentGround(voxelGrid, cfg.groundSegmentation);
     [groundContext, offGroundVoxelGrid] = buildBranchInputs( ...
-        frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2), ~coarseMode);
+        frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2), legacyMode);
 
-    if coarseMode
-        coarseCfg = resolveCoarseProbabilityCloudConfig(cfg);
-        ground = extractCoarseGroundVoxelFeatures(groundContext, cfg.groundFeatures, coarseCfg);
-        offGround = extractCoarseOffGroundVoxelFeatures(offGroundVoxelGrid, cfg.offGroundFeatures, coarseCfg);
-        probabilityCloud = buildCoarseSemanticProbabilityCloud(ground, offGround, coarseCfg);
-        perception = struct();
-        perception.executionMode = "coarseProbabilityCloud";
-        perception.probabilityCloud = probabilityCloud;
-        perception.sourceSummary = struct( ...
-            "numFramePoints", double(numel(frame.x)), ...
-            "numRetainedPoints", double(voxelGrid.numFilteredPoints), ...
-            "numGroundPoints", double(size(groundContext.groundPoints, 1)), ...
-            "numOffGroundPoints", double(size(offGroundVoxelGrid.points, 1)));
-        if logical(coarseCfg.storeDiagnostics)
-            perception.diagnostics = struct("ground", ground, "offGround", offGround);
-        end
+    % Explicit compatibility path for historical regression artifacts only.
+    if legacyMode
+        ground = extractGroundFeatures(groundContext, frame, cfg.groundFeatures);
+        offGround = extractOffGroundFeatures(offGroundVoxelGrid, cfg.offGroundFeatures);
+        perception = struct("voxelGrid", voxelGrid, "groundPointIdx", groundPointIdx, ...
+            "groundContext", groundContext, "offGroundVoxelGrid", offGroundVoxelGrid, ...
+            "ground", ground, "offGround", offGround);
+        perception.featureMasks = buildFeaturePointMasks(frame, ground, offGround, offGroundVoxelGrid, groundPointIdx);
         return;
     end
 
-    ground = extractGroundFeatures(groundContext, frame, cfg.groundFeatures);
-    offGround = extractOffGroundFeatures(offGroundVoxelGrid, cfg.offGroundFeatures);
-
-    perception = struct();
-    perception.voxelGrid = voxelGrid;
-    perception.groundPointIdx = groundPointIdx;
-    perception.groundContext = groundContext;
-    perception.offGroundVoxelGrid = offGroundVoxelGrid;
-    perception.ground = ground;
-    perception.offGround = offGround;
-    perception.featureMasks = buildFeaturePointMasks(frame, ground, offGround, offGroundVoxelGrid, groundPointIdx);
+    coarseCfg = resolveCoarseProbabilityCloudConfig(cfg);
+    ground = analyzeGroundPillars(groundContext, cfg.groundFeatures, coarseCfg);
+    offGround = analyzeStructuralPillars(offGroundVoxelGrid, cfg.offGroundFeatures, coarseCfg);
+    candidates = buildPerceptionCandidates(voxelGrid, ground, offGround);
+    probabilityCloud = buildCoarseSemanticProbabilityCloud(ground, offGround, coarseCfg);
+    perception = struct("executionMode", "coarseProbabilityCloud", ...
+        "probabilityCloud", probabilityCloud, "candidates", candidates);
+    perception.sourceSummary = struct("numFramePoints", double(numel(frame.x)), ...
+        "numRetainedPoints", double(voxelGrid.numFilteredPoints), ...
+        "numGroundPoints", double(size(groundContext.groundPoints, 1)), ...
+        "numOffGroundPoints", double(size(offGroundVoxelGrid.points, 1)));
+    if logical(coarseCfg.storeDiagnostics)
+        perception.diagnostics = struct("ground", ground, "offGround", offGround);
+    end
+    if any(mode == ["offline", "full"])
+        context = struct("voxelGrid", voxelGrid, "groundContext", groundContext, ...
+            "offGroundVoxelGrid", offGroundVoxelGrid, "ground", ground, "offGround", offGround);
+        fine = refinePerceptionCandidates(frame, candidates, context, cfg);
+        perception.executionMode = "offline";
+        perception.featureMasks = fine.featureMasks;
+        perception.refinement = fine.refinement;
+    end
 end
 
 function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGrid, groundPointIdx, cellSizeXY, storeDenseOffGroundCount)
@@ -406,13 +397,6 @@ function [occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets, voxelPointLo
     voxelPointOffsets = int32([occupiedStartIdx; numel(sortedLinIdx) + 1]);
     [xSub, ySub, zSub] = ind2sub(double(dims), double(occupiedVoxelLinIdx));
     occupiedVoxelSub = int32([xSub(:), ySub(:), zSub(:)]);
-end
-
-function coarseMode = isCoarseProbabilityCloudMode(cfg)
-% isCoarseProbabilityCloudMode: Resolve the explicit execution-mode switch
-% used only by the dedicated coarse probability-cloud entry point.
-    coarseMode = isfield(cfg, "executionMode") && ...
-        lower(strtrim(string(cfg.executionMode))) == "coarseprobabilitycloud";
 end
 
 function coarseCfg = resolveCoarseProbabilityCloudConfig(cfg)

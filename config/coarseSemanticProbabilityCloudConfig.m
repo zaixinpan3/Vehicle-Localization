@@ -1,6 +1,6 @@
 function cfg = coarseSemanticProbabilityCloudConfig()
 % coarseSemanticProbabilityCloudConfig: Parameters for the fast, strictly
-% voxel-classified 2D semantic probability cloud. Feature decisions stay on
+% pillar-classified 2D semantic probability cloud. Feature decisions stay on
 % the ground-cell and vertical-column rasters; selected cell geometry is
 % accumulated into regularized 2D NDT components for distribution-to-
 % distribution matching.
@@ -20,17 +20,18 @@ function cfg = coarseSemanticProbabilityCloudConfig()
     % Three source cells per output cell preserve exact 0.3 m boundaries.
     cfg.resolution = 0.9;
     cfg.coordinateFrame = "sensorLocalXY";
+    % Optional known IMU tilt: transform sufficient statistics before BEV
+    % projection, while classifying in the original vehicle XY pillars.
+    cfg.projectionRotation = eye(3);
     cfg.semanticNames = ["curb", "roadMarking", "pole"];
 
-    % Cell-level selectors chosen on Mississippi development frames and
-    % locked before evaluation on the validation frames.
-    cfg.curbMinimumTotalEnergy = 0.03;
-    cfg.curbDisabledRefinementStages = [ ...
-        "sameSideDuplicateSuppressionEnabled", ...
-        "roadFacingShoulderRecoveryEnabled", ...
-        "sameSideOutlierSuppressionEnabled"];
-    cfg.poleMinimumPointScore = 0.60;
-    cfg.poleMaximumLineScore = 0.75;
+    % Pillar selectors retain the tested geometric evidence rules.
+    % The accepted cell mask already applies the curb evidence tests.
+    cfg.curbMinimumTotalEnergy = 0;
+    cfg.curbDisabledRefinementStages = strings(0, 1);
+    % Apply the retained shape criterion to complete candidate footprints,
+    % not separately to each pillar of a boundary-crossing pole.
+    cfg.poleMinimumFootprintScore = 0.70;
 
     % Probability transfers and NDT covariance safeguards.
     cfg.minimumSemanticProbability = 0.50;

@@ -2,6 +2,11 @@
 
 Date: 2026-09-04
 
+Historical study for commit `6a301c2`. The default execution mode, shared
+coarse/offline boundary, empirical moments, and D2D solver are superseded by
+[pillar_perception_and_d2d.md](pillar_perception_and_d2d.md). Results below
+describe the earlier implementation.
+
 ## Research question
 
 Can one LiDAR frame be converted directly into a sparse, two-dimensional,

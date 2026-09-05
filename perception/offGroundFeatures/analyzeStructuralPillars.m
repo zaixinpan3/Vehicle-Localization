@@ -1,8 +1,8 @@
-function coarseOffGround = extractCoarseOffGroundVoxelFeatures(voxelGrid, offGroundCfg, coarseCfg)
-% extractCoarseOffGroundVoxelFeatures: Detect pole support from sparse 3D
-% voxel occupancy reduced directly to 2D vertical-column maps. The function
-% avoids materializing a second dense 3D tensor and skips slice-level pole
-% refinement; semantic decisions use only vertical runs and 2D column shape.
+function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coarseCfg)
+% analyzeStructuralPillars: Detect pole candidates from XY pillars and their
+% sparse height histograms. Semantic decisions use vertical runs, neighboring
+% pillar contrast and footprint shape. No dense 3D tensor or point-level
+% feature refinement is constructed.
 %
 % Input:
 %   voxelGrid: compact off-ground voxel metadata from perceiveFrame
@@ -17,7 +17,7 @@ function coarseOffGround = extractCoarseOffGroundVoxelFeatures(voxelGrid, offGro
         "voxelGrid is missing coarse off-ground inputs.");
 
     [columnMaps, sparseFineGrid] = ...
-        buildSparseColumnMaps(voxelGrid, offGroundCfg);
+        buildSparseColumnMaps(voxelGrid, offGroundCfg, coarseCfg.projectionRotation);
     columnMaps.runLayerMap = single(columnMaps.maxRunLayerCount);
     columnMaps.rawLayerCount = single(columnMaps.runLayerMap);
     columnMaps.supportScore = single(columnMaps.runLayerMap);
@@ -29,9 +29,16 @@ function coarseOffGround = extractCoarseOffGroundVoxelFeatures(voxelGrid, offGro
     poleParams = resolvePoleDetectionParams(offGroundCfg);
     candidates = detectPoleCandidates( ...
         columnMaps, false(columnMaps.mapSize), sparseFineGrid, poleParams);
-    poleCellMask = logical(candidates.candidateMask) & ...
-        double(columnMaps.pointScore) >= double(coarseCfg.poleMinimumPointScore) & ...
-        double(columnMaps.lineScore) <= double(coarseCfg.poleMaximumLineScore);
+    % Preserve candidate footprints as objects. Independent per-pillar
+    % post-gates can remove one half of a pole crossing a grid boundary.
+    poleCellMask = logical(candidates.candidateMask);
+    footprints = bwconncomp(poleCellMask,8);
+    for footprint = footprints.PixelIdxList
+        cells = footprint{1};
+        if mean(double(columnMaps.pointScore(cells))) < coarseCfg.poleMinimumFootprintScore
+            poleCellMask(cells) = false;
+        end
+    end
 
     probabilityFloor = max(0, min(1, double(coarseCfg.minimumSemanticProbability)));
     runScale = max(1, double(poleParams.coreMinRunLayerThreshold));
@@ -51,7 +58,7 @@ function coarseOffGround = extractCoarseOffGroundVoxelFeatures(voxelGrid, offGro
     coarseOffGround.poleParams = poleParams;
 end
 
-function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg)
+function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, projectionRotation)
 % buildSparseColumnMaps: Compute the same column occupancy statistics as the
 % dense fine-grid branch from sorted occupied voxels and 2D accumulations.
     dims = round(double(voxelGrid.gridConfig.dims(1:3)));
@@ -86,6 +93,9 @@ function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg)
     yMap(~occupiedMask) = NaN;
 
     columnMaps = struct();
+    cellRows = sub2ind(mapSize, pointVoxelSub(structuralPointMask, 2), pointVoxelSub(structuralPointMask, 1));
+    columnMaps.moments = aggregatePlanarCellMoments(voxelGrid.points(structuralPointMask, :), cellRows, prod(mapSize), projectionRotation);
+    columnMaps.voxelStatistics = sparseVoxels;
     columnMaps.mapSize = double(mapSize);
     columnMaps.origin = double(origin(1:2));
     columnMaps.dx = double(voxelSize(1));

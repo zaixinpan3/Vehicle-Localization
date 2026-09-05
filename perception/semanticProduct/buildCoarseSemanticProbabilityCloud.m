@@ -1,13 +1,13 @@
 function probabilityCloud = buildCoarseSemanticProbabilityCloud(coarseGround, coarseOffGround, cfg)
-% buildCoarseSemanticProbabilityCloud: Aggregate voxel-classified curb,
+% buildCoarseSemanticProbabilityCloud: Aggregate pillar-classified curb,
 % road-marking, and pole support into a sparse 2D semantic NDT cloud. Each
 % component stores a regularized Gaussian, semantic evidence probability,
 % hit-based occupancy probability, and normalized mixture weight without
 % allocating dense semantic layers.
 %
 % Input:
-%   coarseGround: output from extractCoarseGroundVoxelFeatures
-%   coarseOffGround: output from extractCoarseOffGroundVoxelFeatures
+%   coarseGround: output from analyzeGroundPillars
+%   coarseOffGround: output from analyzeStructuralPillars
 %   cfg: struct from coarseSemanticProbabilityCloudConfig
 %
 % Output:
@@ -36,8 +36,12 @@ function probabilityCloud = buildCoarseSemanticProbabilityCloud(coarseGround, co
     probabilityCloud = struct();
     probabilityCloud.mapType = "semanticNDTProbabilityCloud2D";
     probabilityCloud.representation = "sparseGaussianMixture";
-    probabilityCloud.classificationStage = "voxelOnlyCoarseValidation";
+    probabilityCloud.classificationStage = "pillarOnlyCoarseValidation";
     probabilityCloud.coordinateFrame = string(cfg.coordinateFrame);
+    probabilityCloud.projectionRotation = cfg.projectionRotation;
+    probabilityCloud.dimension = 2;
+    probabilityCloud.weightSemantics = "normalizedSemanticEvidenceTimesHitSupport";
+    probabilityCloud.probabilityCalibration = "uncalibratedEvidence";
     probabilityCloud.geometry = geometry;
     probabilityCloud.semanticNames = semanticNames;
     probabilityCloud.layers = layers;
@@ -129,6 +133,9 @@ function observations = selectGroundCells(ground, cellMask, probabilityMap)
     valid = count > 0 & all(isfinite(meanXY), 2) & isfinite(probability);
     observations = observationStruct( ...
         meanXY(valid, :), count(valid), probability(valid), ground.cellSize);
+    if isfield(ground, "moments")
+        observations = useEmpiricalMoments(observations, ground.moments, selectedCell(valid));
+    end
 end
 
 function observations = selectOffGroundColumns(offGround, cellMask, probabilityMap)
@@ -142,6 +149,17 @@ function observations = selectOffGroundColumns(offGround, cellMask, probabilityM
     valid = count > 0 & all(isfinite(meanXY), 2) & isfinite(probability);
     observations = observationStruct( ...
         meanXY(valid, :), count(valid), probability(valid), [maps.dx, maps.dy]);
+    if isfield(maps, "moments")
+        observations = useEmpiricalMoments(observations, maps.moments, selectedCell(valid));
+    end
+end
+
+function observations = useEmpiricalMoments(observations, moments, rows)
+% useEmpiricalMoments: Carry geometric scatter independently of class decisions.
+    observations.mean = moments.mean(rows, :);
+    observations.covarianceXX = moments.covariance(rows, 1);
+    observations.covarianceXY = moments.covariance(rows, 2);
+    observations.covarianceYY = moments.covariance(rows, 3);
 end
 
 function observations = observationStruct(meanXY, count, probability, cellSize)

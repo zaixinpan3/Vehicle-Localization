@@ -10,9 +10,8 @@ function groundPointIdx = segmentGround(voxelGrid, cfg)
 % its residual to the cell ground estimate is within tolerance.
 %
 % Input:
-%   voxelGrid: struct from voxelizePointCloud with fields gridConfig,
-%       points [K x 3], pointIndices [K x 1], pointVoxelSub, pointVoxelLinIdx,
-%       and count
+%   voxelGrid: spatial index with gridConfig, points [K x 3], and aligned
+%       pointIndices [K x 1]. Dense 3D voxel statistics are not required.
 %   cfg: struct from groundSegmentationConfig
 %
 % Output:
@@ -29,12 +28,6 @@ function groundPointIdx = segmentGround(voxelGrid, cfg)
     assert(isfield(voxelGrid, "pointIndices") && isvector(voxelGrid.pointIndices) && ...
         numel(voxelGrid.pointIndices) == size(voxelGrid.points, 1), ...
         "voxelGrid must contain pointIndices aligned to points.");
-    assert(isfield(voxelGrid, "pointVoxelSub") && size(voxelGrid.pointVoxelSub, 1) == size(voxelGrid.points, 1), ...
-        "voxelGrid must contain pointVoxelSub from voxelizePointCloud.");
-    assert(isfield(voxelGrid, "pointVoxelLinIdx") && ...
-        numel(voxelGrid.pointVoxelLinIdx) == size(voxelGrid.points, 1), ...
-        "voxelGrid must contain pointVoxelLinIdx from voxelizePointCloud.");
-    assert(isfield(voxelGrid, "count"), "voxelGrid must contain count from voxelizePointCloud.");
 
     seedMaxZ = readRequiredScalarConfig(cfg, "groundSeedMaxZ");
     assert(isfinite(seedMaxZ), "groundSeedMaxZ must be finite.");
