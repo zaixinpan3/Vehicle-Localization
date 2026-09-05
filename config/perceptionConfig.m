@@ -9,6 +9,7 @@ function cfg = perceptionConfig()
     cfg.executionMode = "coarseProbabilityCloud";
     cfg.executionBackend = "auto"; % Native kernels when built; otherwise MATLAB.
     cfg.compactGroundRaster = true; % Trim empty margins, retaining all ground and its halo.
+    cfg.frameCalibration = lidarFrameCalibrationConfig();
     cfg.voxel = frameVoxelizationConfig();
     cfg.groundSegmentation = groundSegmentationConfig();
     cfg.groundFeatures = groundFeatureConfig();

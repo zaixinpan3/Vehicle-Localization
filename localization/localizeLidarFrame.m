@@ -9,7 +9,11 @@ function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initia
 % Set cfg.registration.heightTranslation to the sensor/vehicle origin in map
 % Z (third output of poseRowToPlanarPose for recorded data). Auto mode uses
 % XYZ only with a known vertical reference and height in both clouds;
-% result.height describes the chosen mode. The event pose remains [x y yaw].
+% result.height describes the chosen mode. The state and event pose are ALWAYS
+% [X Y psi]; Z/roll/pitch are not optimized. Geometric D2D uses height only to
+% condition correspondence compatibility. Rank-deficient geometry emits no
+% full-pose event. Set cfg.perception.frameCalibration consistently with the
+% offline map; its default is identity and it never changes point selection.
 % An accepted event has timestamp, arrivalTime, pose fields consumed by
 % runImprovedVehicleObserver. The caller sets arrivalTime when it is delivered.
 % Empty measurement means rejection. Curvature is deliberately not exported

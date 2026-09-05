@@ -1,4 +1,4 @@
-function moments = aggregatePlanarCellMoments(points, cellIndices, numCells, projectionRotation)
+function moments = aggregatePlanarCellMoments(points, cellIndices, numCells, projectionRotation, projectionTranslation)
 % aggregatePlanarCellMoments: Compute XY and retained height moments before semantics.
 % Cell indices use the caller's linear layout. Empirical within-cell scatter
 % is preserved; downstream regularization supplies a finite sensor floor.
@@ -12,6 +12,11 @@ function moments = aggregatePlanarCellMoments(points, cellIndices, numCells, pro
             norm(rotation*rotation.'-eye(3),'fro')<1e-8 && det(rotation)>0, ...
             'projectionRotation must be a proper rotation.');
         points = double(points)*rotation.';
+    end
+    if nargin >= 5
+        translation=double(projectionTranslation(:).');
+        assert(numel(translation)==3 && all(isfinite(translation)), 'Invalid projection translation.');
+        if any(translation~=0), points=points+translation; end
     end
     counts = zeros(numCells, 1);
     meanXY = zeros(numCells, 2);

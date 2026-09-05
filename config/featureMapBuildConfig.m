@@ -16,6 +16,7 @@ function cfg = featureMapBuildConfig()
     cfg.pointCloudMatPath = fullfile("raw", "MissisipiPointClouds.mat");
     cfg.poseMatchCsvPath = fullfile("raw", "Missisipi", "gnss", "raw_data_2024-06-07-12-09-31_0_front_lidar_pose_match_1_1170.csv");
     cfg.mapOutputPath = "missisipiTemporalStabilityProbabilityCloudMap.mat";
+    cfg.frameCalibration = lidarFrameCalibrationConfig();
 
     % Covered frames: empty frameIndices means every frame of the MAT file
     cfg.frameIndices = [];

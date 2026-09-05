@@ -30,6 +30,7 @@ function [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg)
     framePoseTable = readFramePoseTable(poseMatchCsvPath, frameIndices);
 
     perceptionCfg = perceptionConfig();
+    if isfield(cfg,'frameCalibration'), perceptionCfg.frameCalibration=validateLidarFrameCalibration(cfg.frameCalibration); end
     perceptionCfg.offGroundFeatures.facadeDetectionEnabled = logical(cfg.facadeDetectionEnabled);
     featureData = collectFeatureObservations(matPath, frameIndices, framePoseTable, perceptionCfg, cfg);
     probabilityCloudMap = buildSlidingWindowMap(featureData, cfg);

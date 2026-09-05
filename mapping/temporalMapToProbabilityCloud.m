@@ -10,11 +10,14 @@ function cloud = temporalMapToProbabilityCloud(map, batchIndex)
     if nargin < 2
         batchIndex = 1;
     end
+    calibration=[];
+    if isfield(map,'frameCalibration'), calibration=map.frameCalibration; end
     if isfield(map,'batchMaps')
         assert(isscalar(batchIndex) && batchIndex==floor(batchIndex) && batchIndex>=1 && ...
             batchIndex<=numel(map.batchMaps), 'Invalid map window.');
         map = map.batchMaps(batchIndex).gmmMap;
     end
+    if isfield(map,'frameCalibration'), calibration=map.frameCalibration; end
     names = strings(0,1); means=zeros(0,2); covariance=zeros(2,2,0); weights=zeros(0,1);
     amplitudes=zeros(0,1);
     meansXYZ = zeros(0,3); covarianceXYZ = zeros(3,3,0); heightAvailable = false(0,1);
@@ -60,6 +63,7 @@ function cloud = temporalMapToProbabilityCloud(map, batchIndex)
     cloud.spatialDimension=2+any(heightAvailable);
     cloud.spatialCoordinateFrame="mapXYZ";
     cloud.heightModel="unavailable";
+    if ~isempty(calibration), cloud.frameCalibration=validateLidarFrameCalibration(calibration); end
     if any(heightAvailable), cloud.heightModel="conditionalGaussianGivenXY"; end
     validateSemanticProbabilityCloud(cloud);
 end

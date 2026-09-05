@@ -1,0 +1,144 @@
+{
+  "interpretation": "Recorded-pose consistency, not independent ground truth",
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "onlineState": "X,Y,psi",
+  "frames": [
+    260,
+    550,
+    900,
+    120,
+    350,
+    700,
+    1050
+  ],
+  "starts": [
+    [
+      0.5,
+      -0.4,
+      0.034906585039886591
+    ],
+    [
+      -0.5,
+      0.4,
+      -0.034906585039886591
+    ],
+    [
+      0,
+      0,
+      0
+    ]
+  ],
+  "registrationRuns": 126,
+  "testsPassed": 107,
+  "testsFailed": 0,
+  "testsIncomplete": 0,
+  "codeAnalysisFiles": 30,
+  "codeAnalysisFindings": 0,
+  "calibration": {
+    "rotation": [
+      [
+        0.998159683192376,
+        0,
+        -0.0606403071339151
+      ],
+      [
+        0,
+        1,
+        0
+      ],
+      [
+        0.0606403071339151,
+        0,
+        0.998159683192376
+      ]
+    ],
+    "translation": [
+      0,
+      0,
+      0
+    ],
+    "identifier": "Mississippi260CurbPitchCandidate"
+  },
+  "calibrationFit": {
+    "pitchIncrementDegrees": -3.476566590226208,
+    "fittedAngleDegrees": 3.476566590226208,
+    "referenceFrame": 260,
+    "feature": "curb",
+    "parametersEstimated": "pitchOnly",
+    "translationEstimated": false,
+    "onlineState": "X,Y,psi",
+    "rmsFrameMedianBeforeM": 0.3331865686873382,
+    "rmsFrameMedianAfterM": 0.0051400710555918874,
+    "interpretation": "Offline calibration candidate; requires validation on frames not used in fitting."
+  },
+  "currentMedianCoarseMs": 68.0468565,
+  "previousMedianCoarseMs": 66.2868565,
+  "groups": [
+    {
+      "calibration": "Mississippi260CurbPitchCandidate",
+      "variant": "densityXY",
+      "runs": 21,
+      "accepted": 11,
+      "acceptedOverOneMeter": 3,
+      "medianAcceptedDifferenceM": 0.20154001666555021,
+      "maximumAcceptedDifferenceM": 3.0946820542993363,
+      "maximumAcceptedYawDifferenceDeg": 1.8565805669158821,
+      "medianRegistrationMs": 19.6108565
+    },
+    {
+      "calibration": "Mississippi260CurbPitchCandidate",
+      "variant": "geometricHeight",
+      "runs": 21,
+      "accepted": 18,
+      "acceptedOverOneMeter": 0,
+      "medianAcceptedDifferenceM": 0.078576015651174475,
+      "maximumAcceptedDifferenceM": 0.14085429663571244,
+      "maximumAcceptedYawDifferenceDeg": 0.39426040664896744,
+      "medianRegistrationMs": 18.125856499999998
+    },
+    {
+      "calibration": "Mississippi260CurbPitchCandidate",
+      "variant": "geometricXY",
+      "runs": 21,
+      "accepted": 18,
+      "acceptedOverOneMeter": 0,
+      "medianAcceptedDifferenceM": 0.0785754005187167,
+      "maximumAcceptedDifferenceM": 0.14085412167846387,
+      "maximumAcceptedYawDifferenceDeg": 0.39426040664896744,
+      "medianRegistrationMs": 14.4788565
+    },
+    {
+      "calibration": "identity",
+      "variant": "densityXY",
+      "runs": 21,
+      "accepted": 12,
+      "acceptedOverOneMeter": 1,
+      "medianAcceptedDifferenceM": 0.15770598455953649,
+      "maximumAcceptedDifferenceM": 2.961002464703228,
+      "maximumAcceptedYawDifferenceDeg": 1.9488420242700439,
+      "medianRegistrationMs": 16.7878565
+    },
+    {
+      "calibration": "identity",
+      "variant": "geometricHeight",
+      "runs": 21,
+      "accepted": 16,
+      "acceptedOverOneMeter": 0,
+      "medianAcceptedDifferenceM": 0.07641065397993535,
+      "maximumAcceptedDifferenceM": 0.16588824480518188,
+      "maximumAcceptedYawDifferenceDeg": 0.2479626669647769,
+      "medianRegistrationMs": 18.5078565
+    },
+    {
+      "calibration": "identity",
+      "variant": "geometricXY",
+      "runs": 21,
+      "accepted": 18,
+      "acceptedOverOneMeter": 0,
+      "medianAcceptedDifferenceM": 0.076409234280358229,
+      "maximumAcceptedDifferenceM": 0.16588843334524145,
+      "maximumAcceptedYawDifferenceDeg": 0.37981153030134235,
+      "medianRegistrationMs": 13.7228565
+    }
+  ]
+}

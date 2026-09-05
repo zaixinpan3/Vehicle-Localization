@@ -208,24 +208,41 @@ mapCloud = temporalMapToProbabilityCloud(probabilityCloudMap, batchIndex);
 % to its actual delivery time before adding it to the observer lidar stream.
 ```
 
-The caller supplies a local prediction, map-window selection, consistent sensor
-extrinsics, and known IMU tilt. This is SE(2) local alignment, not global place
-recognition. The original noisy-OR/max support query is unchanged; the map
-conversion is an explicit sum-of-Gaussian-support surrogate for registration.
-Class-conditional overlap balances curb, marking, and pole contributions. Both
-means and covariances rotate. Curvature and convergence gates reject unusable
-solutions; the curvature is not a calibrated sensor information matrix.
+The localization state and every accepted measurement are **[X, Y, psi]** in
+meters/radians. The caller supplies a local prediction, a map window, and known
+IMU tilt. This is local SE(2) alignment. Online perception remains pillar-only;
+fine point verification is confined to offline mapping.
 
-Height is retained by default, while `distributionRegistrationConfig` keeps
-`heightMode="xy"`. Experimental `"xyz"` matching requires height in both
-clouds and `heightTranslation`, the moving sensor/vehicle origin's map Z.
-`poseRowToPlanarPose` returns that height as its third output for recorded data.
-`"auto"` is also opt-in and falls back to XY when height or its reference is
-unavailable. `diagnostic.height` records the selected behavior. Height/tilt
-uncertainty settings are engineering defaults, not calibrated sensor confidence.
-Recorded tests found that direct XYZ matching can increase pose error and
-accept incorrect alignments under vertical perturbations, so it is not the
-production default. See [implementation and experiments](research/height_probability_cloud_implementation.md).
+`distributionRegistrationConfig` now defaults to `method="geometricD2D"`.
+It matches same-class Gaussian components using both covariances. Elongated
+curbs and markings constrain their normal directions; poles constrain XY.
+Positive mixture masses do not attract the solution toward sampling-density
+peaks. Full-pose acceptance requires three observable directions and class
+consistency. A rejected result produces no observer event; partial geometry
+is available only as a diagnostic. Its normal matrix is not calibrated sensor
+information. Explicit `method="densityOverlap"` reproduces the old normalized
+L2 objective. The separate `scoreSemanticProbabilityCloudAlignment` function
+continues to evaluate that legacy objective, so its score is not comparable
+to the new solver's residual compatibility.
+
+Full XYZ means/covariances, including xz and yz, remain in every supported
+probability-cloud component. The default `heightMode="xy"` uses the XY
+marginal. Opt-in `"xyz"` makes geometric D2D check conditional height
+compatibility; it never estimates Z, roll, or pitch. Supply `heightTranslation`
+as the moving origin's map Z (the third output of `poseRowToPlanarPose`).
+`"auto"` falls back to XY when height or its reference is absent. Small
+compatible height residuals do not exert a planar pose force.
+
+Optional `perceptionConfig().frameCalibration` and
+`featureMapBuildConfig().frameCalibration` specify the same rigid increment
+from stored points to the recorded body frame. Their default is identity.
+`fitLidarPitchCalibration` produces an **offline pitch-only candidate** from
+static feature observations; it does not add a localization state or claim a
+complete sensor extrinsic calibration. Rebuild a map with the chosen transform
+before using it online. Known mismatched transforms are rejected; legacy
+identity maps with missing provenance are labeled `unverifiedLegacy`.
+
+See [algorithm, equations, configuration, and recorded validation](research/geometric_d2d_registration.md).
 
 ### Data layout expected under `dataRoot`
 

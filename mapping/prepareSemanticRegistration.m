@@ -5,6 +5,7 @@ function [fixed, moving, details] = prepareSemanticRegistration(fixedCloud, movi
 % Auto uses the XY marginal if height or the reference is unavailable.
     fixed = validateSemanticProbabilityCloud(fixedCloud);
     moving = validateSemanticProbabilityCloud(movingCloud);
+    calibrationStatus=validateRegistrationCalibration(fixedCloud,movingCloud);
     mode = "xy";
     translation = NaN;
     heightSd = 0.20;
@@ -26,6 +27,7 @@ function [fixed, moving, details] = prepareSemanticRegistration(fixedCloud, movi
     fixed = projectSemanticProbabilityCloud(fixedCloud,dimension).components;
     moving = projectSemanticProbabilityCloud(movingCloud,dimension).components;
     details = struct('dimension',dimension,'heightUsed',useHeight, ...
+        'calibrationStatus',calibrationStatus, ...
         'heightTranslation',translation,'heightStandardDeviation',heightSd, ...
         'tiltStandardDeviation',tiltSd,'heightReason',"enabled");
     if useHeight

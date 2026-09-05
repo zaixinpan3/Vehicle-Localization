@@ -38,7 +38,7 @@ function report = evaluateHeightProbabilityCloud(outputFolder)
             pcfg.coarseProbabilityCloud.projectionRotation=[cos(a) 0 sin(a);0 1 0;-sin(a) 0 cos(a)]*tilt;
             moving=perceiveCoarseProbabilityCloud(frame,pcfg);
             for mode=["xy","xyz"]
-                cfg=distributionRegistrationConfig(); cfg.heightMode=mode;
+                cfg=distributionRegistrationConfig(); cfg.method="densityOverlap"; cfg.heightMode=mode;
                 cfg.heightTranslation=height+heightOffsets(variant);
                 for startIndex=1:size(poseOffsets,1)
                     timer=tic;

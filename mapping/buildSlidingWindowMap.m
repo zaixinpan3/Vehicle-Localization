@@ -33,6 +33,7 @@ function probabilityCloudMap = buildSlidingWindowMap(featureData, cfg)
             logStep(cfg, "batch.gmm.build", "idx=%d/%d | sourcePoints=%d | classes=%s", batchIdx, numel(batchFrameWindows), ...
                 size(mapInput.points, 1), strjoin(mapInput.buildFeatureNames, ", "));
             gmmMap = buildTemporalStabilityGmmMap(mapInput.pointsXYZ, mapInput.labels, mapInput.timestamps, gmmCfg);
+            if isfield(featureData,'frameCalibration'), gmmMap.frameCalibration=featureData.frameCalibration; end
             logGmmMapSummary(cfg, gmmMap);
         else
             logStep(cfg, "batch.gmm.skip", "idx=%d/%d | no class met map input thresholds", batchIdx, numel(batchFrameWindows));
@@ -60,6 +61,7 @@ function probabilityCloudMap = buildSlidingWindowMap(featureData, cfg)
     probabilityCloudMap.layerSummaryTable = buildLayerSummaryTable(batchMaps);
     probabilityCloudMap.frameSummaryTable = featureData.frameSummaryTable;
     probabilityCloudMap.config = cfg;
+    if isfield(featureData,'frameCalibration'), probabilityCloudMap.frameCalibration=featureData.frameCalibration; end
 end
 
 function gmmCfg = resolveWindowMapConfig(buildFeatureNames, batchCfg)

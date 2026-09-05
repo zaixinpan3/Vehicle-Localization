@@ -442,4 +442,10 @@ function coarseCfg = resolveCoarseProbabilityCloudConfig(cfg)
     else
         coarseCfg = coarseSemanticProbabilityCloudConfig();
     end
+    calibration=lidarFrameCalibrationConfig();
+    if isfield(cfg,'frameCalibration'), calibration=validateLidarFrameCalibration(cfg.frameCalibration); end
+    if ~isfield(coarseCfg,'projectionTranslation'), coarseCfg.projectionTranslation=[0 0 0]; end
+    coarseCfg.projectionTranslation=coarseCfg.projectionTranslation+calibration.translation*coarseCfg.projectionRotation.';
+    coarseCfg.projectionRotation=coarseCfg.projectionRotation*calibration.rotation;
+    coarseCfg.frameCalibration=calibration;
 end

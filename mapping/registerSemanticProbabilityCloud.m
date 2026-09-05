@@ -1,13 +1,19 @@
 function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, initialPose, cfg)
-% registerSemanticProbabilityCloud: Align planar semantic distributions.
-% Maximize normalized Gaussian overlap using analytic derivatives, BFGS and
-% Armijo line search at decreasing covariance smoothing scales. initialPose
-% and poseXYTheta map moving-local XY to fixed-map XY, in meters/radians.
-% The final curvature is a local observability diagnostic, NOT a calibrated
-% pose information matrix. A rejected result must not be fused as a pose.
+% registerSemanticProbabilityCloud: Estimate ONLY [X Y psi] from Gaussian clouds.
+% Default geometricD2D matches semantic distributions, constrains ground-line
+% normals and pole XY, and rejects incomplete SE(2) observability. Optional
+% height is correspondence evidence, never another optimized pose state.
+% Explicit densityOverlap reproduces normalized L2 overlap with covariance
+% smoothing and BFGS. Its similarity has different semantics from geometricD2D.
+% Curvature is not calibrated sensor information. Never fuse a rejected pose.
     if nargin < 4 || isempty(cfg)
         cfg = distributionRegistrationConfig();
     end
+    if isfield(cfg,'method') && string(cfg.method)=="geometricD2D"
+        result=registerGeometricProbabilityCloud(fixedCloud,movingCloud,initialPose,cfg);
+        return;
+    end
+    assert(~isfield(cfg,'method') || string(cfg.method)=="densityOverlap",'Invalid registration method.');
     [fixed, moving, heightDetails] = prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
     initialPose = double(initialPose(:).');
     assert(numel(initialPose)==3 && all(isfinite(initialPose)), 'Expected finite initial [x y yaw].');

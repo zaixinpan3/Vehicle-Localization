@@ -17,7 +17,7 @@ function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coa
         "voxelGrid is missing coarse off-ground inputs.");
 
     [columnMaps, sparseFineGrid] = ...
-        buildSparseColumnMaps(voxelGrid, offGroundCfg, coarseCfg.projectionRotation);
+        buildSparseColumnMaps(voxelGrid, offGroundCfg, coarseCfg.projectionRotation, coarseCfg.projectionTranslation);
     columnMaps.runLayerMap = single(columnMaps.maxRunLayerCount);
     columnMaps.rawLayerCount = single(columnMaps.runLayerMap);
     columnMaps.supportScore = single(columnMaps.runLayerMap);
@@ -58,7 +58,7 @@ function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coa
     coarseOffGround.poleParams = poleParams;
 end
 
-function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, projectionRotation)
+function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, projectionRotation, projectionTranslation)
 % buildSparseColumnMaps: Compute the same column occupancy statistics as the
 % dense fine-grid branch from sorted occupied voxels and 2D accumulations.
     dims = round(double(voxelGrid.gridConfig.dims(1:3)));
@@ -94,7 +94,7 @@ function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, pr
 
     columnMaps = struct();
     cellRows = sub2ind(mapSize, pointVoxelSub(structuralPointMask, 2), pointVoxelSub(structuralPointMask, 1));
-    columnMaps.moments = aggregatePlanarCellMoments(voxelGrid.points(structuralPointMask, :), cellRows, prod(mapSize), projectionRotation);
+    columnMaps.moments = aggregatePlanarCellMoments(voxelGrid.points(structuralPointMask, :), cellRows, prod(mapSize), projectionRotation, projectionTranslation);
     columnMaps.voxelStatistics = sparseVoxels;
     columnMaps.mapSize = double(mapSize);
     columnMaps.origin = double(origin(1:2));

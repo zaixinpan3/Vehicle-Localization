@@ -3,6 +3,7 @@ function cfg = distributionRegistrationConfig()
 % Search limits describe the prediction basin, not global relocalization.
 % Similarity/curvature gates are engineering checks, not calibrated confidence.
     cfg = struct();
+    cfg.method = "geometricD2D"; % Explicit "densityOverlap" reproduces the old objective.
     cfg.smoothingStandardDeviations = [1.0 0.35 0];
     cfg.maximumIterationsPerScale = 40;
     cfg.maximumPoseCorrection = [3 3 deg2rad(12)];
@@ -13,11 +14,18 @@ function cfg = distributionRegistrationConfig()
     cfg.minimumComponents = 3;
     cfg.minimumScaledCurvature = 1e-5;
     cfg.minimumCurvatureRatio = 1e-4;
-    % Height is retained by default, but XYZ matching is opt-in until its
-    % coarse/fine vertical sampling mismatch is calibrated on independent data.
+    % Pose is ALWAYS [X Y psi]. Retain full XYZ statistics but use height for
+    % geometric correspondence compatibility only, opt-in with a map Z reference.
     cfg.heightMode = "xy";
     cfg.heightTranslation = NaN; % Moving origin in map Z; never assume zero.
     % Engineering uncertainty defaults, not calibrated sensor specifications.
     cfg.heightStandardDeviation = 0.20;
     cfg.tiltStandardDeviation = deg2rad(0.5);
+    % Geometry-based Gaussian correspondence solver. These specify spatial
+    % tolerance and observation quality, not dataset-specific feature rules.
+    cfg.geometric = struct('maximumMatchDistance',2.5, ...
+        'minimumLineAnisotropy',3,'noiseStandardDeviation',0.10, ...
+        'robustStandardizedDistance',2.5,'minimumMatchFraction',0.10, ...
+        'minimumObservabilityRatio',0.01,'maximumClassCorrection',0.50, ...
+        'heightCompatibilitySigma',3);
 end

@@ -23,6 +23,7 @@ function cfg = coarseSemanticProbabilityCloudConfig()
     % Optional known IMU tilt: transform sufficient statistics before BEV
     % projection, while classifying in the original vehicle XY pillars.
     cfg.projectionRotation = eye(3);
+    cfg.projectionTranslation = [0 0 0];
     cfg.semanticNames = ["curb", "roadMarking", "pole"];
 
     % Pillar selectors retain the tested geometric evidence rules.

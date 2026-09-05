@@ -72,7 +72,7 @@ function report = diagnoseHeightRegistrationBias(outputFolder, stage)
                 fixed=item.(mapName); moving=item.(sourceName);
                 for variant=["xy","xyz","xyzNoCross","xyzExactPose","xyzWideHeight"]
                     if mapName~="fixed" && ~ismember(variant,["xy","xyz","xyzExactPose"]), continue; end
-                    cfg=distributionRegistrationConfig(); cfg.heightTranslation=item.height;
+                    cfg=distributionRegistrationConfig(); cfg.method="densityOverlap"; cfg.heightTranslation=item.height;
                     cfg.heightMode="xyz";
                     if variant=="xy", cfg.heightMode="xy"; end
                     f=fixed; m=moving;
@@ -111,7 +111,7 @@ function report = diagnoseHeightRegistrationBias(outputFolder, stage)
         for sourceName=["coarse","fine"]
             for name=["all",cloudCfg.semanticNames]
                 f=selectClass(item.fixed,name); m=selectClass(item.(sourceName),name);
-                cfg=distributionRegistrationConfig(); cfg.heightMode="xyz";
+                cfg=distributionRegistrationConfig(); cfg.method="densityOverlap"; cfg.heightMode="xyz";
                 for dz=-1:0.05:1
                     cfg.heightTranslation=item.height+dz;
                     score=scoreSemanticProbabilityCloudAlignment(f,m,item.pose,cfg);
@@ -133,7 +133,7 @@ function report = diagnoseHeightRegistrationBias(outputFolder, stage)
             end
         end
         for mode=["xy","xyz"]
-            cfg=distributionRegistrationConfig(); cfg.heightMode=mode; cfg.heightTranslation=item.height;
+            cfg=distributionRegistrationConfig(); cfg.method="densityOverlap"; cfg.heightMode=mode; cfg.heightTranslation=item.height;
             [f,m]=prepareSemanticRegistration(item.fixed,item.coarse,cfg);
             f.mean(:,1:2)=f.mean(:,1:2)-item.pose(1:2);
             if mode=="xyz", f.mean(:,3)=f.mean(:,3)-item.height; m.mean(:,3)=m.mean(:,3)-item.height; end
@@ -276,7 +276,7 @@ function report=mechanismStudy(inputs,folder,matPath,posePath,mapCfg,cloudCfg)
             if geometry=="pitchCorrected", current=corrected{i}; end
             for mapName=["fixed","futureGrid"]
                 for mode=["xy","xyz"]
-                    cfg=distributionRegistrationConfig(); cfg.heightMode=mode; cfg.heightTranslation=item.height;
+                    cfg=distributionRegistrationConfig(); cfg.method="densityOverlap"; cfg.heightMode=mode; cfg.heightTranslation=item.height;
                     rows=[rows;registrationRows(current.(mapName),current.coarse,item,cfg,geometry+"_"+mapName,"all")]; %#ok<AGROW>
                 end
             end
@@ -300,14 +300,14 @@ function report=mechanismStudy(inputs,folder,matPath,posePath,mapCfg,cloudCfg)
             end
             f.components.mixtureWeight=w/sum(w);
             for mode=["xy","xyz"]
-                cfg=distributionRegistrationConfig(); cfg.heightMode=mode; cfg.heightTranslation=item.height;
+                cfg=distributionRegistrationConfig(); cfg.method="densityOverlap"; cfg.heightMode=mode; cfg.heightTranslation=item.height;
                 rows=[rows;registrationRows(f,item.coarse,item,cfg,weightMode,"all")]; %#ok<AGROW>
             end
         end
         % A wide search tests objective bias rather than initial-bound clipping.
         for name=["all",cloudCfg.semanticNames]
             for mode=["xy","xyz"]
-                cfg=distributionRegistrationConfig(); cfg.heightMode=mode; cfg.heightTranslation=item.height;
+                cfg=distributionRegistrationConfig(); cfg.method="densityOverlap"; cfg.heightMode=mode; cfg.heightTranslation=item.height;
                 cfg.maximumPoseCorrection=[12 12 deg2rad(12)]; cfg.maximumIterationsPerScale=100;
                 cfg.minimumComponents=1;
                 f=selectClass(item.fixed,name); m=selectClass(item.coarse,name);
@@ -331,7 +331,7 @@ function report=mechanismStudy(inputs,folder,matPath,posePath,mapCfg,cloudCfg)
         windowMaps{j}=buildSlidingWindowMap(observations,mapCfg);
         f=temporalMapToProbabilityCloud(windowMaps{j});
         for mode=["xy","xyz"]
-            cfg=distributionRegistrationConfig(); cfg.heightMode=mode; cfg.heightTranslation=item.height;
+            cfg=distributionRegistrationConfig(); cfg.method="densityOverlap"; cfg.heightMode=mode; cfg.heightTranslation=item.height;
             cfg.maximumPoseCorrection=[12 12 deg2rad(12)]; cfg.maximumIterationsPerScale=100;
             rows=[rows;registrationRows(f,item.coarse,item,cfg,"window"+frames(1)+"to"+frames(end),"all")]; %#ok<AGROW>
         end
@@ -339,7 +339,7 @@ function report=mechanismStudy(inputs,folder,matPath,posePath,mapCfg,cloudCfg)
     % An unmatched pole class is still given equal nominal class energy.
     % Record each class at both the recorded pose and the returned XY pose.
     for i=1:3
-        item=inputs{i}; cfg=distributionRegistrationConfig();
+        item=inputs{i}; cfg=distributionRegistrationConfig(); cfg.method="densityOverlap";
         result=registerSemanticProbabilityCloud(item.fixed,item.coarse,item.pose,cfg);
         for name=cloudCfg.semanticNames
             f=selectClass(item.fixed,name); m=selectClass(item.coarse,name);

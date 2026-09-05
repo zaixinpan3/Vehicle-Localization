@@ -20,6 +20,7 @@ function report = evaluatePillarRegistration(dataRoot, outputFolder)
     offsets=[0 0 0;0.5 -0.4 deg2rad(2);-0.5 0.4 -deg2rad(2)];
     rows=cell(numel(frames)*size(offsets,1)+1,13);
     cfg=struct('perception',perceptionConfig(),'registration',distributionRegistrationConfig());
+    cfg.registration.method="densityOverlap"; % Preserve this historical baseline experiment.
     cfg.perception.coarseProbabilityCloud.coordinateFrame="gravityAlignedVehicleXY";
     index=0;
     for k=1:numel(frames)
