@@ -33,6 +33,7 @@ function groundPointIdx = segmentGround(voxelGrid, cfg)
     assert(isfinite(seedMaxZ), "groundSeedMaxZ must be finite.");
     cellSizeXY = resolveSlopeGridXYCellSize(cfg, voxelGrid);
     params = resolveSlopeGridParams(cfg, seedMaxZ);
+    params.useNativeKernels = isfield(cfg, "useNativeKernels") && cfg.useNativeKernels;
     groundMask = extractGroundMaskSlopeGrid(voxelGrid, cellSizeXY, params);
 
     if ~any(groundMask)
@@ -284,6 +285,16 @@ function [cellStats, pointCellLinIdx] = computeSlopeGridCellStats(points, pointC
 
     validCell = double(pointCellLinIdx(valid));
     validZ = points(valid, 3);
+    if isfield(params,"useNativeKernels") && params.useNativeKernels
+        reduced = perceptionKernelsMex('groundStats',validCell,double(validZ),numCells);
+        cellStats.occupiedLinIdx = int32(reduced(:,1));
+        cellStats.count = reduced(:,2);
+        cellStats.zMin = reduced(:,3); cellStats.zSecond = reduced(:,4); cellStats.zMax = reduced(:,5);
+        cellStats.zLow = cellStats.zMin;
+        useSecond = cellStats.count>=2 & (cellStats.zSecond-cellStats.zMin)>params.lowOutlierThreshold;
+        cellStats.zLow(useSecond) = cellStats.zSecond(useSecond);
+        return;
+    end
     [~, sortOrder] = sortrows([validCell, validZ], [1, 2]);
     sortedCell = validCell(sortOrder);
     sortedZ = validZ(sortOrder);
@@ -378,6 +389,14 @@ function [groundHeight, state] = propagateSlopeGridGround(cellStats, flatCandida
     [~, order] = sort(cellRange, "ascend");
     occupiedLinIdx = double(cellStats.occupiedLinIdx(:));
     zLow = cellStats.zLow(:);
+    if isfield(params, "useNativeKernels") && params.useNativeKernels
+        [groundHeight, state] = perceptionKernelsMex('propagateGround', ...
+            double(order), occupiedLinIdx, double(zLow), logical(flatCandidate), ...
+            double(cellRange), groundHeight, state, double(dimsXY), double(cellSizeXY), ...
+            [params.noiseBase, params.noiseRangeSlope, params.noiseMax, ...
+             params.baseHeightTolerance, params.maxSlope]);
+        return;
+    end
     [neighborIdxByStats, neighborDistanceByStats] = buildSlopeGridOccupiedNeighborLookup( ...
         occupiedLinIdx, dimsXY, cellSizeXY);
     for orderIdx = 1:numel(order)
@@ -405,7 +424,11 @@ function [groundHeight, state] = propagateSlopeGridGround(cellStats, flatCandida
         noiseMargin = min(params.noiseBase + params.noiseRangeSlope .* cellRange(statsIdx), params.noiseMax);
         compatible = false;
         if flatCandidate(statsIdx)
-            allowed = params.baseHeightTolerance + params.maxSlope .* neighborDistance(groundNeighborMask) + noiseMargin;
+            % Preserve the original conservative gate explicitly. Previously
+            % a column of residuals and a row of tolerances expanded to a
+            % matrix; if(any(...)) required support at every tolerance. This
+            % is equivalent to any residual passing the smallest tolerance.
+            allowed = params.baseHeightTolerance + params.maxSlope .* min(neighborDistance(groundNeighborMask)) + noiseMargin;
             compatible = any(abs(zLow(statsIdx) - supportedGroundHeights) < allowed);
         end
 
@@ -514,16 +537,13 @@ function [groundHeight, state] = promoteSlopeGridSmoothFlatComponents(cellStats,
     componentSize = accumarray(componentId, 1, [numComponents, 1], @sum, 0);
     componentMinZ = accumarray(componentId, cellStats.zLow(flatStatsIdx), [numComponents, 1], @min, NaN);
     componentMaxZ = accumarray(componentId, cellStats.zLow(flatStatsIdx), [numComponents, 1], @max, NaN);
-    componentHasGround = accumarray(componentId, state(flatLinIdx) == uint8(1), [numComponents, 1], @any, false);
+    componentHasGround = accumarray(componentId, state(flatLinIdx) == uint8(1), [numComponents, 1], @max, false);
     [componentOrder, componentStartIdx, componentEndIdx] = buildSlopeGridComponentMemberIndex(componentId, numComponents);
 
     promotedComponent = componentHasGround;
-    groundedComponents = find(componentHasGround(:)).';
-    for iComponent = groundedComponents
-        memberRows = componentOrder(componentStartIdx(iComponent):componentEndIdx(iComponent));
-        [groundHeight, state] = setSlopeGridSmoothComponentGround( ...
-            memberRows, flatLinIdx, flatStatsIdx, cellStats, groundHeight, state);
-    end
+    groundedFlatMask = componentHasGround(componentId);
+    groundHeight(flatLinIdx(groundedFlatMask)) = cellStats.zLow(flatStatsIdx(groundedFlatMask));
+    state(flatLinIdx(groundedFlatMask)) = uint8(1);
 
     if params.smoothComponentBridgeRadiusCells < 1 || ~any(promotedComponent)
         return;
@@ -533,8 +553,8 @@ function [groundHeight, state] = promoteSlopeGridSmoothFlatComponents(cellStats,
         componentSize <= params.smoothComponentBridgeMaxCells & ...
         (componentMaxZ - componentMinZ) <= params.smoothComponentBridgeMaxHeightRange;
     if canUseSlopeGridDistanceTransformBridge(cellSizeXY)
-        componentMedianHeight = accumarray(componentId, cellStats.zLow(flatStatsIdx), [numComponents, 1], @median, NaN);
-        componentMedianRange = accumarray(componentId, cellRange(flatStatsIdx), [numComponents, 1], @median, NaN);
+        componentMedianHeight = groupedFiniteMedian(componentId, cellStats.zLow(flatStatsIdx), numComponents);
+        componentMedianRange = groupedFiniteMedian(componentId, cellRange(flatStatsIdx), numComponents);
         [groundHeight, state] = bridgeSlopeGridSmoothComponentsDistanceTransform( ...
             componentId, flatLinIdx, flatStatsIdx, componentMedianHeight, componentMedianRange, bridgeEligible, ...
             promotedComponent, cellStats, groundHeight, state, dimsXY, cellSizeXY, params);
@@ -594,6 +614,13 @@ function [componentId, flatLinIdx, flatStatsIdx] = buildSlopeGridSmoothFlatCompo
     numFlatCells = numel(flatLinIdx);
     componentId = zeros(numFlatCells, 1);
     if numFlatCells == 0
+        return;
+    end
+    if isfield(params,"useNativeKernels") && params.useNativeKernels
+        componentId = perceptionKernelsMex('smoothComponents',flatLinIdx, ...
+            double(cellStats.zLow(flatStatsIdx)),double(cellRange(flatStatsIdx)), ...
+            double(dimsXY),double(cellSizeXY), ...
+            [params.noiseBase,params.noiseRangeSlope,params.noiseMax,params.baseHeightTolerance,params.maxSlope]);
         return;
     end
 

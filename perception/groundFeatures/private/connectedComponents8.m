@@ -11,7 +11,11 @@ function components = connectedComponents8(mask)
 %   components: cell array where each element contains linear indices for
 %       one 8-connected component
     mask = logical(mask);
-    if exist("bwconncomp", "file") == 2
+    persistent hasImageComponents
+    if isempty(hasImageComponents)
+        hasImageComponents = exist("bwconncomp", "file") == 2;
+    end
+    if hasImageComponents
         connectedComponentStruct = bwconncomp(mask, 8);
         components = connectedComponentStruct.PixelIdxList(:);
         return;

@@ -96,24 +96,11 @@ function interiorMask = buildCurbBoundedInteriorMask(curbCellMask, xyView, seedM
         referenceY = median(seedYValues, "omitnan");
     end
 
-    lowerRowsByCol = NaN(numCols, 1);
-    upperRowsByCol = NaN(numCols, 1);
     [curbRows, curbCols] = find(logical(curbCellMask));
-    for colIdx = 1:numCols
-        rowsInCol = curbRows(curbCols == colIdx);
-        if isempty(rowsInCol)
-            continue;
-        end
-        yInCol = yCenters(rowsInCol);
-        lowerRows = rowsInCol(yInCol < referenceY);
-        upperRows = rowsInCol(yInCol > referenceY);
-        if ~isempty(lowerRows)
-            lowerRowsByCol(colIdx) = max(lowerRows);
-        end
-        if ~isempty(upperRows)
-            upperRowsByCol(colIdx) = min(upperRows);
-        end
-    end
+    lower = yCenters(curbRows) < referenceY;
+    upper = yCenters(curbRows) > referenceY;
+    lowerRowsByCol = accumarray(curbCols(lower),curbRows(lower),[numCols 1],@max,NaN);
+    upperRowsByCol = accumarray(curbCols(upper),curbRows(upper),[numCols 1],@min,NaN);
 
     minBoundaryCells = max(2, round(double(cfg.curbInteriorMinBoundaryCells)));
     validLowerCols = find(isfinite(lowerRowsByCol));
@@ -223,6 +210,11 @@ function roadCellMask = growRoadCellsFromSeeds(candidateRoadMask, seedMask, heig
     seedHeight = median(double(heightMap(seedIdx)), "omitnan");
     maxNeighborStep = double(cfg.maxNeighborHeightStepMeters);
     maxSeedDeviation = double(cfg.maxSeedHeightDeviationMeters);
+    if isfield(cfg, "useNativeKernels") && cfg.useNativeKernels
+        roadCellMask = perceptionKernelsMex('growRoad', candidateRoadMask, ...
+            double(seedIdx), double(heightMap), [seedHeight, maxNeighborStep, maxSeedDeviation]);
+        return;
+    end
 
     while queueHead <= queueCount
         currentIdx = queue(queueHead);

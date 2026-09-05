@@ -171,8 +171,11 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
                 [cloud, diagnostics] = perceiveCoarseProbabilityCloud(frame, cfg);
                 referenceSourceMasks = ...
                     coarseSemanticProbabilityCloudTest.referenceSourceMasks(full, diagnostics);
-                candidateSourceMasks = {diagnostics.ground.curbCellMask; ...
-                    diagnostics.ground.roadMarkingCellMask; ...
+                sourceSize = size(full.groundContext.groundXYView.countMap);
+                candidateSourceMasks = {coarseSemanticProbabilityCloudTest.expandGroundMask( ...
+                    diagnostics.ground.curbCellMask,diagnostics.ground.pillarOffset,sourceSize); ...
+                    coarseSemanticProbabilityCloudTest.expandGroundMask( ...
+                    diagnostics.ground.roadMarkingCellMask,diagnostics.ground.pillarOffset,sourceSize); ...
                     diagnostics.offGround.poleCellMask};
                 for semanticIdx = 1:numel(semanticNames)
                     sourceCounts(semanticIdx) = ...
@@ -200,10 +203,10 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             metrics.columnMapsExact = columnMapsExact;
         end
 
-        function masks = referenceSourceMasks(full, diagnostics)
+        function masks = referenceSourceMasks(full, ~)
         % referenceSourceMasks: Project full point semantics to their source
         % ground cells and retain the full pole support mask.
-            mapSize = size(diagnostics.ground.curbCellMask);
+            mapSize = size(full.groundContext.groundXYView.countMap);
             curb = coarseSemanticProbabilityCloudTest.projectGroundMask( ...
                 full.ground.groundCellLinIdx, full.ground.curbPointMask, mapSize);
             roadMarking = coarseSemanticProbabilityCloudTest.projectGroundMask( ...
@@ -218,6 +221,14 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             cellIdx = unique(double(pointCellLinIdx(logical(pointMask))));
             [xBin, yBin] = ind2sub([mapSize(2), mapSize(1)], cellIdx);
             mask(sub2ind(mapSize, yBin, xBin)) = true;
+        end
+
+        function mask = expandGroundMask(compact,offset,mapSize)
+        % Compare in the original lattice so reference points outside the
+        % compact diagnostic raster still count as false negatives.
+            mask = false(mapSize);
+            [row,col] = find(compact);
+            mask(sub2ind(mapSize,row+offset(2),col+offset(1))) = true;
         end
 
         function cells = projectPointMaskToNdt(frame, pointMask, geometry)

@@ -8,6 +8,11 @@ function params = resolvePoleDetectionParams(cfg)
 %
 % Output:
 %   params: struct with validated pole-detection parameters and kernels
+    persistent cachedConfig cachedParams
+    if ~isempty(cachedParams) && isequaln(cachedConfig,cfg)
+        params = cachedParams;
+        return;
+    end
     params = struct();
     params.baseConfidenceThreshold = 0.55;
     if isfield(cfg, "poleBaseConfidenceThreshold") && isscalar(cfg.poleBaseConfidenceThreshold) && isfinite(cfg.poleBaseConfidenceThreshold)
@@ -270,4 +275,6 @@ function params = resolvePoleDetectionParams(cfg)
         params.maxFootprintSpanCells = max(1, round(double(cfg.poleMaxFootprintSpanCells)));
     end
     params.neighborhoodKernel = true((2 * params.neighborhoodRadius) + 1, (2 * params.neighborhoodRadius) + 1);
+    cachedConfig = cfg;
+    cachedParams = params;
 end

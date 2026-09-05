@@ -24,6 +24,8 @@ function voxelGrid = voxelizePointCloud(pointCloud, cfg)
 %       maxRange: scalar maximum range in meters
 %       statisticsMode: "full", "countOnly", or "sparse". Sparse mode
 %           builds membership only; every dense 3D statistic is empty.
+%       buildPointLookup: true by default. False omits sorted inverse lookup
+%           arrays; numOccupiedVoxels is NaN because that count is not computed.
 %
 % Output:
 %   voxelGrid: struct with fields:
@@ -68,8 +70,16 @@ function voxelGrid = voxelizePointCloud(pointCloud, cfg)
 
     [count, sumX, sumY, sumZ, sumXX, sumYY, sumZZ, sumXY, sumXZ, sumYZ] = ...
         accumulateVoxelStatistics(xyz, pointVoxelSub, dims, voxelCfg.statisticsMode);
-    [occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets, voxelPointLocalIdx] = ...
-        buildVoxelPointMapping(pointVoxelLinIdx, dims);
+    buildPointLookup = ~isfield(cfg,"buildPointLookup") || logical(cfg.buildPointLookup);
+    if buildPointLookup
+        [occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets, voxelPointLocalIdx] = ...
+            buildVoxelPointMapping(pointVoxelLinIdx, dims);
+    else
+        occupiedVoxelLinIdx = zeros(0,1,"int32");
+        occupiedVoxelSub = zeros(0,3,"int32");
+        voxelPointOffsets = int32(1);
+        voxelPointLocalIdx = zeros(0,1,"int32");
+    end
     voxelPointIndices = zeros(0, 1, "int32");
     if ~isempty(voxelPointLocalIdx)
         voxelPointIndices = int32(pointIndices(double(voxelPointLocalIdx(:))));
@@ -111,6 +121,8 @@ function voxelGrid = voxelizePointCloud(pointCloud, cfg)
     voxelGrid.numInputPoints = double(inputMeta.numInputPoints);
     voxelGrid.numFilteredPoints = double(size(xyz, 1));
     voxelGrid.numOccupiedVoxels = double(numel(occupiedVoxelLinIdx));
+    voxelGrid.hasPointLookup = buildPointLookup;
+    if ~buildPointLookup && ~isempty(xyz), voxelGrid.numOccupiedVoxels = NaN; end
 end
 
 function [xyz, pointIndices, pointAttributes, inputMeta] = resolvePointCloudInput(pointCloud)

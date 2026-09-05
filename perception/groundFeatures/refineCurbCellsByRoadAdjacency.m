@@ -468,109 +468,72 @@ function [refinedMask, promotedMask] = keepSameColumnFeaturePeakCurbCells(curbMa
         .* max(double(energyMaps.totalBase), 0) ...
         .* (1 + max(double(energyMaps.linearity), 0));
 
-    numRows = size(refinedMask, 1);
-    numCols = size(refinedMask, 2);
+    [numRows, numCols] = size(refinedMask);
     originalMask = refinedMask;
-    for colIdx = 1:numCols
-        selectedRows = find(originalMask(:, colIdx));
-        if isempty(selectedRows)
-            continue;
-        end
+    % Reduce all selected cells by column and road side in one pass. The
+    % maxima still span the entire side of each column, as in the scalar rule.
+    selected = find(originalMask);
+    selected = selected(:);
+    [selectedRows, selectedCols] = ind2sub(size(originalMask), selected);
+    validSide = sideByRow(selectedRows) ~= 0;
+    selected = selected(validSide);
+    selectedRows = selectedRows(validSide);
+    selectedCols = selectedCols(validSide);
+    groups = selectedCols + numCols .* (sideByRow(selectedRows) > 0);
+    numGroups = 2 * numCols;
+    selectedHeight = accumarray(groups, double(energyMaps.heightStepMeters(selected)), [numGroups 1], @max, -inf);
+    selectedBase = accumarray(groups, double(energyMaps.totalBase(selected)), [numGroups 1], @max, -inf);
+    selectedRoughness = accumarray(groups, double(energyMaps.roughnessMeters(selected)), [numGroups 1], @max, -inf);
+    selectedScore = accumarray(groups, peakScore(selected), [numGroups 1], @max, -inf);
+    selectedDistance = accumarray(groups, abs(yCenters(selectedRows)-referenceY), [numGroups 1], @max, -inf);
 
-        for sideValue = [-1, 1]
-            sideRows = selectedRows(sideByRow(selectedRows) == sideValue);
-            if isempty(sideRows)
-                continue;
-            end
+    % Form only same-side vertical neighborhoods; never cross a road side or
+    % a column at a raster edge. Duplicate candidate indices are removed once.
+    neighborRows = selectedRows + (-searchRadiusCells:searchRadiusCells);
+    valid = neighborRows >= 1 & neighborRows <= numRows;
+    boundedRows = min(max(neighborRows, 1), numRows);
+    valid = valid & reshape(sideByRow(boundedRows), size(boundedRows)) == sideByRow(selectedRows);
+    neighborIndices = boundedRows + (selectedCols-1) .* numRows;
+    candidate = unique(neighborIndices(valid));
+    candidate = candidate(:);
+    candidate = candidate(candidateMask(candidate) & ~originalMask(candidate));
+    [candidateRows, candidateCols] = ind2sub(size(originalMask), candidate);
+    candidateGroups = candidateCols + numCols .* (sideByRow(candidateRows) > 0);
+    candidateHeight = double(energyMaps.heightStepMeters(candidate));
+    candidateBase = double(energyMaps.totalBase(candidate));
+    candidateRoughness = double(energyMaps.roughnessMeters(candidate));
+    heightPromotion = candidateHeight >= selectedHeight(candidateGroups) + promotionMinHeightGainMeters ...
+        & peakScore(candidate) >= selectedScore(candidateGroups) .* promotionScoreRatio ...
+        & candidateBase >= selectedBase(candidateGroups) .* promotionBaseRatio ...
+        & candidateRoughness >= promotionMinRoughnessMeters;
+    roughnessPromotion = candidateRoughness >= promotionMinRoughnessMeters ...
+        & candidateRoughness >= selectedRoughness(candidateGroups) .* promotionRoughnessRatio ...
+        & candidateBase >= selectedBase(candidateGroups) .* promotionBaseRatio;
+    roadFacingPromotion = abs(yCenters(candidateRows)-referenceY) < selectedDistance(candidateGroups) ...
+        & roadFacingCandidateMask(candidate);
+    promotedMask(candidate(heightPromotion | roughnessPromotion | roadFacingPromotion)) = true;
+    refinedMask = originalMask | promotedMask;
 
-            rowSupport = false(numRows, 1);
-            for rowIdx = reshape(sideRows, 1, [])
-                rowWindow = max(1, rowIdx - searchRadiusCells):min(numRows, rowIdx + searchRadiusCells);
-                rowSupport(rowWindow) = true;
-            end
-            candidateRows = find(rowSupport ...
-                & candidateMask(:, colIdx) ...
-                & (sideByRow == sideValue));
-            if isempty(candidateRows)
-                continue;
-            end
-
-            selectedHeight = double(energyMaps.heightStepMeters(sideRows, colIdx));
-            selectedBase = double(energyMaps.totalBase(sideRows, colIdx));
-            selectedRoughness = double(energyMaps.roughnessMeters(sideRows, colIdx));
-            selectedPeakScore = peakScore(sideRows, colIdx);
-            candidateHeight = double(energyMaps.heightStepMeters(candidateRows, colIdx));
-            candidateBase = double(energyMaps.totalBase(candidateRows, colIdx));
-            candidateRoughness = double(energyMaps.roughnessMeters(candidateRows, colIdx));
-            candidateLinearity = double(energyMaps.linearity(candidateRows, colIdx));
-            candidateCenterEvidence = double(energyMaps.linearityComponentCenterEvidence(candidateRows, colIdx));
-            candidateDistance = abs(yCenters(candidateRows) - referenceY);
-            selectedDistance = abs(yCenters(sideRows) - referenceY);
-            candidatePeakScore = peakScore(candidateRows, colIdx);
-            heightPromotionMask = candidateHeight >= max(selectedHeight) + promotionMinHeightGainMeters ...
-                & candidatePeakScore >= max(selectedPeakScore) .* promotionScoreRatio ...
-                & candidateBase >= max(selectedBase) .* promotionBaseRatio ...
-                & candidateRoughness >= promotionMinRoughnessMeters;
-            roughnessPromotionMask = candidateRoughness >= promotionMinRoughnessMeters ...
-                & candidateRoughness >= max(selectedRoughness) .* promotionRoughnessRatio ...
-                & candidateBase >= max(selectedBase) .* promotionBaseRatio;
-            roadFacingPromotionMask = candidateDistance < max(selectedDistance) ...
-                & candidateBase >= roadFacingMinBaseEnergy ...
-                & candidateRoughness >= roadFacingMinRoughnessMeters ...
-                & candidateLinearity >= roadFacingMinLinearity ...
-                & candidateCenterEvidence >= roadFacingMinCenterEvidence;
-            promoteRows = candidateRows(~originalMask(candidateRows, colIdx) ...
-                & (heightPromotionMask | roughnessPromotionMask | roadFacingPromotionMask));
-            refinedMask(promoteRows, colIdx) = true;
-            promotedMask(promoteRows, colIdx) = true;
-        end
-    end
-
-    selectionBeforeSuppression = refinedMask;
-    for colIdx = 1:numCols
-        selectedRows = find(selectionBeforeSuppression(:, colIdx));
-        if isempty(selectedRows)
-            continue;
-        end
-
-        for sideValue = [-1, 1]
-            sideRows = selectedRows(sideByRow(selectedRows) == sideValue);
-            if numel(sideRows) < 2
-                continue;
-            end
-
-            sideHeights = double(energyMaps.heightStepMeters(sideRows, colIdx));
-            sideScores = peakScore(sideRows, colIdx);
-            sideDistances = abs(yCenters(sideRows) - referenceY);
-            sideStrongCenterRoughness = double(energyMaps.totalBase(sideRows, colIdx)) >= roadFacingMinBaseEnergy ...
-                & double(energyMaps.roughnessMeters(sideRows, colIdx)) >= strongCenterRoughnessMinMeters ...
-                & double(energyMaps.linearityComponentCenterEvidence(sideRows, colIdx)) >= roadFacingMinCenterEvidence;
-            for rowListIdx = 1:numel(sideRows)
-                if promotedMask(sideRows(rowListIdx), colIdx)
-                    continue;
-                end
-
-                neighborMask = abs(sideRows - sideRows(rowListIdx)) <= searchRadiusCells ...
-                    & sideRows ~= sideRows(rowListIdx);
-                closerNeighborMask = sideDistances < sideDistances(rowListIdx);
-                neighborMask = neighborMask & closerNeighborMask;
-                if ~any(neighborMask)
-                    continue;
-                end
-
-                strongerNeighborMask = sideHeights(neighborMask) ...
-                    >= sideHeights(rowListIdx) + suppressionMinHeightGainMeters;
-                strongerNeighborMask = strongerNeighborMask ...
-                    & sideScores(neighborMask) >= sideScores(rowListIdx) .* suppressionScoreRatio;
-                if sideStrongCenterRoughness(rowListIdx)
-                    strongerNeighborMask = strongerNeighborMask & sideStrongCenterRoughness(neighborMask);
-                end
-                if any(strongerNeighborMask)
-                    refinedMask(sideRows(rowListIdx), colIdx) = false;
-                end
-            end
-        end
-    end
+    % Suppression uses the immutable post-promotion selection. Batch the local
+    % pair comparisons while retaining protection of newly promoted cells.
+    selected = find(refinedMask & ~promotedMask);
+    selected = selected(:);
+    [selectedRows, selectedCols] = ind2sub(size(refinedMask), selected);
+    neighborRows = selectedRows + [-searchRadiusCells:-1, 1:searchRadiusCells];
+    boundedRows = min(max(neighborRows, 1), numRows);
+    neighbors = boundedRows + (selectedCols-1) .* numRows;
+    valid = neighborRows >= 1 & neighborRows <= numRows ...
+        & reshape(sideByRow(boundedRows), size(boundedRows)) == sideByRow(selectedRows) ...
+        & sideByRow(selectedRows) ~= 0 & reshape(refinedMask(neighbors), size(neighbors)) ...
+        & abs(reshape(yCenters(boundedRows), size(boundedRows))-referenceY) < abs(yCenters(selectedRows)-referenceY);
+    strongCenter = double(energyMaps.totalBase) >= roadFacingMinBaseEnergy ...
+        & double(energyMaps.roughnessMeters) >= strongCenterRoughnessMinMeters ...
+        & double(energyMaps.linearityComponentCenterEvidence) >= roadFacingMinCenterEvidence;
+    stronger = reshape(double(energyMaps.heightStepMeters(neighbors)), size(neighbors)) ...
+        >= double(energyMaps.heightStepMeters(selected)) + suppressionMinHeightGainMeters ...
+        & reshape(peakScore(neighbors), size(neighbors)) >= peakScore(selected) .* suppressionScoreRatio ...
+        & (~strongCenter(selected) | reshape(strongCenter(neighbors), size(neighbors)));
+    refinedMask(selected(any(valid & stronger, 2))) = false;
 end
 
 function protectionMask = keepRoadConsistentPeakPromotionProtection(peakPromotionMask, curbMask, energyMaps, xyView, roadSeedMask, cfg)

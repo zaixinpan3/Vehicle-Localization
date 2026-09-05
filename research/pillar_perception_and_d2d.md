@@ -2,6 +2,9 @@
 
 Date: 2026-09-04. This study supersedes the execution-boundary and registration
 choices in [the earlier voxel-cloud study](coarse_probability_cloud_design.md).
+Subsequent latency reductions and fresh baseline comparisons are recorded in
+[the runtime optimization study](coarse_perception_runtime_optimization.md).
+The timings below describe this original redesign experiment.
 
 ## Decision and implemented boundary
 

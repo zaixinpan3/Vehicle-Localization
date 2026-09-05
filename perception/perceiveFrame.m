@@ -15,6 +15,14 @@ function perception = perceiveFrame(frame, cfg)
 
     mode = string(cfg.executionMode);
     legacyMode = mode == "legacyFull";
+    backend = "auto";
+    if isfield(cfg, "executionBackend"), backend = cfg.executionBackend; end
+    useNative = ~legacyMode && perceptionNativeAvailable(backend);
+    cfg.groundSegmentation.useNativeKernels = useNative;
+    cfg.groundFeatures.road.useNativeKernels = useNative;
+    cfg.groundFeatures.curb.compactRaster = ~legacyMode && ...
+        (~isfield(cfg,"compactGroundRaster") || cfg.compactGroundRaster);
+    cfg.offGroundFeatures.useNativeKernels = useNative;
     assert(any(mode == ["coarseProbabilityCloud", "offline", "full", "legacyFull"]), ...
         "Unknown perception execution mode.");
     if legacyMode
@@ -24,7 +32,7 @@ function perception = perceiveFrame(frame, cfg)
     end
     groundPointIdx = segmentGround(voxelGrid, cfg.groundSegmentation);
     [groundContext, offGroundVoxelGrid] = buildBranchInputs( ...
-        frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2), legacyMode);
+        frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2), legacyMode, cfg.groundFeatures.curb);
 
     % Explicit compatibility path for historical regression artifacts only.
     if legacyMode
@@ -61,7 +69,7 @@ function perception = perceiveFrame(frame, cfg)
     end
 end
 
-function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGrid, groundPointIdx, cellSizeXY, storeDenseOffGroundCount)
+function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGrid, groundPointIdx, cellSizeXY, storeDenseOffGroundCount, curbCfg)
 % buildBranchInputs: Split the voxelized frame at the ground segmentation
 % into the inputs of the two feature branches: the ground context (ground
 % points, their XY raster cells, and reflectivity) and the canonical voxel
@@ -82,16 +90,16 @@ function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGri
     if nargin < 5
         storeDenseOffGroundCount = true;
     end
-    groundXYView = buildGroundXYView(voxelGrid, cellSizeXY);
     pointIndices = double(voxelGrid.pointIndices(:));
-    pointCellLinIdx = double(groundXYView.pointCellLinIdx(:));
     numFramePoints = numel(frame.x);
     groundMaskOriginal = buildMaskFromIndices(groundPointIdx, numFramePoints);
     groundPointMask = false(size(pointIndices));
     validPointIdx = isfinite(pointIndices) & pointIndices >= 1 & pointIndices <= numFramePoints & pointIndices == floor(pointIndices);
     groundPointMask(validPointIdx) = groundMaskOriginal(pointIndices(validPointIdx));
+    groundXYView = buildGroundXYView(voxelGrid, cellSizeXY, groundPointMask, curbCfg);
+    pointCellLinIdx = double(groundXYView.pointCellLinIdx(:));
     validGroundMap = groundPointMask & isfinite(pointCellLinIdx) & pointCellLinIdx >= 1;
-    offGroundPointMask = ~groundPointMask & isfinite(pointCellLinIdx) & pointCellLinIdx >= 1;
+    offGroundPointMask = ~groundPointMask;
 
     groundContext = struct();
     groundContext.groundVoxelGrid = voxelGrid;
@@ -107,7 +115,7 @@ function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGri
         voxelGrid, find(offGroundPointMask), logical(storeDenseOffGroundCount));
 end
 
-function xyView = buildGroundXYView(voxelGrid, cellSizeXY)
+function xyView = buildGroundXYView(voxelGrid, cellSizeXY, groundPointMask, curbCfg)
 % buildGroundXYView: Build the XY pillar view required by
 % extractGroundFeatures directly from a canonical voxel grid, including
 % per-point XY cell assignments and per-cell point lookup metadata.
@@ -135,10 +143,30 @@ function xyView = buildGroundXYView(voxelGrid, cellSizeXY)
     yEdges = minCorner(2) + (0:dimsXY(2)) .* cellSizeXY(2);
     xCenters = xEdges(1:end-1) + (0.5 .* cellSizeXY(1));
     yCenters = yEdges(1:end-1) + (0.5 .* cellSizeXY(2));
+    % Keep the original lattice phase when trimming empty ground margins.
+    % All ground points and a halo survive; off-ground points outside this
+    % raster remain in the separate structural branch.
+    xBin = floor((points(:,1)-minCorner(1))./cellSizeXY(1))+1;
+    yBin = floor((points(:,2)-minCorner(2))./cellSizeXY(2))+1;
+    first = [1 1]; last = dimsXY;
+    if isfield(curbCfg,"compactRaster") && curbCfg.compactRaster && any(groundPointMask)
+        padding = ceil(max([curbCfg.detrendBoxRadiusCells+1, curbCfg.relativeHeightRadiusCells, ...
+            curbCfg.linearityRadiusMeters./cellSizeXY, curbCfg.directionalLineRadiusCells+1, ...
+            curbCfg.componentFillSupportRadiusCells, curbCfg.extractionStandaloneBridgeRadiusCells]))+2;
+        first = max([min(xBin(groundPointMask)),min(yBin(groundPointMask))]-padding,1);
+        last = min([max(xBin(groundPointMask)),max(yBin(groundPointMask))]+padding,dimsXY);
+        if prod(last-first+1)>0.85*prod(dimsXY), first=[1 1]; last=dimsXY; end
+    end
+    xCenters = xCenters(first(1):last(1)); yCenters = yCenters(first(2):last(2));
+    xEdges = xEdges(first(1):last(1)+1); yEdges = yEdges(first(2):last(2)+1);
+    minCorner = minCorner+(first-1).*cellSizeXY;
+    dimsXY = last-first+1;
+    xBin = xBin-first(1)+1; yBin = yBin-first(2)+1;
     [xMap, yMap] = meshgrid(single(xCenters), single(yCenters));
 
     xyView = struct();
     xyView.viewType = "xyPillar";
+    xyView.pillarOffset = first-1;
     xyView.origin = double(minCorner(:).');
     xyView.cellSize = double(cellSizeXY(:).');
     xyView.gridSize = double(dimsXY(:).');
@@ -164,8 +192,6 @@ function xyView = buildGroundXYView(voxelGrid, cellSizeXY)
     if isempty(points)
         return;
     end
-    xBin = floor((points(:, 1) - minCorner(1)) ./ cellSizeXY(1)) + 1;
-    yBin = floor((points(:, 2) - minCorner(2)) ./ cellSizeXY(2)) + 1;
     valid = isfinite(xBin) & isfinite(yBin);
     valid = valid & xBin >= 1 & xBin <= dimsXY(1) & yBin >= 1 & yBin <= dimsXY(2);
     if ~any(valid)
@@ -184,9 +210,6 @@ function xyView = buildGroundXYView(voxelGrid, cellSizeXY)
     zRangeVec = zeros(numCells, 1);
     validSpan = isfinite(zMinVec) & isfinite(zMaxVec);
     zRangeVec(validSpan) = max(0, zMaxVec(validSpan) - zMinVec(validSpan));
-    [sortedCellLinIdx, sortOrder] = sort(double(pointCellLinIdx(:)));
-    occupiedMask = [true; diff(sortedCellLinIdx) ~= 0];
-    occupiedStartIdx = find(occupiedMask);
     xyView.countMap = reshape(single(countsVec), dimsXY(1), dimsXY(2)).';
     xyView.zRangeMap = reshape(single(zRangeVec), dimsXY(1), dimsXY(2)).';
     xyView.occupiedMask = xyView.countMap > 0;
@@ -196,11 +219,16 @@ function xyView = buildGroundXYView(voxelGrid, cellSizeXY)
     xyView.pointIndices = pointIndices;
     xyView.pointCellXBin = pointCellXBin;
     xyView.pointCellYBin = pointCellYBin;
-    xyView.pointCellLinIdx = pointCellLinIdx;
-    xyView.occupiedCellLinIdx = int32(sortedCellLinIdx(occupiedStartIdx));
-    xyView.cellPointOffsets = int32([occupiedStartIdx; numel(sortedCellLinIdx) + 1]);
-    xyView.cellPointLocalIdx = int32(pointLocalIdx(sortOrder));
-    xyView.cellPointIndices = int32(pointIndices(sortOrder));
+    xyView.pointCellLinIdx = zeros(size(points,1),1,"int32");
+    xyView.pointCellLinIdx(valid) = pointCellLinIdx;
+    xyView.occupiedCellLinIdx = int32(find(countsVec>0));
+    if ~isfield(curbCfg,"compactRaster") || ~curbCfg.compactRaster
+        [sortedCellLinIdx, sortOrder] = sort(double(pointCellLinIdx(:)));
+        occupiedStartIdx = find([true; diff(sortedCellLinIdx) ~= 0]);
+        xyView.cellPointOffsets = int32([occupiedStartIdx; numel(sortedCellLinIdx) + 1]);
+        xyView.cellPointLocalIdx = int32(pointLocalIdx(sortOrder));
+        xyView.cellPointIndices = int32(pointIndices(sortOrder));
+    end
 end
 
 function scalarValues = extractFrameScalar(frame, pointIndices, pointMask, primaryField, fallbackField)
@@ -253,7 +281,7 @@ function offGroundVoxelGrid = deriveOffGroundVoxelGrid(sourceVoxelGrid, sourceLo
     end
     sourceLocalIdx = double(sourceLocalIdx(:));
     sourceLocalIdx = sourceLocalIdx(isfinite(sourceLocalIdx) & sourceLocalIdx >= 1 & sourceLocalIdx <= size(sourceVoxelGrid.points, 1) & sourceLocalIdx == floor(sourceLocalIdx));
-    sourceLocalIdx = unique(sourceLocalIdx, "stable");
+    if any(diff(sourceLocalIdx)<=0), sourceLocalIdx = unique(sourceLocalIdx,"stable"); end
     voxelSize = double(sourceVoxelGrid.gridConfig.voxelSize(1:3));
     sourceMinCorner = double(sourceVoxelGrid.gridConfig.minCorner(1:3));
     offGroundVoxelGrid = emptyDerivedVoxelGrid(sourceVoxelGrid, voxelSize);
@@ -271,7 +299,12 @@ function offGroundVoxelGrid = deriveOffGroundVoxelGrid(sourceVoxelGrid, sourceLo
     else
         count = zeros(0, 0, 0, "single");
     end
-    [occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets, voxelPointLocalIdx] = buildDerivedVoxelPointMapping(pointVoxelLinIdx, dims);
+    if storeDenseCount
+        [occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets, voxelPointLocalIdx] = buildDerivedVoxelPointMapping(pointVoxelLinIdx, dims);
+    else
+        occupiedVoxelLinIdx = zeros(0,1,"int32"); occupiedVoxelSub = zeros(0,3,"int32");
+        voxelPointOffsets = int32(1); voxelPointLocalIdx = zeros(0,1,"int32");
+    end
     selectedPointIndices = int32(sourceVoxelGrid.pointIndices(sourceLocalIdx));
     voxelPointIndices = int32(selectedPointIndices(double(voxelPointLocalIdx(:))));
     minCorner = sourceMinCorner + ((minSub - 1) .* voxelSize);
@@ -304,6 +337,8 @@ function offGroundVoxelGrid = deriveOffGroundVoxelGrid(sourceVoxelGrid, sourceLo
     offGroundVoxelGrid.pointAttributes = filterDerivedPointAttributes(sourceVoxelGrid.pointAttributes, sourceLocalIdx);
     offGroundVoxelGrid.numFilteredPoints = double(numel(sourceLocalIdx));
     offGroundVoxelGrid.numOccupiedVoxels = double(numel(occupiedVoxelLinIdx));
+    offGroundVoxelGrid.hasPointLookup = storeDenseCount;
+    if ~storeDenseCount, offGroundVoxelGrid.numOccupiedVoxels = NaN; end
 end
 
 function voxelGrid = emptyDerivedVoxelGrid(sourceVoxelGrid, voxelSize)

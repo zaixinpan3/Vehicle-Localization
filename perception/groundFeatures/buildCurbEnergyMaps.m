@@ -735,40 +735,36 @@ function [componentScoreMap, componentPeakMap, componentSizeMap] = computeLineCo
 
     candidateMask = logical(supportMask) & baseEnergy >= double(cfg.componentSeedEnergyThreshold);
     components = connectedComponents8(candidateMask);
-    for k = 1:numel(components)
-        cellIdx = components{k};
-        weights = double(baseEnergy(cellIdx));
-        weightSum = sum(weights);
-        if weightSum <= 0
-            continue;
-        end
-
-        xVals = double(xGrid(cellIdx));
-        yVals = double(yGrid(cellIdx));
-        muX = sum(weights .* xVals) ./ weightSum;
-        muY = sum(weights .* yVals) ./ weightSum;
-        centeredX = xVals - muX;
-        centeredY = yVals - muY;
-        cxx = sum(weights .* centeredX .* centeredX) ./ weightSum;
-        cyy = sum(weights .* centeredY .* centeredY) ./ weightSum;
-        cxy = sum(weights .* centeredX .* centeredY) ./ weightSum;
-        traceC = max(cxx + cyy, 0);
-        deltaC = sqrt(max(((cxx - cyy) .* (cxx - cyy)) + (4 .* cxy .* cxy), 0));
-        lambda1 = max(0.5 .* (traceC + deltaC), 0);
-        lambda2 = max(min(0.5 .* (traceC - deltaC), lambda1), 0);
-        sigma1 = sqrt(lambda1);
-        sigma2 = sqrt(lambda2);
-        anisotropy = min(max((lambda1 - lambda2) ./ max(lambda1 + lambda2, eps), 0), 1);
-        cellCount = numel(cellIdx);
-        score = (anisotropy .^ max(double(cfg.componentAnisotropyPower), eps)) ...
-            .* smoothStepMap(cellCount, cfg.componentMinCells, cfg.componentSaturatedCells) ...
-            .* smoothStepMap(sigma1, cfg.componentMinLengthMeters, cfg.componentSaturatedLengthMeters) ...
-            .* (1 - smoothStepMap(sigma2, cfg.componentMaxWidthMeters, cfg.componentRejectWidthMeters));
-        score = min(max(score, 0), 1);
-        componentScoreMap(cellIdx) = score;
-        componentPeakMap(cellIdx) = max(weights);
-        componentSizeMap(cellIdx) = cellCount;
-    end
+    numComponents = numel(components);
+    if numComponents == 0, return; end
+    counts = cellfun(@numel,components);
+    indices = vertcat(components{:});
+    groups = repelem((1:numComponents).',counts);
+    weights = double(baseEnergy(indices));
+    weightSum = accumarray(groups,weights,[numComponents 1],@sum,0);
+    denominator = max(weightSum,eps);
+    x = double(xGrid(indices)); y = double(yGrid(indices));
+    muX = accumarray(groups,weights.*x,[numComponents 1],@sum,0)./denominator;
+    muY = accumarray(groups,weights.*y,[numComponents 1],@sum,0)./denominator;
+    x = x-muX(groups); y = y-muY(groups);
+    cxx = accumarray(groups,weights.*x.*x,[numComponents 1],@sum,0)./denominator;
+    cyy = accumarray(groups,weights.*y.*y,[numComponents 1],@sum,0)./denominator;
+    cxy = accumarray(groups,weights.*x.*y,[numComponents 1],@sum,0)./denominator;
+    traceC = max(cxx+cyy,0);
+    deltaC = sqrt(max((cxx-cyy).*(cxx-cyy)+4.*cxy.*cxy,0));
+    lambda1 = max(0.5.*(traceC+deltaC),0);
+    lambda2 = max(min(0.5.*(traceC-deltaC),lambda1),0);
+    anisotropy = min(max((lambda1-lambda2)./max(lambda1+lambda2,eps),0),1);
+    score = (anisotropy.^max(double(cfg.componentAnisotropyPower),eps)) ...
+        .*smoothStepMap(counts,cfg.componentMinCells,cfg.componentSaturatedCells) ...
+        .*smoothStepMap(sqrt(lambda1),cfg.componentMinLengthMeters,cfg.componentSaturatedLengthMeters) ...
+        .*(1-smoothStepMap(sqrt(lambda2),cfg.componentMaxWidthMeters,cfg.componentRejectWidthMeters));
+    score = min(max(score,0),1);
+    peak = accumarray(groups,weights,[numComponents 1],@max,0);
+    valid = weightSum(groups)>0;
+    componentScoreMap(indices(valid)) = score(groups(valid));
+    componentPeakMap(indices(valid)) = peak(groups(valid));
+    componentSizeMap(indices(valid)) = counts(groups(valid));
 end
 
 function smoothMap = smoothStepMap(valueMap, lowerValue, upperValue)

@@ -7,6 +7,8 @@ function cfg = perceptionConfig()
 % historical reproduction and the retained geometric feature rules.
     cfg = struct();
     cfg.executionMode = "coarseProbabilityCloud";
+    cfg.executionBackend = "auto"; % Native kernels when built; otherwise MATLAB.
+    cfg.compactGroundRaster = true; % Trim empty margins, retaining all ground and its halo.
     cfg.voxel = frameVoxelizationConfig();
     cfg.groundSegmentation = groundSegmentationConfig();
     cfg.groundFeatures = groundFeatureConfig();

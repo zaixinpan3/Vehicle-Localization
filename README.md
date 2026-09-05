@@ -32,7 +32,7 @@ organized LiDAR frame (vehicle coordinates)
 
 `perceiveFrame(frame, perceptionConfig())` returns `probabilityCloud`,
 `candidates`, and compact source counts. The analysis unit is a 0.3 m XY pillar.
-Vertical structure uses sparse 0.3 m height-bin counts; no semantic label is
+Vertical structure uses sparse 0.5 m height-bin counts; no semantic label is
 assigned to a height bin. Reading returns, rejecting invalid measurements,
 separating terrain, and accumulating statistics are common preprocessing.
 There is no online point-level curb, pole, or marking refinement.
@@ -61,6 +61,16 @@ occupancy posteriors. Known IMU tilt can be supplied through
 `cfg.coarseProbabilityCloud.projectionRotation` before statistical XY projection.
 
 See [the design and measured limitations](research/pillar_perception_and_d2d.md).
+The [runtime optimization study](research/coarse_perception_runtime_optimization.md)
+measured median coarse latency of 56.5 ms versus 113.9 ms before optimization
+on 19 Mississippi frames, with identical ground labels, semantic candidates,
+fine feature points, and probability weights. Empty ground margins are trimmed
+internally while public pillar IDs retain the original lattice.
+
+Run `buildPerceptionKernels` once to compile the optional C++ CPU kernels.
+`cfg.executionBackend="auto"` uses them when available; `"matlab"` forces the
+MATLAB implementation and `"native"` requires a successful build. The source
+and build script are versioned; generated platform binaries are ignored.
 
 ### Mapping (`mapping/`)
 
@@ -147,6 +157,7 @@ are explicit:
 
 ```matlab
 setupVehicleLocalization();                       % add modules to the path
+buildPerceptionKernels();                         % optional; requires a C++ compiler
 frame = loadPointCloudFrame("data/raw/MissisipiPointClouds.mat", 260);
 cfg = perceptionConfig();
 coarse = perceiveFrame(frame, cfg);               % no point feature masks
@@ -216,6 +227,9 @@ known-tilt moments, rejection behavior, and recorded point fidelity.
 `distributionRegistrationTest` checks analytic derivatives, anisotropic covariance
 rotation, semantic mass invariance, known-pose recovery, map support units, empty
 inputs, and degeneracy. Existing observer and temporal-map tests remain in the suite.
+`coarsePerceptionPerformanceTest` checks native/MATLAB equivalence, boundary
+cases, conservative ground propagation, compact-raster indexing, and omitted
+inverse lookups. Build the native kernels to execute its native-specific cases.
 
 Recorded fidelity uses the old detector as a behavioral baseline, not labeled
 truth. Current metrics and experiment identifiers are in the

@@ -261,33 +261,26 @@ function [covariance, inverseCovariance, determinant, logNormalization] = ...
         regularizeCovariances(covarianceXX, covarianceXY, covarianceYY, cfg)
 % regularizeCovariances: Bound covariance eigenvalues and cache inverse and
 % normalization terms required by NDT matching.
-    numComponents = numel(covarianceXX);
-    covariance = zeros(2, 2, numComponents);
-    inverseCovariance = zeros(2, 2, numComponents);
-    determinant = zeros(numComponents, 1);
-    logNormalization = zeros(numComponents, 1);
-    for componentIdx = 1:numComponents
-        covarianceMatrix = [covarianceXX(componentIdx), covarianceXY(componentIdx); ...
-            covarianceXY(componentIdx), covarianceYY(componentIdx)];
-        covarianceMatrix(~isfinite(covarianceMatrix)) = 0;
-        covarianceMatrix = ((covarianceMatrix + covarianceMatrix.') ./ 2) + ...
-            (cfg.regularizationVariance .* eye(2));
-        [eigenvectors, eigenvalueMatrix] = eig(covarianceMatrix);
-        eigenvalues = diag(eigenvalueMatrix);
-        eigenvalues(~isfinite(eigenvalues)) = cfg.minCovarianceEigenvalue;
-        eigenvalues = min(max(eigenvalues, ...
-            cfg.minCovarianceEigenvalue), cfg.maxCovarianceEigenvalue);
-        covarianceMatrix = eigenvectors * diag(eigenvalues) * eigenvectors.';
-        covarianceMatrix = (covarianceMatrix + covarianceMatrix.') ./ 2;
-        inverseMatrix = covarianceMatrix \ eye(2);
-        determinantValue = det(covarianceMatrix);
-        covariance(:, :, componentIdx) = covarianceMatrix;
-        inverseCovariance(:, :, componentIdx) = ...
-            (inverseMatrix + inverseMatrix.') ./ 2;
-        determinant(componentIdx) = determinantValue;
-        logNormalization(componentIdx) = ...
-            -log(2 .* pi) - (0.5 .* log(determinantValue));
-    end
+    % Spectral clipping of symmetric 2-by-2 matrices in one batch. The
+    % eigenprojector formula avoids per-component eig, inverse and det calls.
+    a = covarianceXX(:); b = covarianceXY(:); d = covarianceYY(:);
+    a(~isfinite(a)) = 0; b(~isfinite(b)) = 0; d(~isfinite(d)) = 0;
+    a = a + cfg.regularizationVariance; d = d + cfg.regularizationVariance;
+    center = (a+d)./2; halfDifference = (a-d)./2;
+    radius = hypot(halfDifference,b);
+    upper = min(max(center+radius,cfg.minCovarianceEigenvalue),cfg.maxCovarianceEigenvalue);
+    lower = min(max(center-radius,cfg.minCovarianceEigenvalue),cfg.maxCovarianceEigenvalue);
+    clippedCenter = (upper+lower)./2;
+    scale = zeros(size(radius));
+    distinct = radius>0;
+    scale(distinct) = (upper(distinct)-lower(distinct))./(2.*radius(distinct));
+    xx = clippedCenter + scale.*halfDifference;
+    yy = clippedCenter - scale.*halfDifference;
+    xy = scale.*b;
+    covariance = reshape([xx,xy,xy,yy].',2,2,[]);
+    determinant = xx.*yy-xy.*xy;
+    inverseCovariance = reshape([yy,-xy,-xy,xx].'./determinant.',2,2,[]);
+    logNormalization = -log(2*pi)-0.5.*log(determinant);
 end
 
 function components = concatenateComponents(componentSets)

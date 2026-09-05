@@ -5,6 +5,9 @@ function pillars = pillarizePointCloud(frame, cfg)
 % distribution statistics; semantic decisions use XY pillars exclusively.
 % Public pillar IDs index a [Ny Nx] raster in MATLAB column-major order.
     cfg.statisticsMode = "sparse";
+    % Modern branches consume point-to-bin membership; no inverse 3D lookup
+    % is needed. Callers may explicitly request it for external diagnostics.
+    if ~isfield(cfg,"buildPointLookup"), cfg.buildPointLookup = false; end
     pillars = voxelizePointCloud(frame, cfg);
     geometry = pillars.gridConfig;
     mapSize = max(geometry.dims([2 1]), 1);

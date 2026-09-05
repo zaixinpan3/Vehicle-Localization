@@ -59,6 +59,10 @@ function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg
     coarseGround.cellMapSize = double(size(road.roadCellMask));
     coarseGround.cellOrigin = double(groundContext.groundXYView.origin(1:2));
     coarseGround.cellSize = double(groundContext.groundXYView.cellSize(1:2));
+    coarseGround.pillarOffset = [0 0];
+    if isfield(groundContext.groundXYView,"pillarOffset")
+        coarseGround.pillarOffset = groundContext.groundXYView.pillarOffset;
+    end
     coarseGround.curbCellMask = curbCellMask;
     coarseGround.curbProbability = single(curbProbability);
     coarseGround.roadMarkingCellMask = roadMarkingCellMask;

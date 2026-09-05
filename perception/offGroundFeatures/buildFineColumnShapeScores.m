@@ -15,6 +15,16 @@ function [pointScore, lineScore, normalOrientation, blobness] = buildFineColumnS
 %       maps consumed by facade detection and pole candidate scoring
     centerRun = single(runLayerMap);
     centerRun(~isfinite(centerRun)) = 0;
+    if isfield(cfg, "useNativeKernels") && cfg.useNativeKernels
+        parameters = [resolveFineShapeScoreNeighborhoodRadius(cfg), ...
+            resolvePositiveScalar(dx, 1), resolvePositiveScalar(dy, 1), ...
+            resolveFineShapeScoreWeightPower(cfg), resolveFineShapeScoreLinearityPower(cfg), ...
+            resolveFineShapeScoreMinSeedCount(cfg), resolveFineShapeScoreSaturatedSeedCount(cfg)];
+        [pointScore, lineScore, normalOrientation] = perceptionKernelsMex( ...
+            'pillarShape', centerRun, logical(occupiedMask), parameters);
+        blobness = pointScore;
+        return;
+    end
     [numRowsRun, numColsRun] = size(centerRun);
     rowIdx = 1:numRowsRun;
     colIdx = 1:numColsRun;
