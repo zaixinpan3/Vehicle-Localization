@@ -1,0 +1,10 @@
+[
+  {
+    "file": "scripts/diagnoseHeightRegistrationBias.m",
+    "issues": []
+  },
+  {
+    "file": "scripts/finalizeHeightBiasDiagnostics.m",
+    "issues": []
+  }
+]

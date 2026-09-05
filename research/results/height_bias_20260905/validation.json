@@ -1,0 +1,49 @@
+{
+  "baselineCommit": "2fc2ba3d2c882f4a59edf506cae85cd329344432",
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "registrationRuns": 435,
+  "heightScoreSamples": 984,
+  "longitudinalScoreSamples": 4824,
+  "maximumGradientAbsoluteError": 1.8039852776041698E-6,
+  "coordinateMaximumErrorM": 0,
+  "maximumPositiveControlTranslationErrorM": 1.1735792404793073E-6,
+  "maximumBaselineReproductionErrorM": 4.8849813083506888E-15,
+  "diagnosticPitchCorrectionDegrees": 3.4714879224564346,
+  "pitchCalibrationFrames": [
+    260,
+    261,
+    262,
+    263,
+    264,
+    265,
+    266
+  ],
+  "pitchCalibrationClass": "curb",
+  "originalBagExtractorRmsM": 4.2176065611160637E-7,
+  "originalBagAffineFitRmsM": 4.0601818438734357E-7,
+  "fittedStoredFromRosAffineTranspose": [
+    [
+      0.99593311580096422,
+      0.0065671715148584459,
+      -0.090109996510377127
+    ],
+    [
+      -0.0042762486569696148,
+      0.99966311458917545,
+      0.025595000021334281
+    ],
+    [
+      0.090247809958184849,
+      -0.025105557331676253,
+      0.99562501833225825
+    ],
+    [
+      -4.2773176742671775E-9,
+      -2.1671285629259605E-10,
+      -6.5543286191608179E-10
+    ]
+  ],
+  "pointMask": "finite raw range 1 to 80 m",
+  "auditPointCount": 52848,
+  "interpretation": "Recorded-map-pose consistency and geometry diagnostics; no independent truth."
+}

@@ -1,0 +1,12 @@
+{
+  "frame": 260,
+  "stamp": 1717776595.3585153,
+  "timestamp_error_seconds": 0.0,
+  "frame_id": "front_ouster",
+  "height": 64,
+  "width": 1024,
+  "xyz_binary_format": "little-endian float64, N by 3, C row-major",
+  "rosbags_version": "0.11.5",
+  "numpy_version": "2.5.2",
+  "bag_has_tf": false
+}

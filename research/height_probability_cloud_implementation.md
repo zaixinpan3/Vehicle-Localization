@@ -5,6 +5,10 @@ Reference: `8ff55cbb41c785b7e7755ce41c8df4a554ad7f2c`.
 This implements the retention decision in
 [the height study](pillar_height_retention_decision.md).
 
+The subsequent [bias diagnosis](height_registration_bias_diagnosis.md) separates
+a vertical geometry inconsistency from view-dependent planar density alignment
+using 435 controlled registrations and original-bag checks.
+
 ## Delivered behavior
 
 Online coarse perception now retains XYZ Gaussian statistics, including xz and
