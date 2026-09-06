@@ -160,13 +160,10 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
     assert(numel(initialPose)==3 && all(isfinite(initialPose)),'Expected finite [x y yaw].');
     gcfg=cfg.geometric;
     validateParameters(cfg,gcfg);
-    originalF=mappingSupport.validateSemanticProbabilityCloud(fixedCloud);
-    originalM=mappingSupport.validateSemanticProbabilityCloud(movingCloud);
-    f.quality=quality(originalF); m.quality=quality(originalM);
+    f.quality=quality(f); m.quality=quality(m);
     % Height/tilt uncertainty belongs to the compatibility calculation. Keep
     % the planar metric identical when only height mode/reference changes.
-    planarMoving=projectSemanticProbabilityCloud(movingCloud,2);
-    m.planarCovariance=planarMoving.components.covariance;
+    m.planarCovariance=movingCloud.components.covariance(1:2,1:2,:);
     f.mean(:,1:2)=f.mean(:,1:2)-initialPose(1:2);
     if height.heightUsed
         f.mean(:,3)=f.mean(:,3)-height.heightTranslation;

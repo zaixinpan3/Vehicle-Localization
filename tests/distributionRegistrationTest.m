@@ -1,11 +1,34 @@
 classdef distributionRegistrationTest < matlab.unittest.TestCase
 % distributionRegistrationTest: Analytic D2D geometry, map units and failure gates.
+    properties (TestParameter)
+        dimension = struct('xy',2,'xyz',3)
+    end
     methods (TestClassSetup)
         function paths(~)
             run(fullfile(fileparts(fileparts(mfilename('fullpath'))),'setupVehicleLocalization.m'));
         end
     end
     methods (Test)
+        function zeroMassComponentsPreserveScoreAndGradient(testCase,dimension)
+            source=heightProbabilityCloudTest.spatialCloud();
+            target=heightProbabilityCloudTest.transform(source,[1.2 -0.7 0.16],0);
+            moving=projectSemanticProbabilityCloud(source,dimension);
+            fixed=projectSemanticProbabilityCloud(target,dimension);
+            cfg=distributionRegistrationConfig(); cfg.heightMode="auto"; cfg.heightTranslation=0;
+            pose=[1.1 -0.6 0.12];
+            [expected,reference]=scoreSemanticProbabilityCloudAlignment(fixed,moving,pose,cfg);
+            [actual,details]=scoreSemanticProbabilityCloudAlignment( ...
+                testCase.withZeroMassComponents(fixed),testCase.withZeroMassComponents(moving),pose,cfg);
+            testCase.verifyEqual(actual,expected,'AbsTol',1e-12);
+            testCase.verifyEqual(details.gradient,reference.gradient,'AbsTol',1e-12);
+        end
+        function energyIsIndependentOfRequestedGradient(testCase,dimension)
+            cloud=projectSemanticProbabilityCloud(heightProbabilityCloudTest.spatialCloud(),dimension);
+            energy=semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
+            [withGradient,gradient]=semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
+            testCase.verifyEqual(energy,withGradient,'AbsTol',0);
+            testCase.verifyTrue(all(isfinite(gradient)));
+        end
         function analyticGradientIncludesCovarianceRotation(testCase)
             moving = distributionRegistrationTest.exampleCloud();
             fixed = distributionRegistrationTest.transform(moving,[1.2 -0.7 0.16]);
@@ -85,6 +108,15 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
         end
     end
     methods (Static)
+        function cloud=withZeroMassComponents(cloud)
+            c=cloud.components;
+            names=c.semanticName; names(end)="zeroMassOnly";
+            cloud.components=struct('mean',[c.mean;c.mean+7], ...
+                'covariance',cat(3,c.covariance,c.covariance), ...
+                'semanticName',[c.semanticName;names], ...
+                'mixtureWeight',[c.mixtureWeight;zeros(c.numComponents,1)], ...
+                'numComponents',2*c.numComponents);
+        end
         function cloud=exampleCloud()
             means=[-2 -1;0 0;2 1;4 -1;0 4;5 3];
             covariance=repmat([0.3 0.07;0.07 0.04],1,1,6);

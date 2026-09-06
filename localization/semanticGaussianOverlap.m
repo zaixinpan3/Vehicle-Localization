@@ -4,7 +4,11 @@ function [energy, gradient] = semanticGaussianOverlap(fixed, moving, pose)
 % rotated with the mean; derivatives include the rotating covariance term.
 % Inputs are component structs already validated at the API boundary.
     if size(fixed.mean,2)==3
-        [energy,gradient]=spatialGaussianOverlap(fixed,moving,pose);
+        if nargout > 1
+            [energy,gradient]=spatialGaussianOverlap(fixed,moving,pose);
+        else
+            energy=spatialGaussianOverlap(fixed,moving,pose);
+        end
         return;
     end
     c = cos(pose(3)); s = sin(pose(3));
@@ -18,10 +22,12 @@ function [energy, gradient] = semanticGaussianOverlap(fixed, moving, pose)
     mb = c*s*(a0-d0) + (c*c-s*s)*b0;
     md = s*s*a0 + 2*c*s*b0 + c*c*d0;
     energy = 0; gradient = zeros(1,3);
-    names = intersect(unique(fixed.semanticName), unique(moving.semanticName));
+    fixedActive = fixed.mixtureWeight > 0;
+    movingActive = moving.mixtureWeight > 0;
+    names = intersect(unique(fixed.semanticName(fixedActive)), unique(moving.semanticName(movingActive)));
     for name = names.'
-        f = find(fixed.semanticName == name);
-        allMoving = find(moving.semanticName == name);
+        f = find(fixed.semanticName == name & fixedActive);
+        allMoving = find(moving.semanticName == name & movingActive);
         fa = reshape(fixed.covariance(1,1,f), [], 1);
         fb = reshape(fixed.covariance(1,2,f), [], 1);
         fd = reshape(fixed.covariance(2,2,f), [], 1);
@@ -68,10 +74,12 @@ function [energy, gradient] = spatialGaussianOverlap(fixed, moving, pose)
     mc=c*c0-s*e0; me=s*c0+c*e0;
     mf=reshape(moving.covariance(3,3,:),[],1);
     energy=0; gradient=zeros(1,3);
-    names=intersect(unique(fixed.semanticName),unique(moving.semanticName));
+    fixedActive=fixed.mixtureWeight>0;
+    movingActive=moving.mixtureWeight>0;
+    names=intersect(unique(fixed.semanticName(fixedActive)),unique(moving.semanticName(movingActive)));
     for name=names.'
-        f=find(fixed.semanticName==name);
-        allMoving=find(moving.semanticName==name);
+        f=find(fixed.semanticName==name & fixedActive);
+        allMoving=find(moving.semanticName==name & movingActive);
         fa=reshape(fixed.covariance(1,1,f),[],1); fb=reshape(fixed.covariance(1,2,f),[],1);
         fc=reshape(fixed.covariance(1,3,f),[],1); fd=reshape(fixed.covariance(2,2,f),[],1);
         fe=reshape(fixed.covariance(2,3,f),[],1); ff=reshape(fixed.covariance(3,3,f),[],1);
@@ -93,12 +101,14 @@ function [energy, gradient] = spatialGaussianOverlap(fixed, moving, pose)
             kernel=exp(-0.5*(dx.*qx+dy.*qy+dz.*qz))./((2*pi)^1.5*sqrt(determinant));
             weighted=kernel.*(fixed.mixtureWeight(f)*moving.mixtureWeight(m).');
             energy=energy+sum(weighted,'all');
-            da=-2*mb(m).'; db=(ma(m)-md(m)).'; dc=-me(m).';
-            dd=2*mb(m).'; de=mc(m).';
-            rotationTerm=qx.*meanDerivative(m,1).'+qy.*meanDerivative(m,2).'+ ...
-                0.5*(qx.^2.*da+2*qx.*qy.*db+2*qx.*qz.*dc+qy.^2.*dd+2*qy.*qz.*de- ...
-                (aa.*da+2*ab.*db+2*ac.*dc+ad.*dd+2*ae.*de)./determinant);
-            gradient=gradient+[sum(weighted.*qx,'all'),sum(weighted.*qy,'all'),sum(weighted.*rotationTerm,'all')];
+            if nargout > 1
+                da=-2*mb(m).'; db=(ma(m)-md(m)).'; dc=-me(m).';
+                dd=2*mb(m).'; de=mc(m).';
+                rotationTerm=qx.*meanDerivative(m,1).'+qy.*meanDerivative(m,2).'+ ...
+                    0.5*(qx.^2.*da+2*qx.*qy.*db+2*qx.*qz.*dc+qy.^2.*dd+2*qy.*qz.*de- ...
+                    (aa.*da+2*ab.*db+2*ac.*dc+ad.*dd+2*ae.*de)./determinant);
+                gradient=gradient+[sum(weighted.*qx,'all'),sum(weighted.*qy,'all'),sum(weighted.*rotationTerm,'all')];
+            end
         end
     end
 end
