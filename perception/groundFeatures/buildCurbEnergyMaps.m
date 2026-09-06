@@ -239,7 +239,11 @@ function [heightStepMap, targetEnergyMap] = computeHeightStepFeatureMaps(detrend
 % Output:
 %   heightStepMap: [Ny x Nx] single maximum neighbor height step in meters
 %   targetEnergyMap: [Ny x Nx] single target height-step score in [0, 1]
-    heightStepMap = maxNeighborAbsDiffMap(double(detrendedHeightMap), validMask);
+    if isfield(cfg,"useNativeKernels") && cfg.useNativeKernels
+        heightStepMap = perceptionKernelsMex('neighborDifference',double(detrendedHeightMap),logical(validMask));
+    else
+        heightStepMap = maxNeighborAbsDiffMap(double(detrendedHeightMap), validMask);
+    end
     sigmaH = max(double(cfg.heightStepSigmaMeters), eps);
     targetEnergyMap = exp(-((heightStepMap - double(cfg.heightStepTargetMeters)).^2) ./ (2 * sigmaH * sigmaH));
     inBand = heightStepMap >= double(cfg.heightStepMinMeters) & heightStepMap <= double(cfg.heightStepMaxMeters);
@@ -604,6 +608,19 @@ function directionalLinearity = computeDirectionalLinearityMap(baseEnergy, suppo
 
     radiusCells = max(1, round(double(cfg.directionalLineRadiusCells)));
     highSeed = double(logical(supportMask) & baseEnergy >= double(cfg.directionalLineEnergyThreshold));
+    centerEnergyGate = smoothStepMap(baseEnergy, cfg.directionalLineCenterEnergyMin, cfg.directionalLineCenterEnergySaturated);
+    componentGate = smoothStepMap(componentScore, cfg.directionalLineComponentScoreMin, cfg.directionalLineComponentScoreSaturated);
+    if isfield(cfg,"useNativeKernels") && cfg.useNativeKernels
+        % Only positive final gates require directional neighborhood counts.
+        active=logical(supportMask) & centerEnergyGate>0 & componentGate>0;
+        best=perceptionKernelsMex('directionalSupport',logical(highSeed),active, ...
+            [radiusCells,cfg.directionalLineMinCount,cfg.directionalLineSaturatedCount, ...
+             cfg.directionalLineThinnessMin,cfg.directionalLineThinnessSaturated]);
+        directionalLinearity=best.*centerEnergyGate.*componentGate.*double(supportMask);
+        directionalLinearity(~isfinite(directionalLinearity))=0;
+        directionalLinearity=min(max(directionalLinearity,0),1);
+        return;
+    end
     kernelSet = resolveDirectionalLinearityKernels(size(baseEnergy), radiusCells);
     bestDirectionalScore = zeros(size(baseEnergy));
     for k = 1:numel(kernelSet)
@@ -623,8 +640,6 @@ function directionalLinearity = computeDirectionalLinearityMap(baseEnergy, suppo
         bestDirectionalScore = max(bestDirectionalScore, directionalScore);
     end
 
-    centerEnergyGate = smoothStepMap(baseEnergy, cfg.directionalLineCenterEnergyMin, cfg.directionalLineCenterEnergySaturated);
-    componentGate = smoothStepMap(componentScore, cfg.directionalLineComponentScoreMin, cfg.directionalLineComponentScoreSaturated);
     directionalLinearity = bestDirectionalScore .* centerEnergyGate .* componentGate .* double(supportMask);
     directionalLinearity(~isfinite(directionalLinearity)) = 0;
     directionalLinearity = min(max(directionalLinearity, 0), 1);

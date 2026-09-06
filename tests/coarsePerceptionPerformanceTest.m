@@ -11,6 +11,42 @@ classdef coarsePerceptionPerformanceTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function nativeMomentsRetainSmallScatterAtLargeCoordinates(testCase)
+            testCase.assumeTrue(perceptionNativeAvailable);
+            points=[700000 4300000 100;700000.002 4300000.004 100.006; ...
+                700003 4300004 102;700003.02 4300004.04 102.06];
+            cells=[1;1;3;3];
+            reference=aggregatePlanarCellMoments(points,cells,4,eye(3),[0 0 0],false);
+            actual=aggregatePlanarCellMoments(points,cells,4,eye(3),[0 0 0],true);
+            testCase.verifyEqual(actual,reference,'AbsTol',1e-15);
+            testCase.verifyGreaterThan(actual.heightCovariance(1,3),0);
+        end
+        function nativeMomentsPreserveEmptyAndSingletonCells(testCase)
+            testCase.assumeTrue(perceptionNativeAvailable);
+            empty=aggregatePlanarCellMoments(zeros(0,3),zeros(0,1),0,eye(3),[0 0 0],true);
+            one=aggregatePlanarCellMoments([1 2 3],2,3,eye(3),[0 0 0],true);
+            testCase.verifyEmpty(empty.count);
+            testCase.verifySize(empty.heightCovariance,[0 3]);
+            testCase.verifyEqual(one.count,[0;1;0]);
+            testCase.verifyEqual(one.heightCovariance,zeros(3),'AbsTol',0);
+            testCase.verifyEqual(one.meanZ,[0;3;0],'AbsTol',0);
+        end
+        function nativeNeighborDifferenceRespectsMissingCells(testCase)
+            testCase.assumeTrue(perceptionNativeAvailable);
+            values=[NaN 1 3;0 Inf 2]; valid=true(2,3);
+            actual=perceptionKernelsMex('neighborDifference',values,valid);
+            testCase.verifyEqual(actual,[0 2 2;1 0 1],'AbsTol',0);
+        end
+        function nativeDirectionalSupportMatchesConvolution(testCase,shapeCase)
+            testCase.assumeTrue(perceptionNativeAvailable);
+            stream=RandStream('mt19937ar','Seed',1729);
+            seed=rand(stream,shapeCase(1),shapeCase(2))>0.45;
+            active=rand(stream,size(seed))>0.2;
+            parameters=[shapeCase(3) 2 7 0.4 0.9];
+            expected=directionalConvolutionReference(seed,active,parameters);
+            actual=perceptionKernelsMex('directionalSupport',seed,active,parameters);
+            testCase.verifyEqual(actual,expected,'AbsTol',1e-14);
+        end
         function nativePillarShapeMatchesMatlabAtRasterEdges(testCase,shapeCase)
             testCase.assumeTrue(perceptionNativeAvailable);
             stream=RandStream('mt19937ar','Seed',1729);
@@ -139,4 +175,31 @@ function [energy,cfg,view,seeds] = singleAnchorCurbScenario()
     [x,y]=meshgrid(-3:3,-3:3);
     view=struct('xCenters',-3:3,'yCenters',(-3:3).','xMap',x,'yMap',y,'cellSize',[1 1]);
     seeds=false(7); seeds(4,4)=true;
+end
+
+function result=directionalConvolutionReference(seed,active,p)
+% Independent dense convolution oracle for the sparse native traversal.
+    result=zeros(size(seed)); directions=[0 1;1 0;1 1;1 -1];
+    radius=p(1); width=2*radius+3; center=radius+2;
+    for direction=directions.'
+        kernels=zeros(width,width,3);
+        normal=[-direction(2);direction(1)];
+        for side=-1:1
+            offsets=direction*(-radius:radius)+normal*side;
+            ids=sub2ind([width width],center-offsets(1,:),center-offsets(2,:));
+            kernel=zeros(width); kernel(ids)=1;
+            kernels(:,:,side+2)=kernel;
+        end
+        counts=zeros([size(seed),3]); valid=true(size(seed));
+        for k=1:3
+            counts(:,:,k)=conv2(double(seed),kernels(:,:,k),'same');
+            valid=valid & conv2(ones(size(seed)),kernels(:,:,k),'same')==2*radius+1;
+        end
+        line=counts(:,:,2); sides=min(counts(:,:,1),counts(:,:,3));
+        thin=line./max(line+sides,eps);
+        a=min(1,max(0,(line-p(2))/(p(3)-p(2))));
+        b=min(1,max(0,(thin-p(4))/(p(5)-p(4))));
+        score=(3*a.^2-2*a.^3).*(3*b.^2-2*b.^3);
+        score(~valid | ~active)=0; result=max(result,score);
+    end
 end

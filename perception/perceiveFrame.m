@@ -27,6 +27,7 @@ function perception = perceiveFrame(frame, cfg)
     useNative = ~legacyMode && perceptionNativeAvailable(backend);
     cfg.groundSegmentation.useNativeKernels = useNative;
     cfg.groundFeatures.road.useNativeKernels = useNative;
+    cfg.groundFeatures.curb.useNativeKernels = useNative;
     cfg.groundFeatures.curb.compactRaster = ~legacyMode && ...
         (~isfield(cfg,"compactGroundRaster") || cfg.compactGroundRaster);
     cfg.offGroundFeatures.useNativeKernels = useNative;

@@ -1,5 +1,9 @@
 # Coarse perception to planar D2D pose: latency measurements
 
+The subsequent [implementation optimization](localization_pipeline_optimization.md)
+reports interleaved baseline comparisons and the current reduced timings.
+This document preserves the preceding measurement campaign.
+
 Date: 2026-09-06. Baseline: `2692e9e5c12d7419b6b4224b5d4ccba2fbe49860`.
 
 The complete default path runs successfully on seven Mississippi scenes with

@@ -214,6 +214,92 @@ void smoothComponents(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
         result[k]=labels[root];
     }
 }
+void cellMoments(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
+    require(nrhs==4 && nlhs==3,"Cell moments need points, indices, size and three outputs.");
+    const mwSize n=mxGetM(in[1]), dimensions=mxGetN(in[1]);
+    require(mxGetNumberOfDimensions(in[1])==2 && (dimensions==2 || dimensions==3),"Expected XY or XYZ points.");
+    array(in[1],mxDOUBLE_CLASS,n*dimensions); array(in[2],mxDOUBLE_CLASS,n); array(in[3],mxDOUBLE_CLASS,1);
+    const double size=mxGetScalar(in[3]);
+    require(std::isfinite(size) && size>=0 && size<=2147483647 && size==std::floor(size),"Invalid cell count.");
+    const mwSize cells=static_cast<mwSize>(size);
+    const double* points=mxGetDoubles(in[1]); const double* indices=mxGetDoubles(in[2]);
+    for (mwSize k=0;k<n;++k) require(index(indices[k],cells),"Invalid moment index.");
+    out[0]=mxCreateDoubleMatrix(cells,1,mxREAL);
+    out[1]=mxCreateDoubleMatrix(cells,dimensions,mxREAL);
+    out[2]=mxCreateDoubleMatrix(cells,dimensions==3 ? 6 : 3,mxREAL);
+    double* count=mxGetDoubles(out[0]); double* mean=mxGetDoubles(out[1]); double* covariance=mxGetDoubles(out[2]);
+    // Two centered passes retain small scatter at large coordinate offsets.
+    // Each cell's additions follow the original point order, as in accumarray.
+    for (mwSize k=0;k<n;++k) {
+        const mwSize c=static_cast<mwSize>(indices[k])-1;
+        ++count[c];
+        for (mwSize d=0;d<dimensions;++d) mean[c+d*cells]+=points[k+d*n];
+    }
+    for (mwSize c=0;c<cells;++c) if (count[c]) {
+        for (mwSize d=0;d<dimensions;++d) mean[c+d*cells]/=count[c];
+    }
+    for (mwSize k=0;k<n;++k) {
+        const mwSize c=static_cast<mwSize>(indices[k])-1;
+        const double x=points[k]-mean[c],y=points[k+n]-mean[c+cells];
+        covariance[c]+=x*x; covariance[c+cells]+=x*y; covariance[c+2*cells]+=y*y;
+        if (dimensions==3) {
+            const double z=points[k+2*n]-mean[c+2*cells];
+            covariance[c+3*cells]+=x*z; covariance[c+4*cells]+=y*z; covariance[c+5*cells]+=z*z;
+        }
+    }
+    for (mwSize c=0;c<cells;++c) if (count[c]) {
+        for (mwSize d=0;d<(dimensions==3 ? 6 : 3);++d) covariance[c+d*cells]/=count[c];
+    }
+}
+void neighborDifference(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
+    require(nrhs==3 && nlhs==1,"Neighbor difference needs a height map and validity mask.");
+    const mwSize rows=mxGetM(in[1]),cols=mxGetN(in[1]),n=rows*cols;
+    require(mxGetNumberOfDimensions(in[1])==2,"Expected a height matrix.");
+    array(in[1],mxDOUBLE_CLASS,n); array(in[2],mxLOGICAL_CLASS,n);
+    const double* values=mxGetDoubles(in[1]); const mxLogical* valid=mxGetLogicals(in[2]);
+    out[0]=mxCreateDoubleMatrix(rows,cols,mxREAL); double* result=mxGetDoubles(out[0]);
+    for (mwSize c=0;c<n;++c) {
+        if (!valid[c] || !std::isfinite(values[c])) continue;
+        const mwSignedIndex row=c%rows,col=c/rows;
+        double largest=0;
+        for (int dc=-1;dc<=1;++dc) for (int dr=-1;dr<=1;++dr) {
+            const mwSignedIndex rr=row+dr,cc=col+dc;
+            if ((!dr&&!dc) || rr<0 || cc<0 || rr>=static_cast<mwSignedIndex>(rows) || cc>=static_cast<mwSignedIndex>(cols)) continue;
+            const mwSize other=rr+cc*rows;
+            if (valid[other] && std::isfinite(values[other])) largest=std::max(largest,std::abs(values[c]-values[other]));
+        }
+        result[c]=largest;
+    }
+}
+void directionalSupport(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
+    require(nrhs==4 && nlhs==1,"Directional support needs seed/active masks and parameters.");
+    const mwSize rows=mxGetM(in[1]),cols=mxGetN(in[1]),n=rows*cols;
+    require(mxGetNumberOfDimensions(in[1])==2,"Expected a seed matrix.");
+    array(in[1],mxLOGICAL_CLASS,n); array(in[2],mxLOGICAL_CLASS,n); array(in[3],mxDOUBLE_CLASS,5);
+    const mxLogical* seed=mxGetLogicals(in[1]); const mxLogical* active=mxGetLogicals(in[2]);
+    const double* p=mxGetDoubles(in[3]);
+    for (int k=0;k<5;++k) require(std::isfinite(p[k]),"Invalid directional parameter.");
+    require(p[0]>=1 && p[0]<=10000 && p[0]==std::floor(p[0]),"Invalid directional radius.");
+    const int radius=static_cast<int>(p[0]);
+    const int dr[4]={0,1,1,1},dc[4]={1,0,1,-1};
+    out[0]=mxCreateDoubleMatrix(rows,cols,mxREAL); double* result=mxGetDoubles(out[0]);
+    for (mwSize c=0;c<n;++c) {
+        if (!active[c]) continue;
+        const mwSignedIndex row=c%rows,col=c/rows;
+        for (int direction=0;direction<4;++direction) {
+            const int rr=dr[direction],cc=dc[direction],nr=-cc,nc=rr;
+            const int rowHalo=radius*std::abs(rr)+std::abs(nr),colHalo=radius*std::abs(cc)+std::abs(nc);
+            if (row<rowHalo || col<colHalo || row+rowHalo>=static_cast<mwSignedIndex>(rows) || col+colHalo>=static_cast<mwSignedIndex>(cols)) continue;
+            double line=0,positive=0,negative=0;
+            for (int step=-radius;step<=radius;++step) {
+                const mwSignedIndex r=row+step*rr,k=col+step*cc;
+                line+=seed[r+k*rows]; positive+=seed[r+nr+(k+nc)*rows]; negative+=seed[r-nr+(k-nc)*rows];
+            }
+            const double thinness=line/std::max(line+std::min(positive,negative),std::numeric_limits<double>::epsilon());
+            result[c]=std::max(result[c],smooth(line,p[1],p[2])*smooth(thinness,p[3],p[4]));
+        }
+    }
+}
 void pillarShape(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
     require(nrhs==4 && nlhs==3, "Pillar shape needs three inputs and three outputs.");
     const mwSize rows=mxGetM(in[1]), cols=mxGetN(in[1]), n=rows*cols;
@@ -287,9 +373,16 @@ void mexFunction(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
     char command[48];
     require(mxGetString(in[0], command, sizeof(command)) == 0, "Invalid kernel name.");
     try {
-        if (!std::strcmp(command, "propagateGround")) propagate(nlhs, out, nrhs, in);
+        if (!std::strcmp(command,"version")) {
+            require(nrhs==1 && nlhs==1,"Version needs no data and one output.");
+            out[0]=mxCreateDoubleScalar(2);
+        }
+        else if (!std::strcmp(command, "propagateGround")) propagate(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "growRoad")) roadGrowth(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "pillarShape")) pillarShape(nlhs, out, nrhs, in);
+        else if (!std::strcmp(command, "cellMoments")) cellMoments(nlhs, out, nrhs, in);
+        else if (!std::strcmp(command, "neighborDifference")) neighborDifference(nlhs, out, nrhs, in);
+        else if (!std::strcmp(command, "directionalSupport")) directionalSupport(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "groundStats")) groundStats(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "smoothComponents")) smoothComponents(nlhs, out, nrhs, in);
         else mexErrMsgIdAndTxt("perception:native:UnknownKernel", "Unknown kernel.");

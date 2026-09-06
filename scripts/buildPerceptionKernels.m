@@ -29,6 +29,7 @@ function binary = buildPerceptionKernels()
     pathCleanup = onCleanup(@() rmpath(temporary));
     rehash;
     assert(strcmp(which('perceptionKernelsMex'),freshBinary), 'Smoke test must load the fresh binary.');
+    assert(isequal(perceptionKernelsMex('version'),2),'Native kernel version mismatch.');
     mask = perceptionKernelsMex('growRoad',logical([1 1;0 1]),1, ...
         [0 0.1;0 0.2],[0 0.15 inf]);
     assert(isequal(mask,logical([1 1;0 1])), 'Native kernel smoke test failed.');

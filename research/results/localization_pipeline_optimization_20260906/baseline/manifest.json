@@ -1,0 +1,66 @@
+{
+  "baseline": "883c2e4cb58ea3e90ffbe4e67a15a062b8b43560",
+  "renamedIdentifiers": {
+    "localizeLidarFrame": "localizeLidarFrameLatencyBaseline",
+    "registerSemanticProbabilityCloud": "registerSemanticProbabilityCloudLatencyBaseline",
+    "perceiveCoarseProbabilityCloud": "perceiveCoarseProbabilityCloudLatencyBaseline",
+    "perceiveFrame": "perceiveFrameLatencyBaseline",
+    "aggregatePlanarCellMoments": "aggregatePlanarCellMomentsLatencyBaseline",
+    "analyzeGroundPillars": "analyzeGroundPillarsLatencyBaseline",
+    "buildCurbEnergyMaps": "buildCurbEnergyMapsLatencyBaseline",
+    "analyzeStructuralPillars": "analyzeStructuralPillarsLatencyBaseline"
+  },
+  "sources": [
+    {
+      "path": "localization/localizeLidarFrame.m",
+      "originalSha256": "376197840572d2e3b73b8ac2c14339945c8993267260d2c877546d2403576229"
+    },
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "originalSha256": "501a7047db9f7b00395dfba9b70ee148d90a4cb985348bbe36faca5c07a54954"
+    },
+    {
+      "path": "perception/perceiveCoarseProbabilityCloud.m",
+      "originalSha256": "f0f22e430e12198c3820357e7ed049f85f9c86ede42fef4fd0b15143ba4d0a38"
+    },
+    {
+      "path": "perception/perceiveFrame.m",
+      "originalSha256": "9a22da2b5ffabf94bc324c67e7b4fa886f34aec94e77c724df2bf2c2451760bb"
+    },
+    {
+      "path": "perception/aggregatePlanarCellMoments.m",
+      "originalSha256": "ad13b8005817c949555c72084a68484f5df0ca7d32d5fbde909e48dd497431d7"
+    },
+    {
+      "path": "perception/groundFeatures/analyzeGroundPillars.m",
+      "originalSha256": "7392d04c160e6400c66f90e39c99f2030c69c93263cf1a74a6cf01471f1bab37"
+    },
+    {
+      "path": "perception/groundFeatures/buildCurbEnergyMaps.m",
+      "originalSha256": "9c623ad65a68f6d538d10b922a4f6497e1b04ed7553a683bd9bcd14bd66e77e4"
+    },
+    {
+      "path": "perception/offGroundFeatures/analyzeStructuralPillars.m",
+      "originalSha256": "f17fe8f8708932d31aa037496770a4383cbd518014b5ed1636519505ee10166d"
+    }
+  ],
+  "privateHelpers": [
+    "perception/groundFeatures/private/connectedComponents8.m",
+    "perception/groundFeatures/private/resolveRoadSeedReferenceY.m",
+    "perception/groundFeatures/private/sampleCellMapAtPoints.m",
+    "perception/offGroundFeatures/private/buildFineGridFromPointSamples.m",
+    "perception/offGroundFeatures/private/buildFineGridSupportMeta.m",
+    "perception/offGroundFeatures/private/clamp01.m",
+    "perception/offGroundFeatures/private/estimateVoxelStep.m",
+    "perception/offGroundFeatures/private/expandCoarseMaskToFine.m",
+    "perception/offGroundFeatures/private/isFacadeDetectionEnabled.m",
+    "perception/offGroundFeatures/private/mapCoarseCellToFineBounds.m",
+    "perception/offGroundFeatures/private/projectFineMaskToCoarse.m",
+    "perception/offGroundFeatures/private/resolveFineGridForSupportMask.m",
+    "perception/offGroundFeatures/private/resolvePoleDetectionParams.m",
+    "perception/offGroundFeatures/private/resolvePoleOccupiedLayerMinPoints.m",
+    "perception/offGroundFeatures/private/segmentsToHoughParams.m",
+    "perception/private/buildMaskFromIndices.m"
+  ],
+  "method": "Rename function identifiers only; share unchanged public helpers and legacy native commands."
+}

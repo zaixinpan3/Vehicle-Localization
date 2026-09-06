@@ -1,0 +1,340 @@
+{
+  "baselineCommit": "883c2e4cb58ea3e90ffbe4e67a15a062b8b43560",
+  "batch": {
+    "paired": {
+      "baseline": {
+        "totalMs": {
+          "count": 420,
+          "mean": 88.88188095238095,
+          "median": 88.7085,
+          "p95": 101.02829999999999,
+          "p99": 113.49639000000002,
+          "maximum": 136.564,
+          "over100ms": 23
+        },
+        "perceptionMs": {
+          "count": 420,
+          "mean": 73.04589761904761,
+          "median": 72.636,
+          "p95": 83.44545,
+          "p99": 92.97659,
+          "maximum": 121.069,
+          "over100ms": 3
+        },
+        "registrationMs": {
+          "count": 420,
+          "mean": 15.814076190476191,
+          "median": 15.400500000000001,
+          "p95": 21.794649999999997,
+          "p99": 24.874080000000003,
+          "maximum": 34.258,
+          "over100ms": 0
+        }
+      },
+      "optimized": {
+        "totalMs": {
+          "count": 420,
+          "mean": 72.32420952380953,
+          "median": 71.7735,
+          "p95": 80.9592,
+          "p99": 89.08053000000001,
+          "maximum": 98.501,
+          "over100ms": 0
+        },
+        "perceptionMs": {
+          "count": 420,
+          "mean": 65.48870000000001,
+          "median": 65.1705,
+          "p95": 74.03784999999999,
+          "p99": 80.57254,
+          "maximum": 87.331,
+          "over100ms": 0
+        },
+        "registrationMs": {
+          "count": 420,
+          "mean": 6.8126428571428574,
+          "median": 6.714,
+          "p95": 8.286599999999998,
+          "p99": 10.407070000000001,
+          "maximum": 23.195,
+          "over100ms": 0
+        }
+      },
+      "quality": {
+        "maxPoseComponentDifference": 2.220446049250313e-16,
+        "exactProbabilityClouds": true,
+        "exactCorrespondenceIndices": true
+      },
+      "warmup": {
+        "count": 84,
+        "mean": 87.5922261904762,
+        "median": 85.356,
+        "p95": 103.0325,
+        "p99": 144.00900000000024,
+        "maximum": 257.719,
+        "over100ms": 7
+      }
+    },
+    "paired_final": {
+      "baseline": {
+        "totalMs": {
+          "count": 420,
+          "mean": 87.10744047619048,
+          "median": 87.114,
+          "p95": 98.18399999999998,
+          "p99": 105.86728000000001,
+          "maximum": 113.711,
+          "over100ms": 11
+        },
+        "perceptionMs": {
+          "count": 420,
+          "mean": 71.17375476190476,
+          "median": 70.24350000000001,
+          "p95": 81.62259999999999,
+          "p99": 85.29584000000001,
+          "maximum": 95.117,
+          "over100ms": 0
+        },
+        "registrationMs": {
+          "count": 420,
+          "mean": 15.911007142857143,
+          "median": 15.513000000000002,
+          "p95": 21.615099999999995,
+          "p99": 22.78589,
+          "maximum": 36.005,
+          "over100ms": 0
+        }
+      },
+      "optimized": {
+        "totalMs": {
+          "count": 420,
+          "mean": 70.64995952380953,
+          "median": 70.29150000000001,
+          "p95": 79.80745,
+          "p99": 84.07136000000001,
+          "maximum": 97.356,
+          "over100ms": 0
+        },
+        "perceptionMs": {
+          "count": 420,
+          "mean": 63.70003809523809,
+          "median": 63.432500000000005,
+          "p95": 72.0454,
+          "p99": 77.08703,
+          "maximum": 84.355,
+          "over100ms": 0
+        },
+        "registrationMs": {
+          "count": 420,
+          "mean": 6.926816666666666,
+          "median": 6.8134999999999994,
+          "p95": 8.491749999999998,
+          "p99": 9.592920000000001,
+          "maximum": 12.971,
+          "over100ms": 0
+        }
+      },
+      "quality": {
+        "maxPoseComponentDifference": 2.220446049250313e-16,
+        "exactProbabilityClouds": true,
+        "exactCorrespondenceIndices": true
+      },
+      "warmup": {
+        "count": 84,
+        "mean": 82.06751190476191,
+        "median": 78.1305,
+        "p95": 96.41189999999999,
+        "p99": 179.20188000000007,
+        "maximum": 207.641,
+        "over100ms": 4
+      }
+    }
+  },
+  "paced": {
+    "paced_default/paced_91.693ms.csv": {
+      "accepted": 420,
+      "computeMs": {
+        "count": 420,
+        "mean": 69.37675238095237,
+        "median": 68.83049999999895,
+        "p95": 77.38374999999995,
+        "p99": 83.42000000000064,
+        "maximum": 95.5469999999998,
+        "over100ms": 0
+      },
+      "waitingMs": {
+        "count": 420,
+        "mean": 0.03611627902074263,
+        "median": 0.0193549652092173,
+        "p95": 0.03530072784245762,
+        "p99": 0.07984123977653469,
+        "maximum": 3.91418051147596,
+        "over100ms": 0
+      },
+      "availabilityToPoseMs": {
+        "count": 420,
+        "mean": 69.41286865997311,
+        "median": 68.87843339538425,
+        "p95": 77.44944677734296,
+        "p99": 83.44449177719264,
+        "maximum": 95.5863434295665,
+        "over100ms": 0
+      }
+    },
+    "paced_default/paced_100.000ms.csv": {
+      "accepted": 210,
+      "computeMs": {
+        "count": 210,
+        "mean": 70.19128095238088,
+        "median": 70.19149999999995,
+        "p95": 77.93329999999999,
+        "p99": 80.96810000000018,
+        "maximum": 96.2560000000003,
+        "over100ms": 0
+      },
+      "waitingMs": {
+        "count": 210,
+        "mean": 0.025561904761395388,
+        "median": 0.022999999998774,
+        "p95": 0.046299999998300395,
+        "p99": 0.07690999999928395,
+        "maximum": 0.0830000000000553,
+        "over100ms": 0
+      },
+      "availabilityToPoseMs": {
+        "count": 210,
+        "mean": 70.21684285714227,
+        "median": 70.2119999999988,
+        "p95": 77.95745000000005,
+        "p99": 80.98992999999992,
+        "maximum": 96.2840000000007,
+        "over100ms": 0
+      }
+    },
+    "paced_pilot/paced_91.693ms.csv": {
+      "accepted": 180,
+      "computeMs": {
+        "count": 210,
+        "mean": 72.14328571428575,
+        "median": 72.35100000000074,
+        "p95": 80.12529999999977,
+        "p99": 84.40042,
+        "maximum": 108.085,
+        "over100ms": 1
+      },
+      "waitingMs": {
+        "count": 210,
+        "mean": 0.12415601189020171,
+        "median": 0.01965499114930935,
+        "p95": 0.057185944366411265,
+        "p99": 0.08761964996373273,
+        "maximum": 16.4507866210939,
+        "over100ms": 0
+      },
+      "availabilityToPoseMs": {
+        "count": 210,
+        "mean": 72.26744172617596,
+        "median": 72.37066046905575,
+        "p95": 80.61324827270465,
+        "p99": 90.13206746459934,
+        "maximum": 108.113949539185,
+        "over100ms": 1
+      }
+    }
+  },
+  "exploratory": {
+    "thread_probe.csv": {
+      "1": {
+        "count": 21,
+        "mean": 130.82104761904762,
+        "median": 127.371,
+        "p95": 154.483,
+        "p99": 159.2878,
+        "maximum": 160.489,
+        "over100ms": 21
+      },
+      "2": {
+        "count": 21,
+        "mean": 103.28790476190476,
+        "median": 101.88,
+        "p95": 114.784,
+        "p99": 117.7552,
+        "maximum": 118.498,
+        "over100ms": 13
+      },
+      "4": {
+        "count": 21,
+        "mean": 88.49533333333333,
+        "median": 87.329,
+        "p95": 100.141,
+        "p99": 100.2594,
+        "maximum": 100.289,
+        "over100ms": 2
+      },
+      "8": {
+        "count": 21,
+        "mean": 91.547,
+        "median": 90.988,
+        "p95": 105.495,
+        "p99": 110.82220000000001,
+        "maximum": 112.154,
+        "over100ms": 3
+      }
+    },
+    "native_probe.csv": {
+      "0": {
+        "count": 42,
+        "mean": 111.54330952380954,
+        "median": 110.402,
+        "p95": 132.5883,
+        "p99": 161.49681999999984,
+        "maximum": 178.839,
+        "over100ms": 31
+      },
+      "1": {
+        "count": 42,
+        "mean": 77.39395238095238,
+        "median": 75.869,
+        "p95": 88.3543,
+        "p99": 96.07868999999997,
+        "maximum": 98.576,
+        "over100ms": 0
+      }
+    },
+    "interleaved_pilot.csv": {
+      "0": {
+        "count": 42,
+        "mean": 99.85214285714285,
+        "median": 92.74000000000001,
+        "p95": 125.94684999999996,
+        "p99": 205.52817999999994,
+        "maximum": 214.344,
+        "over100ms": 12
+      },
+      "1": {
+        "count": 42,
+        "mean": 80.19714285714286,
+        "median": 77.983,
+        "p95": 99.69434999999999,
+        "p99": 108.61280999999995,
+        "maximum": 114.131,
+        "over100ms": 2
+      }
+    }
+  },
+  "tests": {
+    "unique": 151,
+    "passed": 151,
+    "failed": 0,
+    "incomplete": 0
+  },
+  "codeAnalyzer": {
+    "files": 11,
+    "findings": 0
+  },
+  "formalTimedCalls": 2520,
+  "finalDefaultOptimizedCalls": 1050,
+  "finalDefaultOptimizedOver100ms": 0,
+  "fixedDelayChanged": false,
+  "observerChanged": false
+}

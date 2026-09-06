@@ -1,0 +1,12 @@
+file,findings
+localization/registerSemanticProbabilityCloud.m,0
+perception/aggregatePlanarCellMoments.m,0
+perception/groundFeatures/analyzeGroundPillars.m,0
+perception/groundFeatures/buildCurbEnergyMaps.m,0
+perception/offGroundFeatures/analyzeStructuralPillars.m,0
+perception/perceiveFrame.m,0
+perception/perceptionNativeAvailable.m,0
+scripts/buildPerceptionKernels.m,0
+scripts/compareLocalizationPipelineTiming.m,0
+tests/coarsePerceptionPerformanceTest.m,0
+tests/geometricRegistrationTest.m,0

@@ -113,7 +113,15 @@ on 19 Mississippi frames, with identical ground labels, semantic candidates,
 fine feature points, and probability weights. Empty ground margins are trimmed
 internally while public pillar IDs retain the original lattice.
 
+The subsequent [complete-pipeline optimization](research/localization_pipeline_optimization.md)
+measured a 70.3 ms median and 97.4 ms maximum from coarse perception through
+D2D pose output over 420 warmed default-map calls, with unchanged probability
+clouds. This is a measured workload result; an additional smaller-map run
+retained a 108.1 ms outlier.
+
 Run `buildPerceptionKernels` once to compile the optional C++ CPU kernels.
+Rebuild after native interface changes; automatic mode falls back to MATLAB
+when an older binary is detected.
 `cfg.executionBackend="auto"` uses them when available; `"matlab"` forces the
 MATLAB implementation and `"native"` requires a successful build. The source
 and build script are versioned; generated platform binaries are ignored.

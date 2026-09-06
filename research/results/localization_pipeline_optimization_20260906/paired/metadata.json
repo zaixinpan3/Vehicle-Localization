@@ -1,0 +1,16 @@
+{
+  "metadata": {
+    "seed": 2.0260906E+7,
+    "repetitions": 20,
+    "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+    "computationalThreads": 8,
+    "baselineFunction": "localizeLidarFrameLatencyBaseline",
+    "timedScope": "Preloaded raw frame and cached local map to pose event or rejection",
+    "order": "Randomized scene/start order and randomized method order within each pair"
+  },
+  "quality": {
+    "maxPoseComponentDifference": 2.2204460492503131E-16,
+    "exactProbabilityClouds": true,
+    "exactCorrespondenceIndices": true
+  }
+}

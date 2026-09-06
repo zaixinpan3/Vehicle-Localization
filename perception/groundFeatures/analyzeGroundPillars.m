@@ -86,7 +86,8 @@ function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg
     [xBin, yBin] = ind2sub(dims([2, 1]), pointCellLinIdx);
     cellRows = sub2ind(dims, yBin, xBin);
     coarseGround.moments = aggregatePlanarCellMoments( ...
-        groundContext.groundPoints, cellRows, prod(dims), coarseCfg.projectionRotation, coarseCfg.projectionTranslation);
+        groundContext.groundPoints, cellRows, prod(dims), coarseCfg.projectionRotation, coarseCfg.projectionTranslation, ...
+        isfield(curbCfg,"useNativeKernels") && curbCfg.useNativeKernels);
     coarseGround.energyMaps = energyMaps;
     coarseGround.initialRoadResult = initialRoad;
     coarseGround.roadResult = road;

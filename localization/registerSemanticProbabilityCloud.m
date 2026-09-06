@@ -183,11 +183,12 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
             nnz(ismember(m.semanticName,shared))<cfg.minimumComponents, return; end
     [f.normal,f.majorVariance,f.lineEligible]=normalGeometry(f,gcfg);
     if height.heightUsed, f=prepareConditionalHeight(f); end
+    groups=correspondenceGroups(f,m);
     scale=[1;1;1/cfg.yawLeverArm]; bounds=cfg.maximumPoseCorrection(:)./scale;
     q=zeros(3,1); converged=false;
     for iteration=1:cfg.maximumIterationsPerScale
         pose=[q(1:2).',initialPose(3)+q(3)*scale(3)];
-        system=linearize(f,m,pose,gcfg,scale);
+        system=linearize(f,m,pose,gcfg,scale,groups);
         if iteration==1, result.initialSimilarity=system.similarity; end
         if system.numPairs<cfg.minimumComponents, break; end
         [step,~,rank]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
@@ -209,14 +210,14 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
         end
     end
     pose=[q(1:2).',initialPose(3)+q(3)*scale(3)];
-    system=linearize(f,m,pose,gcfg,scale);
+    system=linearize(f,m,pose,gcfg,scale,groups);
     [~,projector,rank,eigenvalues]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
     % Preserve the initial prediction in unsupported directions, rather than
     % silently replacing them with a drift accumulated through changing pairs.
     if rank<3
         q=projector*q;
         pose=[q(1:2).',initialPose(3)+q(3)*scale(3)];
-        system=linearize(f,m,pose,gcfg,scale);
+        system=linearize(f,m,pose,gcfg,scale,groups);
         [~,projector,rank,eigenvalues]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
     end
     result.poseXYTheta=initialPose+(q.*scale).';
@@ -225,7 +226,7 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
     result.similarity=system.similarity; result.scaledCurvature=system.H;
     result.curvatureEigenvalues=eigenvalues; result.observableRank=rank;
     result.observableProjector=projector;
-    result.correspondences=system.pairs;
+    result.correspondences=struct2table(system.pairs);
     result.matchedFraction=system.numPairs/max(1,m.numComponents);
     result.classDiagnostics=classDiagnostics(system,gcfg);
     result.height.medianConditionalResidual=median(system.pairs.heightResidual,'omitnan');
@@ -248,67 +249,99 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
     end
 end
 
-function system=linearize(f,m,pose,cfg,scale)
+function groups=correspondenceGroups(f,m)
+% Class membership and eligible targets are invariant during one solve.
+    names=intersect(unique(f.semanticName),unique(m.semanticName));
+    groups=repmat(struct('source',[],'target',[],'line',false),numel(names),1);
+    for k=1:numel(names)
+        groups(k).line=any(names(k)==["curb","roadMarking","facade"]);
+        groups(k).source=find(m.semanticName==names(k) & m.quality>0);
+        keep=f.semanticName==names(k) & f.quality>0;
+        if groups(k).line, keep=keep & f.lineEligible; end
+        groups(k).target=find(keep);
+    end
+end
+
+function system=linearize(f,m,pose,cfg,scale,groups)
+% Compare each semantic class in a matrix, preserving first-target tie order.
+% Workspace scales with one class rather than the full all-class product.
     r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
     means=m.mean(:,1:2)*r.'+pose(1:2);
     n=m.numComponents;
-    jacobian=zeros(2,3,n); residual=zeros(2,n); precision=zeros(2,2,n);
-    source=zeros(n,1); target=zeros(n,1); weights=zeros(n,1); qvalue=zeros(n,1);
-    zResidual=nan(n,1); rows=0;
-    for i=1:n
-        candidates=find(f.semanticName==m.semanticName(i) & f.quality>0);
-        if isempty(candidates) || m.quality(i)<=0, continue; end
-        lineFeature=ismember(m.semanticName(i),["curb","roadMarking","facade"]);
-        if lineFeature, candidates=candidates(f.lineEligible(candidates)); end
-        if isempty(candidates), continue; end
-        cm=r*m.planarCovariance(:,:,i)*r.';
-        delta=means(i,:)-f.mean(candidates,1:2);
-        cf=f.covariance(1:2,1:2,candidates);
-        a=reshape(cf(1,1,:),[],1)+cm(1,1)+cfg.noiseStandardDeviation^2;
-        b=reshape(cf(1,2,:),[],1)+cm(1,2);
-        d=reshape(cf(2,2,:),[],1)+cm(2,2)+cfg.noiseStandardDeviation^2;
-        if lineFeature
-            normal=f.normal(candidates,:);
-            dn=sum(delta.*normal,2); tangent=[-normal(:,2),normal(:,1)];
-            dt=sum(delta.*tangent,2);
-            variance=a.*normal(:,1).^2+2*b.*normal(:,1).*normal(:,2)+d.*normal(:,2).^2;
-            distance=dn.^2./variance+dt.^2./(f.majorVariance(candidates)+cfg.maximumMatchDistance^2);
-            valid=abs(dn)<=cfg.maximumMatchDistance & ...
-                abs(dt)<=3*sqrt(f.majorVariance(candidates))+cfg.maximumMatchDistance;
-        else
-            determinant=a.*d-b.^2;
-            distance=(d.*delta(:,1).^2-2*b.*delta(:,1).*delta(:,2)+a.*delta(:,2).^2)./determinant;
-            % Gaussian shape compatibility discourages diffuse components
-            % from capturing a compact landmark solely through large variance.
-            detF=reshape(cf(1,1,:),[],1).*reshape(cf(2,2,:),[],1)-reshape(cf(1,2,:),[],1).^2;
-            detM=det(cm);
-            distance=distance+max(0,log(determinant./(4*sqrt(detF*detM))));
-            valid=sum(delta.^2,2)<=cfg.maximumMatchDistance^2;
+    rotated=pagemtimes(pagemtimes(r,m.planarCovariance),r.');
+    chosen=zeros(n,1); chosenZ=nan(n,1); lineSource=false(n,1);
+    for group=groups.'
+        source=group.source; targets=group.target;
+        if isempty(source) || isempty(targets), continue; end
+        % Bound temporary pair matrices for larger externally supplied maps.
+        allSource=source; blockSize=max(1,floor(65536/numel(targets)));
+        for first=1:blockSize:numel(allSource)
+            source=allSource(first:min(first+blockSize-1,numel(allSource)));
+            dx=means(source,1).'-f.mean(targets,1);
+            dy=means(source,2).'-f.mean(targets,2);
+            cf=f.covariance(1:2,1:2,targets);
+            cm=rotated(:,:,source);
+            a=reshape(cf(1,1,:),[],1)+reshape(cm(1,1,:),1,[])+cfg.noiseStandardDeviation^2;
+            b=reshape(cf(1,2,:),[],1)+reshape(cm(1,2,:),1,[]);
+            d=reshape(cf(2,2,:),[],1)+reshape(cm(2,2,:),1,[])+cfg.noiseStandardDeviation^2;
+            if group.line
+                normal=f.normal(targets,:);
+                dn=dx.*normal(:,1)+dy.*normal(:,2);
+                dt=-dx.*normal(:,2)+dy.*normal(:,1);
+                variance=a.*normal(:,1).^2+2*b.*normal(:,1).*normal(:,2)+d.*normal(:,2).^2;
+                distance=dn.^2./variance+dt.^2./(f.majorVariance(targets)+cfg.maximumMatchDistance^2);
+                valid=abs(dn)<=cfg.maximumMatchDistance & ...
+                    abs(dt)<=3*sqrt(f.majorVariance(targets))+cfg.maximumMatchDistance;
+            else
+                determinant=a.*d-b.^2;
+                distance=(d.*dx.^2-2*b.*dx.*dy+a.*dy.^2)./determinant;
+                detF=reshape(cf(1,1,:),[],1).*reshape(cf(2,2,:),[],1)-reshape(cf(1,2,:),[],1).^2;
+                detM=reshape(cm(1,1,:).*cm(2,2,:)-cm(1,2,:).*cm(2,1,:),1,[]);
+                distance=distance+max(0,log(determinant./(4*sqrt(detF*detM))));
+                valid=dx.^2+dy.^2<=cfg.maximumMatchDistance^2;
+            end
+            dz=nan(size(distance));
+            if size(f.mean,2)==3
+                for k=1:numel(source)
+                    [dz(:,k),zVariance]=conditionalHeightResidual(f,m,source(k),targets,means(source(k),:),pose(3));
+                    valid(:,k)=valid(:,k) & abs(dz(:,k))<=cfg.heightCompatibilitySigma*sqrt(zVariance);
+                end
+            end
+            distance(~valid)=Inf;
+            [best,index]=min(distance,[],1);
+            keep=isfinite(best); selected=source(keep);
+            chosen(selected)=targets(index(keep));
+            linear=index(keep)+(find(keep)-1)*numel(targets);
+            chosenZ(selected)=dz(linear);
+            lineSource(selected)=group.line;
         end
-        dz=nan(numel(candidates),1);
-        if size(f.mean,2)==3
-            [dz,zVariance]=conditionalHeightResidual(f,m,i,candidates,means(i,:),pose(3));
-            valid=valid & abs(dz)<=cfg.heightCompatibilitySigma*sqrt(zVariance);
-        end
-        distance(~valid)=Inf;
-        [best,j]=min(distance);
-        if ~isfinite(best), continue; end
-        k=candidates(j); rows=rows+1;
-        if lineFeature
-            p=f.normal(k,:)/sqrt(variance(j));
-            whiten=[p;0 0];
-        else
-            whiten=chol([a(j) b(j);b(j) d(j)],'lower')\eye(2);
-        end
-        positionJacobian=[eye(2),r*[-m.mean(i,2);m.mean(i,1)]];
-        jacobian(:,:,rows)=whiten*positionJacobian*diag(scale);
-        residual(:,rows)=whiten*delta(j,:).'; precision(:,:,rows)=whiten;
-        source(rows)=i; target(rows)=k; zResidual(rows)=dz(j);
-        weights(rows)=m.quality(i)*f.quality(k);
-        qvalue(rows)=sum(residual(:,rows).^2);
     end
-    source=source(1:rows); target=target(1:rows); weights=weights(1:rows);
-    qvalue=qvalue(1:rows); residual=residual(:,1:rows); jacobian=jacobian(:,:,1:rows);
+    source=find(chosen); target=chosen(source); rows=numel(source);
+    cm=rotated(:,:,source); cf=f.covariance(1:2,1:2,target);
+    a=reshape(cf(1,1,:)+cm(1,1,:),[],1)+cfg.noiseStandardDeviation^2;
+    b=reshape(cf(1,2,:)+cm(1,2,:),[],1);
+    d=reshape(cf(2,2,:)+cm(2,2,:),[],1)+cfg.noiseStandardDeviation^2;
+    line=lineSource(source); point=~line;
+    w11=zeros(rows,1); w12=w11; w21=w11; w22=w11;
+    normal=f.normal(target(line),:);
+    variance=a(line).*normal(:,1).^2+2*b(line).*normal(:,1).*normal(:,2)+d(line).*normal(:,2).^2;
+    w11(line)=normal(:,1)./sqrt(variance); w12(line)=normal(:,2)./sqrt(variance);
+    % Explicit 2-by-2 Cholesky whitening for positive definite summed scatter.
+    l11=sqrt(a(point)); l21=b(point)./l11; l22=sqrt(d(point)-l21.^2);
+    w11(point)=1./l11; w21(point)=-l21./l11./l22; w22(point)=1./l22;
+    precision=zeros(2,2,rows);
+    precision(1,1,:)=w11; precision(1,2,:)=w12;
+    precision(2,1,:)=w21; precision(2,2,:)=w22;
+    yawDerivative=m.mean(source,1:2)*[r(:,2),-r(:,1)].';
+    jacobian=zeros(2,3,rows);
+    jacobian(1,1,:)=w11*scale(1); jacobian(1,2,:)=w12*scale(2);
+    jacobian(2,1,:)=w21*scale(1); jacobian(2,2,:)=w22*scale(2);
+    jacobian(1,3,:)=(w11.*yawDerivative(:,1)+w12.*yawDerivative(:,2))*scale(3);
+    jacobian(2,3,:)=(w21.*yawDerivative(:,1)+w22.*yawDerivative(:,2))*scale(3);
+    delta=means(source,:)-f.mean(target,1:2);
+    residual=[w11.*delta(:,1)+w12.*delta(:,2),w21.*delta(:,1)+w22.*delta(:,2)].';
+    weights=m.quality(source).*f.quality(target);
+    qvalue=sum(residual.^2,1).'; zResidual=chosenZ(source);
     names=m.semanticName(source); classes=intersect(unique(f.semanticName),unique(m.semanticName));
     similarity=0;
     for name=classes.'
@@ -318,13 +351,12 @@ function system=linearize(f,m,pose,cfg,scale)
         similarity=similarity+coverage*sum(weights(selected).*exp(-qvalue(selected)/2));
     end
     robust=1./(1+qvalue/cfg.robustStandardizedDistance^2);
-    h=zeros(3); gradient=zeros(3,1);
-    for j=1:rows
-        a=jacobian(:,:,j); w=weights(j)*robust(j);
-        h=h+w*(a.'*a); gradient=gradient+w*a.'*residual(:,j);
-    end
-    pairs=table(source,target,names,qvalue,zResidual(1:rows), ...
-        'VariableNames',{'source','target','semanticName','squaredStandardizedResidual','heightResidual'});
+    stacked=reshape(permute(jacobian,[1 3 2]),[],3);
+    rowWeights=repelem(weights.*robust,2);
+    h=stacked.'*(stacked.*rowWeights);
+    gradient=stacked.'*(residual(:).*rowWeights);
+    pairs=struct('source',source,'target',target,'semanticName',names, ...
+        'squaredStandardizedResidual',qvalue,'heightResidual',zResidual(1:rows));
     system=struct('H',h,'gradient',gradient,'numPairs',rows,'pairs',pairs, ...
         'J',jacobian,'residual',residual,'weights',weights,'robust',robust, ...
         'precision',precision(:,:,1:rows),'targetMean',f.mean(target,1:2), ...
@@ -335,8 +367,10 @@ end
 function cost=frozenCost(system,m,pose,cfg)
     r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
     delta=m.mean(system.pairs.source,1:2)*r.'+pose(1:2)-system.targetMean;
-    q=zeros(system.numPairs,1);
-    for i=1:system.numPairs, q(i)=sum((system.precision(:,:,i)*delta(i,:).').^2); end
+    p=system.precision;
+    rx=reshape(p(1,1,:),[],1).*delta(:,1)+reshape(p(1,2,:),[],1).*delta(:,2);
+    ry=reshape(p(2,1,:),[],1).*delta(:,1)+reshape(p(2,2,:),[],1).*delta(:,2);
+    q=rx.^2+ry.^2;
     cost=sum(system.weights.*cfg.robustStandardizedDistance^2.*log1p(q/cfg.robustStandardizedDistance^2));
 end
 

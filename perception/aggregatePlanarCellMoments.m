@@ -1,4 +1,4 @@
-function moments = aggregatePlanarCellMoments(points, cellIndices, numCells, projectionRotation, projectionTranslation)
+function moments = aggregatePlanarCellMoments(points, cellIndices, numCells, projectionRotation, projectionTranslation, useNative)
 % aggregatePlanarCellMoments: Compute XY and retained height moments before semantics.
 % Cell indices use the caller's linear layout. Empirical within-cell scatter
 % is preserved; downstream regularization supplies a finite sensor floor.
@@ -17,6 +17,15 @@ function moments = aggregatePlanarCellMoments(points, cellIndices, numCells, pro
         translation=double(projectionTranslation(:).');
         assert(numel(translation)==3 && all(isfinite(translation)), 'Invalid projection translation.');
         if any(translation~=0), points=points+translation; end
+    end
+    if nargin>=6 && useNative
+        [counts,mu,scatter]=perceptionKernelsMex('cellMoments',double(points),double(cellIndices(:)),double(numCells));
+        moments=struct("count",counts,"mean",mu(:,1:2),"covariance",scatter(:,1:3));
+        if size(points,2)==3
+            moments.meanZ=mu(:,3);
+            moments.heightCovariance=scatter(:,4:6);
+        end
+        return;
     end
     counts = zeros(numCells, 1);
     meanXY = zeros(numCells, 2);

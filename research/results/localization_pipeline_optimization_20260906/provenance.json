@@ -1,0 +1,80 @@
+{
+  "sourceFiles": [
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "sha256": "9391a499aadf9e0ade8d784e71d658fb3311aee3a2d77f9ff00f90effd7aecf8"
+    },
+    {
+      "path": "perception/aggregatePlanarCellMoments.m",
+      "sha256": "1124fb29044dea923405da6133479cbc045efa0db3382ad95c9cb7898b9935a9"
+    },
+    {
+      "path": "perception/groundFeatures/analyzeGroundPillars.m",
+      "sha256": "e4a0f98e3bbe922571049eb4cdeb9f726e7811291e33d429690d166f2716ee0c"
+    },
+    {
+      "path": "perception/groundFeatures/buildCurbEnergyMaps.m",
+      "sha256": "058d7bd76cd567764c55b807425edcde7fc36b2f1d5221df1a161330bcea44c1"
+    },
+    {
+      "path": "perception/offGroundFeatures/analyzeStructuralPillars.m",
+      "sha256": "706c613fb6be874104609e064e8d9befc72272297b2d1136b9cdb2bc6af8ec31"
+    },
+    {
+      "path": "perception/perceiveFrame.m",
+      "sha256": "82ba8b29c8bfc3712bd654fd3d6ad3fe29c4004b023d5338c9cbcfb8026a79c6"
+    },
+    {
+      "path": "perception/perceptionNativeAvailable.m",
+      "sha256": "91541be255cfc781097522b98ace403186269218ebb8405a6e06a2f63f608f1f"
+    },
+    {
+      "path": "scripts/buildPerceptionKernels.m",
+      "sha256": "fcd1922f7a8a9f5bbbeae74c0bc2ae6cbeb92219b1eef5d6ab9253fcfaf18af8"
+    },
+    {
+      "path": "scripts/compareLocalizationPipelineTiming.m",
+      "sha256": "687d66475a8c9260768c666588d501733ac0380934c616c19f1968091e90209b"
+    },
+    {
+      "path": "tests/coarsePerceptionPerformanceTest.m",
+      "sha256": "81d093c9010a169ef296e8da92492ae0627c38a215c344c7f577bac489747ab9"
+    },
+    {
+      "path": "tests/geometricRegistrationTest.m",
+      "sha256": "b3e558b6d9c6f062bed456dd955f9a38e21a541b31c5445dc7901791c164663b"
+    },
+    {
+      "path": "perception/native/perceptionKernelsMex.cpp",
+      "sha256": "5ec46f286da7918661af1030401ff6877c8d8023bf4a02688f140591f24b380a"
+    },
+    {
+      "path": "scripts/createLocalizationTimingBaseline.py",
+      "sha256": "ee5bfd4e84e15a636238fe8975bf2dad0d270ee0d738a84b71c918bb79f598ca"
+    },
+    {
+      "path": "localization/localizeLidarFrame.m",
+      "sha256": "376197840572d2e3b73b8ac2c14339945c8993267260d2c877546d2403576229"
+    },
+    {
+      "path": "scripts/measurePacedLocalizationPipeline.m",
+      "sha256": "67c2390b75851efc624859f2be37f86686a57444f3207e281b5e0f787c9b9e7a"
+    },
+    {
+      "path": "config/perceptionConfig.m",
+      "sha256": "0d03af4ba911003f000d5c54e605e1ed2531cb0108a1db573e5d71fbe27d3b6e"
+    },
+    {
+      "path": "config/distributionRegistrationConfig.m",
+      "sha256": "ca83490c8900e0b1a2fbb6c501560f244d89f87d22ad7c636b91a3a1d742cd18"
+    }
+  ],
+  "nativeBinary": {
+    "path": "perception/perceptionKernelsMex.mexa64",
+    "sha256": "118908cc9f1f9d9a47984f21acc27913411feae7536fbbec909e1cb9b671fd10"
+  },
+  "binaryTracked": false,
+  "baseline": "883c2e4cb58ea3e90ffbe4e67a15a062b8b43560",
+  "inputFolder": "output/localization_pipeline_timing30_20260906",
+  "note": "Private baseline helpers were extracted from Git; only named identifiers changed. Paired is the prototype before the final memory bound and native-version check; paired_final uses final production code."
+}

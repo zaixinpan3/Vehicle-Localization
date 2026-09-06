@@ -101,6 +101,7 @@ function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, co
         pointVoxelSub(:, 3) >= 1 & pointVoxelSub(:, 3) <= nz;
     projectionRotation = coarseCfg.projectionRotation;
     projectionTranslation = coarseCfg.projectionTranslation;
+    useNative = isfield(cfg,"useNativeKernels") && cfg.useNativeKernels;
     intensity = nan(numPoints,1);
     structuralPointMask = validPoint;
     trafficThreshold = resolveTrafficThreshold(cfg);
@@ -125,7 +126,7 @@ function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, co
 
     columnMaps = struct();
     cellRows = sub2ind(mapSize, pointVoxelSub(structuralPointMask, 2), pointVoxelSub(structuralPointMask, 1));
-    columnMaps.moments = aggregatePlanarCellMoments(voxelGrid.points(structuralPointMask, :), cellRows, prod(mapSize), projectionRotation, projectionTranslation);
+    columnMaps.moments = aggregatePlanarCellMoments(voxelGrid.points(structuralPointMask, :), cellRows, prod(mapSize), projectionRotation, projectionTranslation, useNative);
     % Radiometric evidence selects whole pillars. Their Gaussian contains
     % every off-ground member, including nonreflective support at other heights.
     columnMaps.trafficSignCellMask = false(mapSize);
@@ -139,7 +140,7 @@ function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, co
         candidateMembers = columnMaps.trafficSignCellMask(allColumns);
         validRows = find(validPoint);
         columnMaps.trafficSignMoments = aggregatePlanarCellMoments(voxelGrid.points(validRows(candidateMembers),:), ...
-            allColumns(candidateMembers),prod(mapSize),projectionRotation,projectionTranslation);
+            allColumns(candidateMembers),prod(mapSize),projectionRotation,projectionTranslation,useNative);
     end
     columnMaps.voxelStatistics = sparseVoxels;
     columnMaps.mapSize = double(mapSize);

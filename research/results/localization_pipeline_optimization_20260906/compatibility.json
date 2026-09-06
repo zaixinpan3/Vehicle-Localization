@@ -1,0 +1,6 @@
+{
+  "autoUsesNative": false,
+  "explicitNativeError": "perception:NativeUnavailable",
+  "currentNativeAvailable": true,
+  "currentVersion": 2
+}

@@ -1,11 +1,22 @@
 classdef geometricRegistrationTest < matlab.unittest.TestCase
 % geometricRegistrationTest: Sampling invariance and honest pose observability.
+    properties (TestParameter)
+        repeatedComponents = {1,200}
+    end
     methods (TestClassSetup)
         function paths(~)
             setupVehicleLocalization();
         end
     end
     methods (Test)
+        function repeatedTargetsPreserveFirstTieAcrossBlocks(testCase,repeatedComponents)
+            cloud=repeatedCloud(repeatedComponents);
+            cfg=geometricRegistrationTest.configuration();
+            result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0],cfg);
+            testCase.verifyTrue(result.accepted,result.reason);
+            testCase.verifyEqual(result.poseXYTheta,[0 0 0],'AbsTol',1e-12);
+            testCase.verifyEqual(result.correspondences.target,repmat((1:6).',repeatedComponents,1));
+        end
         function recoversGaussianPoseAtLargeCoordinates(testCase)
             moving=distributionRegistrationTest.exampleCloud();
             expected=[700001.2 4300000.7 0.16];
@@ -168,4 +179,12 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
                 'frameIndices',1:4,'framePoseTable',poses);
         end
     end
+end
+
+function cloud=repeatedCloud(copies)
+    cloud=distributionRegistrationTest.exampleCloud(); c=cloud.components;
+    cloud.components=struct('mean',repmat(c.mean,copies,1), ...
+        'covariance',repmat(c.covariance,1,1,copies), ...
+        'mixtureWeight',repmat(c.mixtureWeight,copies,1), ...
+        'semanticName',repmat(c.semanticName,copies,1),'numComponents',6*copies);
 end
