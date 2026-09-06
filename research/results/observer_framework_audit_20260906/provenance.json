@@ -1,0 +1,97 @@
+{
+  "baselineCommit": "8cc97b1d3498a08de24d69b640ce05a6a5fd15f5",
+  "activityDate": "2026-09-06",
+  "relocatedFiles": [
+    {
+      "workingPath": "localization/README.md",
+      "committedPath": "localization/improvedObserver/README.md",
+      "byteIdentical": true,
+      "sha256": "2e8e0bd914dfb85ba38547dd6060feb91eeaeaf58997f8f035140d78e0cfebc7"
+    },
+    {
+      "workingPath": "localization/buildImprovedObserverCertificateData.m",
+      "committedPath": "localization/improvedObserver/buildImprovedObserverCertificateData.m",
+      "byteIdentical": true,
+      "sha256": "9c553e6b2041855632271991ddd06ed980a1d6fce69c68d36dd73be6e47222b8"
+    },
+    {
+      "workingPath": "localization/designImprovedObserverGains.m",
+      "committedPath": "localization/improvedObserver/designImprovedObserverGains.m",
+      "byteIdentical": true,
+      "sha256": "d39b5064e278c68fbe1aaa56fc452b7206c079d65d10d07301a04795c853cb3a"
+    },
+    {
+      "workingPath": "localization/evaluateImprovedObserverChannels.m",
+      "committedPath": "localization/improvedObserver/evaluateImprovedObserverChannels.m",
+      "byteIdentical": true,
+      "sha256": "03165a00b7875a762eb193421ff2bbdadbca43f1fbf789d7e30ddf0dd9051dd2"
+    },
+    {
+      "workingPath": "localization/runImprovedVehicleObserver.m",
+      "committedPath": "localization/improvedObserver/runImprovedVehicleObserver.m",
+      "byteIdentical": true,
+      "sha256": "51012d3e80fd2efad4a5e5a5bab91e15e25659561986ac905025143bfc3591a3"
+    },
+    {
+      "workingPath": "localization/simulateImprovedObserverScenario.m",
+      "committedPath": "localization/improvedObserver/simulateImprovedObserverScenario.m",
+      "byteIdentical": true,
+      "sha256": "dfe6290b7a5ec0cac741bd92877f784649318e1e8661badc1d30e54a451ce323"
+    },
+    {
+      "workingPath": "localization/verifyImprovedObserverDesign.m",
+      "committedPath": "localization/improvedObserver/verifyImprovedObserverDesign.m",
+      "byteIdentical": true,
+      "sha256": "caf6da915487f59487089e00b632a10ce32cd113444085d5a25a783db44c6b0c"
+    },
+    {
+      "workingPath": "localization/improvedObserverReferenceDesign.m",
+      "committedPath": "localization/improvedObserver/improvedObserverReferenceDesign.m",
+      "byteIdentical": true,
+      "sha256": "915e2c4172f61247f337c805133e6496061befdcc1143f0bcdff4f6bf3d6be25"
+    },
+    {
+      "workingPath": "localization/computeLidarInformationWeights.m",
+      "committedPath": "localization/improvedObserver/computeLidarInformationWeights.m",
+      "byteIdentical": true,
+      "sha256": "675225a794f5be1d86e651e22183beee6d9013caa819df8a10959a160609c6ca"
+    }
+  ],
+  "otherInspectedFiles": [
+    {
+      "path": "config/improvedObserverConfig.m",
+      "sha256": "7ec7c4389477f9815a493ee03cabe9d0b71dc8e502124e7241aca209e5acd792"
+    },
+    {
+      "path": "config/lateralObserverConfig.m",
+      "sha256": "6bd58d91d4f007975bd70d1f8ed11b1cfc50eaa3eb94d7124f935165dc73230c"
+    },
+    {
+      "path": "localization/lateralObserver/runLateralVelocityObserver.m",
+      "sha256": "de82dd87b52a37c9cf2a2e6751dbe449d493143b88d155c6a2a8b869c086c1c5"
+    },
+    {
+      "path": "localization/localizeLidarFrame.m",
+      "sha256": "376197840572d2e3b73b8ac2c14339945c8993267260d2c877546d2403576229"
+    },
+    {
+      "path": "tests/improvedObserverTest.m",
+      "sha256": "0d79ae53fa289c04e48cf475a45fd1b4a97c452328d22b8437771695e89e5283"
+    },
+    {
+      "path": "tests/lateralObserverTest.m",
+      "sha256": "3f6270915337f5f15786fa589e4eb285d711960daeba0df2b368c36fb6494d1f"
+    },
+    {
+      "path": "improved_observer_derivation.md",
+      "sha256": "fc671c83ae5c40b44f2d515ea9779b492d388e436036fcda629ff4ed0c579a38"
+    },
+    {
+      "path": "reference/Bessafa et al. - 2026 - Generalized multi-output high-gain observer with application to ego vehicle trajectory and orientati.pdf",
+      "sha256": "8db74274452e3108c86d0b56ceb90186810178209a162ccf4eeb2ebc4fbd87a6"
+    }
+  ],
+  "paperDoi": "10.1016/j.automatica.2026.112915",
+  "paperPages": 13,
+  "scope": "Assessment only. Existing implementation, gains, relocation, draft and papers were not changed or staged."
+}
