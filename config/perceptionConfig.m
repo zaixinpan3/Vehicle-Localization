@@ -1,7 +1,8 @@
 function cfg = perceptionConfig(dataset)
 % perceptionConfig: Shared pillar perception and offline point refinement.
-% Optional dataset="Downtown" enables facades; the default Mississippi profile
-% disables facades. Traffic signs are available in both profiles.
+% cfg.featureNames selects the semantic channels for this invocation.
+% Mississippi defaults to every channel except facade; Downtown selects all.
+% Override featureNames with any subset, or strings(1,0) for no channels.
 % Default mode returns a sparse semantic Gaussian cloud for localization.
 % Set executionMode="offline" for candidate-only fine masks used by mapping.
 % The voxel config names XY resolution and sparse height-bin resolution;
@@ -19,8 +20,10 @@ function cfg = perceptionConfig(dataset)
     cfg.voxel = frameVoxelizationConfig();
     cfg.groundSegmentation = groundSegmentationConfig();
     cfg.groundFeatures = groundFeatureConfig();
-    cfg.offGroundFeatures = offGroundFeatureConfig();
-    cfg.coarseProbabilityCloud = coarseSemanticProbabilityCloudConfig();
+    cfg.offGroundFeatures = rmfield(offGroundFeatureConfig(),"facadeDetectionEnabled");
+    cloudCfg = coarseSemanticProbabilityCloudConfig();
+    cfg.featureNames = cloudCfg.semanticNames;
+    if dataset ~= "downtown", cfg.featureNames(cfg.featureNames=="facade") = []; end
+    cfg.coarseProbabilityCloud = rmfield(cloudCfg,"semanticNames");
     cfg.fine = finePerceptionConfig();
-    cfg.offGroundFeatures.facadeDetectionEnabled = dataset == "downtown";
 end

@@ -1,0 +1,11 @@
+dataset,frameIndex,channels,fineMasksExact,xyzMomentsExact,weightsExact
+Missisipi,100,"curb,roadMarking,pole,trafficSign",1,1,1
+Missisipi,200,"curb,roadMarking,pole,trafficSign",1,1,1
+Missisipi,300,"curb,roadMarking,pole,trafficSign",1,1,1
+Missisipi,400,"curb,roadMarking,pole,trafficSign",1,1,1
+Missisipi,500,"curb,roadMarking,pole,trafficSign",1,1,1
+downTown,100,"curb,roadMarking,pole,facade,trafficSign",1,1,1
+downTown,200,"curb,roadMarking,pole,facade,trafficSign",1,1,1
+downTown,300,"curb,roadMarking,pole,facade,trafficSign",1,1,1
+downTown,400,"curb,roadMarking,pole,facade,trafficSign",1,1,1
+downTown,500,"curb,roadMarking,pole,facade,trafficSign",1,1,1

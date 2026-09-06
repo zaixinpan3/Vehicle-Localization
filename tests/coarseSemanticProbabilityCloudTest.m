@@ -62,7 +62,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             testCase.verifyEqual(cloud.components.numComponents, 0);
             testCase.verifyEmpty(cloud.components.mean);
             testCase.verifyEqual(cloud.semanticNames, ...
-                ["curb"; "roadMarking"; "pole"; "facade"; "trafficSign"]);
+                ["curb"; "roadMarking"; "pole"; "trafficSign"]);
         end
 
         function referenceFramesTrackFullPerception(testCase)

@@ -1,0 +1,20 @@
+{
+  "baselineCommit": "4b35b3f769ae886c86516252d9296b2775886b87",
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "testsPassed": 173,
+  "testsFailed": 0,
+  "testsIncomplete": 0,
+  "newChannelTests": 42,
+  "channelSubsets": 32,
+  "matlabFilesAnalyzed": 16,
+  "analyzerFindings": 0,
+  "datasetRegressionFrames": [
+    100,
+    200,
+    300,
+    400,
+    500
+  ],
+  "viewerSmokeCases": 3,
+  "randomSeed": "none; deterministic recorded frames"
+}

@@ -27,6 +27,8 @@ function report = evaluatePillarPerception(dataRoot, outputFolder)
         if k>=16, split="finalValidation"; end
         if k==15, dataset="downtown"; file='downTownPointClouds.mat'; end
         frame=loadPointCloudFrame(fullfile(dataRoot,'raw',file),frames(k));
+        cfg=perceptionConfig(dataset);
+        offlineCfg=cfg; offlineCfg.executionMode="offline";
         legacyCfg.offGroundFeatures.facadeDetectionEnabled=dataset=="downtown";
         legacy=perceiveFrame(frame,legacyCfg);
         online=perceiveFrame(frame,cfg);

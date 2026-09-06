@@ -15,6 +15,13 @@ function perception = perceiveFrame(frame, cfg)
 
     mode = string(cfg.executionMode);
     legacyMode = mode == "legacyFull";
+    featureNames = validatePerceptionFeatureNames(cfg.featureNames);
+    if ~legacyMode
+        assert(~isfield(cfg.offGroundFeatures,"facadeDetectionEnabled") && ...
+            (~isfield(cfg,"coarseProbabilityCloud") || ~isfield(cfg.coarseProbabilityCloud,"semanticNames")), ...
+            "perception:ObsoleteFeatureSelection", ...
+            "Select all invocation channels with cfg.featureNames; remove the old nested selectors.");
+    end
     backend = "auto";
     if isfield(cfg, "executionBackend"), backend = cfg.executionBackend; end
     useNative = ~legacyMode && perceptionNativeAvailable(backend);
@@ -26,6 +33,9 @@ function perception = perceiveFrame(frame, cfg)
     assert(any(mode == ["coarseProbabilityCloud", "offline", "full", "legacyFull"]), ...
         "Unknown perception execution mode.");
     if legacyMode
+        if ~isfield(cfg.offGroundFeatures,"facadeDetectionEnabled")
+            cfg.offGroundFeatures.facadeDetectionEnabled = any(featureNames=="facade");
+        end
         voxelGrid = voxelizePointCloud(frame, cfg.voxel);
     else
         voxelGrid = pillarizePointCloud(frame, cfg.voxel);
@@ -46,12 +56,19 @@ function perception = perceiveFrame(frame, cfg)
     end
 
     coarseCfg = resolveCoarseProbabilityCloudConfig(cfg);
-    ground = analyzeGroundPillars(groundContext, cfg.groundFeatures, coarseCfg);
-    offGround = analyzeStructuralPillars(offGroundVoxelGrid, cfg.offGroundFeatures, coarseCfg);
+    ground = struct("roadMarkingReflectivityThreshold",NaN);
+    if any(ismember(featureNames,["curb","roadMarking"]))
+        ground = analyzeGroundPillars(groundContext, cfg.groundFeatures, coarseCfg);
+    end
+    offGround = struct();
+    if any(ismember(featureNames,["pole","facade","trafficSign"]))
+        offGround = analyzeStructuralPillars(offGroundVoxelGrid, cfg.offGroundFeatures, coarseCfg);
+    end
     candidates = buildPerceptionCandidates(voxelGrid, ground, offGround, coarseCfg.semanticNames);
     probabilityCloud = buildCoarseSemanticProbabilityCloud(ground, offGround, coarseCfg);
     perception = struct("executionMode", "coarseProbabilityCloud", ...
-        "probabilityCloud", probabilityCloud, "candidates", candidates);
+        "probabilityCloud", probabilityCloud, "candidates", candidates, ...
+        "featureNames",featureNames);
     perception.sourceSummary = struct("numFramePoints", double(numel(frame.x)), ...
         "numRetainedPoints", double(voxelGrid.numFilteredPoints), ...
         "numGroundPoints", double(size(groundContext.groundPoints, 1)), ...
@@ -442,6 +459,7 @@ function coarseCfg = resolveCoarseProbabilityCloudConfig(cfg)
     else
         coarseCfg = coarseSemanticProbabilityCloudConfig();
     end
+    coarseCfg.semanticNames = validatePerceptionFeatureNames(cfg.featureNames);
     calibration=lidarFrameCalibrationConfig();
     if isfield(cfg,'frameCalibration'), calibration=validateLidarFrameCalibration(cfg.frameCalibration); end
     if ~isfield(coarseCfg,'projectionTranslation'), coarseCfg.projectionTranslation=[0 0 0]; end

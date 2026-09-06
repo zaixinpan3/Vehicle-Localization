@@ -15,9 +15,9 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
     methods (Test)
         function profilesKeepAllChannelsWithDatasetFacadeSwitch(testCase)
             suburban=perceptionConfig(); urban=perceptionConfig("Downtown");
-            testCase.verifyFalse(suburban.offGroundFeatures.facadeDetectionEnabled);
-            testCase.verifyTrue(urban.offGroundFeatures.facadeDetectionEnabled);
-            testCase.verifyEqual(urban.coarseProbabilityCloud.semanticNames, ...
+            testCase.verifyFalse(any(suburban.featureNames=="facade"));
+            testCase.verifyTrue(any(urban.featureNames=="facade"));
+            testCase.verifyEqual(urban.featureNames, ...
                 ["curb","roadMarking","pole","facade","trafficSign"]);
             mapCfg=featureMapBuildConfig();
             testCase.verifyTrue(any(mapCfg.featureNames=="trafficSign"));
@@ -70,12 +70,12 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(fine.featureMasks.trafficSign,legacy.featureMasks.trafficSign);
             testCase.verifyEqual(audit.evaluatedPointIndices,audit.candidatePointIndices);
             testCase.verifyEqual(find(fine.featureMasks.trafficSign),sort(audit.candidatePointIndices(audit.accepted)));
-            testCase.verifyTrue(all(ismember(find(legacy.featureMasks.facade),fine.refinement.facade.candidatePointIndices)));
+            testCase.verifyTrue(all(ismember(find(legacy.featureMasks.facade),facadeAudit(fine).candidatePointIndices)));
             testCase.verifyEqual(find(fine.featureMasks.facade), ...
-                sort(fine.refinement.facade.candidatePointIndices(fine.refinement.facade.accepted)));
+                sort(facadeAudit(fine).candidatePointIndices(facadeAudit(fine).accepted)));
         end
         function disabledChannelsStayEmptyInBothProducts(testCase)
-            [frame,cfg,~]=signScene(); cfg.coarseProbabilityCloud.semanticNames=["curb","pole"];
+            [frame,cfg,~]=signScene(); cfg.featureNames=["curb","pole"];
             cfg.executionMode="offline";
             p=perceiveFrame(frame,cfg);
             testCase.verifyFalse(any(p.featureMasks.trafficSign|p.featureMasks.facade));
@@ -112,7 +112,7 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(result.poseXYTheta,expected,'AbsTol',1e-4);
             testCase.verifySize(result.poseXYTheta,[1 3]);
         end
-        function mappingEntryIncludesFacadeWhenItsSwitchIsEnabled(testCase)
+        function mappingEntryUsesTheRequestedFeatureNames(testCase)
             file=fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','raw','downTownPointClouds.mat');
             testCase.assumeTrue(isfile(file));
             folder=testCase.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture());
@@ -142,7 +142,7 @@ function [frame,cfg,expected]=signScene()
     expected=[10.06 5.06 0.5;10.08 5.08 1.5;10.09 5.09 3.5;10.1 5.1 4.5];
     xyz=[ground;expected]; intensity=zeros(size(xyz,1),1); intensity(end)=1700;
     frame=struct('x',xyz(:,1),'y',xyz(:,2),'z',xyz(:,3),'intensity',intensity);
-    cfg=perceptionConfig(); cfg.coarseProbabilityCloud.semanticNames="trafficSign";
+    cfg=perceptionConfig(); cfg.featureNames="trafficSign";
     cfg.frameCalibration.rotation=eye(3); cfg.frameCalibration.translation=[0 0 0];
 end
 
@@ -175,5 +175,11 @@ function cfg=writeMappingFixture(folder,file)
     cfg=featureMapBuildConfig(); cfg.pointCloudMatPath="pointClouds.mat";
     cfg.poseMatchCsvPath="poses.csv"; cfg.mapOutputPath="";
     cfg.frameIndices=1:3; cfg.batchFrameCount=3; cfg.batchFrameStride=3;
-    cfg.logEnabled=false; cfg.facadeDetectionEnabled=true;
+    cfg.logEnabled=false;
+    perception=perceptionConfig("Downtown"); cfg.featureNames=perception.featureNames;
+end
+
+function audit=facadeAudit(perception)
+    audit=struct('candidatePointIndices',zeros(0,1),'accepted',false(0,1));
+    if isfield(perception.refinement,'facade'), audit=perception.refinement.facade; end
 end

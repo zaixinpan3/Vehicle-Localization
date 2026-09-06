@@ -37,23 +37,33 @@ function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg
         double(energyMaps.total), curbCellMask, minimumEnergy, 1, coarseCfg);
 
     pointCellLinIdx = double(groundContext.groundCellLinIdx(:));
-    roadPointMask = sampleCellMapAtPoints(pointCellLinIdx, road.roadCellMask) > 0;
-    reflectivity = double(groundContext.groundReflectivity(:));
-    reflectivityThreshold = resolveRoadReflectivityThreshold( ...
-        reflectivity, roadPointMask, groundCfg.roadMarking);
-    maximumReflectivityMap = aggregateCellMaximum( ...
-        reflectivity, pointCellLinIdx, size(road.roadCellMask));
-    roadMarkingCellMask = logical(road.roadCellMask) & ...
-        isfinite(maximumReflectivityMap) & maximumReflectivityMap > reflectivityThreshold;
-    finiteRoadReflectivity = maximumReflectivityMap( ...
-        logical(road.roadCellMask) & isfinite(maximumReflectivityMap));
-    upperReflectivity = reflectivityThreshold;
-    if ~isempty(finiteRoadReflectivity)
-        upperReflectivity = max(finiteRoadReflectivity);
+    reflectivityThreshold = NaN;
+    maximumReflectivityMap = zeros(size(road.roadCellMask),'single');
+    roadMarkingCellMask = false(size(road.roadCellMask));
+    roadMarkingProbability = zeros(size(road.roadCellMask),'single');
+    if any(string(coarseCfg.semanticNames)=="roadMarking")
+        roadPointMask = sampleCellMapAtPoints(pointCellLinIdx, road.roadCellMask) > 0;
+        reflectivity = double(groundContext.groundReflectivity(:));
+        reflectivityThreshold = resolveRoadReflectivityThreshold( ...
+            reflectivity, roadPointMask, groundCfg.roadMarking);
+        maximumReflectivityMap = aggregateCellMaximum( ...
+            reflectivity, pointCellLinIdx, size(road.roadCellMask));
+        roadMarkingCellMask = logical(road.roadCellMask) & ...
+            isfinite(maximumReflectivityMap) & maximumReflectivityMap > reflectivityThreshold;
+        finiteRoadReflectivity = maximumReflectivityMap( ...
+            logical(road.roadCellMask) & isfinite(maximumReflectivityMap));
+        upperReflectivity = reflectivityThreshold;
+        if ~isempty(finiteRoadReflectivity)
+            upperReflectivity = max(finiteRoadReflectivity);
+        end
+        roadMarkingProbability = probabilityAboveThreshold( ...
+            maximumReflectivityMap, roadMarkingCellMask, reflectivityThreshold, ...
+            upperReflectivity, coarseCfg);
     end
-    roadMarkingProbability = probabilityAboveThreshold( ...
-        maximumReflectivityMap, roadMarkingCellMask, reflectivityThreshold, ...
-        upperReflectivity, coarseCfg);
+    if ~any(string(coarseCfg.semanticNames)=="curb")
+        curbCellMask(:) = false;
+        curbProbability(:) = 0;
+    end
 
     coarseGround = struct();
     coarseGround.cellMapSize = double(size(road.roadCellMask));

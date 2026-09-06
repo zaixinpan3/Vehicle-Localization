@@ -21,41 +21,52 @@ function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coa
     columnMaps.runLayerMap = single(columnMaps.maxRunLayerCount);
     columnMaps.rawLayerCount = single(columnMaps.runLayerMap);
     columnMaps.supportScore = single(columnMaps.runLayerMap);
-    [columnMaps.pointScore, columnMaps.lineScore, ...
-        columnMaps.normalOrientation, columnMaps.blobness] = ...
-        buildFineColumnShapeScores(columnMaps.runLayerMap, ...
-        columnMaps.occupiedMask, offGroundCfg, columnMaps.dx, columnMaps.dy);
+    columnMaps.pointScore = zeros(columnMaps.mapSize,"single");
+    columnMaps.lineScore = zeros(columnMaps.mapSize,"single");
+    if any(ismember(string(coarseCfg.semanticNames),["pole","facade"]))
+        [columnMaps.pointScore, columnMaps.lineScore, ...
+            columnMaps.normalOrientation, columnMaps.blobness] = ...
+            buildFineColumnShapeScores(columnMaps.runLayerMap, ...
+            columnMaps.occupiedMask, offGroundCfg, columnMaps.dx, columnMaps.dy);
+    end
 
-    facadeCfg = offGroundCfg;
-    facadeCfg.facadeDetectionEnabled = offGroundCfg.facadeDetectionEnabled && ...
-        any(string(coarseCfg.semanticNames) == "facade");
-    facadeCfg.facadeRefineEnabled = false;
-    facade = extractFacadeFeatures(columnMaps, struct(), facadeCfg);
-    facade = expandFacadePillarSupport(facade,columnMaps,offGroundCfg);
-
-    poleParams = resolvePoleDetectionParams(offGroundCfg);
-    candidates = detectPoleCandidates( ...
-        columnMaps, facade.mask, sparseFineGrid, poleParams);
-    % Preserve candidate footprints as objects. Independent per-pillar
-    % post-gates can remove one half of a pole crossing a grid boundary.
-    poleCellMask = logical(candidates.candidateMask);
-    footprints = bwconncomp(poleCellMask,8);
-    for footprint = footprints.PixelIdxList
-        cells = footprint{1};
-        if mean(double(columnMaps.pointScore(cells))) < coarseCfg.poleMinimumFootprintScore
-            poleCellMask(cells) = false;
-        end
+    facade = struct("mask",false(columnMaps.mapSize));
+    if any(string(coarseCfg.semanticNames)=="facade")
+        facadeCfg = offGroundCfg;
+        facadeCfg.facadeDetectionEnabled = true;
+        facadeCfg.facadeRefineEnabled = false;
+        facade = extractFacadeFeatures(columnMaps, struct(), facadeCfg);
+        facade = expandFacadePillarSupport(facade,columnMaps,offGroundCfg);
     end
 
     probabilityFloor = max(0, min(1, double(coarseCfg.minimumSemanticProbability)));
-    runScale = max(1, double(poleParams.coreMinRunLayerThreshold));
-    runConfidence = min(double(columnMaps.runLayerMap) ./ runScale, 1);
-    shapeConfidence = min(max(double(columnMaps.pointScore), 0), 1) .* ...
-        (1 - min(max(double(columnMaps.lineScore), 0), 1));
+    poleCellMask = false(columnMaps.mapSize);
     poleProbability = zeros(columnMaps.mapSize);
-    combinedConfidence = min(max(shapeConfidence .* runConfidence, 0), 1);
-    poleProbability(poleCellMask) = probabilityFloor + ...
-        ((1 - probabilityFloor) .* combinedConfidence(poleCellMask));
+    poleParams = struct(); candidates = struct();
+    if any(string(coarseCfg.semanticNames)=="pole")
+        poleParams = resolvePoleDetectionParams(offGroundCfg);
+        candidates = detectPoleCandidates( ...
+            columnMaps, facade.mask, sparseFineGrid, poleParams);
+        % Preserve candidate footprints as objects. Independent per-pillar
+        % post-gates can remove one half of a pole crossing a grid boundary.
+        poleCellMask = logical(candidates.candidateMask);
+        footprints = bwconncomp(poleCellMask,8);
+        for footprint = footprints.PixelIdxList
+            cells = footprint{1};
+            if mean(double(columnMaps.pointScore(cells))) < coarseCfg.poleMinimumFootprintScore
+                poleCellMask(cells) = false;
+            end
+        end
+
+        runScale = max(1, double(poleParams.coreMinRunLayerThreshold));
+        runConfidence = min(double(columnMaps.runLayerMap) ./ runScale, 1);
+        shapeConfidence = min(max(double(columnMaps.pointScore), 0), 1) .* ...
+            (1 - min(max(double(columnMaps.lineScore), 0), 1));
+        poleProbability = zeros(columnMaps.mapSize);
+        combinedConfidence = min(max(shapeConfidence .* runConfidence, 0), 1);
+        poleProbability(poleCellMask) = probabilityFloor + ...
+            ((1 - probabilityFloor) .* combinedConfidence(poleCellMask));
+    end
 
     coarseOffGround = struct();
     coarseOffGround.facade = facade;
@@ -100,6 +111,9 @@ function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, co
             ~(isfinite(intensity) & intensity > trafficThreshold);
     end
 
+    if ~any(ismember(string(coarseCfg.semanticNames),["pole","facade"]))
+        structuralPointMask(:) = false;
+    end
     occupiedLayerMinPoints = resolvePoleOccupiedLayerMinPoints(cfg);
     [pillarCounts, occupiedLayerCount, maxRunLayerCount, pillarZRange, sparseVoxels] = ...
         accumulateSparseOccupancy(pointVoxelSub(structuralPointMask, :), ...

@@ -49,24 +49,51 @@ and an acceptance decision for every member. Curbs use the established residual
 and boundary filters; markings use the road-derived reflectivity threshold;
 poles use sparse height support and a robust vertical-line residual test.
 There is no fallback that republishes every candidate when fine validation
-rejects all points. The modern pipeline supports curb, roadMarking, pole,
-facade, and trafficSign. `perceptionConfig("Downtown")` enables facade Hough
-lines and their occupied neighbor pillars; the default Mississippi profile
-keeps that channel empty. Offline facades require robust vertical planes and
-per-point distance tests. Sign pillars use maximum intensity evidence; offline
-sign points must individually exceed `trafficSignIntensityThreshold` (1600 in
-the recorded sensor's raw units). Coarse sign XYZ moments include all off-ground
-members of each candidate pillar, so height information is preserved even when
-nonreflective returns share its footprint. These are reflective sign candidates,
-not sign-type recognition. The dense semantic product remains in `legacyFull`.
+rejects all points. The invocation's **only semantic selector** is
+`cfg.featureNames`. Dataset profiles select these channels:
 
-Offline `featureMapBuildConfig` now includes traffic signs by default.
-Setting `cfg.facadeDetectionEnabled=true` in `buildFeatureMap` also includes the
-facade class; supply the Downtown MAT path and its matched pose CSV for that
-route. Empty or disabled feature layers stay empty. Facades contribute normal
-distance constraints to planar registration; compact sign Gaussians contribute
-XY landmark constraints. The estimated pose remains `[X,Y,psi]`.
-See [the restoration measurements and limits](research/structural_perception_restoration.md).
+| Configuration | Requested channels |
+| --- | --- |
+| `perceptionConfig("Mississippi")` (default) | curb, roadMarking, pole, trafficSign |
+| `perceptionConfig("Downtown")` | curb, roadMarking, pole, facade, trafficSign |
+
+```matlab
+cfg = perceptionConfig("Downtown");
+cfg.featureNames = ["facade", "pole"]; % Optional per-call subset, in output order.
+result = perceiveFrame(frame, cfg);
+% cfg.featureNames = strings(1,0); explicitly requests no semantic channels.
+```
+
+The list controls coarse detectors, candidate/cloud channels, and offline
+point refinement. Unrequested fine-mask fields remain false for compatibility;
+`refinement` contains only requested channels. Shared ground segmentation and
+terrain preparation remain preprocessing. Marking-only perception retains
+curb/road-boundary evidence needed to delimit its road region, but publishes
+no curb candidates or curb point decisions. Sign-only calls skip ground-feature,
+pole and facade detection. Unknown/duplicate names are rejected.
+
+Modern calls reject the former nested `coarseProbabilityCloud.semanticNames`
+and `offGroundFeatures.facadeDetectionEnabled` selectors; use `featureNames`
+instead. The low-level standalone Gaussian builder still receives its internal
+`semanticNames` list from the caller. `legacyFull` retains the historical
+facade switch only for reproducing old reference artifacts.
+
+Offline facades require robust vertical planes and per-point distance tests.
+Sign pillars use maximum intensity evidence; fine sign points must individually
+exceed `trafficSignIntensityThreshold` (1600 in the recorded sensor's raw units).
+Coarse sign XYZ moments include all nonground members of each candidate pillar.
+These are reflective sign candidates, not sign-type recognition.
+
+`featureMapBuildConfig().featureNames` is passed directly to perception and map
+collection, with no additional facade switch. To select all Downtown channels,
+copy `perceptionConfig("Downtown").featureNames` into the map configuration and
+supply that route's MAT file and matched pose CSV. The viewer
+`showMississippiPerception(frameIndex,matPath,mode,cfg)` colors the selected
+channels; without `cfg`, a Downtown filename selects the Downtown profile.
+Facades contribute normal-distance constraints to planar registration; compact
+sign Gaussians contribute XY landmark constraints. The estimated pose remains
+`[X,Y,psi]`. See [the restoration measurements](research/structural_perception_restoration.md)
+and [the invocation-selection validation](research/perception_feature_selection.md).
 
 The coarse product contains normalized mixture weights and empirical XYZ
 means/covariances, aggregated into 0.9 m XY output cells with covariance safeguards.
@@ -205,7 +232,7 @@ are explicit:
 | `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` |
 | `groundSegmentationConfig` | `segmentGround` |
 | `groundFeatureConfig` (`.curb`, `.road`, `.roadMarking`) | `extractGroundFeatures` |
-| `offGroundFeatureConfig` | `extractOffGroundFeatures` (`facadeDetectionEnabled` is a dataset policy) |
+| `offGroundFeatureConfig` | `extractOffGroundFeatures` (historical facade switch; modern calls use `featureNames`) |
 | `temporalStabilityMapConfig` | `buildTemporalStabilityGmmMap` |
 | `featureMapBuildConfig` | `buildFeatureMap` |
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |

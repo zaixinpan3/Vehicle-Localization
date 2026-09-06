@@ -18,7 +18,7 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
 %   featureData: struct with featureNames, frameIndices, framePoseTable,
 %       pointsByFeatureFrame {C x F} of [N x 3] global points, counts
 %       [F x C], numFrames, and frameSummaryTable
-    featureNames = string(cfg.featureNames(:)).';
+    featureNames = validatePerceptionFeatureNames(cfg.featureNames);
     frameIndices = double(frameIndices(:).');
     numFeatures = numel(featureNames);
     numRequestedFrames = numel(frameIndices);
@@ -32,9 +32,7 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
 
     if string(perceptionCfg.executionMode) ~= "legacyFull"
         perceptionCfg.executionMode = "offline";
-        perceptionCfg.coarseProbabilityCloud.semanticNames = featureNames;
-        perceptionCfg.offGroundFeatures.facadeDetectionEnabled = any(featureNames == "facade") && ...
-            perceptionCfg.offGroundFeatures.facadeDetectionEnabled;
+        perceptionCfg.featureNames = featureNames;
     end
     mappingSupport.logStep(cfg, "feature.collect", "frameCount=%d | featureCount=%d", numRequestedFrames, numFeatures);
     for frameListIdx = 1:numRequestedFrames

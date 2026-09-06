@@ -1,9 +1,10 @@
-function result = showMississippiPerception(frameIndex, matPath, mode)
+function result = showMississippiPerception(frameIndex, matPath, mode, cfg)
 % showMississippiPerception: Run full perception and show one recorded frame.
 %   result = showMississippiPerception(260) reads Mississippi frame 260 and
 %   displays all finite source points with pcshow, including points outside
-%   the perception ROI. Curbs are orange-red, poles cyan, and road markings
-%   yellow. Larger feature markers overlay the complete gray point cloud.
+%   the perception ROI. The optional cfg selects invocation channels. Without
+%   cfg, the MAT filename selects the Downtown or Mississippi profile.
+%   Larger selected-feature markers overlay the complete gray point cloud.
 %   These are the point masks returned by perceiveFrame, not ground truth.
 %
 %   An optional matPath selects another extracted point-cloud MAT file.
@@ -16,6 +17,7 @@ function result = showMississippiPerception(frameIndex, matPath, mode)
         frameIndex (1, 1) double {mustBeInteger, mustBePositive} = 260
         matPath (1, 1) string = ""
         mode (1, 1) string {mustBeMember(mode,["offline","coarseProbabilityCloud"])} = "offline"
+        cfg (1, 1) struct = struct()
     end
 
     projectRoot = fileparts(fileparts(mfilename("fullpath")));
@@ -25,7 +27,12 @@ function result = showMississippiPerception(frameIndex, matPath, mode)
         matPath = fullfile(projectRoot, "data", "raw", "MissisipiPointClouds.mat");
     end
     [frame, numFrames] = loadPointCloudFrame(matPath, frameIndex);
-    cfg = perceptionConfig();
+    [~,datasetName]=fileparts(matPath);
+    if isempty(fieldnames(cfg))
+        dataset="Mississippi";
+        if contains(lower(datasetName),"downtown"), dataset="Downtown"; end
+        cfg=perceptionConfig(dataset);
+    end
     cfg.executionMode = mode;
     timer = tic;
     perception = perceiveFrame(frame, cfg);
@@ -34,15 +41,19 @@ function result = showMississippiPerception(frameIndex, matPath, mode)
     xyz = double([frame.x(:), frame.y(:), frame.z(:)]);
     finiteMask = all(isfinite(xyz), 2);
     assert(any(finiteMask), "The selected frame has no finite XYZ points.");
-    featureNames = ["curb", "pole", "roadMarking"];
-    featureColors = [1.0, 0.25, 0.08; 0.0, 0.85, 1.0; 1.0, 0.9, 0.05];
-    featureCounts = zeros(1, 3);
-    selected = false(size(xyz, 1), 3);
+    featureNames = perception.featureNames;
+    paletteNames = ["curb","pole","roadMarking","facade","trafficSign"];
+    palette = [1 .25 .08;0 .85 1;1 .9 .05;.3 1 .4;1 .2 .9];
+    [~,colorRows]=ismember(featureNames,paletteNames);
+    featureColors=palette(colorRows,:);
+    numFeatures=numel(featureNames);
+    featureCounts = zeros(1, numFeatures);
+    selected = false(size(xyz, 1), numFeatures);
     coarse = mode == "coarseProbabilityCloud";
     if coarse
         pillars = pillarizePointCloud(frame,cfg.voxel);
     end
-    for featureIndex = 1:3
+    for featureIndex = 1:numFeatures
         if coarse
             mask = false(size(xyz,1),1);
             semanticIndex = perception.candidates.semanticNames==featureNames(featureIndex);
@@ -58,25 +69,27 @@ function result = showMississippiPerception(frameIndex, matPath, mode)
         featureCounts(featureIndex) = nnz(mask);
     end
 
-    fig = figure("Name", sprintf("Mississippi frame %d - %s", frameIndex, mode), ...
+    fig = figure("Name", sprintf("%s frame %d - %s", datasetName, frameIndex, mode), ...
         "NumberTitle", "off", "Color", [0.06, 0.06, 0.08], "Position", [100 100 1200 800]);
     ax = axes("Parent", fig);
     pcshow(xyz(finiteMask, :), [0.42, 0.42, 0.46], ...
         "Parent", ax, "MarkerSize", 8);
     hold(ax, "on");
-    handles = gobjects(1, 3);
-    for featureIndex = 1:3
+    handles = gobjects(1, numFeatures);
+    for featureIndex = 1:numFeatures
         points = xyz(selected(:, featureIndex), :);
         handles(featureIndex) = scatter3(ax, points(:, 1), points(:, 2), ...
             points(:, 3), 32, featureColors(featureIndex, :), "filled");
     end
     hold(ax, "off");
-    labels = compose("%s: %d points", ["Curb"; "Pole"; "Road marking"], featureCounts(:));
-    legend(ax, handles, labels, "TextColor", "white", ...
-        "Color", [0.1, 0.1, 0.12], "Location", "northeast");
+    labels = compose("%s: %d points", featureNames(:), featureCounts(:));
+    if numFeatures>0
+        legend(ax, handles, labels, "TextColor", "white", ...
+            "Color", [0.1, 0.1, 0.12], "Location", "northeast");
+    end
     detail = sprintf("All %d finite source points shown; gray = source cloud", nnz(finiteMask));
-    titleLines = {sprintf("Mississippi frame %d | %s: %.3f s", ...
-        frameIndex, mode, elapsedSeconds), detail};
+    titleLines = {sprintf("%s frame %d | %s: %.3f s", ...
+        datasetName, frameIndex, mode, elapsedSeconds), detail};
     if coarse
         titleLines{end+1} = "Colors show candidate pillar membership, before point validation";
     end
@@ -91,8 +104,7 @@ function result = showMississippiPerception(frameIndex, matPath, mode)
     metrics = struct("frameIndex", frameIndex, "numFrames", numFrames, ...
         "inputPoints", size(xyz, 1), "displayedPoints", nnz(finiteMask), ...
         "retainedPoints", perception.sourceSummary.numRetainedPoints, ...
-        "curbPoints", featureCounts(1), "polePoints", featureCounts(2), ...
-        "roadMarkingPoints", featureCounts(3), ...
+        "featureNames",featureNames,"featurePointCounts",featureCounts, ...
         "overlappingFeaturePoints", nnz(sum(selected, 2) > 1), ...
         "perceptionSeconds", elapsedSeconds);
     result = struct("source", matPath, "frame", frame, "config", cfg, ...

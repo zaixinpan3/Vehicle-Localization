@@ -73,7 +73,7 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
             cfg.frameIndices = reference.frameIndices;
             perceptionCfg = perceptionConfig();
             perceptionCfg.executionMode = "legacyFull";
-            perceptionCfg.offGroundFeatures.facadeDetectionEnabled = cfg.facadeDetectionEnabled;
+            perceptionCfg.offGroundFeatures.facadeDetectionEnabled = any(cfg.featureNames=="facade");
             featureData = collectFeatureObservations(matPath, reference.frameIndices, reference.poseTable, perceptionCfg, cfg);
             probabilityCloudMap = buildSlidingWindowMap(featureData, cfg);
             gmmMap = probabilityCloudMap.canonicalMap;

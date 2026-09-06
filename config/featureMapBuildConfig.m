@@ -26,8 +26,8 @@ function cfg = featureMapBuildConfig()
     cfg.batchFrameStride = 20;
 
     % Semantic feature classes registered into the map (facades are off on this route)
-    cfg.featureNames = ["curb", "roadMarking", "pole", "trafficSign"];
-    cfg.facadeDetectionEnabled = false;
+    perception = perceptionConfig("Mississippi");
+    cfg.featureNames = perception.featureNames;
 
     % Deterministic representatives, observation blocks, and tile inference.
     % Sparse classes are retained as empty/unconfirmed layers.

@@ -10,7 +10,7 @@ function report = evaluateRepeatedObservationMap(dataRoot, outputFolder, frameIn
     cfg.featureNames=["curb","roadMarking","pole","trafficSign"];
     poses=readFramePoseTable(fullfile(dataRoot,cfg.poseMatchCsvPath),frameIndices);
     perception=perceptionConfig(); perception.executionMode="legacyFull";
-    perception.offGroundFeatures.facadeDetectionEnabled=cfg.facadeDetectionEnabled;
+    perception.featureNames=cfg.featureNames;
     timer=tic;
     observations=collectFeatureObservations(fullfile(dataRoot,cfg.pointCloudMatPath),frameIndices,poses,perception,cfg);
     extractionSeconds=toc(timer); timer=tic;

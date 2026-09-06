@@ -24,6 +24,7 @@ function cfg = coarseSemanticProbabilityCloudConfig()
     % projection, while classifying in the original vehicle XY pillars.
     cfg.projectionRotation = eye(3);
     cfg.projectionTranslation = [0 0 0];
+    % Internal/standalone builder labels; perceiveFrame derives these from cfg.featureNames.
     cfg.semanticNames = ["curb", "roadMarking", "pole", "facade", "trafficSign"];
 
     % Pillar selectors retain the tested geometric evidence rules.

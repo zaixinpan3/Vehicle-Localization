@@ -17,9 +17,7 @@ function [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg)
     if nargin < 2 || isempty(cfg)
         cfg = featureMapBuildConfig();
     end
-    if cfg.facadeDetectionEnabled && ~any(string(cfg.featureNames)=="facade")
-        cfg.featureNames(end+1) = "facade";
-    end
+    cfg.featureNames = validatePerceptionFeatureNames(cfg.featureNames);
     matPath = fullfile(dataRoot, cfg.pointCloudMatPath);
     poseMatchCsvPath = fullfile(dataRoot, cfg.poseMatchCsvPath);
     assert(isfile(matPath), "Point-cloud MAT file not found: %s", matPath);
@@ -34,8 +32,7 @@ function [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg)
 
     perceptionCfg = perceptionConfig();
     if isfield(cfg,'frameCalibration'), perceptionCfg.frameCalibration=validateLidarFrameCalibration(cfg.frameCalibration); end
-    perceptionCfg.offGroundFeatures.facadeDetectionEnabled = logical(cfg.facadeDetectionEnabled);
-    perceptionCfg.coarseProbabilityCloud.semanticNames = string(cfg.featureNames);
+    perceptionCfg.featureNames = cfg.featureNames;
     featureData = collectFeatureObservations(matPath, frameIndices, framePoseTable, perceptionCfg, cfg);
     probabilityCloudMap = buildSlidingWindowMap(featureData, cfg);
     probabilityCloudMap.sourceMatPath = string(matPath);
