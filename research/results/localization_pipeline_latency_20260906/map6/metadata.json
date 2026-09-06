@@ -1,0 +1,42 @@
+{
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "frames": [
+    120,
+    260,
+    350,
+    550,
+    700,
+    900,
+    1050
+  ],
+  "starts": [
+    [
+      0.5,
+      -0.4,
+      0.034906585039886591
+    ],
+    [
+      -0.5,
+      0.4,
+      -0.034906585039886591
+    ],
+    [
+      0,
+      0,
+      0
+    ]
+  ],
+  "repetitions": 20,
+  "seed": 2.0260906E+7,
+  "featureNames": [
+    "curb",
+    "roadMarking",
+    "pole",
+    "trafficSign"
+  ],
+  "mapSchema": 2,
+  "nativeKernel": "/home/zai/Downloads/ResearchProjects/vehicleLocalization/perception/perceptionKernelsMex.mexa64",
+  "timedScope": "Preloaded raw frame and cached exported local map to accepted [X,Y,psi] event or explicit rejection",
+  "excluded": "Disk loading; offline mapping/export; sensor scan acquisition; transport; ROS/queue scheduling; visualization",
+  "limitation": "Seven same-route scenes and three starts, repeated on one desktop; empirical latency, not a hard real-time bound or independent accuracy test"
+}

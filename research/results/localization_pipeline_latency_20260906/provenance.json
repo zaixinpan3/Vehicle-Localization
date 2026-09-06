@@ -1,0 +1,37 @@
+{
+  "files": [
+    {
+      "path": "scripts/benchmarkLocalizationPipeline.m",
+      "sha256": "a654cad390e7f1b052054919b09bc7d52e782a115a7c46e0bdcba4fe0a065649"
+    },
+    {
+      "path": "scripts/measurePacedLocalizationPipeline.m",
+      "sha256": "67c2390b75851efc624859f2be37f86686a57444f3207e281b5e0f787c9b9e7a"
+    },
+    {
+      "path": "localization/localizeLidarFrame.m",
+      "sha256": "376197840572d2e3b73b8ac2c14339945c8993267260d2c877546d2403576229"
+    },
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "sha256": "501a7047db9f7b00395dfba9b70ee148d90a4cb985348bbe36faca5c07a54954"
+    },
+    {
+      "path": "config/perceptionConfig.m",
+      "sha256": "0d03af4ba911003f000d5c54e605e1ed2531cb0108a1db573e5d71fbe27d3b6e"
+    },
+    {
+      "path": "config/distributionRegistrationConfig.m",
+      "sha256": "ca83490c8900e0b1a2fbb6c501560f244d89f87d22ad7c636b91a3a1d742cd18"
+    },
+    {
+      "path": "mapping/buildSlidingWindowMap.m",
+      "sha256": "c5f36751151e71fcdcf1cd6df330a7275ac8b8c3788d9bfcbea585141520be12"
+    },
+    {
+      "path": "mapping/temporalMapToProbabilityCloud.m",
+      "sha256": "d3738b701bbd943b7cc608e306141f268e538daf97a404a4cd22974659367ba9"
+    }
+  ],
+  "nativeKernelSha256": "c1e4af17521d82a89ca50aac6a2eabf168cd6b71f0017b2849c97a69b546df4c"
+}

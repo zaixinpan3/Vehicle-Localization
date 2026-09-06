@@ -1,0 +1,458 @@
+{
+  "platform": "AMD Ryzen 7 7800X3D, 8 cores / 16 logical CPUs; ordinary shared desktop, no real-time isolation",
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "baselineCommit": "2692e9e5c12d7419b6b4224b5d4ccba2fbe49860",
+  "quantileDefinition": "Linear interpolation between sorted samples at 1+(n-1)*p",
+  "batchStudies": {
+    "6": {
+      "stages": {
+        "totalMs": {
+          "count": 420,
+          "meanMs": 87.86056904761905,
+          "medianMs": 87.46600000000001,
+          "p95Ms": 102.89264999999999,
+          "p99Ms": 124.81488,
+          "maximumMs": 138.261
+        },
+        "perceptionMs": {
+          "count": 420,
+          "meanMs": 74.0134,
+          "medianMs": 73.215,
+          "p95Ms": 88.46109999999999,
+          "p99Ms": 106.30469000000001,
+          "maximumMs": 124.207
+        },
+        "registrationMs": {
+          "count": 420,
+          "meanMs": 13.827385714285715,
+          "medianMs": 13.135,
+          "p95Ms": 19.367199999999993,
+          "p99Ms": 20.409299999999998,
+          "maximumMs": 22.274
+        },
+        "overheadMs": {
+          "count": 420,
+          "meanMs": 0.019783333333333403,
+          "medianMs": 0.01999999999998625,
+          "p95Ms": 0.0249999999999852,
+          "p99Ms": 0.04481000000000439,
+          "maximumMs": 0.0660000000000025
+        }
+      },
+      "calls": 420,
+      "accepted": 360,
+      "cases": [
+        {
+          "frame": 120,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 44,
+          "sourceComponents": 104,
+          "maximumAcceptedPositionDifferenceM": 0.0729849419202837
+        },
+        {
+          "frame": 260,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 26,
+          "sourceComponents": 82,
+          "maximumAcceptedPositionDifferenceM": 0.121073158069821
+        },
+        {
+          "frame": 350,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 29,
+          "sourceComponents": 92,
+          "maximumAcceptedPositionDifferenceM": 0.128690101570696
+        },
+        {
+          "frame": 550,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 37,
+          "sourceComponents": 97,
+          "maximumAcceptedPositionDifferenceM": 0.08555409709061
+        },
+        {
+          "frame": 700,
+          "calls": 60,
+          "accepted": 0,
+          "reasons": [
+            "inconsistentClasses"
+          ],
+          "mapComponents": 27,
+          "sourceComponents": 86,
+          "maximumAcceptedPositionDifferenceM": null
+        },
+        {
+          "frame": 900,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 22,
+          "sourceComponents": 94,
+          "maximumAcceptedPositionDifferenceM": 0.0618384460730401
+        },
+        {
+          "frame": 1050,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 25,
+          "sourceComponents": 88,
+          "maximumAcceptedPositionDifferenceM": 0.170771926515976
+        }
+      ]
+    },
+    "30": {
+      "stages": {
+        "totalMs": {
+          "count": 420,
+          "meanMs": 80.62248571428572,
+          "medianMs": 80.38050000000001,
+          "p95Ms": 90.47505,
+          "p99Ms": 97.68458000000001,
+          "maximumMs": 106.036
+        },
+        "perceptionMs": {
+          "count": 420,
+          "meanMs": 65.74702619047619,
+          "medianMs": 65.39150000000001,
+          "p95Ms": 75.57794999999999,
+          "p99Ms": 82.24223,
+          "maximumMs": 90.893
+        },
+        "registrationMs": {
+          "count": 420,
+          "meanMs": 14.856402380952382,
+          "medianMs": 14.4565,
+          "p95Ms": 19.927049999999998,
+          "p99Ms": 21.794340000000002,
+          "maximumMs": 22.18
+        },
+        "overheadMs": {
+          "count": 420,
+          "meanMs": 0.019057142857143064,
+          "medianMs": 0.0180000000000122,
+          "p95Ms": 0.0239999999999938,
+          "p99Ms": 0.03442999999999783,
+          "maximumMs": 0.0450000000000088
+        }
+      },
+      "calls": 420,
+      "accepted": 420,
+      "cases": [
+        {
+          "frame": 120,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 81,
+          "sourceComponents": 104,
+          "maximumAcceptedPositionDifferenceM": 0.273429262011006
+        },
+        {
+          "frame": 260,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 57,
+          "sourceComponents": 82,
+          "maximumAcceptedPositionDifferenceM": 0.210796655863734
+        },
+        {
+          "frame": 350,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 85,
+          "sourceComponents": 92,
+          "maximumAcceptedPositionDifferenceM": 0.276825374009838
+        },
+        {
+          "frame": 550,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 72,
+          "sourceComponents": 97,
+          "maximumAcceptedPositionDifferenceM": 0.0991958565882764
+        },
+        {
+          "frame": 700,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 57,
+          "sourceComponents": 86,
+          "maximumAcceptedPositionDifferenceM": 0.144208480908875
+        },
+        {
+          "frame": 900,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 64,
+          "sourceComponents": 94,
+          "maximumAcceptedPositionDifferenceM": 0.372039482852971
+        },
+        {
+          "frame": 1050,
+          "calls": 60,
+          "accepted": 60,
+          "reasons": [
+            "accepted"
+          ],
+          "mapComponents": 60,
+          "sourceComponents": 88,
+          "maximumAcceptedPositionDifferenceM": 0.315153040535861
+        }
+      ]
+    }
+  },
+  "pacedStudies": {
+    "map6_recordedRate_first": {
+      "periodSeconds": 0.0916931629180908,
+      "stages": {
+        "computeMs": {
+          "count": 210,
+          "meanMs": 93.92611904761904,
+          "medianMs": 93.1214999999996,
+          "p95Ms": 118.40830000000007,
+          "p99Ms": 147.40267000000003,
+          "maximumMs": 160.937
+        },
+        "waitingMs": {
+          "count": 210,
+          "meanMs": 244.43494172617596,
+          "medianMs": 255.1127841720585,
+          "p95Ms": 488.2484361183176,
+          "p99Ms": 507.19286686920157,
+          "maximumMs": 519.881950119018
+        },
+        "availabilityToPoseMs": {
+          "count": 210,
+          "meanMs": 338.361060773795,
+          "medianMs": 348.470528549195,
+          "p95Ms": 580.9844944801332,
+          "p99Ms": 604.5835139393614,
+          "maximumMs": 622.74095011902
+        }
+      },
+      "reconstructedTimestampToPoseMs": {
+        "count": 210,
+        "meanMs": 341.47559079219275,
+        "medianMs": 351.6879872741706,
+        "p95Ms": 583.9399311866762,
+        "p99Ms": 607.7898289799498,
+        "maximumMs": 625.9646077270522
+      },
+      "over150": 175,
+      "over200": 151
+    },
+    "map6_recordedRate_repeat": {
+      "periodSeconds": 0.0916931629180908,
+      "stages": {
+        "computeMs": {
+          "count": 210,
+          "meanMs": 89.15809999999998,
+          "medianMs": 89.59300000000025,
+          "p95Ms": 103.28544999999954,
+          "p99Ms": 125.05156999999996,
+          "maximumMs": 130.209000000001
+        },
+        "waitingMs": {
+          "count": 210,
+          "meanMs": 21.506713154747388,
+          "medianMs": 6.9730790100099895,
+          "p95Ms": 81.64027560729978,
+          "p99Ms": 95.60081786804182,
+          "maximumMs": 105.166893600463
+        },
+        "availabilityToPoseMs": {
+          "count": 210,
+          "meanMs": 110.66481315474736,
+          "medianMs": 98.86199452209455,
+          "p95Ms": 173.31163852539112,
+          "p99Ms": 187.26761078613325,
+          "maximumMs": 196.837056518556
+        }
+      },
+      "reconstructedTimestampToPoseMs": {
+        "count": 210,
+        "meanMs": 113.77934317314511,
+        "medianMs": 102.18578793334943,
+        "p95Ms": 176.27730338897754,
+        "p99Ms": 190.46712851303144,
+        "maximumMs": 199.79249322509898
+      },
+      "over150": 31,
+      "over200": 0
+    },
+    "map6_10Hz": {
+      "periodSeconds": 0.1,
+      "stages": {
+        "computeMs": {
+          "count": 210,
+          "meanMs": 89.52729523809522,
+          "medianMs": 90.66149999999995,
+          "p95Ms": 104.35539999999999,
+          "p99Ms": 112.69538999999999,
+          "maximumMs": 120.508
+        },
+        "waitingMs": {
+          "count": 210,
+          "meanMs": 4.849571428570913,
+          "medianMs": 0.0149999999994321,
+          "p95Ms": 35.35384999999989,
+          "p99Ms": 57.821059999999974,
+          "maximumMs": 64.4439999999999
+        },
+        "availabilityToPoseMs": {
+          "count": 210,
+          "meanMs": 94.37686666666613,
+          "medianMs": 91.23549999999895,
+          "p95Ms": 135.33024999999998,
+          "p99Ms": 157.80051999999998,
+          "maximumMs": 164.424
+        }
+      },
+      "reconstructedTimestampToPoseMs": {
+        "count": 210,
+        "meanMs": 97.49139668506388,
+        "medianMs": 94.3380175857529,
+        "p95Ms": 138.31408235931394,
+        "p99Ms": 161.02548652603147,
+        "maximumMs": 167.37943670654298
+      },
+      "over150": 5,
+      "over200": 0
+    },
+    "map30_recordedRate": {
+      "periodSeconds": 0.0916931629180908,
+      "stages": {
+        "computeMs": {
+          "count": 210,
+          "meanMs": 80.71586190476192,
+          "medianMs": 80.55349999999976,
+          "p95Ms": 91.59975,
+          "p99Ms": 94.65626000000013,
+          "maximumMs": 98.904000000001
+        },
+        "waitingMs": {
+          "count": 210,
+          "meanMs": 0.18021791665213396,
+          "medianMs": 0.0143486175534502,
+          "p95Ms": 0.20521818313596618,
+          "p99Ms": 4.905736247863849,
+          "maximumMs": 9.33363523864728
+        },
+        "availabilityToPoseMs": {
+          "count": 210,
+          "meanMs": 80.89607982141405,
+          "medianMs": 80.57246958160391,
+          "p95Ms": 91.87783110122695,
+          "p99Ms": 96.57880916595538,
+          "maximumMs": 101.007798156738
+        }
+      },
+      "reconstructedTimestampToPoseMs": {
+        "count": 210,
+        "meanMs": 84.01060983981179,
+        "medianMs": 83.6835936203002,
+        "p95Ms": 94.90876144103996,
+        "p99Ms": 99.7915615081795,
+        "maximumMs": 103.96323486328097
+      },
+      "over150": 0,
+      "over200": 0
+    },
+    "map30_10Hz": {
+      "periodSeconds": 0.1,
+      "stages": {
+        "computeMs": {
+          "count": 210,
+          "meanMs": 80.900861904762,
+          "medianMs": 80.87400000000055,
+          "p95Ms": 91.40644999999964,
+          "p99Ms": 100.29725999999904,
+          "maximumMs": 103.385
+        },
+        "waitingMs": {
+          "count": 210,
+          "meanMs": 0.03986190476127244,
+          "medianMs": 0.0149999999976558,
+          "p95Ms": 0.02354999999993892,
+          "p99Ms": 0.683530000000196,
+          "maximumMs": 3.42500000000001
+        },
+        "availabilityToPoseMs": {
+          "count": 210,
+          "meanMs": 80.94072380952328,
+          "medianMs": 80.8894999999996,
+          "p95Ms": 91.42044999999962,
+          "p99Ms": 100.31216999999906,
+          "maximumMs": 103.402
+        }
+      },
+      "reconstructedTimestampToPoseMs": {
+        "count": 210,
+        "meanMs": 84.05525382792102,
+        "medianMs": 84.00062403869589,
+        "p95Ms": 94.51585714569077,
+        "p99Ms": 103.26116940490628,
+        "maximumMs": 106.51312403869629
+      },
+      "over150": 0,
+      "over200": 0
+    }
+  },
+  "recordedTimestampToBagMs": {
+    "count": 1170,
+    "meanMs": 3.33456728193495,
+    "medianMs": 3.0875205993652344,
+    "p95Ms": 4.73341941833496,
+    "p99Ms": 6.601126194000242,
+    "maximumMs": 12.581110000610352
+  },
+  "recordedFrameIntervalMs": {
+    "count": 1169,
+    "meanMs": 91.66710064694655,
+    "medianMs": 91.69316291809082,
+    "p95Ms": 92.60354042053223,
+    "p99Ms": 93.17188262939453,
+    "maximumMs": 94.35296058654785
+  },
+  "pacedScope": "Executed MATLAB paced in-memory replay with serial processing, real wall-clock waiting, seven repeated scenes. Transport/ROS is not replayed; reconstructed timestamp-to-pose adds historical bag timestamp differences and is not measured live latency.",
+  "mapScope": "Each query is excluded from its next-N-frame current schema-2 local map; no whole-route map search or loading is timed.",
+  "excluded": "Disk reading, offline fine perception, map fitting/export, sensor scan acquisition, live transport/ROS, external scheduling and visualization."
+}
