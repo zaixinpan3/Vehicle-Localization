@@ -32,6 +32,9 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
 
     if string(perceptionCfg.executionMode) ~= "legacyFull"
         perceptionCfg.executionMode = "offline";
+        perceptionCfg.coarseProbabilityCloud.semanticNames = featureNames;
+        perceptionCfg.offGroundFeatures.facadeDetectionEnabled = any(featureNames == "facade") && ...
+            perceptionCfg.offGroundFeatures.facadeDetectionEnabled;
     end
     mappingSupport.logStep(cfg, "feature.collect", "frameCount=%d | featureCount=%d", numRequestedFrames, numFeatures);
     for frameListIdx = 1:numRequestedFrames

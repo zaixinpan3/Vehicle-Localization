@@ -31,8 +31,12 @@ function facade = extractFacadeFeatures(columnMaps, fineVoxelGrid, cfg)
         [lineMap, mask] = assignFacadeColumnsToLines( ...
             detectorDiagnostics, detectedLinesRaw, detectedLines, detectorMask, ...
             columnMaps.xMap, columnMaps.yMap, columnMaps.dx, columnMaps.dy, fineFacadeCfg);
-        [lineMap, mask, refineDiagnostics] = refineFacadeWithFineGrid( ...
-            lineMap, mask, fineVoxelGrid, detectedLines, fineFacadeCfg);
+        if cfg.facadeRefineEnabled
+            [lineMap, mask, refineDiagnostics] = refineFacadeWithFineGrid( ...
+                lineMap, mask, fineVoxelGrid, detectedLines, fineFacadeCfg);
+        else
+            refineDiagnostics = struct("enabled", false, "reason", "disabled");
+        end
     else
         detectedLinesRaw = zeros(0, 4);
         detectedLines = zeros(0, 4);

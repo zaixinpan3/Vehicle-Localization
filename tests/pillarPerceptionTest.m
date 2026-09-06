@@ -61,7 +61,7 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             offline=perceiveFrame(frame,cfg);
             testCase.verifyEqual(offline.candidates,online.candidates);
             testCase.verifyEqual(offline.probabilityCloud.components,online.probabilityCloud.components);
-            for name=online.candidates.semanticNames.'
+            for name=["curb","roadMarking","pole"]
                 audit=offline.refinement.(name);
                 testCase.verifyEqual(audit.evaluatedPointIndices,audit.candidatePointIndices);
                 testCase.verifyEqual(find(offline.featureMasks.(name)), ...

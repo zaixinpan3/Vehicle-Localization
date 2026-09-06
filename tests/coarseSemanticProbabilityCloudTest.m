@@ -62,7 +62,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             testCase.verifyEqual(cloud.components.numComponents, 0);
             testCase.verifyEmpty(cloud.components.mean);
             testCase.verifyEqual(cloud.semanticNames, ...
-                ["curb"; "roadMarking"; "pole"]);
+                ["curb"; "roadMarking"; "pole"; "facade"; "trafficSign"]);
         end
 
         function referenceFramesTrackFullPerception(testCase)
@@ -127,6 +127,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
         % syntheticVoxelFeatures: Three accepted source cells in one output
         % NDT cell, one for each supported semantic channel.
             cfg = coarseSemanticProbabilityCloudConfig();
+            cfg.semanticNames = ["curb", "roadMarking", "pole"];
             cfg.xMin = 0;
             cfg.xMax = 2;
             cfg.yMin = 0;

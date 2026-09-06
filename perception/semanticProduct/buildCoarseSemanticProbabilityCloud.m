@@ -1,6 +1,6 @@
 function probabilityCloud = buildCoarseSemanticProbabilityCloud(coarseGround, coarseOffGround, cfg)
 % buildCoarseSemanticProbabilityCloud: Aggregate pillar-classified curb,
-% road-marking, and pole support into a sparse semantic cloud with XYZ
+% road-marking, pole, facade, and traffic-sign support into a sparse semantic cloud with XYZ
 % moments and an exact XY marginal. Each
 % component stores a regularized Gaussian, semantic evidence probability,
 % hit-based occupancy probability, and normalized mixture weight without
@@ -123,10 +123,16 @@ function observations = selectSemanticObservations(semanticName, coarseGround, c
             observations = selectGroundCells( ...
                 coarseGround, coarseGround.roadMarkingCellMask, ...
                 coarseGround.roadMarkingProbability);
-        case "pole"
+        case {"pole", "facade", "trafficsign"}
+            name = string(semanticName);
+            maps = coarseOffGround.columnMaps;
+            if semanticName == "trafficSign" && isfield(maps,"trafficSignMoments")
+                maps.moments = maps.trafficSignMoments;
+                maps.pillarCounts = reshape(maps.moments.count,maps.mapSize);
+            end
             observations = selectOffGroundColumns( ...
-                coarseOffGround, coarseOffGround.poleCellMask, ...
-                coarseOffGround.poleProbability);
+                struct("columnMaps",maps), coarseOffGround.(name+"CellMask"), ...
+                coarseOffGround.(name+"Probability"));
         otherwise
             error("Unsupported coarse semantic class: %s", semanticName);
     end
@@ -160,6 +166,7 @@ function observations = selectOffGroundColumns(offGround, cellMask, probabilityM
     maps = offGround.columnMaps;
     x = double(maps.xMap(selectedCell)); y = double(maps.yMap(selectedCell));
     meanXY = [x(:), y(:)];
+    if isfield(maps,"moments"), meanXY = maps.moments.mean(selectedCell,:); end
     count = double(maps.pillarCounts(selectedCell));
     probability = double(probabilityMap(selectedCell));
     count = count(:); probability = probability(:);

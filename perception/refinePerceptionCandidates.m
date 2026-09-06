@@ -10,13 +10,14 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
     groundPoint = false(n, 1);
     groundPoint(gc.groundOriginalPointIdx) = true;
     masks = struct("groundPoint", groundPoint, "curb", false(n, 1), ...
-        "roadMarking", false(n, 1), "pole", false(n, 1));
+        "roadMarking", false(n, 1), "pole", false(n, 1), ...
+        "facade", false(n,1), "trafficSign", false(n,1));
     decisions = struct();
     for k = 1:numel(candidates.semanticNames)
         name = candidates.semanticNames(k);
         inCandidate = ismember(grid.pointPillarLinIdx, candidates.pillarIndices{k});
         pointIdx = double(grid.pointIndices(inCandidate));
-        if name == "pole"
+        if ismember(name,["pole","facade","trafficSign"])
             pointIdx = pointIdx(~groundPoint(pointIdx));
         else
             pointIdx = pointIdx(groundPoint(pointIdx));
@@ -37,6 +38,13 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                 [~, groundRows] = ismember(pointIdx, gc.groundOriginalPointIdx);
                 reflectivity = double(gc.groundReflectivity(groundRows));
                 accepted = isfinite(reflectivity) & reflectivity > candidates.groundReflectivityThreshold;
+            case "facade"
+                accepted = validateFacadeCandidatePoints(points, context.offGround, cfg.fine);
+            case "trafficSign"
+                if isfield(frame,"intensity")
+                    intensity = double(frame.intensity(pointIdx));
+                    accepted = isfinite(intensity(:)) & intensity(:) > cfg.offGroundFeatures.trafficSignIntensityThreshold;
+                end
             case "pole"
                 accepted = validatePolePoints(points, cfg.fine, context.offGround, context.offGroundVoxelGrid.gridConfig);
         end

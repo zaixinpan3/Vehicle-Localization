@@ -1,25 +1,31 @@
-function candidates = buildPerceptionCandidates(pillars, ground, offGround)
+function candidates = buildPerceptionCandidates(pillars, ground, offGround, semanticNames)
 % buildPerceptionCandidates: Publish semantic XY pillar IDs and geometry.
-% Ground and structural returns share the XY lattice. Sparse height bins
-% contribute statistics, but no height bin or point receives a feature label.
+% Height bins contribute statistics; only XY pillars receive semantic labels.
+    if nargin < 4
+        semanticNames = ["curb", "roadMarking", "pole", "facade", "trafficSign"];
+    end
+    semanticNames = string(semanticNames(:));
     geometry = pillars.pillarGeometry;
-    [row, col] = find(offGround.poleCellMask);
-    row = row(:); col = col(:);
-    maps = offGround.columnMaps;
-    centers = maps.origin + ([col row]-0.5).*[maps.dx maps.dy];
-    bins = floor((centers-geometry.origin)./geometry.cellSize)+1;
-    valid = bins(:,1)>=1 & bins(:,1)<=geometry.mapSize(2) & ...
-        bins(:,2)>=1 & bins(:,2)<=geometry.mapSize(1);
-    poles = sub2ind(geometry.mapSize,bins(valid,2),bins(valid,1));
-    offset = [0 0];
-    if isfield(ground,"pillarOffset"), offset = ground.pillarOffset; end
-    [curbRow,curbCol] = find(ground.curbCellMask);
-    [markRow,markCol] = find(ground.roadMarkingCellMask);
-    curbs = sub2ind(geometry.mapSize,curbRow+offset(2),curbCol+offset(1));
-    markings = sub2ind(geometry.mapSize,markRow+offset(2),markCol+offset(1));
-    ids = {int32(curbs); int32(markings); int32(unique(poles))};
+    ids = cell(numel(semanticNames),1);
+    for k = 1:numel(semanticNames)
+        name = semanticNames(k);
+        if ismember(name,["curb","roadMarking"])
+            offset = [0 0];
+            if isfield(ground,"pillarOffset"), offset = ground.pillarOffset; end
+            [row,col] = find(ground.(name+"CellMask"));
+            bins = [col(:)+offset(1),row(:)+offset(2)];
+        else
+            [row,col] = find(offGround.(name+"CellMask"));
+            maps = offGround.columnMaps;
+            centers = maps.origin + ([col(:) row(:)]-0.5).*[maps.dx maps.dy];
+            bins = floor((centers-geometry.origin)./geometry.cellSize)+1;
+        end
+        valid = bins(:,1)>=1 & bins(:,1)<=geometry.mapSize(2) & ...
+            bins(:,2)>=1 & bins(:,2)<=geometry.mapSize(1);
+        ids{k} = int32(unique(sub2ind(geometry.mapSize,bins(valid,2),bins(valid,1))));
+    end
     candidates = struct("productType", "sparseSemanticPillarCandidates", ...
-        "geometry", geometry, "semanticNames", ["curb"; "roadMarking"; "pole"], ...
+        "geometry", geometry, "semanticNames", semanticNames, ...
         "pillarIndices", {ids}, "framePointCount", pillars.numInputPoints, ...
         "groundReflectivityThreshold", ground.roadMarkingReflectivityThreshold);
 end

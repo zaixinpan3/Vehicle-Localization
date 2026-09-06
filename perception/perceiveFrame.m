@@ -48,7 +48,7 @@ function perception = perceiveFrame(frame, cfg)
     coarseCfg = resolveCoarseProbabilityCloudConfig(cfg);
     ground = analyzeGroundPillars(groundContext, cfg.groundFeatures, coarseCfg);
     offGround = analyzeStructuralPillars(offGroundVoxelGrid, cfg.offGroundFeatures, coarseCfg);
-    candidates = buildPerceptionCandidates(voxelGrid, ground, offGround);
+    candidates = buildPerceptionCandidates(voxelGrid, ground, offGround, coarseCfg.semanticNames);
     probabilityCloud = buildCoarseSemanticProbabilityCloud(ground, offGround, coarseCfg);
     perception = struct("executionMode", "coarseProbabilityCloud", ...
         "probabilityCloud", probabilityCloud, "candidates", candidates);

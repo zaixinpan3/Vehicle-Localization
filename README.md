@@ -35,7 +35,7 @@ organized LiDAR frame (vehicle coordinates)
 Vertical structure uses sparse 0.5 m height-bin counts; no semantic label is
 assigned to a height bin. Reading returns, rejecting invalid measurements,
 separating terrain, and accumulating statistics are common preprocessing.
-There is no online point-level curb, pole, or marking refinement.
+There is no online point-level feature refinement.
 
 Useful original ideas are retained: terrain-relative curb geometry, road-edge
 continuity and adjacency, road reflectivity contrast, and vertical pole support
@@ -49,9 +49,24 @@ and an acceptance decision for every member. Curbs use the established residual
 and boundary filters; markings use the road-derived reflectivity threshold;
 poles use sparse height support and a robust vertical-line residual test.
 There is no fallback that republishes every candidate when fine validation
-rejects all points. The modern pipeline supports curb, roadMarking, and pole.
-Facade and traffic-sign detectors and the dense semantic product remain in the
-explicit historical path.
+rejects all points. The modern pipeline supports curb, roadMarking, pole,
+facade, and trafficSign. `perceptionConfig("Downtown")` enables facade Hough
+lines and their occupied neighbor pillars; the default Mississippi profile
+keeps that channel empty. Offline facades require robust vertical planes and
+per-point distance tests. Sign pillars use maximum intensity evidence; offline
+sign points must individually exceed `trafficSignIntensityThreshold` (1600 in
+the recorded sensor's raw units). Coarse sign XYZ moments include all off-ground
+members of each candidate pillar, so height information is preserved even when
+nonreflective returns share its footprint. These are reflective sign candidates,
+not sign-type recognition. The dense semantic product remains in `legacyFull`.
+
+Offline `featureMapBuildConfig` now includes traffic signs by default.
+Setting `cfg.facadeDetectionEnabled=true` in `buildFeatureMap` also includes the
+facade class; supply the Downtown MAT path and its matched pose CSV for that
+route. Empty or disabled feature layers stay empty. Facades contribute normal
+distance constraints to planar registration; compact sign Gaussians contribute
+XY landmark constraints. The estimated pose remains `[X,Y,psi]`.
+See [the restoration measurements and limits](research/structural_perception_restoration.md).
 
 The coarse product contains normalized mixture weights and empirical XYZ
 means/covariances, aggregated into 0.9 m XY output cells with covariance safeguards.

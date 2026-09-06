@@ -1,5 +1,5 @@
 function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coarseCfg)
-% analyzeStructuralPillars: Detect pole candidates from XY pillars and their
+% analyzeStructuralPillars: Detect poles, facades, and traffic signs from XY pillars and their
 % sparse height histograms. Semantic decisions use vertical runs, neighboring
 % pillar contrast and footprint shape. No dense 3D tensor or point-level
 % feature refinement is constructed.
@@ -17,7 +17,7 @@ function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coa
         "voxelGrid is missing coarse off-ground inputs.");
 
     [columnMaps, sparseFineGrid] = ...
-        buildSparseColumnMaps(voxelGrid, offGroundCfg, coarseCfg.projectionRotation, coarseCfg.projectionTranslation);
+        buildSparseColumnMaps(voxelGrid, offGroundCfg, coarseCfg);
     columnMaps.runLayerMap = single(columnMaps.maxRunLayerCount);
     columnMaps.rawLayerCount = single(columnMaps.runLayerMap);
     columnMaps.supportScore = single(columnMaps.runLayerMap);
@@ -26,9 +26,16 @@ function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coa
         buildFineColumnShapeScores(columnMaps.runLayerMap, ...
         columnMaps.occupiedMask, offGroundCfg, columnMaps.dx, columnMaps.dy);
 
+    facadeCfg = offGroundCfg;
+    facadeCfg.facadeDetectionEnabled = offGroundCfg.facadeDetectionEnabled && ...
+        any(string(coarseCfg.semanticNames) == "facade");
+    facadeCfg.facadeRefineEnabled = false;
+    facade = extractFacadeFeatures(columnMaps, struct(), facadeCfg);
+    facade = expandFacadePillarSupport(facade,columnMaps,offGroundCfg);
+
     poleParams = resolvePoleDetectionParams(offGroundCfg);
     candidates = detectPoleCandidates( ...
-        columnMaps, false(columnMaps.mapSize), sparseFineGrid, poleParams);
+        columnMaps, facade.mask, sparseFineGrid, poleParams);
     % Preserve candidate footprints as objects. Independent per-pillar
     % post-gates can remove one half of a pole crossing a grid boundary.
     poleCellMask = logical(candidates.candidateMask);
@@ -51,6 +58,13 @@ function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coa
         ((1 - probabilityFloor) .* combinedConfidence(poleCellMask));
 
     coarseOffGround = struct();
+    coarseOffGround.facade = facade;
+    coarseOffGround.facadeCellMask = facade.mask;
+    coarseOffGround.facadeProbability = single(facade.mask .* ...
+        (probabilityFloor + (1-probabilityFloor).*double(columnMaps.lineScore)));
+    coarseOffGround.trafficSignCellMask = columnMaps.trafficSignCellMask;
+    coarseOffGround.trafficSignProbability = single(columnMaps.trafficSignCellMask .* ...
+        (probabilityFloor + (1-probabilityFloor).*columnMaps.trafficSignEvidence));
     coarseOffGround.poleCellMask = poleCellMask;
     coarseOffGround.poleProbability = single(poleProbability);
     coarseOffGround.columnMaps = columnMaps;
@@ -58,7 +72,7 @@ function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coa
     coarseOffGround.poleParams = poleParams;
 end
 
-function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, projectionRotation, projectionTranslation)
+function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, coarseCfg)
 % buildSparseColumnMaps: Compute the same column occupancy statistics as the
 % dense fine-grid branch from sorted occupied voxels and 2D accumulations.
     dims = round(double(voxelGrid.gridConfig.dims(1:3)));
@@ -74,6 +88,9 @@ function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, pr
         pointVoxelSub(:, 1) >= 1 & pointVoxelSub(:, 1) <= nx & ...
         pointVoxelSub(:, 2) >= 1 & pointVoxelSub(:, 2) <= ny & ...
         pointVoxelSub(:, 3) >= 1 & pointVoxelSub(:, 3) <= nz;
+    projectionRotation = coarseCfg.projectionRotation;
+    projectionTranslation = coarseCfg.projectionTranslation;
+    intensity = nan(numPoints,1);
     structuralPointMask = validPoint;
     trafficThreshold = resolveTrafficThreshold(cfg);
     if isfield(voxelGrid.pointAttributes, "intensity") && ...
@@ -95,6 +112,21 @@ function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, pr
     columnMaps = struct();
     cellRows = sub2ind(mapSize, pointVoxelSub(structuralPointMask, 2), pointVoxelSub(structuralPointMask, 1));
     columnMaps.moments = aggregatePlanarCellMoments(voxelGrid.points(structuralPointMask, :), cellRows, prod(mapSize), projectionRotation, projectionTranslation);
+    % Radiometric evidence selects whole pillars. Their Gaussian contains
+    % every off-ground member, including nonreflective support at other heights.
+    columnMaps.trafficSignCellMask = false(mapSize);
+    columnMaps.trafficSignEvidence = zeros(mapSize);
+    if any(string(coarseCfg.semanticNames) == "trafficSign")
+        allColumns = sub2ind(mapSize, pointVoxelSub(validPoint,2), pointVoxelSub(validPoint,1));
+        values = intensity(validPoint); values(~isfinite(values)) = 0;
+        maxima = accumarray(allColumns,values,[prod(mapSize),1],@max,0);
+        columnMaps.trafficSignCellMask = reshape(maxima > trafficThreshold,mapSize);
+        columnMaps.trafficSignEvidence = reshape(max(0,1-trafficThreshold./max(maxima,eps)),mapSize);
+        candidateMembers = columnMaps.trafficSignCellMask(allColumns);
+        validRows = find(validPoint);
+        columnMaps.trafficSignMoments = aggregatePlanarCellMoments(voxelGrid.points(validRows(candidateMembers),:), ...
+            allColumns(candidateMembers),prod(mapSize),projectionRotation,projectionTranslation);
+    end
     columnMaps.voxelStatistics = sparseVoxels;
     columnMaps.mapSize = double(mapSize);
     columnMaps.origin = double(origin(1:2));
@@ -205,4 +237,29 @@ function threshold = resolveTrafficThreshold(cfg)
             isfinite(cfg.trafficSignIntensityThreshold)
         threshold = max(0, double(cfg.trafficSignIntensityThreshold));
     end
+end
+
+function facade = expandFacadePillarSupport(facade,maps,cfg)
+% Move the legacy refinement halo into the coarse candidate stage so every
+% point later considered offline already belongs to a published candidate.
+% This expansion uses only pillar occupancy and distances between XY centers.
+    if ~any(facade.mask(:)), return; end
+    radius = max(0,round(cfg.facadeRefineHorizontalSupportRadiusVoxels));
+    seedMap = facade.lineMap;
+    bestDistance = inf(maps.mapSize);
+    [cols,rows] = meshgrid(1:maps.mapSize(2),1:maps.mapSize(1));
+    x = maps.origin(1)+(cols-0.5)*maps.dx;
+    y = maps.origin(2)+(rows-0.5)*maps.dy;
+    for k = 1:size(facade.detectedLines,1)
+        support = imdilate(seedMap==k,true(2*radius+1)) & maps.pillarCounts>0;
+        line = facade.detectedLines(k,:);
+        direction = line(3:4)-line(1:2);
+        distance = abs((x-line(1))*direction(2)-(y-line(2))*direction(1))/max(norm(direction),eps);
+        update = support & distance<bestDistance;
+        facade.lineMap(update) = uint16(k);
+        bestDistance(update) = distance(update);
+    end
+    facade.mask = facade.lineMap>0;
+    facade.pillarLinIdx = find(facade.mask);
+    facade.pillarLineIdx = double(facade.lineMap(facade.pillarLinIdx));
 end

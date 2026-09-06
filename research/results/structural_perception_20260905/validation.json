@@ -1,0 +1,20 @@
+{
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "baselineCommit": "89141407604af210fbdbe930c05b978c5eafb23a",
+  "framesPerDataset": [
+    100,
+    200,
+    300,
+    400,
+    500
+  ],
+  "warmupCalls": 2,
+  "timedCallsPerFrameAndVersion": 11,
+  "backend": "auto with shared native MEX",
+  "testsPassed": 131,
+  "testsFailed": 0,
+  "analyzedMatlabFiles": 18,
+  "analyzerFindings": 0,
+  "coarseFineOrDenseCalls": 0,
+  "randomSeed": "none; deterministic recorded frames and synthetic fixtures"
+}

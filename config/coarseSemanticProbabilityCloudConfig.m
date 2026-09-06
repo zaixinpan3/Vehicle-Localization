@@ -24,7 +24,7 @@ function cfg = coarseSemanticProbabilityCloudConfig()
     % projection, while classifying in the original vehicle XY pillars.
     cfg.projectionRotation = eye(3);
     cfg.projectionTranslation = [0 0 0];
-    cfg.semanticNames = ["curb", "roadMarking", "pole"];
+    cfg.semanticNames = ["curb", "roadMarking", "pole", "facade", "trafficSign"];
 
     % Pillar selectors retain the tested geometric evidence rules.
     % The accepted cell mask already applies the curb evidence tests.

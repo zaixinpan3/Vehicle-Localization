@@ -26,7 +26,7 @@ function cfg = featureMapBuildConfig()
     cfg.batchFrameStride = 20;
 
     % Semantic feature classes registered into the map (facades are off on this route)
-    cfg.featureNames = ["curb", "roadMarking", "pole"];
+    cfg.featureNames = ["curb", "roadMarking", "pole", "trafficSign"];
     cfg.facadeDetectionEnabled = false;
 
     % Deterministic representatives, observation blocks, and tile inference.

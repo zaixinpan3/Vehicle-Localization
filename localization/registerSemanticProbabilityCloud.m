@@ -258,8 +258,8 @@ function system=linearize(f,m,pose,cfg,scale)
     for i=1:n
         candidates=find(f.semanticName==m.semanticName(i) & f.quality>0);
         if isempty(candidates) || m.quality(i)<=0, continue; end
-        ground=ismember(m.semanticName(i),["curb","roadMarking"]);
-        if ground, candidates=candidates(f.lineEligible(candidates)); end
+        lineFeature=ismember(m.semanticName(i),["curb","roadMarking","facade"]);
+        if lineFeature, candidates=candidates(f.lineEligible(candidates)); end
         if isempty(candidates), continue; end
         cm=r*m.planarCovariance(:,:,i)*r.';
         delta=means(i,:)-f.mean(candidates,1:2);
@@ -267,7 +267,7 @@ function system=linearize(f,m,pose,cfg,scale)
         a=reshape(cf(1,1,:),[],1)+cm(1,1)+cfg.noiseStandardDeviation^2;
         b=reshape(cf(1,2,:),[],1)+cm(1,2);
         d=reshape(cf(2,2,:),[],1)+cm(2,2)+cfg.noiseStandardDeviation^2;
-        if ground
+        if lineFeature
             normal=f.normal(candidates,:);
             dn=sum(delta.*normal,2); tangent=[-normal(:,2),normal(:,1)];
             dt=sum(delta.*tangent,2);
@@ -294,7 +294,7 @@ function system=linearize(f,m,pose,cfg,scale)
         [best,j]=min(distance);
         if ~isfinite(best), continue; end
         k=candidates(j); rows=rows+1;
-        if ground
+        if lineFeature
             p=f.normal(k,:)/sqrt(variance(j));
             whiten=[p;0 0];
         else
