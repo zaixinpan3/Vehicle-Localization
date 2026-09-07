@@ -1,0 +1,28 @@
+{
+  "activity_date": "2026-09-07",
+  "tested_project_base_commit": "f39a39456a798be2afbf782491ab989b6341a2b3",
+  "purpose": "Controlled recorded-input diagnosis, not a production observer repair or a new certificate",
+  "scenario": "Mississippi 2024-06-07-12-09-31, GNSS XY outage [40,60), requested replay horizon 61 s",
+  "executed_cases": 9,
+  "original_observer_sources_unchanged": true,
+  "baseline_maximum_online_state_difference_through_48s": 0,
+  "diagnostic_artifact_certified": false,
+  "scope": "Same-drive reference; fixed 150 ms delay except zeroDelay case; recorded accepted timestamps and information; known recorded roll/pitch retained; no global observer to D2D feedback",
+  "finite_case_interpretation": "baseGainUnitWeight finite to 61 s, outage max 1.60931 m; noInvariant finite but outage max 9493.57 m. Neither is certified.",
+  "linearization_scope": "State/input frozen at 40 s, mean recorded weights on [40,49.57), idealized 30 ms on / 70 ms off. Not full time-varying error propagation.",
+  "isolated_chain_weight_threshold": 0.844441189,
+  "checks": [
+    "Nine recorded-input counterfactuals executed",
+    "Exact seven-state baseline reproduction through 48 s",
+    "Failure/finite-case assertions pass",
+    "Factory analyzer zero findings in two new MATLAB files",
+    "Plot generated and inspected"
+  ],
+  "source_sha256": {
+    "localization/runImprovedVehicleObserver.m": "51012d3e80fd2efad4a5e5a5bab91e15e25659561986ac905025143bfc3591a3",
+    "localization/evaluateImprovedObserverChannels.m": "03165a00b7875a762eb193421ff2bbdadbca43f1fbf789d7e30ddf0dd9051dd2",
+    "localization/computeLidarInformationWeights.m": "675225a794f5be1d86e651e22183beee6d9013caa819df8a10959a160609c6ca",
+    "scripts/diagnoseMncavObserverOutage.m": "600d8e8f3f839f58efac0d80b414087f5e7d6fdb33e67c3ff081fb7d44591e2a",
+    "scripts/plotMncavOutageDiagnosis.m": "7455917e69f3b06adba9fbad8872165ff4fcef62556e26b1e056c434217e952e"
+  }
+}
