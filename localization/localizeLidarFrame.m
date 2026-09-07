@@ -14,14 +14,18 @@ function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initia
 % condition correspondence compatibility. Rank-deficient geometry emits no
 % full-pose event. Set cfg.perception.frameCalibration consistently with the
 % offline map; its default is identity and it never changes point selection.
-% An accepted event has timestamp, arrivalTime, pose fields consumed by
+% An accepted event has timestamp, arrivalTime, pose, information fields consumed by
 % runImprovedVehicleObserver. The caller sets arrivalTime when it is delivered.
-% Empty measurement means rejection. Curvature is deliberately not exported
-% as sensor information: that conversion requires empirical calibration.
+% Empty measurement means rejection. Information is the final robust Gaussian
+% model information in physical map-frame [X,Y,psi] coordinates, not an
+% inverse empirically calibrated pose covariance or a density-score Hessian.
     if nargin < 5 || isempty(cfg)
         cfg = struct('perception',perceptionConfig(),'registration',distributionRegistrationConfig());
     end
     assert(isscalar(timestamp) && isfinite(timestamp), 'Expected finite acquisition time.');
+    assert(isfield(cfg.registration,'method') && string(cfg.registration.method)=="geometricD2D", ...
+        'VehicleLocalization:RegistrationInformationUnavailable', ...
+        'Online pose events require geometricD2D with Gaussian pose information.');
     startTime = tic;
     cloud = perceiveCoarseProbabilityCloud(frame,cfg.perception);
     perceptionSeconds = toc(startTime);
@@ -30,9 +34,5 @@ function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initia
     result.perceptionSeconds = perceptionSeconds;
     result.registrationSeconds = toc(registrationStart);
     result.probabilityCloud = cloud;
-    measurement = [];
-    if result.accepted
-        measurement = struct('timestamp',double(timestamp),'arrivalTime',double(timestamp), ...
-            'pose',result.poseXYTheta);
-    end
+    measurement = registrationPoseMeasurement(result,timestamp);
 end

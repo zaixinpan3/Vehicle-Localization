@@ -1,0 +1,65 @@
+{
+  "software": {
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "pandas": "3.0.5"
+  },
+  "calibration_sequence": "raw_data_2024-06-07-12-11-24_0",
+  "evaluation_sequence": "raw_data_2024-06-07-12-09-31_0",
+  "training_interval_seconds": [
+    1,
+    40
+  ],
+  "validation_start_seconds": 40,
+  "duration_seconds": 77.9199999999837,
+  "input_correction": {
+    "longitudinalAcceleration": {
+      "sign": 1,
+      "offset": 0.027522640649579853,
+      "diagnostic_unconstrained_slope": 0.862274566881592,
+      "validation_rmse": 0.23300290097687543
+    },
+    "lateralAcceleration": {
+      "sign": -1,
+      "offset": -0.15468705901689392,
+      "diagnostic_unconstrained_slope": -1.027969636543299,
+      "validation_rmse": 0.13466583336166868
+    },
+    "yawRate": {
+      "sign": 1,
+      "offset": -0.012282345053570586,
+      "diagnostic_unconstrained_slope": 1.001957402603148,
+      "validation_rmse": 0.0017621005548777205
+    }
+  },
+  "vehicle": {
+    "mass": 2273.0,
+    "lf": 1.3746049999999999,
+    "lr": 1.7143950000000001,
+    "yawInertia": 5874.607330416667,
+    "frontCorneringStiffness": 108238.09523809524,
+    "rearCorneringStiffness": 80817.77777777778
+  },
+  "steeringRatio": 16.2,
+  "provenance": {
+    "identity": "UMN identifies MnCAV as a 2021 Chrysler Pacifica Hybrid.",
+    "stock_specifications": "2273 kg EPA curb mass, 3.089 m wheelbase, 55.5/44.5 axle load split, 16.2 steering ratio; actual loaded MnCAV mass is unknown.",
+    "lf_lr": "Derived static unladen CG distances from published axle load fractions.",
+    "yawInertia": "Explicit uniform rectangular planform approximation, not a measured MnCAV inertia.",
+    "cornering_stiffness": "Unidentified nominal prior: existing generic model stiffnesses scaled by the stock mass ratio. Not a manufacturer specification.",
+    "sensitivity": "Repeat the experiment at 0.7 and 1.3 times nominal inertia and both axle stiffnesses; nominal mass and geometry remain fixed.",
+    "input_offsets": "Fixed signs plus median offsets from the independent calibration drive; no online truth injection. Residual road-bank and sensor-to-CG lever-arm errors remain.",
+    "sources": [
+      "https://www.cts.umn.edu/news-pubs/news/2021/august/mncav",
+      "https://www.stellantisfleet.com/content/dam/fca-fleet/na/fleet/en_us/chrysler/2021/Pacifica/specifications/2021_CH_PacificaHybrid_Specifications.pdf"
+    ]
+  },
+  "rejected_direct_identification": {
+    "front_stiffness_N_per_rad": 115941.24466210035,
+    "rear_stiffness_N_per_rad": -58552.398651281204,
+    "yaw_inertia_kg_m2": -13632.955453067512,
+    "design_condition_number": 17.69829140689223,
+    "used_in_observer": false,
+    "reason": "Nonphysical solution and unknown INS-to-CG reference point. This drive does not establish calibrated MnCAV bicycle parameters."
+  }
+}

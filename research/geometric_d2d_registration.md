@@ -1,5 +1,11 @@
 # Semantic Gaussian geometry registration with retained height
 
+Interface update, 2026-09-07: the geometric solver now exports
+[physical pose information and complete observer events](d2d_pose_information.md).
+The [1170-frame replay](mississippi_full_sequence_replay.md) includes the
+lateral/global observer, fixed delay, nominal vehicle sensitivity and recorded
+GNSS-position-outage failures.
+
 Date: 2026-09-05. This implementation follows the
 [height and density bias investigation](height_registration_bias_diagnosis.md).
 Its localization state, optimization vector, and accepted observer measurement

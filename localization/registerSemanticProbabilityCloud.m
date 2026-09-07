@@ -7,7 +7,10 @@ function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, init
 % repeatability preserves legacy weights; mixture mass is not a substitute.
 % Explicit densityOverlap reproduces normalized L2 overlap with covariance
 % smoothing and BFGS. Its similarity has different semantics from geometricD2D.
-% Curvature is not calibrated sensor information. Never fuse a rejected pose.
+% geometricD2D exports local robust Gaussian information in map-frame
+% [X,Y,psi] coordinates (meters/radians), conditional on the final matches
+% and scatter model. It is not an empirically calibrated pose covariance.
+% densityOverlap remains a legacy score-only diagnostic. Never fuse a rejected pose.
     if nargin < 4 || isempty(cfg)
         cfg = distributionRegistrationConfig();
     end
@@ -186,7 +189,11 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
         'curvatureSemantics',"uncalibratedGaussianGeometryNormalMatrix", ...
         'similaritySemantics',"repeatabilityWeightedClassGaussianCompatibilityWithCoverage", ...
         'repeatabilitySource',repeatabilitySource, ...
-        'weightSemantics',"classBalancedQualityTimesMapRepeatability");
+        'weightSemantics',"classBalancedQualityTimesMapRepeatability", ...
+        'information',zeros(3), ...
+        'informationSemantics',"robustCompositeGaussianGaussNewton", ...
+        'informationCoordinates',"additive map X,Y,psi; meters,radians", ...
+        'informationCalibrated',false);
     shared=intersect(unique(f.semanticName),unique(m.semanticName));
     if nnz(ismember(f.semanticName,shared))<cfg.minimumComponents || ...
             nnz(ismember(m.semanticName,shared))<cfg.minimumComponents, return; end
@@ -235,6 +242,13 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
     result.similarity=system.similarity; result.scaledCurvature=system.H;
     result.curvatureEigenvalues=eigenvalues; result.observableRank=rank;
     result.observableProjector=projector;
+    % q = diag(1,1,yawLeverArm) * deltaPose. Undo this numerical
+    % conditioning before exporting physical pose information. The normal
+    % matrix sums J_i' W_i J_i, where W_i contains summed source/map scatter,
+    % class-balanced quality, map repeatability, and final robust influence.
+    % Keep cross terms and genuine null directions; add no diagonal prior.
+    inverseScale=diag(1./scale);
+    result.information=inverseScale*((system.H+system.H.')/2)*inverseScale;
     result.correspondences=struct2table(system.pairs);
     result.matchedFraction=system.numPairs/max(1,m.numComponents);
     result.classDiagnostics=classDiagnostics(system,gcfg);

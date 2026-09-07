@@ -1,0 +1,35 @@
+{
+  "mode": "recursive",
+  "frameCount": 1170,
+  "sourceMap": "/home/zai/Downloads/ResearchProjects/vehicleLocalization/output/mississippi_20240607_120931_20260907/publishedCloud.mat",
+  "initialOffset": [
+    0.5,
+    -0.4,
+    0.034906585039886591
+  ],
+  "mapCropRadiusM": 100,
+  "mapComponents": 1723,
+  "mapPreparationSeconds": 0.011029,
+  "features": [
+    "curb",
+    "roadMarking",
+    "pole",
+    "trafficSign"
+  ],
+  "heightMode": "xy",
+  "poseState": "X,Y,psi",
+  "motionSource": "recorded /vehicle/twist with causal zero-order hold",
+  "clockSource": "INSPVA receiver GPS seconds interpolated on ROS stamp; edge extrapolation only",
+  "rosDurationSeconds": 107.15884017944336,
+  "receiverDurationSeconds": 116.89954311095237,
+  "reference": "nearest matched NovAtel odom base_link GNSS/INS pose, also used for mapping",
+  "knownTilt": "recorded GNSS/INS roll/pitch through quaternion yaw/tilt decomposition",
+  "maximumReferenceTimeOffsetSeconds": 0.0329816341400146,
+  "maximumMatTimestampDifferenceSeconds": 5.0067901611328125E-6,
+  "timingScope": "map crop, fresh coarse perception, D2D and pose event; excludes disk read and offline preparation",
+  "diskLoading": "blocks loaded before processing; diskLoadMs is block time divided by block frame count",
+  "frameBlockSize": 50,
+  "mapOverlap": "same sequence used for mapping and query; includes query observations",
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "computationalThreads": 8
+}

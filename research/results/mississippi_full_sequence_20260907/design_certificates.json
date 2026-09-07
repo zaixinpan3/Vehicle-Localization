@@ -1,0 +1,527 @@
+{
+  "factor_0_7": {
+    "factor": 0.7,
+    "vehicle": {
+      "mass": 2273,
+      "lf": 1.3746049999999999,
+      "lr": 1.7143950000000001,
+      "yawInertia": 4112.225131291666,
+      "frontCorneringStiffness": 75766.666666666657,
+      "rearCorneringStiffness": 56572.444444444445
+    },
+    "lateralCertified": true,
+    "lateralWorstMargin": -6.5769507786722636E-6,
+    "globalVerification": {
+      "outputVertexCount": 8192,
+      "omegaVertexCount": 2,
+      "fVertexCount": 4,
+      "checkedVertexCount": 65536,
+      "worstBlockMargin": -0.056050538148342509,
+      "worstSchurMargin": -0.056050688881679217,
+      "worstCombination": [
+        532,
+        1,
+        3
+      ],
+      "minimumPEigenvalue": 0.13999999999576232,
+      "minimumXEigenvalue": 786.4349004149758,
+      "invariantGainNorm": 0.11135528725660045,
+      "certified": true
+    },
+    "globalCfg": {
+      "operating": {
+        "maximumSpeed": 16,
+        "maximumAcceleration": 5,
+        "maximumTrackAngleRate": 0.6
+      },
+      "observer": {
+        "theta": 3.5,
+        "sigma": 3,
+        "scalingExponents": [
+          1,
+          2,
+          3,
+          1,
+          2,
+          3,
+          1
+        ],
+        "integrationMethod": "rk4",
+        "initialState": [],
+        "fallbackPosition": [
+          0,
+          0
+        ],
+        "fallbackHeading": 0,
+        "clampTrackAngleRateToDesignEnvelope": false,
+        "invariantGain": [
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0.02,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0.02,
+            0.02,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0.02,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0.02,
+            -0.02,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            -0.1
+          ]
+        ]
+      },
+      "measurement": {
+        "sampleTime": 0.01,
+        "inputInterpolation": "zoh",
+        "gpsMaximumAge": 0.03,
+        "lidarMaximumAge": 0.03,
+        "replayBufferDuration": 1,
+        "timestampTolerance": 0
+      },
+      "lidar": {
+        "translationInformationScale": 25,
+        "headingInformationScale": 50,
+        "minimumHeadingWeight": 0.15,
+        "missingInformationTranslationWeight": 0,
+        "missingInformationHeadingWeight": 0.15
+      },
+      "synthesis": {
+        "solver": "sedumi",
+        "verbose": 0,
+        "dualize": 0,
+        "normalizationTrace": 7,
+        "minimumPEigenvalue": 0.14,
+        "minimumLambda": 1E-5,
+        "maximumLambda": 10,
+        "strictnessEpsilon": 1E-7,
+        "violationTolerance": 1E-7,
+        "gainDecisionWeight": 2E-5,
+        "lambdaSafetyFactor": 0.75,
+        "schurSafetyFactor": 4,
+        "maximumCuttingPlaneIterations": 40,
+        "outputFolder": "",
+        "saveFileName": "improvedObserverDesign.mat"
+      },
+      "simulation": {
+        "sampleTime": 0.01,
+        "finalTime": 24,
+        "initialPosition": [
+          2,
+          -1
+        ],
+        "initialHeading": 0.13962634015954636,
+        "initialLongitudinalSpeed": 6,
+        "longitudinalSpeedAmplitude": 0.8,
+        "longitudinalSpeedPeriod": 16,
+        "steeringAmplitude": 0.038397243543875255,
+        "steeringPeriod": 10,
+        "gpsRateHz": 5,
+        "lidarRateHz": 10,
+        "gpsDelay": 0.1,
+        "lidarDelay": 0.08,
+        "outOfOrderExtraDelay": 0.14,
+        "gpsDropoutInterval": [
+          8,
+          12
+        ],
+        "lidarDegeneracyInterval": [
+          14,
+          18
+        ],
+        "wheelSpeedNoiseStandardDeviation": 0.01,
+        "steeringNoiseStandardDeviation": 0.00034906585039886593,
+        "gyroNoiseStandardDeviation": 0.0015,
+        "accelerationNoiseStandardDeviation": 0.025,
+        "gpsPositionNoiseStandardDeviation": 0.035,
+        "lidarPositionNoiseStandardDeviation": 0.02,
+        "lidarHeadingNoiseStandardDeviation": 0.0043633231299858239,
+        "initialEstimateError": [
+          0.3,
+          -0.2,
+          0.069813170079773182
+        ],
+        "randomSeed": 2026
+      }
+    },
+    "synthesisSeconds": 11.910823
+  },
+  "factor_1_0": {
+    "factor": 1,
+    "vehicle": {
+      "mass": 2273,
+      "lf": 1.3746049999999999,
+      "lr": 1.7143950000000001,
+      "yawInertia": 5874.6073304166666,
+      "frontCorneringStiffness": 108238.09523809524,
+      "rearCorneringStiffness": 80817.777777777781
+    },
+    "lateralCertified": true,
+    "lateralWorstMargin": -4.0273954084457664E-6,
+    "globalVerification": {
+      "outputVertexCount": 8192,
+      "omegaVertexCount": 2,
+      "fVertexCount": 4,
+      "checkedVertexCount": 65536,
+      "worstBlockMargin": -0.056050538146270305,
+      "worstSchurMargin": -0.056050688879626082,
+      "worstCombination": [
+        532,
+        1,
+        3
+      ],
+      "minimumPEigenvalue": 0.1399999999957578,
+      "minimumXEigenvalue": 786.43489971431359,
+      "invariantGainNorm": 0.11135528725660045,
+      "certified": true
+    },
+    "globalCfg": {
+      "operating": {
+        "maximumSpeed": 16,
+        "maximumAcceleration": 5,
+        "maximumTrackAngleRate": 0.6
+      },
+      "observer": {
+        "theta": 3.5,
+        "sigma": 3,
+        "scalingExponents": [
+          1,
+          2,
+          3,
+          1,
+          2,
+          3,
+          1
+        ],
+        "integrationMethod": "rk4",
+        "initialState": [],
+        "fallbackPosition": [
+          0,
+          0
+        ],
+        "fallbackHeading": 0,
+        "clampTrackAngleRateToDesignEnvelope": false,
+        "invariantGain": [
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0.02,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0.02,
+            0.02,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0.02,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0.02,
+            -0.02,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            -0.1
+          ]
+        ]
+      },
+      "measurement": {
+        "sampleTime": 0.01,
+        "inputInterpolation": "zoh",
+        "gpsMaximumAge": 0.03,
+        "lidarMaximumAge": 0.03,
+        "replayBufferDuration": 1,
+        "timestampTolerance": 0
+      },
+      "lidar": {
+        "translationInformationScale": 25,
+        "headingInformationScale": 50,
+        "minimumHeadingWeight": 0.15,
+        "missingInformationTranslationWeight": 0,
+        "missingInformationHeadingWeight": 0.15
+      },
+      "synthesis": {
+        "solver": "sedumi",
+        "verbose": 0,
+        "dualize": 0,
+        "normalizationTrace": 7,
+        "minimumPEigenvalue": 0.14,
+        "minimumLambda": 1E-5,
+        "maximumLambda": 10,
+        "strictnessEpsilon": 1E-7,
+        "violationTolerance": 1E-7,
+        "gainDecisionWeight": 2E-5,
+        "lambdaSafetyFactor": 0.75,
+        "schurSafetyFactor": 4,
+        "maximumCuttingPlaneIterations": 40,
+        "outputFolder": "",
+        "saveFileName": "improvedObserverDesign.mat"
+      },
+      "simulation": {
+        "sampleTime": 0.01,
+        "finalTime": 24,
+        "initialPosition": [
+          2,
+          -1
+        ],
+        "initialHeading": 0.13962634015954636,
+        "initialLongitudinalSpeed": 6,
+        "longitudinalSpeedAmplitude": 0.8,
+        "longitudinalSpeedPeriod": 16,
+        "steeringAmplitude": 0.038397243543875255,
+        "steeringPeriod": 10,
+        "gpsRateHz": 5,
+        "lidarRateHz": 10,
+        "gpsDelay": 0.1,
+        "lidarDelay": 0.08,
+        "outOfOrderExtraDelay": 0.14,
+        "gpsDropoutInterval": [
+          8,
+          12
+        ],
+        "lidarDegeneracyInterval": [
+          14,
+          18
+        ],
+        "wheelSpeedNoiseStandardDeviation": 0.01,
+        "steeringNoiseStandardDeviation": 0.00034906585039886593,
+        "gyroNoiseStandardDeviation": 0.0015,
+        "accelerationNoiseStandardDeviation": 0.025,
+        "gpsPositionNoiseStandardDeviation": 0.035,
+        "lidarPositionNoiseStandardDeviation": 0.02,
+        "lidarHeadingNoiseStandardDeviation": 0.0043633231299858239,
+        "initialEstimateError": [
+          0.3,
+          -0.2,
+          0.069813170079773182
+        ],
+        "randomSeed": 2026
+      }
+    },
+    "synthesisSeconds": 11.636398
+  },
+  "factor_1_3": {
+    "factor": 1.3,
+    "vehicle": {
+      "mass": 2273,
+      "lf": 1.3746049999999999,
+      "lr": 1.7143950000000001,
+      "yawInertia": 7636.9895295416673,
+      "frontCorneringStiffness": 140709.52380952382,
+      "rearCorneringStiffness": 105063.11111111112
+    },
+    "lateralCertified": true,
+    "lateralWorstMargin": -3.0299241202680349E-6,
+    "globalVerification": {
+      "outputVertexCount": 8192,
+      "omegaVertexCount": 2,
+      "fVertexCount": 4,
+      "checkedVertexCount": 65536,
+      "worstBlockMargin": -0.056050538148342509,
+      "worstSchurMargin": -0.056050688881679217,
+      "worstCombination": [
+        532,
+        1,
+        3
+      ],
+      "minimumPEigenvalue": 0.13999999999576232,
+      "minimumXEigenvalue": 786.4349004149758,
+      "invariantGainNorm": 0.11135528725660045,
+      "certified": true
+    },
+    "globalCfg": {
+      "operating": {
+        "maximumSpeed": 16,
+        "maximumAcceleration": 5,
+        "maximumTrackAngleRate": 0.6
+      },
+      "observer": {
+        "theta": 3.5,
+        "sigma": 3,
+        "scalingExponents": [
+          1,
+          2,
+          3,
+          1,
+          2,
+          3,
+          1
+        ],
+        "integrationMethod": "rk4",
+        "initialState": [],
+        "fallbackPosition": [
+          0,
+          0
+        ],
+        "fallbackHeading": 0,
+        "clampTrackAngleRateToDesignEnvelope": false,
+        "invariantGain": [
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0.02,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0.02,
+            0.02,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0.02,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0.02,
+            -0.02,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            -0.1
+          ]
+        ]
+      },
+      "measurement": {
+        "sampleTime": 0.01,
+        "inputInterpolation": "zoh",
+        "gpsMaximumAge": 0.03,
+        "lidarMaximumAge": 0.03,
+        "replayBufferDuration": 1,
+        "timestampTolerance": 0
+      },
+      "lidar": {
+        "translationInformationScale": 25,
+        "headingInformationScale": 50,
+        "minimumHeadingWeight": 0.15,
+        "missingInformationTranslationWeight": 0,
+        "missingInformationHeadingWeight": 0.15
+      },
+      "synthesis": {
+        "solver": "sedumi",
+        "verbose": 0,
+        "dualize": 0,
+        "normalizationTrace": 7,
+        "minimumPEigenvalue": 0.14,
+        "minimumLambda": 1E-5,
+        "maximumLambda": 10,
+        "strictnessEpsilon": 1E-7,
+        "violationTolerance": 1E-7,
+        "gainDecisionWeight": 2E-5,
+        "lambdaSafetyFactor": 0.75,
+        "schurSafetyFactor": 4,
+        "maximumCuttingPlaneIterations": 40,
+        "outputFolder": "",
+        "saveFileName": "improvedObserverDesign.mat"
+      },
+      "simulation": {
+        "sampleTime": 0.01,
+        "finalTime": 24,
+        "initialPosition": [
+          2,
+          -1
+        ],
+        "initialHeading": 0.13962634015954636,
+        "initialLongitudinalSpeed": 6,
+        "longitudinalSpeedAmplitude": 0.8,
+        "longitudinalSpeedPeriod": 16,
+        "steeringAmplitude": 0.038397243543875255,
+        "steeringPeriod": 10,
+        "gpsRateHz": 5,
+        "lidarRateHz": 10,
+        "gpsDelay": 0.1,
+        "lidarDelay": 0.08,
+        "outOfOrderExtraDelay": 0.14,
+        "gpsDropoutInterval": [
+          8,
+          12
+        ],
+        "lidarDegeneracyInterval": [
+          14,
+          18
+        ],
+        "wheelSpeedNoiseStandardDeviation": 0.01,
+        "steeringNoiseStandardDeviation": 0.00034906585039886593,
+        "gyroNoiseStandardDeviation": 0.0015,
+        "accelerationNoiseStandardDeviation": 0.025,
+        "gpsPositionNoiseStandardDeviation": 0.035,
+        "lidarPositionNoiseStandardDeviation": 0.02,
+        "lidarHeadingNoiseStandardDeviation": 0.0043633231299858239,
+        "initialEstimateError": [
+          0.3,
+          -0.2,
+          0.069813170079773182
+        ],
+        "randomSeed": 2026
+      }
+    },
+    "synthesisSeconds": 10.470764
+  }
+}

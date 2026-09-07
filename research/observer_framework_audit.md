@@ -1,5 +1,12 @@
 # Observer framework and Bessafa comparison
 
+Update, 2026-09-07: the missing D2D information interface described below has
+been replaced by [physical Gaussian pose information](d2d_pose_information.md).
+The [full recorded-sequence experiment](mississippi_full_sequence_replay.md)
+now executes the actual cascade and documents GNSS-loss failures and omitted
+certificate modes. The following assessment and synthetic measurements remain
+the dated 2026-09-06 baseline.
+
 Audit date: 2026-09-06. Scope: the current working-tree implementation,
 its continuous certificate, and its actual interface to planar D2D registration.
 This is an assessment; no estimator implementation or gain is changed.

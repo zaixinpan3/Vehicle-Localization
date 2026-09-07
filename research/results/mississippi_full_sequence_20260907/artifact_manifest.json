@@ -1,0 +1,61 @@
+{
+  "created_at": "2026-09-07T17:10:50.350659-05:00",
+  "scope": "Original data and actual generated artifacts remain at their normal local paths; this manifest contains references, not copies. No weekly or monthly report is hashed.",
+  "base_project_commit": "d63d1f90af8a30da9b5136ef45cb97fee241b8b5",
+  "artifacts": [
+    {
+      "path": "data/raw/Missisipi/raw_data_2024-06-07-12-09-31_0.bag",
+      "role": "original dataset",
+      "bytes": 6354610019,
+      "sha256": "09f3167c3be2ac9359dc9fd1632259372246d3e183fcc44f3a204c021bf4c299"
+    },
+    {
+      "path": "data/raw/Missisipi/raw_data_2024-06-07-12-11-24_0.bag",
+      "role": "independent calibration dataset",
+      "bytes": 4344846963,
+      "sha256": "ecb307da026a7f2132959fca4c18492c6ef5750d333a365d532e62673f68aee6"
+    },
+    {
+      "path": "data/raw/MissisipiPointClouds.mat",
+      "role": "extracted original scans",
+      "bytes": 1273317517,
+      "sha256": "75c4842872acb3a5cfaf25fa52c37572a0653c544ff6d275adad21b189218f1d"
+    },
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_pose_match_1_1170.csv",
+      "role": "GNSS/INS mapping poses",
+      "bytes": 393191,
+      "sha256": "bf05a31315a6d9566eca24366ee026cc48d498e19df8b584535ff1a8fcdb1e74"
+    },
+    {
+      "path": "output/mississippi_20240607_120931_20260907/probabilityCloudMap.mat",
+      "role": "generated full map",
+      "bytes": 1800082306,
+      "sha256": "9a7fa6765af11366352b8664003f8cd4ef349d395db971b74cbdb3ea2a28a05d"
+    },
+    {
+      "path": "output/mississippi_20240607_120931_20260907/publishedCloud.mat",
+      "role": "generated compact map",
+      "bytes": 251771,
+      "sha256": "815712caf85f9f45218051b1973615d4011e2b5c72e9ac727a27578d3512794b"
+    },
+    {
+      "path": "output/mississippi_20240607_120931_20260907/mncavObserverDesign.mat",
+      "role": "nominal design actually used",
+      "bytes": 16252,
+      "sha256": "107bf229b98bb55b2a246263b071a4ceaa0845792437711089518949809f1a22"
+    },
+    {
+      "path": "output/mississippi_20240607_120931_20260907/mncavObserverDesign_0.7.mat",
+      "role": "sensitivity design actually used",
+      "bytes": 16277,
+      "sha256": "41940adb4efbe4b6464cc1d3b5f31215ba618819591cff656ccec1fd361fb16e"
+    },
+    {
+      "path": "output/mississippi_20240607_120931_20260907/mncavObserverDesign_1.3.mat",
+      "role": "sensitivity design actually used",
+      "bytes": 16273,
+      "sha256": "2fe11f5b8ab1c0a09f3ed32c3962e3647a09329c979b5d63771b09a7b32d1289"
+    }
+  ]
+}
