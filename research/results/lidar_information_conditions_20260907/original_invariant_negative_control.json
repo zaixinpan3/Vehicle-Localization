@@ -1,0 +1,28 @@
+{
+  "passed": false,
+  "maximumFlowEigenvalue": 0.84373400333847193,
+  "minimumPEigenvalue": 0.036359630924350433,
+  "maximumPEigenvalue": 2.4202552112513316,
+  "maximumResetEigenvalue": -9.99998040067829E-5,
+  "symmetryError": 0,
+  "flowInequalityCount": 1.441792E+6,
+  "worstCombination": [
+    3002,
+    1,
+    1,
+    1,
+    4,
+    4
+  ],
+  "RDecayRatePerSecond": 0.01,
+  "predictionEuclideanLogNormPerSecond": 2.9359429962898163,
+  "ideal150msPredictionAmplification": 1.5533151438661559,
+  "onEuclideanLogNormPerSecond": 15.958289763508787,
+  "ideal150msReplayTailAmplification": 2.2957551997615155,
+  "minimumQualifiedIntervalSeconds": 0.08,
+  "maximumQualifiedIntervalSeconds": 0.11,
+  "pulseDurationSeconds": 0.03,
+  "solverStatus": 4,
+  "solverOptimalityClaimed": false,
+  "productionImplemented": false
+}

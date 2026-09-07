@@ -1,0 +1,35 @@
+{
+  "activityDate": "2026-09-07",
+  "baselineCommit": "fc1fe755b29edc660cb988425287ed9291bfbcf4",
+  "sourceHashesSHA256": {
+    "localization/buildImprovedObserverCertificateData.m": "9c553e6b2041855632271991ddd06ed980a1d6fce69c68d36dd73be6e47222b8",
+    "localization/evaluateImprovedObserverChannels.m": "03165a00b7875a762eb193421ff2bbdadbca43f1fbf789d7e30ddf0dd9051dd2",
+    "localization/runImprovedVehicleObserver.m": "51012d3e80fd2efad4a5e5a5bab91e15e25659561986ac905025143bfc3591a3",
+    "localization/computeLidarInformationWeights.m": "675225a794f5be1d86e651e22183beee6d9013caa819df8a10959a160609c6ca",
+    "research/results/lidar_information_conditions_20260907/source_design.json": "04089489ffe8ef35205c64c5943023e8fd62ed64226579c861c32643cfb0a504",
+    "research/results/lidar_information_conditions_20260907/timer_certificate.json": "cc6a0ce795b3b48d1b28a6bf2c5a658bf99388309a8801f76ce36208cad70483",
+    "scripts/analyzeLidarInformationConditions.m": "bb72fa5941cf193305aeb84f7ac29be4c3f0efb5508e913e60458c7a35b8b92a",
+    "scripts/designLidarOnlyTimerCertificate.m": "dbd9be1ace81b2dd8a1158b6f1b11bc6318b84a32dcaa68d33f19b3dc65e2ef8",
+    "scripts/verifyLidarOnlyTimerCertificate.m": "ef9b180e9a85b5787a1badfb3e697c76c7a9b2df721782388fda9c99e11d1a93"
+  },
+  "productionModified": false,
+  "designSource": "output/mississippi_20240607_120931_20260907/mncavObserverDesign.mat",
+  "methods": [
+    "Complete 65536-vertex fixed-P audit at original sigma and actual theta.",
+    "Exact physical error-equilibrium Jacobian, three centered finite-difference steps through the production invariant evaluator.",
+    "Aperiodic timer certificate synthesis using YALMIP/SeDuMi; solver status 4; strict exhaustive recovered-matrix verification used for acceptance, no optimum claimed.",
+    "Independent JSON round-trip verification of 1441792 flow inequalities, positive definiteness, symmetry, and all reset endpoints.",
+    "Reproduction through the committed synthesis function: second cutting-plane iteration passes.",
+    "Negative control restoring original invariant gain: largest flow eigenvalue +0.843734003338, rejected.",
+    "Factory MATLAB Code Analyzer: zero findings in all three new scripts.",
+    "Production source bytes compared to tracked pre-relocation files, exact match."
+  ],
+  "limitations": [
+    "No production installation or new complete recorded-sequence replay.",
+    "110 ms is a verified sufficient maximum interval, not the largest feasible one. The previous 471.4 ms accepted-event gap is outside it.",
+    "Error-ellipsoid calibration, bounded cascade input/model error, initial/domain margins and implementation numerical error remain required assumptions.",
+    "The candidate replaces auxiliary XY injection with unit XY base pose injection and scales invariant gain by 0.1; the existing information attenuation is not part of this certificate."
+  ],
+  "localExplorationFolder": "output/lidar_information_condition_20260907",
+  "checksContainMeasuredResultsOnly": true
+}

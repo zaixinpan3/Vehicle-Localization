@@ -1,0 +1,18 @@
+{
+  "originalFixedPThreshold": 15.839514607483739,
+  "originalHiddenMaximumEigenvalue": -0.056748885751277005,
+  "originalGnssCoreMaximumEigenvalue": -0.056050688879625978,
+  "originalOutageUnitLidarCoreMaximumEigenvalue": 1.0311772415340958,
+  "actualThetaHomogeneousThreshold": 3.6933787785670646,
+  "actualThetaHiddenMaximumEigenvalue": -0.29867238106708938,
+  "allPoseOffVRatePerSecond": 12.236363005022282,
+  "continuousGnssAndHeadingVRatePerSecond": -1.4931085639919033,
+  "outageUnitLidarBoxSpectralAbscissaPerSecond": 0.49200460367962506,
+  "physicalCounterexampleSpeedMps": 16,
+  "physicalCounterexampleHeadingRad": -2.3561944901923448,
+  "physicalCounterexampleSpectralAbscissaPerSecond": 0.030570032958029486,
+  "physicalCounterexampleEquilibriumResidual": 0,
+  "largestFiniteDifferenceError": 1.0942452761204482E-9,
+  "robustVertexCount": 65536,
+  "productionModified": false
+}

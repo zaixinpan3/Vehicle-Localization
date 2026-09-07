@@ -1,0 +1,4 @@
+file,factoryAnalyzerFindings
+scripts/analyzeLidarInformationConditions.m,0
+scripts/designLidarOnlyTimerCertificate.m,0
+scripts/verifyLidarOnlyTimerCertificate.m,0
