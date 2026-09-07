@@ -3,6 +3,8 @@ function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, init
 % Default geometricD2D matches semantic distributions, constrains ground-line
 % normals and pole XY, and rejects incomplete SE(2) observability. Optional
 % height is correspondence evidence, never another optimized pose state.
+% Map repeatability discounts class-balanced geometric weights. Missing
+% repeatability preserves legacy weights; mixture mass is not a substitute.
 % Explicit densityOverlap reproduces normalized L2 overlap with covariance
 % smoothing and BFGS. Its similarity has different semantics from geometricD2D.
 % Curvature is not calibrated sensor information. Never fuse a rejected pose.
@@ -161,6 +163,11 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
     gcfg=cfg.geometric;
     validateParameters(cfg,gcfg);
     f.quality=quality(f); m.quality=quality(m);
+    repeatabilitySource="mapPosterior";
+    if ~isfield(f,'repeatability')
+        f.repeatability=ones(f.numComponents,1);
+        repeatabilitySource="legacyUnitWeight";
+    end
     % Height/tilt uncertainty belongs to the compatibility calculation. Keep
     % the planar metric identical when only height mode/reference changes.
     m.planarCovariance=movingCloud.components.covariance(1:2,1:2,:);
@@ -177,7 +184,9 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
         'curvatureEigenvalues',zeros(3,1),'height',height,'observableRank',0, ...
         'observableProjector',zeros(3),'partialPoseAvailable',false, ...
         'curvatureSemantics',"uncalibratedGaussianGeometryNormalMatrix", ...
-        'similaritySemantics',"meanClassGaussianResidualCompatibilityWithCoverage");
+        'similaritySemantics',"repeatabilityWeightedClassGaussianCompatibilityWithCoverage", ...
+        'repeatabilitySource',repeatabilitySource, ...
+        'weightSemantics',"classBalancedQualityTimesMapRepeatability");
     shared=intersect(unique(f.semanticName),unique(m.semanticName));
     if nnz(ismember(f.semanticName,shared))<cfg.minimumComponents || ...
             nnz(ismember(m.semanticName,shared))<cfg.minimumComponents, return; end
@@ -256,7 +265,7 @@ function groups=correspondenceGroups(f,m)
     for k=1:numel(names)
         groups(k).line=any(names(k)==["curb","roadMarking","facade"]);
         groups(k).source=find(m.semanticName==names(k) & m.quality>0);
-        keep=f.semanticName==names(k) & f.quality>0;
+        keep=f.semanticName==names(k) & f.quality>0 & f.repeatability>0;
         if groups(k).line, keep=keep & f.lineEligible; end
         groups(k).target=find(keep);
     end
@@ -341,12 +350,17 @@ function system=linearize(f,m,pose,cfg,scale,groups)
     delta=means(source,:)-f.mean(target,1:2);
     residual=[w11.*delta(:,1)+w12.*delta(:,2),w21.*delta(:,1)+w22.*delta(:,2)].';
     weights=m.quality(source).*f.quality(target);
+    mapRepeatability=f.repeatability(target);
     qvalue=sum(residual.^2,1).'; zResidual=chosenZ(source);
     names=m.semanticName(source); classes=intersect(unique(f.semanticName),unique(m.semanticName));
     similarity=0;
     for name=classes.'
         selected=names==name; possible=m.semanticName==name & m.quality>0;
         weights(selected)=weights(selected)/max(sum(weights(selected)),eps)/max(1,numel(classes));
+        % Discount AFTER class balancing: normalizing r*q by sum(r*q) would
+        % erase a uniformly unreliable class. Apply the map posterior once;
+        % integrated map mass also contains support area and is not confidence.
+        weights(selected)=weights(selected).*mapRepeatability(selected);
         coverage=nnz(selected)/max(1,nnz(possible));
         similarity=similarity+coverage*sum(weights(selected).*exp(-qvalue(selected)/2));
     end
@@ -356,7 +370,8 @@ function system=linearize(f,m,pose,cfg,scale,groups)
     h=stacked.'*(stacked.*rowWeights);
     gradient=stacked.'*(residual(:).*rowWeights);
     pairs=struct('source',source,'target',target,'semanticName',names, ...
-        'squaredStandardizedResidual',qvalue,'heightResidual',zResidual(1:rows));
+        'squaredStandardizedResidual',qvalue,'heightResidual',zResidual(1:rows), ...
+        'mapRepeatability',mapRepeatability,'weight',weights,'robustWeight',weights.*robust);
     system=struct('H',h,'gradient',gradient,'numPairs',rows,'pairs',pairs, ...
         'J',jacobian,'residual',residual,'weights',weights,'robust',robust, ...
         'precision',precision(:,:,1:rows),'targetMean',f.mean(target,1:2), ...

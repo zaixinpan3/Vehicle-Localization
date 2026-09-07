@@ -1,0 +1,113 @@
+{
+  "date": "2026-09-07",
+  "baselineCommit": "c13bfb84d5aec8b7f00a4544a624b45964142af0",
+  "seed": 2.0260906E+7,
+  "repetitions": 20,
+  "distinctCases": 21,
+  "heightMode": "xy",
+  "timingScope": "Preloaded raw frame and cached 30-frame map through coarse perception, D2D and pose event; disk loading and map construction excluded",
+  "quantileMethod": "Linear interpolation at 1+(n-1)*p",
+  "methods": {
+    "baseline": {
+      "calls": 420,
+      "accepted": 420,
+      "over100ms": 0,
+      "stages": {
+        "totalMs": {
+          "median": 66.227,
+          "p95": 76.632,
+          "p99": 78.76897,
+          "maximum": 82.592
+        },
+        "perceptionMs": {
+          "median": 59.829,
+          "p95": 70.07955,
+          "p99": 72.56339,
+          "maximum": 75.622
+        },
+        "registrationMs": {
+          "median": 6.2219999999999995,
+          "p95": 7.6431999999999993,
+          "p99": 8.1808600000000009,
+          "maximum": 9.988
+        }
+      }
+    },
+    "optimized": {
+      "calls": 420,
+      "accepted": 420,
+      "over100ms": 0,
+      "stages": {
+        "totalMs": {
+          "median": 66.359,
+          "p95": 76.237349999999978,
+          "p99": 80.17613999999999,
+          "maximum": 82.695
+        },
+        "perceptionMs": {
+          "median": 60.056,
+          "p95": 69.753700000000009,
+          "p99": 73.89361,
+          "maximum": 75.683
+        },
+        "registrationMs": {
+          "median": 6.3469999999999995,
+          "p95": 7.5661999999999994,
+          "p99": 8.26597,
+          "maximum": 10.737
+        }
+      }
+    }
+  },
+  "warmup": {
+    "baseline": {
+      "calls": 42,
+      "accepted": 42,
+      "maximumMs": 16199.044
+    },
+    "optimized": {
+      "calls": 42,
+      "accepted": 42,
+      "maximumMs": 40508.308
+    }
+  },
+  "cases": {
+    "poseChangeM": 0.0281084953775723,
+    "yawChangeDeg": 0.120202883844297,
+    "recordedTrajectoryConsistency": {
+      "baselineReferenceDistanceM": {
+        "median": 0.239459868377493,
+        "maximum": 0.372039482852971
+      },
+      "weightedReferenceDistanceM": {
+        "median": 0.239604736702555,
+        "maximum": 0.357967300738035
+      },
+      "baselineReferenceYawDeg": {
+        "median": 0.174307976139791,
+        "maximum": 0.739555862637615
+      },
+      "weightedReferenceYawDeg": {
+        "median": 0.142207053456311,
+        "maximum": 0.690856100137852
+      }
+    },
+    "minimumMatchedRepeatability": 0.552009024616657,
+    "minimumMeanMatchedRepeatability": 0.946094240402246
+  },
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "computationalThreads": 8,
+  "unitWeightBaselineMaximumPoseDifference": 0,
+  "exactProbabilityClouds": true,
+  "exactCorrespondenceIndices": false,
+  "tests": {
+    "passed": 100,
+    "failed": 0,
+    "incomplete": 0
+  },
+  "codeAnalyzer": {
+    "configuration": "factory",
+    "files": 4,
+    "findings": 0
+  }
+}

@@ -218,6 +218,14 @@ classdef mappingSupport
             assert(all(strlength(components.semanticName)>0), 'Empty semantic labels.');
             components.mixtureWeight = double(components.mixtureWeight(:));
             assert(isreal(components.mixtureWeight) && all(isfinite(components.mixtureWeight) & components.mixtureWeight >= 0), 'Invalid mixture weights.');
+            if isfield(components,'repeatability')
+                r = components.repeatability;
+                assert(isnumeric(r) && isreal(r) && (isvector(r) || isempty(r)) && ...
+                    numel(r)==n && all(isfinite(r(:)) & r(:)>=0 & r(:)<=1), ...
+                    'VehicleLocalization:InvalidRepeatability', ...
+                    'Repeatability must contain one finite probability in [0,1] per component.');
+                components.repeatability = double(r(:));
+            end
             for k = 1:n
                 covariance = components.covariance(:,:,k);
                 assert(norm(covariance-covariance.', 'fro') <= 1e-9*max(norm(covariance,'fro'),1), 'Asymmetric covariance.');

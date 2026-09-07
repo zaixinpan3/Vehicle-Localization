@@ -15,7 +15,7 @@ function projected = projectSemanticProbabilityCloud(cloud, dimension)
     end
     components = struct('semanticName',source.semanticName,'mean',means, ...
         'covariance',covariance,'mixtureWeight',source.mixtureWeight,'numComponents',source.numComponents);
-    for name=["semanticProbability","occupancyProbability","supportAmplitude"]
+    for name=["semanticProbability","occupancyProbability","supportAmplitude","repeatability"]
         if isfield(source,name), components.(name)=source.(name); end
     end
     projected = struct('components',components,'dimension',dimension);

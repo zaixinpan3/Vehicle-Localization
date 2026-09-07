@@ -62,9 +62,16 @@ three target major standard deviations plus 2.5 m. Pole association uses a
 This discourages a broad map component from capturing a compact landmark
 solely because its residual precision is small.
 
-Weights use source semantic evidence times occupancy and target temporal
-support amplitude, normalized within each shared class. Classes receive equal
-nominal weight. Positive `mixtureWeight` magnitudes are not used: support volume,
+Weights use source semantic evidence times occupancy and available target
+quality, normalized within each shared class. Classes receive equal nominal
+weight. As of 2026-09-07, each normalized weight is then multiplied by the
+matched map component's `repeatability`, without further renormalization.
+This discounts geometrically unstable map components and uniformly unstable
+classes. Schema-2 repeatability is the posterior probability of stable
+geometry across observed blocks, not a calibrated per-frame detection rate.
+Legacy clouds without this field retain unit repeatability and their existing
+support-amplitude quality. See the [implementation and validation](d2d_repeatability_weighting.md).
+Positive `mixtureWeight` magnitudes are not used: support volume,
 EM sampling mass, and source hit count are not interchangeable geometric
 confidence. A zero mixture weight still disables a component. This removes
 the diagnosed integrated-volume attraction without changing the map's query
@@ -96,8 +103,8 @@ it emits a measurement only if `accepted` is true. An event still contains a
 three-element `pose`, with acquisition and arrival timestamps.
 
 Acceptance also requires at least three correspondences, 10% source coverage,
-mean class compatibility >= 0.15, convergence, and an interior solution in the
-configured [3 m, 3 m, 12 deg] correction bounds. Each class independently
+repeatability-weighted mean class compatibility >= 0.15, convergence, and an
+interior solution in the configured [3 m, 3 m, 12 deg] correction bounds. Each class independently
 computes a correction in its own observable subspace; a correction exceeding
 0.5 equivalent meters rejects the combined result as `inconsistentClasses`.
 These thresholds and the normal matrix are engineering diagnostics, not
