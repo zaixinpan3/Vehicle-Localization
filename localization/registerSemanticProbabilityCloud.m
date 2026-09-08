@@ -19,7 +19,7 @@ function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, init
         return;
     end
     assert(~isfield(cfg,'method') || string(cfg.method)=="densityOverlap",'Invalid registration method.');
-    [fixed, moving, heightDetails] = prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
+    [fixed, moving, heightDetails] = registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
     initialPose = double(initialPose(:).');
     assert(numel(initialPose)==3 && all(isfinite(initialPose)), 'Expected finite initial [x y yaw].');
     assert(isscalar(cfg.yawLeverArm) && cfg.yawLeverArm>0 && isfinite(cfg.yawLeverArm), 'Invalid yaw scale.');
@@ -45,12 +45,12 @@ function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, init
         moving.mean(:,3)=moving.mean(:,3)-heightDetails.heightTranslation;
     end
     rawFixed = fixed; rawMoving = moving;
-    [fixed,moving] = balanceSemanticDistributions(rawFixed,rawMoving);
+    [fixed,moving] = registrationSupport.balanceSemanticDistributions(rawFixed,rawMoving);
     parameterScale = [1;1;1/cfg.yawLeverArm];
     scaledBounds = bounds./parameterScale;
     q = zeros(3,1);
-    normalization = sqrt(semanticGaussianOverlap(fixed,fixed,[0 0 0])* ...
-        semanticGaussianOverlap(moving,moving,[0 0 0]));
+    normalization = sqrt(registrationSupport.semanticGaussianOverlap(fixed,fixed,[0 0 0])* ...
+        registrationSupport.semanticGaussianOverlap(moving,moving,[0 0 0]));
     [f0,~] = objective(q,fixed,moving,initialPose(3),parameterScale,normalization);
     result.initialSimilarity = -f0;
     % Compare continuation with direct local refinement. Smoothing can merge
@@ -61,8 +61,8 @@ function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, init
       for smoothing = schedule{1}
         f = smoothComponents(rawFixed,smoothing);
         m = smoothComponents(rawMoving,smoothing);
-        [f,m] = balanceSemanticDistributions(f,m);
-        normValue = sqrt(semanticGaussianOverlap(f,f,[0 0 0])*semanticGaussianOverlap(m,m,[0 0 0]));
+        [f,m] = registrationSupport.balanceSemanticDistributions(f,m);
+        normValue = sqrt(registrationSupport.semanticGaussianOverlap(f,f,[0 0 0])*registrationSupport.semanticGaussianOverlap(m,m,[0 0 0]));
         [value,gradient] = objective(q,f,m,initialPose(3),parameterScale,normValue);
         inverseHessian = eye(3);
         converged = false;
@@ -147,7 +147,7 @@ end
 
 function [value,gradient] = objective(q,fixed,moving,yaw,scale,normalization)
     pose = (q.*scale).'; pose(3)=pose(3)+yaw;
-    [energy,derivative] = semanticGaussianOverlap(fixed,moving,pose);
+    [energy,derivative] = registrationSupport.semanticGaussianOverlap(fixed,moving,pose);
     value = -energy/max(normalization,realmin);
     gradient = -derivative(:).*scale/max(normalization,realmin);
 end
@@ -160,7 +160,7 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
 % Height conditions correspondence compatibility, not the planar pose force.
 % A partially observable solution is reported but never accepted as full SE(2).
     if nargin<4, cfg=distributionRegistrationConfig(); end
-    [f,m,height]=prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
+    [f,m,height]=registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
     initialPose=double(initialPose(:).');
     assert(numel(initialPose)==3 && all(isfinite(initialPose)),'Expected finite [x y yaw].');
     gcfg=cfg.geometric;

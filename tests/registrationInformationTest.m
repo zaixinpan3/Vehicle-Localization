@@ -14,7 +14,7 @@ classdef registrationInformationTest < matlab.unittest.TestCase
             testCase.verifyTrue(result.accepted,result.reason);
             expected=diag([1 1 13])/(2*.2+.1^2);
             testCase.verifyEqual(result.information,expected,'AbsTol',1e-12);
-            event=registrationPoseMeasurement(result,4.2);
+            event=registrationSupport.registrationPoseMeasurement(result,4.2);
             testCase.verifyEqual(event.information,expected,'AbsTol',1e-12);
             testCase.verifyEqual(event.timestamp,4.2);
             testCase.verifyEqual(event.pose,[0 0 0]);
@@ -58,14 +58,14 @@ classdef registrationInformationTest < matlab.unittest.TestCase
             cloud=geometricRegistrationTest.parallelRoad();
             result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
             testCase.verifyEqual(result.information*[1;0;0],zeros(3,1),'AbsTol',1e-12);
-            testCase.verifyEmpty(registrationPoseMeasurement(result,0));
+            testCase.verifyEmpty(registrationSupport.registrationPoseMeasurement(result,0));
         end
         function acceptedPoseCannotOmitOrFakeInformation(testCase)
             result=struct('accepted',true,'poseXYTheta',[0 0 0]);
-            testCase.verifyError(@() registrationPoseMeasurement(result,0), ...
+            testCase.verifyError(@() registrationSupport.registrationPoseMeasurement(result,0), ...
                 'VehicleLocalization:RegistrationInformationUnavailable');
             result.information=diag([1 1 0]);
-            testCase.verifyError(@() registrationPoseMeasurement(result,0), ...
+            testCase.verifyError(@() registrationSupport.registrationPoseMeasurement(result,0), ...
                 'VehicleLocalization:InvalidRegistrationInformation');
         end
     end

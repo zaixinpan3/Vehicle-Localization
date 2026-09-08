@@ -66,7 +66,8 @@ perception does not estimate temporal repeatability.
 - `mappingSupport.validateSemanticProbabilityCloud` validates an optional
   numeric, real, finite per-component vector in `[0,1]` and stores a column.
   Malformed fields raise `VehicleLocalization:InvalidRepeatability`.
-- `projectSemanticProbabilityCloud` preserves the field in XY and XYZ.
+- `registrationSupport.projectSemanticProbabilityCloud` preserves the field in
+  XY and XYZ.
 - Missing repeatability retains unit weights, with result provenance
   `repeatabilitySource="legacyUnitWeight"`; supplied fields report
   `"mapPosterior"`. Existing legacy support-amplitude quality is retained.

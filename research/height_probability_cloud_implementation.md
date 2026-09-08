@@ -36,9 +36,9 @@ The normal coarse/map export keeps its existing `components.mean` [N,2] and
 | `spatialCoordinateFrame` | string | Sensor XYZ after the supplied projection rotation, or map XYZ |
 | `heightModel` | string | Joint source Gaussian, conditional map Gaussian, or unavailable |
 
-`projectSemanticProbabilityCloud(cloud,3)` returns ordinary `mean` [N,3] and
-`covariance` [3,3,N] arrays. Dimension 2 returns the exact marginal. Both retain
-mixture mass. Unknown legacy height is flagged rather than fabricated; explicit
+`registrationSupport.projectSemanticProbabilityCloud(cloud,3)` returns ordinary
+`mean` [N,3] and `covariance` [3,3,N] arrays. Dimension 2 returns the exact marginal.
+Both retain mixture mass. Unknown legacy height is flagged rather than fabricated; explicit
 XYZ projection fails when required height is unavailable. Empty products remain
 valid. XYZ validation checks dimensions, finite geometry, symmetry, positive
 definiteness, and agreement with the stored XY marginal.
@@ -120,13 +120,13 @@ New full-route builds through `buildFeatureMap` use the height-preserving path.
 
 ## Registration and vertical reference
 
-`semanticGaussianOverlap` dispatches planar and spatial overlap. The spatial
-kernel evaluates the exact Gaussian integral with summed covariances, including
+`registrationSupport.semanticGaussianOverlap` dispatches planar and spatial
+overlap. The spatial kernel evaluates the exact Gaussian integral with summed covariances, including
 analytic x/y/yaw derivatives of rotated xz/yz terms. The optimizer and observer
 event remain planar; no height state is added to the observer.
 
-`prepareSemanticRegistration` resolves the representation and adds optional
-moving-frame height/tilt uncertainty before comparison. A finite
+`registrationSupport.prepareSemanticRegistration` resolves the representation
+and adds optional moving-frame height/tilt uncertainty before comparison. A finite
 `heightTranslation` is the sensor/vehicle origin's map Z. It is now the third
 output of `poseRowToPlanarPose`; it is not guessed from cloud means.
 The roll/pitch perturbation Jacobian of a gravity-aligned component mean is

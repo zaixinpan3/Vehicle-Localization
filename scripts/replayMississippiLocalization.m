@@ -53,7 +53,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
             'VehicleLocalization:EvaluationLeakage','Query frames overlap the declared training set.');
         mapOverlap="disjoint training/query frames from the same drive; neighboring scans remain correlated";
     end
-    cloud=projectSemanticProbabilityCloud(fullCloud,2);
+    cloud=registrationSupport.projectSemanticProbabilityCloud(fullCloud,2);
     mapPreparationSeconds=toc(timer);
     clear loaded fullCloud
     offset=[.5,-.4,deg2rad(2)]; state=poseReference(1,:)+offset;

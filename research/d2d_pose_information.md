@@ -4,8 +4,8 @@ Date: 2026-09-07. State order is `[X,Y,psi]`, in meters and radians.
 
 The geometric matcher now supplies its local Gaussian information directly to
 `localizeLidarFrame`, which emits `timestamp`, `arrivalTime`, `pose`, and
-`information`. `registrationPoseMeasurement` rejects an accepted result without
-a finite symmetric positive definite matrix. Rejected or partially observable
+`information`. `registrationSupport.registrationPoseMeasurement` rejects an
+accepted result without a finite symmetric positive definite matrix. Rejected or partially observable
 matches emit no full-pose event. The observer's missing-information defaults are
 unchanged and are not used to compensate for an incomplete D2D interface.
 

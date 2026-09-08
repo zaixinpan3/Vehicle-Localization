@@ -99,8 +99,9 @@ The coarse product contains normalized mixture weights and empirical XYZ
 means/covariances, aggregated into 0.9 m XY output cells with covariance safeguards.
 `components.meanXYZ`, `covarianceXYZ`, and `heightAvailable` retain height and
 its xz/yz coupling. Existing `mean` and `covariance` fields remain the exact XY
-marginal. `projectSemanticProbabilityCloud(cloud,3)` returns standard XYZ
-component arrays; dimension 2 selects the marginal without changing weights.
+marginal. `registrationSupport.projectSemanticProbabilityCloud(cloud,3)` returns
+standard XYZ component arrays; dimension 2 selects the marginal without changing
+weights.
 `semanticProbability` and `occupancyProbability` are compatibility field names
 for **uncalibrated evidence and hit support**, not Bayesian semantic or free-space
 occupancy posteriors. Known IMU tilt can be supplied through

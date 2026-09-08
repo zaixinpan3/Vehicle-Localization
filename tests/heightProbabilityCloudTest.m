@@ -42,12 +42,12 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             cloud=temporalMapToProbabilityCloud(struct('layers',layer));
             testCase.verifyFalse(cloud.components.heightAvailable);
             testCase.verifyTrue(isnan(cloud.components.meanXYZ(3)));
-            testCase.verifyError(@() projectSemanticProbabilityCloud(cloud,3),'VehicleLocalization:HeightUnavailable');
+            testCase.verifyError(@() registrationSupport.projectSemanticProbabilityCloud(cloud,3),'VehicleLocalization:HeightUnavailable');
         end
         function aggregatesWithinAndBetweenPillarHeight(testCase)
             [ground,offGround,cfg,points]=heightProbabilityCloudTest.groundFixture();
             cloud=buildCoarseSemanticProbabilityCloud(ground,offGround,cfg);
-            spatial=projectSemanticProbabilityCloud(cloud,3);
+            spatial=registrationSupport.projectSemanticProbabilityCloud(cloud,3);
             testCase.verifyEqual(spatial.components.mean,mean(points,1),'AbsTol',1e-12);
             testCase.verifyEqual(spatial.components.covariance,cov(points,1),'AbsTol',1e-10);
             testCase.verifyEqual(spatial.components.covariance(1:2,1:2),cloud.components.covariance,'AbsTol',0);
@@ -59,7 +59,7 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             spatial=buildTemporalStabilityGmmMap(points,labels,frames,cfg);
             xyCloud=temporalMapToProbabilityCloud(planar);
             jointCloud=temporalMapToProbabilityCloud(spatial);
-            full=projectSemanticProbabilityCloud(jointCloud,3);
+            full=registrationSupport.projectSemanticProbabilityCloud(jointCloud,3);
             expectedZ=30+0.2*full.components.mean(:,1)-0.1*full.components.mean(:,2);
             testCase.verifyEqual(jointCloud.components.mean,xyCloud.components.mean,'AbsTol',0);
             testCase.verifyEqual(jointCloud.components.covariance,xyCloud.components.covariance,'AbsTol',0);
@@ -94,8 +94,8 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             fixed=heightProbabilityCloudTest.transform(moving,[1 -2 0.1],100);
             cfg=distributionRegistrationConfig(); cfg.heightMode="auto";
             [score,details]=scoreSemanticProbabilityCloudAlignment(fixed,moving,[0.9 -1.9 0.08],cfg);
-            expected=scoreSemanticProbabilityCloudAlignment(projectSemanticProbabilityCloud(fixed,2), ...
-                projectSemanticProbabilityCloud(moving,2),[0.9 -1.9 0.08]);
+            expected=scoreSemanticProbabilityCloudAlignment(registrationSupport.projectSemanticProbabilityCloud(fixed,2), ...
+                registrationSupport.projectSemanticProbabilityCloud(moving,2),[0.9 -1.9 0.08]);
             testCase.verifyEqual(score,expected,'AbsTol',0);
             testCase.verifyEqual(details.height.heightReason,"verticalReferenceUnavailable");
         end

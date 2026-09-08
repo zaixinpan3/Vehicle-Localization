@@ -50,7 +50,7 @@ function report = diagnoseHeightRegistrationBias(outputFolder, stage)
             inputs{i}=struct('frame',frames(i),'pose',pose,'height',z,'tilt',tilt, ...
                 'coarse',coarse,'fine',fineQuery,'fixed',fixed,'futureGrid',futureGrid, ...
                 'fineSelf',transformCloud(fineQuery,pose,z), ...
-                'coarseSelf',transformCloud(projectSemanticProbabilityCloud(coarse,3),pose,z), ...
+                'coarseSelf',transformCloud(registrationSupport.projectSemanticProbabilityCloud(coarse,3),pose,z), ...
                 'queryPoints',{queryPoints},'futurePoints',{futurePoints}, ...
                 'observations',observations,'coordinateMaximumError',max(abs(check-split),[],'all'));
             fprintf('Cached diagnostic frame %d.\n',frames(i));
@@ -121,7 +121,7 @@ function report = diagnoseHeightRegistrationBias(outputFolder, stage)
         end
         for name=cloudCfg.semanticNames
             for sourceName=["fixed","coarse","fine"]
-                c=selectClass(projectSemanticProbabilityCloud(item.(sourceName),3),name);
+                c=selectClass(registrationSupport.projectSemanticProbabilityCloud(item.(sourceName),3),name);
                 c=c.components;
                 for j=1:c.numComponents
                     cov=c.covariance(:,:,j); beta=cov(1:2,1:2)\cov(1:2,3);
@@ -134,15 +134,15 @@ function report = diagnoseHeightRegistrationBias(outputFolder, stage)
         end
         for mode=["xy","xyz"]
             cfg=distributionRegistrationConfig(); cfg.method="densityOverlap"; cfg.heightMode=mode; cfg.heightTranslation=item.height;
-            [f,m]=prepareSemanticRegistration(item.fixed,item.coarse,cfg);
+            [f,m]=registrationSupport.prepareSemanticRegistration(item.fixed,item.coarse,cfg);
             f.mean(:,1:2)=f.mean(:,1:2)-item.pose(1:2);
             if mode=="xyz", f.mean(:,3)=f.mean(:,3)-item.height; m.mean(:,3)=m.mean(:,3)-item.height; end
-            [f,m]=balanceSemanticDistributions(f,m);
+            [f,m]=registrationSupport.balanceSemanticDistributions(f,m);
             testPose=[0.17 -0.23 item.pose(3)+0.01];
-            [~,gradient]=semanticGaussianOverlap(f,m,testPose);
+            [~,gradient]=registrationSupport.semanticGaussianOverlap(f,m,testPose);
             for axis=1:3
                 step=zeros(1,3); step(axis)=1e-5;
-                numeric=(semanticGaussianOverlap(f,m,testPose+step)-semanticGaussianOverlap(f,m,testPose-step))/(2e-5);
+                numeric=(registrationSupport.semanticGaussianOverlap(f,m,testPose+step)-registrationSupport.semanticGaussianOverlap(f,m,testPose-step))/(2e-5);
                 gradientRows(end+1,:)={item.frame,mode,axis,gradient(axis),numeric}; %#ok<AGROW>
             end
         end
@@ -212,7 +212,7 @@ function r=yawRotation(yaw,dim)
 end
 
 function out=removeCross(cloud)
-    out=mappingSupport.validateSemanticProbabilityCloud(projectSemanticProbabilityCloud(cloud,3));
+    out=mappingSupport.validateSemanticProbabilityCloud(registrationSupport.projectSemanticProbabilityCloud(cloud,3));
     out.covariance(1:2,3,:)=0; out.covariance(3,1:2,:)=0;
     out=struct('components',out);
 end
@@ -222,7 +222,7 @@ function out=selectClass(cloud,name)
     % Return a minimal schema while retaining measured height for XY inputs.
     dim=2;
     if size(c.mean,2)==3 || (isfield(c,'heightAvailable') && all(c.heightAvailable)), dim=3; end
-    out=mappingSupport.validateSemanticProbabilityCloud(projectSemanticProbabilityCloud(cloud,dim));
+    out=mappingSupport.validateSemanticProbabilityCloud(registrationSupport.projectSemanticProbabilityCloud(cloud,dim));
     keep=out.semanticName==name | name=="all";
     out.semanticName=out.semanticName(keep); out.mean=out.mean(keep,:);
     out.covariance=out.covariance(:,:,keep); out.mixtureWeight=out.mixtureWeight(keep);

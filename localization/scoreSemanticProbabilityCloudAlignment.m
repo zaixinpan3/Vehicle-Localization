@@ -4,13 +4,13 @@ function [similarity, details] = scoreSemanticProbabilityCloudAlignment(fixedClo
 % with yaw in radians. Both means and covariances transform. Empty clouds
 % return zero similarity. gradient is with respect to the three pose entries.
     if nargin<4, cfg=distributionRegistrationConfig(); end
-    [fixed,moving,heightDetails] = prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
-    [fixed,moving] = balanceSemanticDistributions(fixed,moving);
+    [fixed,moving,heightDetails] = registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
+    [fixed,moving] = registrationSupport.balanceSemanticDistributions(fixed,moving);
     pose = double(poseXYTheta(:).');
     assert(numel(pose)==3 && all(isfinite(pose)), 'Expected finite [x y yaw].');
-    [crossEnergy, gradient] = semanticGaussianOverlap(fixed, moving, pose);
-    fixedSelf = semanticGaussianOverlap(fixed, fixed, [0 0 0]);
-    movingSelf = semanticGaussianOverlap(moving, moving, [0 0 0]);
+    [crossEnergy, gradient] = registrationSupport.semanticGaussianOverlap(fixed, moving, pose);
+    fixedSelf = registrationSupport.semanticGaussianOverlap(fixed, fixed, [0 0 0]);
+    movingSelf = registrationSupport.semanticGaussianOverlap(moving, moving, [0 0 0]);
     normalization = sqrt(max(fixedSelf*movingSelf,0));
     similarity = 0;
     if normalization > 0

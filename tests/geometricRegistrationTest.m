@@ -145,7 +145,7 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
             cloud.frameCalibration=lidarFrameCalibrationConfig();
             cloud.frameCalibration.translation=[.1 0 0];
             cloud.components.semanticProbability=(1:6).'/6;
-            projected=projectSemanticProbabilityCloud(cloud,2);
+            projected=registrationSupport.projectSemanticProbabilityCloud(cloud,2);
             testCase.verifyEqual(projected.frameCalibration,cloud.frameCalibration);
             testCase.verifyEqual(projected.components.semanticProbability,cloud.components.semanticProbability);
             identity=projected; identity.frameCalibration=lidarFrameCalibrationConfig();

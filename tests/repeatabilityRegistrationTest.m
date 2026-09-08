@@ -18,7 +18,7 @@ classdef repeatabilityRegistrationTest < matlab.unittest.TestCase
         function projectionRetainsStabilityWithoutChangingMass(testCase,dimension)
             cloud=heightProbabilityCloudTest.spatialCloud();
             cloud.components.repeatability=(1:6)/6;
-            projected=projectSemanticProbabilityCloud(cloud,dimension);
+            projected=registrationSupport.projectSemanticProbabilityCloud(cloud,dimension);
             testCase.verifyEqual(projected.components.repeatability,(1:6).'/6,'AbsTol',0);
             testCase.verifyEqual(projected.components.mixtureWeight,cloud.components.mixtureWeight,'AbsTol',0);
         end

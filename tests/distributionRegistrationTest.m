@@ -12,8 +12,8 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
         function zeroMassComponentsPreserveScoreAndGradient(testCase,dimension)
             source=heightProbabilityCloudTest.spatialCloud();
             target=heightProbabilityCloudTest.transform(source,[1.2 -0.7 0.16],0);
-            moving=projectSemanticProbabilityCloud(source,dimension);
-            fixed=projectSemanticProbabilityCloud(target,dimension);
+            moving=registrationSupport.projectSemanticProbabilityCloud(source,dimension);
+            fixed=registrationSupport.projectSemanticProbabilityCloud(target,dimension);
             cfg=distributionRegistrationConfig(); cfg.heightMode="auto"; cfg.heightTranslation=0;
             pose=[1.1 -0.6 0.12];
             [expected,reference]=scoreSemanticProbabilityCloudAlignment(fixed,moving,pose,cfg);
@@ -23,9 +23,9 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             testCase.verifyEqual(details.gradient,reference.gradient,'AbsTol',1e-12);
         end
         function energyIsIndependentOfRequestedGradient(testCase,dimension)
-            cloud=projectSemanticProbabilityCloud(heightProbabilityCloudTest.spatialCloud(),dimension);
-            energy=semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
-            [withGradient,gradient]=semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
+            cloud=registrationSupport.projectSemanticProbabilityCloud(heightProbabilityCloudTest.spatialCloud(),dimension);
+            energy=registrationSupport.semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
+            [withGradient,gradient]=registrationSupport.semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
             testCase.verifyEqual(energy,withGradient,'AbsTol',0);
             testCase.verifyTrue(all(isfinite(gradient)));
         end

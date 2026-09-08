@@ -1,4 +1,27 @@
-# Vehicle observer
+# Localization and vehicle observer
+
+The module contains 19 MATLAB files, excluding the independent
+`lateralObserver/` directory. `localizeLidarFrame` runs online perception,
+registration and pose-event export. `registerSemanticProbabilityCloud` and
+`scoreSemanticProbabilityCloudAlignment` remain the registration and scoring
+entry points; observer design, verification and simulation keep their existing
+entry points.
+
+Shared registration helpers are static methods in `registrationSupport.m`.
+Call them with the `registrationSupport.` prefix:
+
+| Method | Responsibility |
+| --- | --- |
+| `projectSemanticProbabilityCloud` | Select XYZ or its exact XY marginal |
+| `prepareSemanticRegistration` | Validate calibration and resolve height/tilt uncertainty |
+| `balanceSemanticDistributions` | Balance shared semantic-class overlap energies |
+| `semanticGaussianOverlap` | Evaluate Gaussian overlap and planar-pose gradients |
+| `registrationPoseMeasurement` | Validate and export accepted pose information |
+
+The former standalone helper names are replaced by these qualified calls,
+for example `registrationSupport.projectSemanticProbabilityCloud(cloud,3)`.
+Certificate-condition diagnostics are local to `runImprovedVehicleObserver`;
+their results remain available in `estimate.diagnostics.certificateConditions`.
 
 The public localization output is `[X,Y,psi]`. The independent lateral
 observer feeds the seven-state global model `[X,Vx,Ax,Y,Vy,Ay,psi]`.

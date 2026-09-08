@@ -34,5 +34,5 @@ function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initia
     result.perceptionSeconds = perceptionSeconds;
     result.registrationSeconds = toc(registrationStart);
     result.probabilityCloud = cloud;
-    measurement = registrationPoseMeasurement(result,timestamp);
+    measurement = registrationSupport.registrationPoseMeasurement(result,timestamp);
 end
