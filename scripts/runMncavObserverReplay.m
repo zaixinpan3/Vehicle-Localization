@@ -1,4 +1,4 @@
-function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,outputFolder,scenario,fixedLidarDelay)
+function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,outputFolder,scenario,fixedLidarDelay,options)
 % runMncavObserverReplay Evaluate the actual lateral/global observer cascade.
 % D2D events come from recursive vehicle-motion-seeded matching and do not use
 % reference-seeded guesses. This feed-forward experiment does not feed global
@@ -8,8 +8,9 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
         designFile (1,1) string
         parameterFile (1,1) string
         outputFolder (1,1) string
-        scenario (1,1) string {mustBeMember(scenario,["fusion","gpsOnly","positionOutage","outageNoLidar"])} = "fusion"
+        scenario (1,1) string {mustBeMember(scenario,["fusion","gpsOnly","positionOutage","outageNoLidar","lidarOnly"])} = "fusion"
         fixedLidarDelay (1,1) double {mustBeNonnegative} = .15
+        options.SensorFolder (1,1) string = ""
     end
     if ~isfolder(outputFolder), mkdir(outputFolder); end
     sequenceFolder=fileparts(replayFolder);
@@ -19,17 +20,20 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
     else
         assert(any(scenario==["gpsOnly","outageNoLidar"]),'The D2D replay must finish before fusion.');
     end
-    if any(scenario==["fusion","positionOutage"])
+    if any(scenario==["fusion","positionOutage","lidarOnly"])
         assert(height(calls)==1170,'The complete 1170-frame replay is required.');
     else
         calls=table();
     end
+    sensorFolder=options.SensorFolder;
+    if strlength(sensorFolder)==0, sensorFolder=fullfile(sequenceFolder,'sensors'); end
     [sensorData,reference,metadata]=prepareMncavObserverReplay( ...
-        fullfile(sequenceFolder,'sensors'),parameterFile,calls,fixedLidarDelay);
+        sensorFolder,parameterFile,calls,fixedLidarDelay);
     designs=load(designFile,'observerDesign','observerCfg','lateralDesign');
     cfg=designs.observerCfg;
     cfg.measurement.inputInterpolation="zoh";
     cfg.measurement.timestampTolerance=0;
+    cfg.measurement.fixedLidarDelay=fixedLidarDelay;
     cfg.lidar.missingInformationTranslationWeight=0;
     cfg.lidar.missingInformationHeadingWeight=cfg.lidar.minimumHeadingWeight;
     initial=[reference.x(1)+.5;0;0;reference.y(1)-.4;0;0;reference.psi(1)+deg2rad(2)];
@@ -41,6 +45,7 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
         sensorData.gps.pose=sensorData.gps.pose(keep,:);
     end
     if any(scenario==["gpsOnly","outageNoLidar"]), sensorData.lidar=struct(); end
+    if scenario=="lidarOnly", sensorData.gps=struct(); end
     timer=tic;
     failure=struct('completed',true,'message',"",'firstFailingSampleTime',NaN, ...
         'diagnosticSeconds',0);
@@ -108,7 +113,20 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
     metadata.scoring="causal onlineZ, before future measurement replay revises past history";
     metadata.architecture="recorded CAN -> lateral observer; recursive D2D events -> seven-state global observer; no global-observer-to-D2D feedback";
     metadata.outageScope="synthetic GNSS XY input outage [40,60) only; D2D retains recorded known roll/pitch, so this is not a complete GNSS-device failure test";
-    metadata.certificateScope="nominal continuous observer envelope only; held pose pulses, delay replay, outages, model uncertainty and mapping errors are empirical tests";
+    metadata.certificateScope="verified aperiodic full-pose flows; actual timing, fixed delay and operating-envelope conditions reported separately; matching, cascade and numerical error budgets not calibrated";
+    conditions=estimate.diagnostics.certificateConditions;
+    summary.maximumQualifiedPoseGapSeconds=conditions.maximumQualifiedPoseGapSeconds;
+    summary.shortQualifiedIntervalCount=conditions.shortIntervalCount;
+    summary.longQualifiedIntervalCount=conditions.longIntervalCount;
+    summary.fixedDelayMatchesConfiguration=conditions.fixedDelayMatchesConfiguration;
+    summary.timingWithinCertificate=conditions.timingWithinCertificate;
+    summary.flowCertificateVerified=estimate.observer.certificateVerified;
+    summary.unconditionalStabilityClaimed=false;
+    metadata.gpsFusion="GPS substitutes XY during full LiDAR pose pulses; position-only continuation outside the recent-LiDAR interval is not labeled a full-pose certificate";
+    if scenario=="lidarOnly"
+        metadata.outageScope="no GNSS XY events after one reference-based biased initialization; recorded known roll/pitch retained for D2D, not complete GNSS/INS device loss";
+    end
+    summary.invariantExtensionSamples=nnz(estimate.diagnostics.invariantExtensionActive);
     metadata.matlabVersion=version;
     metadata.computationalThreads=maxNumCompThreads;
     report=struct('summary',summary,'metadata',metadata,'online',online,'estimate',estimate,'failure',failure);

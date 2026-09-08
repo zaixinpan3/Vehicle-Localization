@@ -1,5 +1,5 @@
-function design = designImprovedObserverGains(cfg)
-% designImprovedObserverGains Synthesize the seven-state robust HGO gains.
+function design = designContinuousObserverGains(cfg)
+% designContinuousObserverGains Synthesize the seven-state robust HGO gains.
 % A cutting-plane loop solves only active vertex LMIs, while every iteration
 % searches the complete output/f/heading-weight Cartesian product. The final
 % design is accepted only after exhaustive verification of the complete
@@ -87,7 +87,7 @@ function design = designImprovedObserverGains(cfg)
     design.invariantGainMode = "fixed-nonzero";
     design.cfg = cfg;
 
-    verification = verifyImprovedObserverDesign(design, cfg);
+    verification = verifyContinuousObserverDesign(design, cfg);
     design.verification = verification;
     design.certified = verification.certified;
     assert(design.certified, ...

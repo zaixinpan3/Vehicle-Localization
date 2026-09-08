@@ -213,17 +213,21 @@ loop. `runLateralVelocityObserver` supplies exactly this interface:
 * `lowSpeedHold`, retained as a compatibility flag indicating that the raw
   side-slip direction is invalid; it no longer hard-zeroes the master state.
 
-The completed global stage is in `localization/improvedObserver/`. Its state is
-`[X,Vx,Ax,Y,Vy,Ay,phi]`; it uses the nonsingular known-input model
-`z3Dot=q^2*z2-2*q*z6`, `z6Dot=q^2*z5+2*q*z3`, and `phiDot=r_m`. GPS position and
-lidar heading form the base output, lidar position receives the
-`T*P^-1*Cl'*W(t)` information-shaped correction, and four invariant outputs
-couple velocity, acceleration, heading, and side slip. The robust certificate
-enumerates all 65,536 combinations of the 13-coefficient output box, heading
-weight endpoints, and exact known-input vertices. Delayed or out-of-order poses
-are replayed at physical timestamps. See
-`localization/improvedObserver/README.md` for equations, data interfaces, and
-the precise certificate boundary.
+The global stage is in `localization/`. Its internal state is
+`[X,Vx,Ax,Y,Vy,Ay,psi]`, with causal output `[X,Y,psi]`. Qualified LiDAR poses
+use the full base gain with unit XY weight; GPS may substitute XY within the
+same pose pulse. Both the invariant gain and the acceleration rows of the base gain are
+reduced by a factor of ten; only
+the nonlinear invariant prediction is extended outside the physical state
+box. The state and its linear prediction are not clipped.
+
+The stored aperiodic certificate checks 1,441,792 flow inequalities plus timer
+resets for 30 ms pulses separated by 50--110 ms. Event-split RK4 and physical
+measurement-time replay implement those pulse boundaries. Full-matrix
+information admission, actual timing/delay diagnostics and the distinction
+between a verified model and a certified run are described in
+`localization/README.md`. The former continuous-GNSS design remains available
+for research audits but is rejected by the production runtime.
 
 ## Configuration (`config/`)
 
@@ -395,11 +399,11 @@ certificate of the proposition (negative definite Lyapunov derivative,
 `legacy/config/hgoLateralObserverConfig.m` of the original repository supplied
 the vehicle parameters; its implementation no longer existed there.
 
-`localization/improvedObserver/` is likewise new code. Its tests independently
-check the nonsingular model and invariant equations, directional lidar weights,
-zero-speed and wrapped-angle behavior, bounded replay rejection, all 65,536
-robust-LMI combinations, and a deterministic end-to-end case containing pose
-delay, out-of-order delivery, GPS dropout, and lidar degeneracy.
+Global-observer tests independently check model/invariant equations,
+full-matrix information admission, zero-speed and wrapped-angle behavior,
+physical-time replay, pulse-boundary integration, timer inequalities, stale
+certificate rejection and causal public pose outputs. Recorded full-sequence
+results and limitations are in `research/observer_pulse_implementation.md`.
 
 Deliberately left behind: profiling and visualization scripts, the `legacy/`
 folder, the unused `seedOnly` and `iterativePca` ground modes, the

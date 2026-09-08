@@ -1,8 +1,8 @@
 classdef improvedObserverTest < matlab.unittest.TestCase
 % improvedObserverTest Tests of the complete seven-state observer cascade.
 % Algebraic tests cover the nonsingular model, invariant outputs, lidar
-% information shaping, and robust-LMI vertex construction. Runtime tests use
-% stored certified gains and therefore need no optimization toolbox.
+% full-matrix admission, and robust timer-LMI construction. Runtime tests use
+% stored certified gains; only the explicitly named synthesis test needs a solver.
 
     properties (Access = private)
         LateralDesign
@@ -73,25 +73,30 @@ classdef improvedObserverTest < matlab.unittest.TestCase
                 expectedMeasurement - expectedPrediction, AbsTol=1.0e-14);
         end
 
-        function lidarWeightsPreserveObservedDirections(testCase)
-        % lidarWeightsPreserveObservedDirections Check the Hessian mapping.
+        function deficientInformationDoesNotInventAPoseChannel(testCase)
             cfg = improvedObserverConfig();
-            angle = pi ./ 6.0;
-            directions = [cos(angle), -sin(angle); sin(angle), cos(angle)];
-            information = zeros(3, 3);
-            information(1:2, 1:2) = directions * diag([225.0, 0.0]) * directions.';
-            information(3, 3) = 100.0;
-            [translationWeight, headingWeight, diagnostics] = ...
-                computeLidarInformationWeights(information, cfg);
+            [translation,heading,info] = computeLidarInformationWeights(diag([225,0,100]),cfg);
+            testCase.verifyEqual(translation,zeros(2),AbsTol=0);
+            testCase.verifyEqual(heading,0,AbsTol=0);
+            testCase.verifyFalse(info.qualified);
+        end
 
-            testCase.verifyEqual(translationWeight * directions(:, 1), ...
-                0.9 .* directions(:, 1), AbsTol=1.0e-12);
-            testCase.verifyEqual(translationWeight * directions(:, 2), ...
-                zeros(2, 1), AbsTol=1.0e-12);
-            testCase.verifyGreaterThanOrEqual(eig(translationWeight), -1.0e-12 .* ones(2, 1));
-            testCase.verifyLessThanOrEqual(eig(translationWeight), ones(2, 1));
-            testCase.verifyEqual(headingWeight, 2.0 ./ 3.0, AbsTol=1.0e-12);
-            testCase.verifyTrue(diagnostics.hadInformation);
+        function fullPoseUsesUnitTranslationGain(testCase)
+            cfg = improvedObserverConfig();
+            [translation,heading,info] = computeLidarInformationWeights(diag([9,12,100]),cfg);
+            testCase.verifyEqual(translation,eye(2),AbsTol=1e-12);
+            testCase.verifyEqual(heading,2/3,AbsTol=1e-12);
+            testCase.verifyTrue(info.qualified);
+        end
+
+        function fullInformationCrossTermsControlAdmission(testCase)
+            cfg = improvedObserverConfig();
+            cfg.lidar.informationLowerBound=.1*eye(3);
+            [translation,heading,info] = computeLidarInformationWeights( ...
+                [1,0,.99;0,1,0;.99,0,1],cfg);
+            testCase.verifyEqual(translation,zeros(2),AbsTol=0);
+            testCase.verifyEqual(heading,0,AbsTol=0);
+            testCase.verifyFalse(info.qualified);
         end
 
         function missingLidarInformationUsesSafeConfiguredWeights(testCase)
@@ -106,7 +111,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
 
         function storedDesignPassesTheExhaustiveCertificate(testCase)
-        % storedDesignPassesTheExhaustiveCertificate Recheck all 65,536 LMIs.
+        % storedDesignPassesTheExhaustiveCertificate Check all flow and reset LMIs.
             cfg = improvedObserverConfig();
             design = testCase.ObserverDesign;
             verification = verifyImprovedObserverDesign(design, cfg);
@@ -114,11 +119,11 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(design.knownInputIncludedExactly);
             testCase.verifyGreaterThan(norm(design.N, "fro"), 0.0);
             testCase.verifyTrue(verification.certified);
-            testCase.verifyEqual(verification.checkedVertexCount, 65536);
-            testCase.verifyLessThan(verification.worstBlockMargin, 0.0);
-            testCase.verifyLessThan(verification.worstSchurMargin, 0.0);
+            testCase.verifyEqual(verification.checkedVertexCount, 1441792);
+            testCase.verifyLessThan(verification.maximumFlowEigenvalue, 0.0);
+            testCase.verifyLessThan(verification.maximumResetEigenvalue, 0.0);
             testCase.verifyGreaterThan(verification.minimumPEigenvalue, 0.0);
-            testCase.verifyGreaterThan(verification.minimumXEigenvalue, 0.0);
+
         end
 
         function completeCascadeTracksThroughDelayDropoutAndDegeneracy(testCase)
@@ -137,7 +142,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(metrics.replayCount, 0);
             testCase.verifyGreaterThan(metrics.acceptedEventCount, 0);
             testCase.verifyEqual(metrics.rejectedEventCount, 0);
-            testCase.verifyLessThan(metrics.degenerateLidarMinimumWeight, 0.05);
+            testCase.verifyEqual(metrics.degenerateLidarMinimumWeight,1,AbsTol=1e-12);
             testCase.verifyGreaterThan(metrics.nominalLidarMinimumWeight, 0.80);
             testCase.verifyFalse(any(result.estimate.diagnostics.outsideTrackRateEnvelope));
             testCase.verifyFalse(any(result.estimate.diagnostics.estimatedVelocityOutsideEnvelope));
@@ -239,7 +244,131 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             sensorData = testCase.zeroMotionSensorData(0.05);
 
             testCase.verifyError(@() runImprovedVehicleObserver(sensorData, ...
-                testCase.LateralDesign, testCase.ObserverDesign, cfg), "");
+                testCase.LateralDesign, testCase.ObserverDesign, cfg), "VehicleLocalization:CertificateMismatch");
+        end
+
+        function delayedReplayRecoversTheSameMeasurementTimeHistory(testCase)
+            cfg = improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.60);
+            data.lidar=struct('timestamp',[0;.1;.2;.3], ...
+                'arrivalTime',[0;.1;.2;.3], 'pose',repmat([.2,-.1,.01],4,1), ...
+                'information',repmat(100*eye(3),1,1,4));
+            immediate=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            data.lidar.arrivalTime=data.lidar.timestamp+.15;
+            delayed=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(delayed.z,immediate.z,AbsTol=1e-11);
+            testCase.verifyEqual(delayed.onlineZ(delayed.time<.15,:), ...
+                zeros(nnz(delayed.time<.15),7),AbsTol=1e-12);
+        end
+
+        function irregularPulseEdgesAgreeWithAFinerInputGrid(testCase)
+            cfg=improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            coarse=testCase.zeroMotionSensorData(.10);
+            coarse.lidar=struct('timestamp',.003,'arrivalTime',.003, ...
+                'pose',[.2,-.1,.01],'information',100*eye(3));
+            fine=coarse;
+            fine.highRate=testCase.stationaryHighRate((0:.005:.1).');
+            a=runImprovedVehicleObserver(coarse,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            b=runImprovedVehicleObserver(fine,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(a.z(end,:),b.z(end,:),AbsTol=1e-5);
+        end
+
+        function regularQualifiedScheduleSatisfiesTimingAudit(testCase)
+            cfg=improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.70);
+            stamps=(0:.1:.5).';
+            data.lidar=struct('timestamp',stamps,'arrivalTime',stamps+.15, ...
+                'pose',zeros(6,3),'information',repmat(100*eye(3),1,1,6));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyTrue(e.diagnostics.certificateConditions.timingWithinCertificate);
+            testCase.verifyTrue(e.diagnostics.certificateConditions.fixedDelayMatchesConfiguration);
+            testCase.verifyTrue(e.observer.certificateVerified);
+            testCase.verifyFalse(e.observer.certified);
+        end
+
+        function prolongedPoseGapIsReportedWithoutFalseCertification(testCase)
+            cfg=improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.70);
+            data.lidar=struct('timestamp',[0;.5],'arrivalTime',[.15;.65], ...
+                'pose',zeros(2,3),'information',repmat(100*eye(3),1,1,2));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyFalse(e.diagnostics.certificateConditions.timingWithinCertificate);
+            testCase.verifyEqual(e.diagnostics.certificateConditions.longIntervalCount,1);
+            testCase.verifyFalse(e.observer.certified);
+        end
+
+        function changedGainCannotReuseAVerificationFlag(testCase)
+            cfg=improvedObserverConfig(); data=testCase.zeroMotionSensorData(.05);
+            design=testCase.ObserverDesign; design.K(1,1)=2*design.K(1,1);
+            testCase.verifyError(@() runImprovedVehicleObserver(data, ...
+                testCase.LateralDesign,design,cfg),'VehicleLocalization:CertificateMismatch');
+        end
+
+        function runtimeRejectsMismatchedPulseDuration(testCase)
+            cfg=improvedObserverConfig();cfg.measurement.lidarMaximumAge=.12;
+            data=testCase.zeroMotionSensorData(.05);
+            testCase.verifyError(@() runImprovedVehicleObserver(data, ...
+                testCase.LateralDesign,testCase.ObserverDesign,cfg), ...
+                'VehicleLocalization:CertificateMismatch');
+        end
+
+        function gpsInAPoseGapDoesNotAddAnUncertifiedGain(testCase)
+            cfg=improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.09);
+            data.lidar=struct('timestamp',0,'arrivalTime',0, ...
+                'pose',[0,0,0],'information',100*eye(3));
+            data.gps=struct('timestamp',.05,'arrivalTime',.05,'pose',[1000,-1000]);
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(e.z,zeros(size(e.z)),AbsTol=1e-12);
+            testCase.verifyEqual(nnz(e.diagnostics.acceptedGps),1);
+        end
+
+        function gpsSubstitutesPositionWithinTheFullPosePulse(testCase)
+            cfg=improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.03);
+            data.lidar=struct('timestamp',0,'arrivalTime',0, ...
+                'pose',[0,0,0],'information',100*eye(3));
+            data.gps=struct('timestamp',0,'arrivalTime',0,'pose',[1,0]);
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(e.innovations.base(1,1),1,AbsTol=1e-12);
+            testCase.verifyEqual(e.innovations.lidarPosition(1,:),[0,0],AbsTol=1e-12);
+            testCase.verifyGreaterThan(e.onlineZ(end,1),0);
+        end
+
+        function invariantExtensionBoundsOnlyTheNonlinearPrediction(testCase)
+            cfg=improvedObserverConfig();
+            sample=struct('longitudinalSpeed',4,'lateralVelocity',0, ...
+                'longitudinalAcceleration',0,'lateralAcceleration',0, ...
+                'yawRate',0,'sideSlipAngle',0,'sideSlipAngleRate',0);
+            z=[0;500;100;0;-500;-100;0];
+            channels=evaluateImprovedObserverChannels(z,sample,cfg.operating);
+            testCase.verifyTrue(channels.invariantExtensionActive);
+            testCase.verifyEqual(channels.invariantPrediction(1),512,AbsTol=1e-12);
+            testCase.verifyEqual(channels.modelDerivative([1,2,4,5]), ...
+                [500;100;-500;-100],AbsTol=0);
+        end
+
+        function publicPoseFieldsAreCausal(testCase)
+            cfg=improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.30);
+            data.lidar=struct('timestamp',0,'arrivalTime',.15, ...
+                'pose',[1,0,.01],'information',100*eye(3));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(e.pose,e.onlineZ(:,[1,4,7]),AbsTol=0);
+            testCase.verifyEqual(e.position,e.onlineZ(:,[1,4]),AbsTol=0);
+            testCase.verifyEqual(e.heading,e.onlineZ(:,7),AbsTol=0);
+            testCase.verifyEqual(e.pose(e.time<.15,:),zeros(nnz(e.time<.15),3),AbsTol=1e-12);
+        end
+
+        function lidarOnlyTracksOnTheCertifiedSchedule(testCase)
+            cfg=improvedObserverConfig();
+            cfg.simulation.gpsDropoutInterval=[0,cfg.simulation.finalTime+1];
+            cfg.simulation.outOfOrderExtraDelay=0;
+            result=simulateImprovedObserverScenario(testCase.ObserverDesign,testCase.LateralDesign,cfg);
+            testCase.verifyEqual(nnz(result.estimate.diagnostics.acceptedGps),0);
+            testCase.verifyTrue(result.estimate.diagnostics.certificateConditions.timingWithinCertificate);
+            testCase.verifyLessThan(result.metrics.positionRmse,.25);
+            testCase.verifyLessThan(result.metrics.headingRmse,.01);
         end
 
         function synthesisProducesAnExhaustivelyCertifiedDesign(testCase)
@@ -249,13 +378,20 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             design = designImprovedObserverGains(improvedObserverConfig());
 
             testCase.verifyTrue(design.certified);
-            testCase.verifyEqual(design.verification.checkedVertexCount, 65536);
-            testCase.verifyLessThan(design.verification.worstBlockMargin, 0.0);
+            testCase.verifyEqual(design.verification.checkedVertexCount, 1441792);
+            testCase.verifyLessThan(design.verification.maximumFlowEigenvalue, 0.0);
             testCase.verifyGreaterThan(norm(design.N, "fro"), 0.0);
         end
     end
 
     methods (Static, Access = private)
+        function highRate=stationaryHighRate(time)
+            n=numel(time);
+            highRate=struct('time',time,'steeringAngle',zeros(n,1), ...
+                'longitudinalSpeed',zeros(n,1),'longitudinalAcceleration',zeros(n,1), ...
+                'lateralAcceleration',zeros(n,1),'yawRate',zeros(n,1));
+        end
+
         function sensorData = zeroMotionSensorData(finalTime)
         % zeroMotionSensorData Build a finite stationary high-rate stream.
             time = (0:0.01:finalTime).';

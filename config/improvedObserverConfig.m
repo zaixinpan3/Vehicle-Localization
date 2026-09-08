@@ -1,19 +1,19 @@
 function cfg = improvedObserverConfig()
 % improvedObserverConfig Configure the seven-state improved vehicle observer.
 % The configuration covers the operating envelope used by the robust LMI,
-% the continuous high-gain observer, delayed GPS/lidar replay, lidar
-% information shaping, and the deterministic synthetic validation scenario.
+% the aperiodic full-pose pulse observer, fixed-delay replay, full-matrix
+% information admission, and the deterministic synthetic validation scenario.
 
     cfg = struct();
 
     cfg.operating = struct();
-    cfg.operating.maximumSpeed = 8.0;
+    cfg.operating.maximumSpeed = 16.0;
     cfg.operating.maximumAcceleration = 5.0;
     cfg.operating.maximumTrackAngleRate = 0.60;
 
     cfg.observer = struct();
     cfg.observer.theta = 3.5;
-    cfg.observer.sigma = 3.0;
+    cfg.observer.sigma = 3.5;
     cfg.observer.scalingExponents = [1; 2; 3; 1; 2; 3; 1];
     cfg.observer.integrationMethod = "rk4";
     cfg.observer.initialState = [];
@@ -23,13 +23,13 @@ function cfg = improvedObserverConfig()
     % operating box are reported by the runtime rather than silently altered.
     cfg.observer.clampTrackAngleRateToDesignEnvelope = false;
     cfg.observer.invariantGain = zeros(7, 4);
-    cfg.observer.invariantGain(2, 1) = 0.02;
-    cfg.observer.invariantGain(5, 1) = 0.02;
-    cfg.observer.invariantGain(3, 2) = 0.02;
-    cfg.observer.invariantGain(6, 2) = 0.02;
-    cfg.observer.invariantGain(3, 3) = 0.02;
-    cfg.observer.invariantGain(6, 3) = -0.02;
-    cfg.observer.invariantGain(7, 4) = -0.10;
+    cfg.observer.invariantGain(2, 1) = 0.002;
+    cfg.observer.invariantGain(5, 1) = 0.002;
+    cfg.observer.invariantGain(3, 2) = 0.002;
+    cfg.observer.invariantGain(6, 2) = 0.002;
+    cfg.observer.invariantGain(3, 3) = 0.002;
+    cfg.observer.invariantGain(6, 3) = -0.002;
+    cfg.observer.invariantGain(7, 4) = -0.01;
 
     cfg.measurement = struct();
     cfg.measurement.sampleTime = 0.01;
@@ -40,14 +40,26 @@ function cfg = improvedObserverConfig()
     cfg.measurement.gpsMaximumAge = 0.03;
     cfg.measurement.lidarMaximumAge = 0.03;
     cfg.measurement.replayBufferDuration = 1.0;
-    cfg.measurement.timestampTolerance = 0.0051;
+    cfg.measurement.timestampTolerance = 0.0;
+
+    cfg.measurement.minimumPoseInterval = 0.05;
+    cfg.measurement.maximumPoseInterval = 0.11;
+    cfg.measurement.fixedLidarDelay = 0.15;
+    cfg.measurement.maximumIntegrationStep = 0.01;
 
     cfg.lidar = struct();
+    % Full-matrix admission precedes unit XY base-pose injection. The default
+    % establishes numerical full rank, not a statistically calibrated error.
+    cfg.lidar.poseScales = [1.0; 1.0; 1.0]; % meters, meters, radians
+    cfg.lidar.minimumNormalizedEigenvalue = 1.0e-8;
+    cfg.lidar.informationLowerBound = zeros(3);
+    cfg.lidar.errorBoundValidated = false;
+    % Retained only for historical continuous-design research utilities.
     cfg.lidar.translationInformationScale = 25.0;
     cfg.lidar.headingInformationScale = 50.0;
     cfg.lidar.minimumHeadingWeight = 0.15;
     cfg.lidar.missingInformationTranslationWeight = 0.0;
-    cfg.lidar.missingInformationHeadingWeight = 0.15;
+    cfg.lidar.missingInformationHeadingWeight = 0.0;
 
     cfg.synthesis = struct();
     cfg.synthesis.solver = "sedumi";
@@ -79,7 +91,7 @@ function cfg = improvedObserverConfig()
     cfg.simulation.gpsRateHz = 5.0;
     cfg.simulation.lidarRateHz = 10.0;
     cfg.simulation.gpsDelay = 0.10;
-    cfg.simulation.lidarDelay = 0.08;
+    cfg.simulation.lidarDelay = cfg.measurement.fixedLidarDelay;
     cfg.simulation.outOfOrderExtraDelay = 0.14;
     cfg.simulation.gpsDropoutInterval = [8.0, 12.0];
     cfg.simulation.lidarDegeneracyInterval = [14.0, 18.0];

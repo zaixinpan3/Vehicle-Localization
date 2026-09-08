@@ -6,7 +6,16 @@ function audit=auditMncavOutageCertificate(designFile,outputFile)
 % correction. A positive margin rejects this certificate, not every possible
 % certificate or every nonlinear trajectory.
     loaded=load(designFile,'observerDesign','observerCfg');
-    design=loaded.observerDesign; data=buildImprovedObserverCertificateData(loaded.observerCfg);
+    design=loaded.observerDesign;
+    if isfield(design,'kind') && string(design.kind)=="aperiodic-pose-v1"
+        v=verifyImprovedObserverDesign(design,loaded.observerCfg);
+        audit=table(["aperiodicFullPoseFlow";"timerReset"], ...
+            [v.maximumFlowEigenvalue;v.maximumResetEigenvalue], ...
+            [v.flowInequalityCount;nnz(design.timer.knots>=design.timer.tMin)], ...
+            'VariableNames',{'mode','maximumEigenvalue','checkedCombinations'});
+        writetable(audit,outputFile);disp(audit);return;
+    end
+    data=buildImprovedObserverCertificateData(loaded.observerCfg);
     p=design.P; y=p*design.K; schur=y*(design.X\y.');
     names=["gpsPresent","gpsAbsentMaximumLidar","allPosePulsesInactive"];
     rows=cell(3,4);

@@ -21,5 +21,4 @@ function rootDir = setupVehicleLocalization()
     addpath(fullfile(rootDir, "mapping"));
     addpath(fullfile(rootDir, "localization"));
     addpath(fullfile(rootDir, "localization", "lateralObserver"));
-    addpath(fullfile(rootDir, "localization", "improvedObserver"));
 end

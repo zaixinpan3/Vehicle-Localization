@@ -1,5 +1,5 @@
-function verification = verifyImprovedObserverDesign(design, cfg)
-% verifyImprovedObserverDesign Exhaustively check the final ten-order LMI.
+function verification = verifyContinuousObserverDesign(design, cfg)
+% verifyContinuousObserverDesign Exhaustively check the final ten-order LMI.
 % Every combination of the 13-parameter h box, the two heading-weight
 % endpoints, and the four exact-known-input vertices is evaluated with the
 % recovered numerical matrices. No optimization toolbox is needed.

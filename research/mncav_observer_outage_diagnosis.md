@@ -3,6 +3,10 @@
 Date: 2026-09-07. Follow-up to the
 [full Mississippi replay](mississippi_full_sequence_replay.md).
 
+Historical reproduction uses the cited pre-implementation commit. The current
+production design and follow-up experiments are documented in
+[the pulse-observer implementation report](observer_pulse_implementation.md).
+
 ## Finding
 
 The observed failure is primarily a feedback-design failure, not absence of

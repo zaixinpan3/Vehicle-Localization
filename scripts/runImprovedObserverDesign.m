@@ -7,5 +7,5 @@ run(fullfile(projectFolder, "setupVehicleLocalization.m"));
 cfg = improvedObserverConfig();
 design = designImprovedObserverGains(cfg);
 
-fprintf("Certified %d robust-LMI vertex combinations; lambda = %.6g.\n", ...
-    design.verification.checkedVertexCount, design.lambda);
+fprintf("Verified %d timer flow inequalities; maximum margin %.6g.\n", ...
+    design.verification.checkedVertexCount, design.verification.maximumFlowEigenvalue);

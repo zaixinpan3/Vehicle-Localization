@@ -13,6 +13,9 @@ function estimate = runImprovedVehicleObserver(sensorData, lateralDesign, observ
     end
 
     validateObserverDesign(observerDesign, cfg);
+    scaling = diag(cfg.observer.theta.^cfg.observer.scalingExponents(:));
+    observerDesign.poseGain = scaling*observerDesign.K;
+    observerDesign.invariantPhysicalGain = scaling*observerDesign.N/cfg.observer.theta^3;
     [highRate, gps, lidar] = normalizeSensorData(sensorData, cfg);
     lateralCfg = lateralDesign.cfg;
     lateralCfg.observer.initialState = double(lateralCfg.observer.initialState(:));
@@ -67,46 +70,49 @@ end
 function stateNext = propagateState(state, intervalIdx, highRate, lateralEstimate, gps, lidar, ...
         acceptedGps, acceptedLidar, design, cfg)
 % propagateState Integrate one high-rate interval with event-aware RK4.
-    stepTime = highRate.time(intervalIdx + 1) - highRate.time(intervalIdx);
-    method = lower(strtrim(string(cfg.observer.integrationMethod)));
-    if method == "euler"
-        derivative = observerDerivative(state, intervalIdx, 0.0, highRate, lateralEstimate, ...
-            gps, lidar, acceptedGps, acceptedLidar, design, cfg);
-        stateNext = state + stepTime .* derivative;
-    elseif method == "rk4"
-        k1 = observerDerivative(state, intervalIdx, 0.0, highRate, lateralEstimate, ...
-            gps, lidar, acceptedGps, acceptedLidar, design, cfg);
-        k2 = observerDerivative(state + 0.5 .* stepTime .* k1, intervalIdx, 0.5, ...
-            highRate, lateralEstimate, gps, lidar, acceptedGps, acceptedLidar, design, cfg);
-        k3 = observerDerivative(state + 0.5 .* stepTime .* k2, intervalIdx, 0.5, ...
-            highRate, lateralEstimate, gps, lidar, acceptedGps, acceptedLidar, design, cfg);
-        k4 = observerDerivative(state + stepTime .* k3, intervalIdx, 1.0, ...
-            highRate, lateralEstimate, gps, lidar, acceptedGps, acceptedLidar, design, cfg);
-        stateNext = state + (stepTime ./ 6.0) .* (k1 + 2.0 .* k2 + 2.0 .* k3 + k4);
-    else
-        error("Unsupported improved-observer integration method: %s.", method);
+    left = highRate.time(intervalIdx);
+    right = highRate.time(intervalIdx+1);
+    % Split at every active pulse boundary. All RK stages within a piece use
+    % its left-continuous terminal mode, so an endpoint cannot shorten a pulse.
+    gpsTimes = gps.timestamp(acceptedGps);
+    lidarTimes = lidar.timestamp(acceptedLidar);
+    edges = [gpsTimes; gpsTimes+cfg.measurement.gpsMaximumAge; ...
+        lidarTimes; lidarTimes+cfg.measurement.lidarMaximumAge; ...
+        lidarTimes+cfg.measurement.maximumPoseInterval];
+    edges = edges(edges>left & edges<right);
+    pieces = ceil((right-left)/cfg.measurement.maximumIntegrationStep-1e-10);
+    cuts = unique([linspace(left,right,max(1,pieces)+1).'; edges]);
+    stateNext = state;
+    for part = 1:numel(cuts)-1
+        t0 = cuts(part); t1 = cuts(part+1); dt = t1-t0;
+        alpha0 = (t0-left)/(right-left);
+        alpha1 = (t1-left)/(right-left);
+        middle = (alpha0+alpha1)/2;
+        endQuery = max(t0,t1-32*eps(max(1,abs(t1))));
+        k1 = observerDerivative(stateNext,intervalIdx,alpha0,t0,highRate,lateralEstimate, ...
+            gps,lidar,acceptedGps,acceptedLidar,design,cfg);
+        k2 = observerDerivative(stateNext+dt*k1/2,intervalIdx,middle,(t0+t1)/2, ...
+            highRate,lateralEstimate,gps,lidar,acceptedGps,acceptedLidar,design,cfg);
+        k3 = observerDerivative(stateNext+dt*k2/2,intervalIdx,middle,(t0+t1)/2, ...
+            highRate,lateralEstimate,gps,lidar,acceptedGps,acceptedLidar,design,cfg);
+        k4 = observerDerivative(stateNext+dt*k3,intervalIdx,alpha1,endQuery, ...
+            highRate,lateralEstimate,gps,lidar,acceptedGps,acceptedLidar,design,cfg);
+        stateNext = stateNext+dt*(k1+2*k2+2*k3+k4)/6;
     end
     stateNext(7) = wrapAngleToPi(stateNext(7));
     assert(all(isfinite(stateNext)), ...
         "The improved observer produced a nonfinite state in interval %d.", intervalIdx);
 end
 
-function derivative = observerDerivative(state, intervalIdx, alpha, highRate, lateralEstimate, ...
+function derivative = observerDerivative(state, intervalIdx, alpha, queryTime, highRate, lateralEstimate, ...
         gps, lidar, acceptedGps, acceptedLidar, design, cfg)
-% observerDerivative Evaluate prediction and all three innovation channels.
-    queryTime = interpolateValue(highRate.time, intervalIdx, alpha, "linear");
+% observerDerivative Use the certified full-pose gain in both source modes.
     sample = measurementSample(highRate, lateralEstimate, intervalIdx, alpha, cfg);
-    channels = evaluateImprovedObserverChannels(state, sample);
+    channels = evaluateImprovedObserverChannels(state, sample, cfg.operating);
     fusion = fusionMeasurementAt(queryTime, gps, lidar, acceptedGps, acceptedLidar, cfg);
-    [baseInnovation, lidarInnovation] = poseInnovations(state, fusion);
-
-    theta = double(cfg.observer.theta);
-    scaling = diag(theta.^double(cfg.observer.scalingExponents(:)));
-    baseCorrection = scaling * design.K * (fusion.omega * baseInnovation);
-    lidarGain = scaling * (design.P \ fusion.Cl.');
-    lidarCorrection = lidarGain * fusion.translationWeight * lidarInnovation;
-    invariantCorrection = (scaling * design.N ./ theta.^3.0) * channels.invariantInnovation;
-    derivative = channels.modelDerivative + baseCorrection + lidarCorrection + invariantCorrection;
+    baseInnovation = poseInnovations(state, fusion);
+    derivative = channels.modelDerivative + design.poseGain*(fusion.omega*baseInnovation) ...
+        + design.invariantPhysicalGain*channels.invariantInnovation;
 end
 
 function sample = measurementSample(highRate, lateralEstimate, intervalIdx, alpha, cfg)
@@ -133,8 +139,8 @@ end
 
 function [baseInnovation, lidarInnovation] = poseInnovations(state, fusion)
 % poseInnovations Form linear position residuals and a wrapped yaw residual.
-    baseInnovation = [fusion.gpsPosition(1) - state(1); ...
-        fusion.gpsPosition(2) - state(4); ...
+    baseInnovation = [fusion.basePosition(1) - state(1); ...
+        fusion.basePosition(2) - state(4); ...
         wrapAngleToPi(fusion.lidarHeading - state(7))];
     lidarInnovation = fusion.lidarPosition - state([1, 4]);
 end
@@ -142,51 +148,52 @@ end
 function fusion = fusionMeasurementAt(queryTime, gps, lidar, acceptedGps, acceptedLidar, cfg)
 % fusionMeasurementAt Return the latest physically available held samples.
     fusion = emptyFusionMeasurement();
-    fusion.Cl = zeros(2, 7);
-    fusion.Cl(1, 1) = 1.0;
-    fusion.Cl(2, 4) = 1.0;
-
-    gpsIdx = latestEligibleEvent(gps, acceptedGps, queryTime, cfg);
+    gpsIdx = latestEligibleEvent(gps, acceptedGps, queryTime);
     if ~isempty(gpsIdx)
-        gpsAge = max(0.0, queryTime - gps.timestamp(gpsIdx));
-        if gpsAge <= double(cfg.measurement.gpsMaximumAge) && all(isfinite(gps.pose(gpsIdx, 1:2)))
-            fusion.gpsPosition = gps.pose(gpsIdx, 1:2).';
+        age = queryTime-gps.timestamp(gpsIdx);
+        if age < cfg.measurement.gpsMaximumAge && all(isfinite(gps.pose(gpsIdx,1:2)))
+            fusion.gpsPosition = gps.pose(gpsIdx,1:2).';
             fusion.gpsValid = true;
-            fusion.gpsAge = gpsAge;
+            fusion.gpsAge = age;
         end
     end
-
-    lidarIdx = latestEligibleEvent(lidar, acceptedLidar, queryTime, cfg);
+    lidarIdx = latestEligibleEvent(lidar, acceptedLidar, queryTime);
+    recentLidar = false;
     if ~isempty(lidarIdx)
-        lidarAge = max(0.0, queryTime - lidar.timestamp(lidarIdx));
-        if lidarAge <= double(cfg.measurement.lidarMaximumAge)
-            information = lidar.information(:, :, lidarIdx);
-            if any(~isfinite(information(:)))
-                information = [];
+        age = queryTime-lidar.timestamp(lidarIdx);
+        recentLidar = age < cfg.measurement.maximumPoseInterval;
+        if age < cfg.measurement.lidarMaximumAge
+            fusion.lidarPosition = lidar.pose(lidarIdx,1:2).';
+            fusion.lidarHeading = lidar.pose(lidarIdx,3);
+            fusion.translationWeight = eye(2);
+            fusion.headingWeight = lidar.headingWeight(lidarIdx);
+            fusion.lidarPositionValid = true;
+            fusion.lidarHeadingValid = true;
+            fusion.lidarAge = age;
+            fusion.basePosition = fusion.lidarPosition;
+            fusion.positionSource = "lidar";
+            % GPS substitutes the position measurement within the same pulse.
+            % It does not add a second, uncertified position gain in the gap.
+            if fusion.gpsValid
+                fusion.basePosition = fusion.gpsPosition;
+                fusion.positionSource = "gps";
             end
-            [translationWeight, headingWeight] = computeLidarInformationWeights(information, cfg);
-            if all(isfinite(lidar.pose(lidarIdx, 1:2)))
-                fusion.lidarPosition = lidar.pose(lidarIdx, 1:2).';
-                fusion.translationWeight = translationWeight;
-                fusion.lidarPositionValid = true;
-            end
-            if isfinite(lidar.pose(lidarIdx, 3))
-                fusion.lidarHeading = lidar.pose(lidarIdx, 3);
-                fusion.headingWeight = headingWeight;
-                fusion.lidarHeadingValid = true;
-            end
-            fusion.lidarAge = lidarAge;
+            fusion.omega = diag([1,1,fusion.headingWeight]);
         end
     end
-
-    gpsWeight = double(fusion.gpsValid);
-    fusion.omega = diag([gpsWeight, gpsWeight, fusion.headingWeight]);
+    if ~recentLidar && fusion.gpsValid
+        % Position-only continuation when no recent full pose exists. The
+        % missing-heading/gap conditions are reported as outside the full-pose
+        % certificate; GPS availability is not falsely labeled a yaw proof.
+        fusion.basePosition = fusion.gpsPosition;
+        fusion.positionSource = "gpsOnly";
+        fusion.omega = diag([1,1,0]);
+    end
 end
 
-function eventIdx = latestEligibleEvent(events, accepted, queryTime, cfg)
+function eventIdx = latestEligibleEvent(events, accepted, queryTime)
 % latestEligibleEvent Select the most recent accepted physical timestamp.
-    tolerance = double(cfg.measurement.timestampTolerance);
-    eligible = accepted & events.timestamp <= queryTime + tolerance;
+    eligible = accepted & events.timestamp <= queryTime;
     if ~any(eligible)
         eventIdx = [];
         return;
@@ -198,6 +205,8 @@ end
 function fusion = emptyFusionMeasurement()
 % emptyFusionMeasurement Return zero-weight residual placeholders.
     fusion = struct();
+    fusion.basePosition = zeros(2,1);
+    fusion.positionSource = "none";
     fusion.gpsPosition = zeros(2, 1);
     fusion.lidarPosition = zeros(2, 1);
     fusion.lidarHeading = 0.0;
@@ -221,7 +230,7 @@ function [accepted, rejected, newlyAccepted] = acceptArrivedEvents(events, accep
     for candidateOffset = 1:numel(candidateIdx)
         eventIdx = candidateIdx(candidateOffset);
         age = currentTime - events.timestamp(eventIdx);
-        if age <= double(cfg.measurement.replayBufferDuration) + tolerance
+        if age <= double(cfg.measurement.replayBufferDuration) + tolerance && events.qualified(eventIdx)
             accepted(eventIdx) = true;
             newlyAccepted(end + 1, 1) = eventIdx; %#ok<AGROW>
         else
@@ -251,8 +260,8 @@ function initialState = buildInitialState(highRate, lateralEstimate, gps, lidar,
     end
 
     initialTime = highRate.time(1);
-    initialGps = gps.arrivalTime <= initialTime & gps.timestamp <= initialTime;
-    initialLidar = lidar.arrivalTime <= initialTime & lidar.timestamp <= initialTime;
+    initialGps = gps.qualified & gps.arrivalTime <= initialTime & gps.timestamp <= initialTime;
+    initialLidar = lidar.qualified & lidar.arrivalTime <= initialTime & lidar.timestamp <= initialTime;
     position = double(cfg.observer.fallbackPosition(:));
     heading = double(cfg.observer.fallbackHeading);
     if any(initialGps)
@@ -301,7 +310,7 @@ function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lida
     for sampleIdx = 1:sampleCount
         sample = measurementSample(highRate, lateralEstimate, min(sampleIdx, sampleCount - 1), ...
             double(sampleIdx == sampleCount), cfg);
-        channels = evaluateImprovedObserverChannels(stateHistory(sampleIdx, :).', sample);
+        channels = evaluateImprovedObserverChannels(stateHistory(sampleIdx, :).', sample, cfg.operating);
         fusion = fusionMeasurementAt(highRate.time(sampleIdx), gps, lidar, acceptedGps, acceptedLidar, cfg);
         [baseInnovation(sampleIdx, :), lidarInnovation(sampleIdx, :)] = ...
             rowPoseInnovations(stateHistory(sampleIdx, :).', fusion);
@@ -315,13 +324,15 @@ function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lida
 
     estimate = struct();
     estimate.time = highRate.time;
-    estimate.z = stateHistory;
+    estimate.z = stateHistory; % Legacy revised history, not a causal output.
+    estimate.revisedZ = stateHistory;
+    estimate.pose = onlineState(:,[1,4,7]);
     estimate.onlineZ = onlineState;
-    estimate.position = stateHistory(:, [1, 4]);
-    estimate.velocity = stateHistory(:, [2, 5]);
-    estimate.acceleration = stateHistory(:, [3, 6]);
-    estimate.heading = stateHistory(:, 7);
-    estimate.speed = hypot(stateHistory(:, 2), stateHistory(:, 5));
+    estimate.position = onlineState(:, [1, 4]);
+    estimate.velocity = onlineState(:, [2, 5]);
+    estimate.acceleration = onlineState(:, [3, 6]);
+    estimate.heading = onlineState(:, 7);
+    estimate.speed = hypot(onlineState(:, 2), onlineState(:, 5));
     estimate.sideSlipAngle = lateralEstimate.sideSlipAngle;
     estimate.sideSlipAngleRate = lateralEstimate.sideSlipAngleRate;
     estimate.trackAngleRate = trackAngleRate;
@@ -343,9 +354,15 @@ function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lida
     estimate.diagnostics.rejectedEventCount = rejectedEventCount;
     estimate.diagnostics.acceptedGps = acceptedGps;
     estimate.diagnostics.acceptedLidar = acceptedLidar;
+    estimate.diagnostics.invariantExtensionActive = any(abs(onlineState(:,[2,5]))>cfg.operating.maximumSpeed,2) ...
+        | any(abs(onlineState(:,[3,6]))>cfg.operating.maximumAcceleration,2);
+    estimate.diagnostics.certificateConditions = observerCertificateConditions( ...
+        highRate,gps,lidar,acceptedGps,acceptedLidar,onlineState,cfg);
     estimate.observer = struct("P", design.P, "K", design.K, "N", design.N, ...
         "theta", cfg.observer.theta, "sigma", cfg.observer.sigma, ...
-        "certified", design.certified, "verification", design.verification);
+        "certificateVerified", design.certified, "certified", false, ...
+        "verification", design.verification, ...
+        "scope", "conditional flow certificate; runtime error/domain and discretization bounds are separate");
 end
 
 function [baseRow, lidarRow] = rowPoseInnovations(state, fusion)
@@ -369,6 +386,16 @@ function [highRate, gps, lidar] = normalizeSensorData(sensorData, cfg)
         lidar = normalizePoseEvents(sensorData.lidar, true);
     else
         lidar = emptyEvents(true);
+    end
+    gps.qualified = all(isfinite(gps.pose(:,1:2)),2);
+    lidar.qualified = false(numel(lidar.timestamp),1);
+    lidar.headingWeight = zeros(numel(lidar.timestamp),1);
+    lidar.informationDiagnostics = cell(numel(lidar.timestamp),1);
+    for eventIdx=1:numel(lidar.timestamp)
+        [~,weight,info] = computeLidarInformationWeights(lidar.information(:,:,eventIdx),cfg);
+        lidar.qualified(eventIdx) = info.qualified && all(isfinite(lidar.pose(eventIdx,:)));
+        lidar.headingWeight(eventIdx) = weight;
+        lidar.informationDiagnostics{eventIdx} = info;
     end
     tolerance = double(cfg.measurement.timestampTolerance);
     assert(all(gps.arrivalTime + tolerance >= gps.timestamp), ...
@@ -501,37 +528,35 @@ end
 
 function validateObserverDesign(design, cfg)
 % validateObserverDesign Reject incomplete or mismatched gain artifacts.
-    requiredFields = ["P", "K", "N", "sigma", "certified", "verification", ...
-        "cfg", "knownInputIncludedExactly", "scalingExponents"];
-    for fieldName = requiredFields
-        assert(isfield(design, fieldName), "observerDesign.%s is required.", fieldName);
-    end
-    assert(logical(design.certified) && logical(design.verification.certified) && ...
-        design.verification.checkedVertexCount == 65536, ...
-        "observerDesign must carry a completed 65,536-vertex certificate.");
-    assert(logical(design.knownInputIncludedExactly), ...
-        "observerDesign must include the known-input model in its certificate.");
-    assert(isequal(size(design.P), [7, 7]) && isequal(size(design.K), [7, 3]) && ...
-        isequal(size(design.N), [7, 4]) && all(isfinite(design.P), "all") && ...
-        all(isfinite(design.K), "all") && all(isfinite(design.N), "all"), ...
-        "observerDesign matrices must have compatible dimensions and finite values.");
-    assert(abs(double(design.sigma) - double(cfg.observer.sigma)) <= 1.0e-12, ...
-        "observerDesign.sigma must match cfg.observer.sigma.");
-    certificateParameters = [design.cfg.operating.maximumSpeed; ...
-        design.cfg.operating.maximumAcceleration; ...
-        design.cfg.operating.maximumTrackAngleRate; ...
-        design.cfg.lidar.minimumHeadingWeight];
-    runtimeParameters = [cfg.operating.maximumSpeed; cfg.operating.maximumAcceleration; ...
-        cfg.operating.maximumTrackAngleRate; cfg.lidar.minimumHeadingWeight];
-    assert(all(abs(double(certificateParameters) - double(runtimeParameters)) <= 1.0e-12), ...
-        "The runtime operating envelope must match the certified design envelope.");
-    assert(isequal(double(design.scalingExponents(:)), ...
-        double(cfg.observer.scalingExponents(:))), ...
-        "The runtime high-gain scaling exponents must match the certified design.");
-    assert(max(abs(double(design.N(:)) - double(cfg.observer.invariantGain(:)))) <= 1.0e-12, ...
-        "cfg.observer.invariantGain must match the certified design.");
-    assert(double(cfg.observer.theta) > double(cfg.observer.sigma), ...
-        "cfg.observer.theta must be strictly greater than sigma.");
+    assert(isfield(design,'kind') && string(design.kind)=="aperiodic-pose-v1", ...
+        'VehicleLocalization:CertificateMismatch','Runtime requires the aperiodic pose certificate.');
+    assert(design.certified && design.verification.certified, ...
+        'VehicleLocalization:CertificateMismatch','The pose design is not verified.');
+    assert(isfield(design.verification,'verifiedModel'), ...
+        'VehicleLocalization:CertificateMismatch','The certificate lacks its verified model snapshot.');
+    verified = design.verification.verifiedModel;
+    assert(isequal(design.K,verified.K) && isequal(design.N,verified.N) ...
+        && isequal(design.timer.P,verified.P) ...
+        && isequal(design.timer.knots,verified.knots) ...
+        && design.timer.rate==verified.rate && design.timer.nFactor==verified.nFactor ...
+        && design.timer.wMin==verified.wMin && cfg.observer.theta==verified.theta ...
+        && design.theta==verified.theta && design.timer.theta==verified.theta ...
+        && isequal(cfg.operating,verified.operating) ...
+        && isequal(cfg.observer.scalingExponents(:),verified.scalingExponents(:)), ...
+        'VehicleLocalization:CertificateMismatch','Runtime matrices or envelope differ from verification.');
+    expected = [design.theta; design.sigma; design.timer.onTime; design.timer.onTime; ...
+        design.timer.tMin; design.timer.tMax; verified.minimumHeadingWeight];
+    actual = [cfg.observer.theta; cfg.observer.sigma; cfg.measurement.gpsMaximumAge; ...
+        cfg.measurement.lidarMaximumAge; cfg.measurement.minimumPoseInterval; ...
+        cfg.measurement.maximumPoseInterval; cfg.lidar.minimumHeadingWeight];
+    assert(all(abs(expected-actual)<1e-12) ...
+        && max(abs(design.N-cfg.observer.invariantGain),[],'all')<1e-12, ...
+        'VehicleLocalization:CertificateMismatch','Runtime gains or pulse timing differ from verification.');
+    assert(string(cfg.observer.integrationMethod)=="rk4" ...
+        && cfg.measurement.maximumIntegrationStep>0 ...
+        && cfg.measurement.maximumIntegrationStep<=.01 ...
+        && cfg.measurement.timestampTolerance==0, ...
+        'VehicleLocalization:CertificateMismatch','Use event-split RK4 with no future timestamp allowance.');
 end
 
 function wrappedAngle = wrapAngleToPi(angle)

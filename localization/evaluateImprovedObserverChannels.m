@@ -1,4 +1,4 @@
-function channels = evaluateImprovedObserverChannels(state, sample)
+function channels = evaluateImprovedObserverChannels(state, sample, operating)
 % evaluateImprovedObserverChannels Evaluate the seven-state model and h map.
 % SAMPLE contains longitudinalSpeed, lateralVelocity, longitudinalAcceleration,
 % lateralAcceleration, yawRate, sideSlipAngle, and sideSlipAngleRate.
@@ -6,6 +6,7 @@ function channels = evaluateImprovedObserverChannels(state, sample)
     arguments
         state (7, 1) double {mustBeFinite}
         sample (1, 1) struct
+        operating struct = struct()
     end
 
     requiredFields = ["longitudinalSpeed", "lateralVelocity", ...
@@ -24,6 +25,17 @@ function channels = evaluateImprovedObserverChannels(state, sample)
         trackAngleRateSquared .* state(5) + 2.0 .* trackAngleRate .* state(3); ...
         sample.yawRate];
 
+    % Extend only h outside the physical operating box. Clipping its
+    % arguments gives a globally bounded mean-value Jacobian already covered
+    % by the certificate's interval vertices. The estimated state and linear
+    % prediction are not clipped or reset.
+    invariantState = state;
+    if ~isempty(fieldnames(operating))
+        invariantState([2,5]) = min(max(state([2,5]),-operating.maximumSpeed),operating.maximumSpeed);
+        invariantState([3,6]) = min(max(state([3,6]),-operating.maximumAcceleration),operating.maximumAcceleration);
+    end
+    extensionActive = any(invariantState~=state);
+    state = invariantState;
     velocitySquared = state(2).^2 + state(5).^2;
     velocityAccelerationDot = state(2) .* state(3) + state(5) .* state(6);
     velocityAccelerationCross = state(2) .* state(6) - state(5) .* state(3);
@@ -42,6 +54,7 @@ function channels = evaluateImprovedObserverChannels(state, sample)
     channels.trackAngleRate = trackAngleRate;
     channels.modelDerivative = modelDerivative;
     channels.invariantPrediction = invariantPrediction;
+    channels.invariantExtensionActive = extensionActive;
     channels.invariantMeasurement = invariantMeasurement;
     channels.invariantInnovation = invariantMeasurement - invariantPrediction;
 end

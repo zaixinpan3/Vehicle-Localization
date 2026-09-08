@@ -1,7 +1,7 @@
 function result = simulateImprovedObserverScenario(observerDesign, lateralDesign, cfg)
 % simulateImprovedObserverScenario Exercise the complete improved architecture.
 % The deterministic scenario includes varying speed and steering, delayed and
-% out-of-order poses, a four-second GPS dropout, and a directionally degenerate
+% out-of-order poses, a four-second GPS dropout, and a directionally weak, full-rank
 % lidar information matrix while retaining a well-observed lidar heading.
 
     arguments
@@ -164,7 +164,7 @@ function arrivalTime = addOutOfOrderDelay(arrivalTime, cfg)
 end
 
 function information = lidarInformationSeries(timestamp, heading, cfg)
-% lidarInformationSeries Build full-rank and directionally degenerate Hessians.
+% lidarInformationSeries Build full-rank nominal and weak-direction Hessians.
     information = zeros(3, 3, numel(timestamp));
     interval = double(cfg.simulation.lidarDegeneracyInterval(:));
     for eventIdx = 1:numel(timestamp)

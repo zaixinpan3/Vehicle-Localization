@@ -1,6 +1,9 @@
 # Conditions for bounded localization without GNSS
 
 Date: 2026-09-07. Analysis baseline: `fc1fe755b29edc660cb988425287ed9291bfbcf4`.
+Implementation follow-up: [production pose observer](observer_pulse_implementation.md),
+including the subsequently revised acceleration gain and 50–110 ms certificate.
+
 Requested localization output remains **[X, Y, psi]**. The observer's velocity
 and acceleration states are internal states whose stability still matters.
 

@@ -1,0 +1,28 @@
+{
+  "frames": 1170,
+  "accepted": 963,
+  "acceptanceFraction": 0.823076923076923,
+  "allFramePositionRmseM": 0.2813775793512972,
+  "acceptedPositionRmseM": 0.26456098657198684,
+  "positionMedianM": 0.10454444400446082,
+  "positionP95M": 0.488661786549316,
+  "positionMaximumM": 1.5631630936685463,
+  "yawRmseDeg": 0.60829835807316646,
+  "yawMaximumAbsDeg": 3.3768043881473098,
+  "deadReckoningPositionRmseM": 215.32074401669806,
+  "deadReckoningFinalErrorM": 410.79297137576384,
+  "totalMedianMs": 71.670999999999992,
+  "totalP95Ms": 81.90405,
+  "totalP99Ms": 89.68404,
+  "totalMaximumMs": 738.184,
+  "callsOver100ms": 7,
+  "perceptionMedianMs": 64.4765,
+  "registrationMedianMs": 6.8925,
+  "reasons": {
+    "accepted": 963,
+    "degenerateGeometry": 1,
+    "inconsistentClasses": 203,
+    "insufficientOverlap": 1,
+    "notConverged": 2
+  }
+}

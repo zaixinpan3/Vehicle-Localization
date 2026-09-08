@@ -11,6 +11,7 @@ function certificate = designLidarOnlyTimerCertificate(fixtureFile, options)
         options.MinimumXYWeight (1, 1) double {mustBePositive} = 1
         options.MinimumInterval (1, 1) double {mustBePositive} = 0.08
         options.MaximumInterval (1, 1) double {mustBePositive} = 0.11
+        options.TimerKnots (1,:) double = []
         options.MaximumIterations (1, 1) double {mustBeInteger, mustBePositive} = 25
     end
     root = fileparts(fileparts(mfilename("fullpath")));
@@ -25,8 +26,10 @@ function certificate = designLidarOnlyTimerCertificate(fixtureFile, options)
     d.observer.sigma = d.observer.theta;
     b = buildImprovedObserverCertificateData(d);
     theta = d.observer.theta;
-    knots = unique([0:0.01:options.MaximumInterval, 0.03, ...
-        options.MinimumInterval, options.MaximumInterval]);
+    knots = options.TimerKnots;
+    if isempty(knots), knots = 0:0.01:options.MaximumInterval; end
+    assert(all(isfinite(knots)) && all(knots>=0 & knots<=options.MaximumInterval));
+    knots = unique(round([knots,0,0.03,options.MinimumInterval,options.MaximumInterval],12));
     assert(options.MinimumInterval >= 0.03 && options.MaximumInterval >= options.MinimumInterval);
     assert(options.MinimumXYWeight <= 1);
     n = numel(knots);
