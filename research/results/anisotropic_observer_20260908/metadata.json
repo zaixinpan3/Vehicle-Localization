@@ -1,0 +1,41 @@
+{
+  "date": "2026-09-08",
+  "baselineCommit": "2bec42742a96ef20b959d997d08d66eee23c7b7b",
+  "matlab": "26.1.0.3276743 (R2026a Update 3)",
+  "computationalThreads": 8,
+  "sourceHashesSHA256": {
+    "config/improvedObserverConfig.m": "a7e963499c7a5562a1d12dabc9bb4455e5ebd1f84de4058a4cf8b640d78aefc2",
+    "localization/computeLidarInformationWeights.m": "25faa4f3ebf0a21349af7d902024d80d63cf44d3691ab32e1bef76cf146140df",
+    "localization/fusePoseInformationWeights.m": "8605e49fb44c9b4c63b0000ea205415e20a5cd8bb97e2d459a95df183de3b73c",
+    "localization/designAnisotropicPoseCertificate.m": "1556abd4313efaaeb51aa8f08d8c945b451bae10bc855a2c7949f4977a2bf3fb",
+    "localization/verifyAnisotropicPoseCertificate.m": "9347cbb8d96cdbf3f3509ea8bfafcdcb0bd1d6baef875cd9d0281e262c049210",
+    "localization/designImprovedObserverGains.m": "5dfe635f01af43821beafb3ae61a391e2a9c9000003485a9e380a3ea6610c4d0",
+    "localization/verifyImprovedObserverDesign.m": "9dce407d64957e0203b94000a59391c3d75ddaabc7bbbd50242cd0ac9f03b751",
+    "localization/improvedObserverReferenceDesign.m": "437b036dcf3b3a85ca7c2e62bb7997a2cc15c404fef4b5546283781436bb7734",
+    "localization/runImprovedVehicleObserver.m": "3ada715faf2a8ed8705975f55e20bd4893eac805245bc09d8ba865d0a01eab09",
+    "localization/observerCertificateConditions.m": "7cb0b1a9fc4c2cd19933619cf9f550bc7871c35b3199e28dbe316cef9481e019",
+    "scripts/auditMncavOutageCertificate.m": "c5ba5f24c29139d78293181ab497e74f261b3a14d7316a7ed42aea20403957ad",
+    "scripts/runMncavObserverReplay.m": "12de3f4f0229a5e5a6e36dba570b9ebf7cf92e883b437b8657123b9a7733a62a",
+    "tests/improvedObserverTest.m": "fbd5a7b5e1214f7c54876a0d61dd1b0a03e6045caf95385a11746eeed4d943ea",
+    "config/poseObserverCertificate.json": "5736563eb78c8151658b164dfa34eefe60e1546af944ddae527203d78f65a62c"
+  },
+  "inputHashesSHA256": {
+    "output/observer_implementation_20260907/recursive_8threads/calls.csv": "13ca46b8ec993f1217d2b49b7fcdf0d0eb3d1d26154fad31a136ca9a71fa3393",
+    "output/mississippi_20240607_120931_20260907/publishedCloud.mat": "815712caf85f9f45218051b1973615d4011e2b5c72e9ac727a27578d3512794b",
+    "output/mississippi_20240607_120931_20260907/vehicle_parameters.json": "17cb26c4f39c5637605ead0b764e33c3597de4c3b24dda418edab7bd34948ac2"
+  },
+  "rawResultFolder": "output/anisotropic_observer_20260908",
+  "inputScope": "Reuse the exact 1170-frame perception/D2D calls computed on 2026-09-07. No new perception/matching run or timing claim. All six observers rerun for 11690 causal samples each.",
+  "gainDesign": "W=(5I+J)^-1 J in normalized pose coordinates; GPS XY information reference 25 m^-2, information-form fusion of separate residuals. K, N, model, invariant extension and lateral stage unchanged. No gain floor or rank-deficiency rejection at observer input. Upstream D2D full-pose acceptance policy unchanged.",
+  "certificate": "720896 robust flow block inequalities for any normalized W in [0.8I,I], 30 ms pulses, 50-110 ms intervals. Independent strict verification passes despite solver numerical-difficulty status 4. The alpha=0.5 norm-ball ansatz was infeasible.",
+  "validation": "58 distinct tests passed (34 global, 15 lateral, seven registration-information, two recorded-data); zero factory Code Analyzer findings in all 13 changed MATLAB files. Final guard and normalization checks included.",
+  "limitations": [
+    "All 962 received LiDAR-only weights violate the sufficient 0.8 lower sector. Minimum/median smallest weights 0.110697/0.598515; no runtime inflation or rejection to meet proof.",
+    "184 intervals exceed 110 ms; largest 1.298701 s. The actual recorded schedule and weights are outside the conditional certificate.",
+    "Same-drive map, known recorded INS tilt and nominal vehicle dynamics; one biased reference-based initialization. No independent-map or complete GNSS/INS device-loss claim.",
+    "Information scales are design references, not calibrated pose-error ellipsoids.",
+    "Full contraction delay-tail bound is very conservative; 150/300 ms factors 756.04/571603.35 are not accuracy estimates.",
+    "No user-hours estimate is derived from computation or test durations."
+  ],
+  "primarySource": "Boyd, El Ghaoui, Feron and Balakrishnan, Linear Matrix Inequalities in System and Control Theory (1994), section 2.6.3, pages 23-24; https://web.stanford.edu/~boyd/lmibook/lmibook.pdf; full-sector timer specialization derived in project report."
+}

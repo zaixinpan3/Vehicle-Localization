@@ -214,17 +214,20 @@ loop. `runLateralVelocityObserver` supplies exactly this interface:
   side-slip direction is invalid; it no longer hard-zeroes the master state.
 
 The global stage is in `localization/`. Its internal state is
-`[X,Vx,Ax,Y,Vy,Ay,psi]`, with causal output `[X,Y,psi]`. Qualified LiDAR poses
-use the full base gain with unit XY weight; GPS may substitute XY within the
-same pose pulse. Both the invariant gain and the acceleration rows of the base gain are
+`[X,Vx,Ax,Y,Vy,Ay,psi]`, with causal output `[X,Y,psi]`. LiDAR poses
+use a full information-dependent anisotropic gain, retaining XY/yaw cross terms
+and partial-rank directions. GPS and LiDAR residuals are combined in information
+form within the same pose pulse. Both the invariant gain and the acceleration rows of the base gain are
 reduced by a factor of ten; only
 the nonlinear invariant prediction is extended outside the physical state
 box. The state and its linear prediction are not clipped.
 
-The stored aperiodic certificate checks 1,441,792 flow inequalities plus timer
-resets for 30 ms pulses separated by 50--110 ms. Event-split RK4 and physical
+The stored aperiodic certificate checks 720,896 robust block inequalities plus
+timer resets for 30 ms pulses separated by 50--110 ms, covering arbitrary
+normalized weight orientations in the sector `0.8*I <= W <= I`. This is a
+certificate condition, not a runtime floor on weak information. Event-split RK4 and physical
 measurement-time replay implement those pulse boundaries. Full-matrix
-information admission, actual timing/delay diagnostics and the distinction
+information gain shaping, actual timing/delay diagnostics and the distinction
 between a verified model and a certified run are described in
 `localization/README.md`. The former continuous-GNSS design remains available
 for research audits but is rejected by the production runtime.
@@ -400,10 +403,10 @@ certificate of the proposition (negative definite Lyapunov derivative,
 the vehicle parameters; its implementation no longer existed there.
 
 Global-observer tests independently check model/invariant equations,
-full-matrix information admission, zero-speed and wrapped-angle behavior,
+full-matrix anisotropic information gains, zero-speed and wrapped-angle behavior,
 physical-time replay, pulse-boundary integration, timer inequalities, stale
 certificate rejection and causal public pose outputs. Recorded full-sequence
-results and limitations are in `research/observer_pulse_implementation.md`.
+results and limitations are in `research/anisotropic_information_gain.md`.
 
 Deliberately left behind: profiling and visualization scripts, the `legacy/`
 folder, the unused `seedOnly` and `iterativePca` ground modes, the

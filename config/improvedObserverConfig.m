@@ -2,7 +2,7 @@ function cfg = improvedObserverConfig()
 % improvedObserverConfig Configure the seven-state improved vehicle observer.
 % The configuration covers the operating envelope used by the robust LMI,
 % the aperiodic full-pose pulse observer, fixed-delay replay, full-matrix
-% information admission, and the deterministic synthetic validation scenario.
+% anisotropic information gains, and the deterministic validation scenario.
 
     cfg = struct();
 
@@ -48,12 +48,13 @@ function cfg = improvedObserverConfig()
     cfg.measurement.maximumIntegrationStep = 0.01;
 
     cfg.lidar = struct();
-    % Full-matrix admission precedes unit XY base-pose injection. The default
-    % establishes numerical full rank, not a statistically calibrated error.
+    % Full information shapes every pose-gain direction, including cross terms.
     cfg.lidar.poseScales = [1.0; 1.0; 1.0]; % meters, meters, radians
-    cfg.lidar.minimumNormalizedEigenvalue = 1.0e-8;
-    cfg.lidar.informationLowerBound = zeros(3);
+    cfg.lidar.gainInformationScale = 5.0;
+    % A certificate hypothesis, never an online gain floor or rejection gate.
+    cfg.lidar.certificateMinimumPoseWeight = 0.8;
     cfg.lidar.errorBoundValidated = false;
+    cfg.gps.positionInformation = [25.0;25.0]; % Design reference, m^-2.
     % Retained only for historical continuous-design research utilities.
     cfg.lidar.translationInformationScale = 25.0;
     cfg.lidar.headingInformationScale = 50.0;

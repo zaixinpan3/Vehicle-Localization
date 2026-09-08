@@ -1,5 +1,7 @@
 # Pose-pulse observer implementation and recorded validation
 
+Current implementation: the 2026-09-08 [anisotropic information-gain correction](anisotropic_information_gain.md) supersedes this report's fixed-XY gain and admission policy. Results below remain the historical baseline.
+
 Date: 2026-09-07. Baseline: `0879a1a8dc340830ce1c598ccdc2d97074e4cdd4`.
 
 The [information and timing study](lidar_information_stability_conditions.md)

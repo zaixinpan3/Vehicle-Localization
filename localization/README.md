@@ -1,69 +1,93 @@
 # Vehicle observer
 
-The localization output is `[X,Y,psi]`. The independent lateral observer feeds
-lateral velocity, sideslip and its derivative to the seven-state global model
-`[X,Vx,Ax,Y,Vy,Ay,psi]`. Use `setupVehicleLocalization` from the repository root.
+The public localization output is `[X,Y,psi]`. The independent lateral
+observer feeds the seven-state global model `[X,Vx,Ax,Y,Vy,Ay,psi]`.
+Use `setupVehicleLocalization` from the repository root.
 
-## Production pulse observer
+## Information-dependent anisotropic gain
 
-`improvedObserverConfig` and `improvedObserverReferenceDesign` define the shipped
-`aperiodic-pose-v1` design. The reference function exhaustively verifies its
-stored matrices. `designImprovedObserverGains` can re-synthesize the timer metric
-using YALMIP/SeDuMi; it accepts a recovered point only after independent checks.
+The production design is `aperiodic-anisotropic-pose-v2`. Every LiDAR pose
+carries its full 3x3 information matrix, including XY/yaw cross terms. With
+pose normalization `D=diag(cfg.lidar.poseScales)` and `J=D*information*D`,
 
-A qualified LiDAR pose acts for 30 ms at its physical timestamp:
-
-```
-zHatDot = model(zHat,input)
-        + T*K*diag(1,1,wPsi)*(pose - [XHat;YHat;psiHat])
-        + T*N/theta^3*(measuredInvariants - predictedInvariants)
+```text
+W = (gainInformationScale*I + J) \ J
+L_lidar = T*K*D*W/D
+correction = L_lidar * [X_lidar-Xhat; Y_lidar-Yhat; wrap(psi_lidar-psihat)]
 ```
 
-Yaw residual uses the shortest arc. XY has unit base-channel weight. There is
-no additional `T*(P\Cl')*W` position injection. Invariant gain is one tenth of
-the earlier design; acceleration rows of the base pose gain are also reduced
-by a factor of ten to limit peaking under sparse updates. Theta is 3.5. GPS may substitute XY during the same pulse.
-It does not inject a second gain in the gap between recent LiDAR pulses. If
-there is no recent full LiDAR pose, GPS-only position pulses continue, but that
-mode is explicitly outside the full-pose/heading certificate.
+In normalized coordinates, the gain weight retains the information
+principal directions and maps eigenvalues `lambda` to `lambda/(scale+lambda)`.
+The default scale is 5; it is the information giving half gain, not an
+acceptance threshold. A weak direction is attenuated, and a zero-information
+direction receives zero gain. Partial-rank information retains its observed
+directions. Nonfinite, materially indefinite or completely zero information
+cannot supply a usable correction. No positive eigenvalue floor is imposed.
+Information curvature alone does not establish correct association or a
+calibrated pose-error distribution.
 
-`computeLidarInformationWeights` uses the complete 3x3 information matrix,
-including XY/yaw cross terms and a configurable matrix lower bound. Missing,
-nonfinite or rank-deficient information disables the entire LiDAR pose channel.
-Qualified heading weight uses marginalized yaw information and lies in
-`[0.15,1]`. The default admission tests numerical full rank; it does **not**
-assert that D2D curvature has been calibrated as an inverse covariance.
+When GPS is present within a LiDAR pulse, normalized GPS information is
+`G=D*diag([cfg.gps.positionInformation;0])*D`. Separate residuals are fused as
 
-## Certificate and runtime conditions
+```text
+A = scale*I + J + G
+correction = T*K*D*( A\J/D * r_lidar + A\G/D * r_gps )
+r_gps = [X_gps-Xhat; Y_gps-Yhat; 0]
+```
 
-The timer certificate covers qualified pose intervals from 50 to 110 ms,
-30 ms pulses, velocity components bounded by 16 m/s, acceleration components
-by 5 m/s² and track-angle rate by 0.6 rad/s. The invariant map uses clipped
-velocity/acceleration arguments outside this box, a Lipschitz extension whose
-Jacobians remain in the same certified interval box. This removes an
-estimated-velocity/acceleration domain assumption; true-state, disturbance and
-heading-chart conditions still matter. The stored metric is piecewise
-affine in time since a qualified pose. All 1,441,792 distinct flow inequalities
-and all permitted timer resets are checked. `sigma=theta` means verification
-at the actual gain scaling, not reuse of a continuous-output design condition.
+GPS does not overwrite the LiDAR position residual. The total homogeneous
+weight `A\(J+G)` remains symmetric between zero and identity. GPS has no
+invented heading information. Its default XY information `[25;25] m^-2` is an
+explicit design reference, not a claim of identified sensor precision.
 
-The runtime checks that gains, metric, envelope and pulse duration match the
-verified model. It exposes `observer.certificateVerified` separately from
-`diagnostics.certificateConditions`. A verified matrix is not an unconditional
-certificate for the measured trajectory: missing/rapid poses, excessive gaps,
-delay mismatch, initial peaking, model/input error and information calibration
-must be assessed separately. `observer.certified` remains false because the
-complete runtime's disturbance, domain and numerical-error budgets have not
-been established. GPS availability alone does not prove yaw observability.
+`diagnostics.lidarPoseWeight`, `gpsPoseWeight`, `totalNormalizedPoseWeight`
+and the complete 7x3 `lidarPoseGain` expose the actual matrices. These
+histories refer to revised measurement time; public pose/state outputs remain
+causal. The first two outputs of `computeLidarInformationWeights` are retained
+as compatibility summaries. The fourth output is the complete pose weight,
+which the runtime uses without discarding cross terms.
 
-RK4 steps split exactly at arrived pulse boundaries and use the left limit at
-terminal stages. A pulse cannot acquire a different duration from numerical
-quadrature or a timestamp tolerance. No future timestamp allowance is used.
-Delayed poses replay their physical-time history. `pose`, `position`, `heading`,
-`velocity`, `acceleration` and `onlineZ` are causal outputs. `revisedZ` and the
-legacy `z` field contain the subsequently revised history. Fixed LiDAR delay defaults to
-150 ms and is explicitly checked in diagnostics. Buffer duration must cover it.
-The integrator does not reset/clamp a diverging state or silently extend a pulse.
+## Pulse and delay model
+
+The invariant gain and acceleration rows of `K` retain the previous factor
+of 0.1 reduction, at `theta=sigma=3.5`. Only nonlinear invariant arguments
+are clipped to extend that map; estimated states and linear prediction are
+not clipped or reset. The source model, invariant extension and lateral stage
+are unchanged by the anisotropic gain correction.
+
+LiDAR corrections act for 30 ms at physical timestamps. GPS joins the same
+pulse; GPS-only position continuation is allowed once no recent LiDAR pulse
+exists, and remains outside the full-pose certificate. Event-split RK4 uses
+left-limit terminal modes, zero future timestamp tolerance and at most 10 ms
+substeps. Physical-time replay handles the configured fixed 150 ms LiDAR delay
+with a 1-second buffer. `pose`, `position`, `heading`, `velocity`, `acceleration`
+and `onlineZ` are causal; `revisedZ` and the legacy `z` are revised history.
+
+## Certificate scope
+
+The new certificate covers **every orientation** of normalized pose weight
+`0.8*I <= W <= I`, including arbitrary XY/yaw cross terms. A norm-bounded
+uncertainty LMI, checked at all nonlinear model vertices and timer endpoints,
+replaces the former diagonal-weight check. There are 720,896 flow checks plus
+reset checks for pulse intervals 50--110 ms. The model box remains velocity
+components at most 16 m/s, acceleration at most 5 m/s² and track-angle rate at
+most 0.6 rad/s. `designAnisotropicPoseCertificate` synthesizes the timer metric;
+`verifyAnisotropicPoseCertificate` checks recovered matrices independently.
+
+**The 0.8 bound is a proof hypothesis, never a runtime floor or rejection
+rule.** The runtime accepts useful weaker/partial information and reports
+`informationWithinCertificate=false`. The LiDAR-only information audit is
+conservative when GPS adds information. The actual recorded drive also has
+pose gaps longer than 110 ms, so its empirical results are not covered by the
+uniform information/timing certificate. The old fixed-XY certificate is not
+reused. Gains, metric, multipliers, normalization and timing are checked
+against the stored verification snapshot.
+
+`certificateVerified` means the conditional model inequalities pass;
+`observer.certified` remains false because full-run disturbance, information
+calibration, heading-chart and discretization budgets are not established.
+The finite delay-tail bound includes all contraction weights and GPS-only
+continuation, but is conservative and is not an asymptotic stability result.
 
 ## Reproduction
 
@@ -75,11 +99,8 @@ estimate = runImprovedVehicleObserver(sensorData,lateralDesign,design,cfg);
 results = runtests('tests/improvedObserverTest.m');
 ```
 
-The former GNSS-present continuous design is retained as
-`designContinuousObserverGains` / `verifyContinuousObserverDesign` for research
-and legacy artifact audits; it is not accepted by the production runtime.
-
-See `research/lidar_information_stability_conditions.md` for the derivation
-and `research/observer_pulse_implementation.md` for recorded validation and
-its limits. The flat `localization/` directory preserves the existing workspace
-reorganization; lateral-observer functions remain under `lateralObserver/`.
+YALMIP/SeDuMi are needed for synthesis, not stored-matrix verification.
+Historical continuous and fixed-XY designs remain auditable, but are rejected
+by the current runtime. See `research/anisotropic_information_gain.md` for the
+full derivation and recorded comparison, and
+`research/observer_pulse_implementation.md` for the preceding implementation.

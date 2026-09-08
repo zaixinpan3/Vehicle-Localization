@@ -122,7 +122,13 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
     summary.timingWithinCertificate=conditions.timingWithinCertificate;
     summary.flowCertificateVerified=estimate.observer.certificateVerified;
     summary.unconditionalStabilityClaimed=false;
-    metadata.gpsFusion="GPS substitutes XY during full LiDAR pose pulses; position-only continuation outside the recent-LiDAR interval is not labeled a full-pose certificate";
+    metadata.gpsFusion="Full-matrix information fusion of separate LiDAR and GPS residuals during pose pulses; GPS-only continuation remains outside the full-pose certificate";
+    summary.informationWithinCertificate=conditions.informationWithinCertificate;
+    summary.weightSectorViolationCount=conditions.weightSectorViolationCount;
+    weights=conditions.minimumLidarWeightEigenvalues;
+    if isempty(weights),summary.minimumLidarWeight=NaN;summary.medianMinimumLidarWeight=NaN;
+    else,summary.minimumLidarWeight=min(weights);summary.medianMinimumLidarWeight=median(weights);end
+    summary.gainInformationScale=cfg.lidar.gainInformationScale;
     if scenario=="lidarOnly"
         metadata.outageScope="no GNSS XY events after one reference-based biased initialization; recorded known roll/pitch retained for D2D, not complete GNSS/INS device loss";
     end

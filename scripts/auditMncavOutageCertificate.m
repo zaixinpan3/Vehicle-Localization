@@ -7,7 +7,7 @@ function audit=auditMncavOutageCertificate(designFile,outputFile)
 % certificate or every nonlinear trajectory.
     loaded=load(designFile,'observerDesign','observerCfg');
     design=loaded.observerDesign;
-    if isfield(design,'kind') && string(design.kind)=="aperiodic-pose-v1"
+    if isfield(design,'kind') && startsWith(string(design.kind),"aperiodic-")
         v=verifyImprovedObserverDesign(design,loaded.observerCfg);
         audit=table(["aperiodicFullPoseFlow";"timerReset"], ...
             [v.maximumFlowEigenvalue;v.maximumResetEigenvalue], ...

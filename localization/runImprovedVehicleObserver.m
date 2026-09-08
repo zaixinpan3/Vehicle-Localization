@@ -110,8 +110,10 @@ function derivative = observerDerivative(state, intervalIdx, alpha, queryTime, h
     sample = measurementSample(highRate, lateralEstimate, intervalIdx, alpha, cfg);
     channels = evaluateImprovedObserverChannels(state, sample, cfg.operating);
     fusion = fusionMeasurementAt(queryTime, gps, lidar, acceptedGps, acceptedLidar, cfg);
-    baseInnovation = poseInnovations(state, fusion);
-    derivative = channels.modelDerivative + design.poseGain*(fusion.omega*baseInnovation) ...
+    lidarResidual=[fusion.lidarPosition-state([1,4]);wrapAngleToPi(fusion.lidarHeading-state(7))];
+    gpsResidual=[fusion.gpsPosition-state([1,4]);0];
+    correction=fusion.lidarWeight*lidarResidual+fusion.gpsWeight*gpsResidual;
+    derivative = channels.modelDerivative + design.poseGain*correction ...
         + design.invariantPhysicalGain*channels.invariantInnovation;
 end
 
@@ -165,20 +167,24 @@ function fusion = fusionMeasurementAt(queryTime, gps, lidar, acceptedGps, accept
         if age < cfg.measurement.lidarMaximumAge
             fusion.lidarPosition = lidar.pose(lidarIdx,1:2).';
             fusion.lidarHeading = lidar.pose(lidarIdx,3);
-            fusion.translationWeight = eye(2);
-            fusion.headingWeight = lidar.headingWeight(lidarIdx);
+            fusion.lidarWeight = lidar.poseWeight(:,:,lidarIdx);
+            fusion.normalizedWeight = lidar.normalizedWeight(:,:,lidarIdx);
             fusion.lidarPositionValid = true;
             fusion.lidarHeadingValid = true;
             fusion.lidarAge = age;
             fusion.basePosition = fusion.lidarPosition;
             fusion.positionSource = "lidar";
-            % GPS substitutes the position measurement within the same pulse.
-            % It does not add a second, uncertified position gain in the gap.
+            % Combine independent residuals in information form. Cross terms
+            % remain active and the total normalized weight stays in [0,I].
             if fusion.gpsValid
-                fusion.basePosition = fusion.gpsPosition;
-                fusion.positionSource = "gps";
+                fusion.lidarWeight=lidar.gpsFusedLidarWeight(:,:,lidarIdx);
+                fusion.gpsWeight=lidar.gpsFusedGpsWeight(:,:,lidarIdx);
+                fusion.normalizedWeight=lidar.gpsFusedNormalizedWeight(:,:,lidarIdx);
+                fusion.positionSource="informationFusion";
             end
-            fusion.omega = diag([1,1,fusion.headingWeight]);
+            fusion.omega=fusion.lidarWeight+fusion.gpsWeight;
+            fusion.translationWeight=fusion.lidarWeight(1:2,1:2);
+            fusion.headingWeight=fusion.lidarWeight(3,3);
         end
     end
     if ~recentLidar && fusion.gpsValid
@@ -187,7 +193,9 @@ function fusion = fusionMeasurementAt(queryTime, gps, lidar, acceptedGps, accept
         % certificate; GPS availability is not falsely labeled a yaw proof.
         fusion.basePosition = fusion.gpsPosition;
         fusion.positionSource = "gpsOnly";
-        fusion.omega = diag([1,1,0]);
+        fusion.gpsWeight=gps.poseWeight;
+        fusion.omega=gps.poseWeight;
+        fusion.normalizedWeight=gps.normalizedWeight;
     end
 end
 
@@ -213,6 +221,7 @@ function fusion = emptyFusionMeasurement()
     fusion.translationWeight = zeros(2, 2);
     fusion.headingWeight = 0.0;
     fusion.omega = zeros(3, 3);
+    fusion.lidarWeight=zeros(3);fusion.gpsWeight=zeros(3);fusion.normalizedWeight=zeros(3);
     fusion.Cl = zeros(2, 7);
     fusion.gpsValid = false;
     fusion.lidarPositionValid = false;
@@ -297,6 +306,8 @@ function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lida
     invariantInnovation = zeros(sampleCount, 4);
     translationWeight = zeros(2, 2, sampleCount);
     headingWeight = zeros(sampleCount, 1);
+    lidarPoseWeight=zeros(3,3,sampleCount);gpsPoseWeight=zeros(3,3,sampleCount);
+    totalNormalizedPoseWeight=zeros(3,3,sampleCount);
     gpsAge = NaN(sampleCount, 1);
     lidarAge = NaN(sampleCount, 1);
     trackAngleRate = zeros(sampleCount, 1);
@@ -317,6 +328,9 @@ function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lida
         invariantInnovation(sampleIdx, :) = channels.invariantInnovation.';
         translationWeight(:, :, sampleIdx) = fusion.translationWeight;
         headingWeight(sampleIdx) = fusion.headingWeight;
+        lidarPoseWeight(:,:,sampleIdx)=fusion.lidarWeight;
+        gpsPoseWeight(:,:,sampleIdx)=fusion.gpsWeight;
+        totalNormalizedPoseWeight(:,:,sampleIdx)=fusion.normalizedWeight;
         gpsAge(sampleIdx) = fusion.gpsAge;
         lidarAge(sampleIdx) = fusion.lidarAge;
         trackAngleRate(sampleIdx) = channels.trackAngleRate;
@@ -343,6 +357,11 @@ function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lida
     estimate.diagnostics = struct();
     estimate.diagnostics.translationWeight = translationWeight;
     estimate.diagnostics.headingWeight = headingWeight;
+    estimate.diagnostics.lidarPoseWeight=lidarPoseWeight;
+    estimate.diagnostics.gpsPoseWeight=gpsPoseWeight;
+    estimate.diagnostics.totalNormalizedPoseWeight=totalNormalizedPoseWeight;
+    estimate.diagnostics.lidarPoseGain=pagemtimes(design.poseGain,lidarPoseWeight);
+    estimate.diagnostics.informationTimeBasis="revised measurement-time history";
     estimate.diagnostics.gpsAge = gpsAge;
     estimate.diagnostics.lidarAge = lidarAge;
     estimate.diagnostics.rawTrackAngleRate = rawTrackAngleRate;
@@ -390,11 +409,20 @@ function [highRate, gps, lidar] = normalizeSensorData(sensorData, cfg)
     gps.qualified = all(isfinite(gps.pose(:,1:2)),2);
     lidar.qualified = false(numel(lidar.timestamp),1);
     lidar.headingWeight = zeros(numel(lidar.timestamp),1);
+    lidar.poseWeight=zeros(3,3,numel(lidar.timestamp));
+    lidar.normalizedWeight=lidar.poseWeight;
+    lidar.gpsFusedLidarWeight=lidar.poseWeight;lidar.gpsFusedGpsWeight=lidar.poseWeight;
+    lidar.gpsFusedNormalizedWeight=lidar.poseWeight;
+    [~,gps.poseWeight,gps.normalizedWeight]=fusePoseInformationWeights(zeros(3),true,cfg);
     lidar.informationDiagnostics = cell(numel(lidar.timestamp),1);
     for eventIdx=1:numel(lidar.timestamp)
-        [~,weight,info] = computeLidarInformationWeights(lidar.information(:,:,eventIdx),cfg);
+        [~,weight,info,W] = computeLidarInformationWeights(lidar.information(:,:,eventIdx),cfg);
         lidar.qualified(eventIdx) = info.qualified && all(isfinite(lidar.pose(eventIdx,:)));
         lidar.headingWeight(eventIdx) = weight;
+        lidar.poseWeight(:,:,eventIdx)=W;lidar.normalizedWeight(:,:,eventIdx)=info.normalizedWeight;
+        lidar.gpsFusedLidarWeight(:,:,eventIdx)=info.gpsFusedLidarWeight;
+        lidar.gpsFusedGpsWeight(:,:,eventIdx)=info.gpsFusedGpsWeight;
+        lidar.gpsFusedNormalizedWeight(:,:,eventIdx)=info.gpsFusedNormalizedWeight;
         lidar.informationDiagnostics{eventIdx} = info;
     end
     tolerance = double(cfg.measurement.timestampTolerance);
@@ -528,7 +556,7 @@ end
 
 function validateObserverDesign(design, cfg)
 % validateObserverDesign Reject incomplete or mismatched gain artifacts.
-    assert(isfield(design,'kind') && string(design.kind)=="aperiodic-pose-v1", ...
+    assert(isfield(design,'kind') && string(design.kind)=="aperiodic-anisotropic-pose-v2", ...
         'VehicleLocalization:CertificateMismatch','Runtime requires the aperiodic pose certificate.');
     assert(design.certified && design.verification.certified, ...
         'VehicleLocalization:CertificateMismatch','The pose design is not verified.');
@@ -538,17 +566,22 @@ function validateObserverDesign(design, cfg)
     assert(isequal(design.K,verified.K) && isequal(design.N,verified.N) ...
         && isequal(design.timer.P,verified.P) ...
         && isequal(design.timer.knots,verified.knots) ...
-        && design.timer.rate==verified.rate && design.timer.nFactor==verified.nFactor ...
-        && design.timer.wMin==verified.wMin && cfg.observer.theta==verified.theta ...
+        && design.timer.rate==verified.rate && design.timer.alpha==verified.alpha ...
+        && isequal(design.timer.multipliers,verified.multipliers) ...
+        && isequal(cfg.lidar.poseScales(:),verified.poseScales(:)) ...
+        && isequal(design.timer.poseScales(:),verified.poseScales(:)) ...
+        && design.timer.onTime==verified.onTime && design.timer.tMin==verified.tMin ...
+        && design.timer.tMax==verified.tMax ...
+        && cfg.observer.theta==verified.theta ...
         && design.theta==verified.theta && design.timer.theta==verified.theta ...
         && isequal(cfg.operating,verified.operating) ...
         && isequal(cfg.observer.scalingExponents(:),verified.scalingExponents(:)), ...
         'VehicleLocalization:CertificateMismatch','Runtime matrices or envelope differ from verification.');
-    expected = [design.theta; design.sigma; design.timer.onTime; design.timer.onTime; ...
-        design.timer.tMin; design.timer.tMax; verified.minimumHeadingWeight];
+    expected = [verified.theta; verified.theta; verified.onTime; verified.onTime; ...
+        verified.tMin; verified.tMax; verified.alpha];
     actual = [cfg.observer.theta; cfg.observer.sigma; cfg.measurement.gpsMaximumAge; ...
         cfg.measurement.lidarMaximumAge; cfg.measurement.minimumPoseInterval; ...
-        cfg.measurement.maximumPoseInterval; cfg.lidar.minimumHeadingWeight];
+        cfg.measurement.maximumPoseInterval; cfg.lidar.certificateMinimumPoseWeight];
     assert(all(abs(expected-actual)<1e-12) ...
         && max(abs(design.N-cfg.observer.invariantGain),[],'all')<1e-12, ...
         'VehicleLocalization:CertificateMismatch','Runtime gains or pulse timing differ from verification.');

@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "maximumFlowEigenvalue": -0.0074376705679547114,
+  "minimumPEigenvalue": 0.039698193013525486,
+  "maximumPEigenvalue": 2.7649945253443127,
+  "maximumResetEigenvalue": -9.9999788587016938E-5,
+  "symmetryError": 0,
+  "flowInequalityCount": 720896,
+  "worstCombination": [
+    1690,
+    1,
+    4,
+    1
+  ],
+  "minimumNormalizedPoseWeight": 0.8,
+  "RDecayRatePerSecond": 0.01,
+  "predictionEuclideanLogNormPerSecond": 2.5508448984425636,
+  "minimumQualifiedIntervalSeconds": 0.05,
+  "maximumQualifiedIntervalSeconds": 0.11,
+  "pulseDurationSeconds": 0.03,
+  "solverStatus": 4,
+  "solverOptimalityClaimed": false,
+  "maximumContinuationLogNormPerSecond": 44.187335303174137,
+  "continuation150msHomogeneousBound": 756.0445443004669,
+  "continuation300msHomogeneousBound": 571603.35296650068,
+  "certified": true,
+  "productionImplemented": true,
+  "checkedVertexCount": 720896,
+  "scope": "arbitrarily oriented normalized pose weights alpha*I<=W<=I; conditional timing and disturbance bounds"
+}
