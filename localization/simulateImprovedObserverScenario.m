@@ -1,7 +1,7 @@
 function result = simulateImprovedObserverScenario(observerDesign, lateralDesign, cfg)
 % simulateImprovedObserverScenario Exercise the complete improved architecture.
 % The deterministic scenario includes varying speed and steering, delayed and
-% out-of-order poses, a four-second GPS dropout, and a directionally weak, full-rank
+% out-of-order GPS, fixed-delay LiDAR, a four-second GPS dropout, and a directionally weak, full-rank
 % lidar information matrix while retaining a well-observed lidar heading.
 
     arguments
@@ -144,12 +144,11 @@ function sensorData = buildSensorData(truth, cfg)
     lidarIdx = (1:lidarStep:sampleCount).';
     lidar = struct();
     lidar.timestamp = truth.time(lidarIdx);
-    lidar.arrivalTime = lidar.timestamp + double(cfg.simulation.lidarDelay);
+    lidar.arrivalTime = lidar.timestamp + double(cfg.measurement.fixedLidarDelay);
     lidar.pose = [truth.position(lidarIdx, :) + ...
         double(cfg.simulation.lidarPositionNoiseStandardDeviation) .* randn(numel(lidarIdx), 2), ...
         wrapAngleToPi(truth.heading(lidarIdx) + ...
         double(cfg.simulation.lidarHeadingNoiseStandardDeviation) .* randn(numel(lidarIdx), 1))];
-    lidar.arrivalTime = addOutOfOrderDelay(lidar.arrivalTime, cfg);
     lidar.information = lidarInformationSeries(truth.time(lidarIdx), truth.heading(lidarIdx), cfg);
 
     sensorData = struct("highRate", highRate, "gps", gps, "lidar", lidar);
@@ -208,7 +207,8 @@ function metrics = computeMetrics(truth, estimate, cfg)
     metrics.trackAngleRateRmse = sqrt(mean(trackRateError(settled).^2));
     metrics.finalPositionError = norm(positionError(end, :));
     metrics.finalHeadingError = abs(headingError(end));
-    metrics.replayCount = nnz(estimate.diagnostics.replayCount);
+    metrics.integrationStepCount = estimate.diagnostics.integrationStepCount;
+    metrics.stateHistoryRecomputed = estimate.diagnostics.stateHistoryRecomputed;
     metrics.acceptedEventCount = estimate.diagnostics.acceptedEventCount(end);
     metrics.rejectedEventCount = estimate.diagnostics.rejectedEventCount(end);
     metrics.maximumStateMagnitude = max(abs(estimate.z), [], "all");

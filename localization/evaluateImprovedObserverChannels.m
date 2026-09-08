@@ -23,11 +23,12 @@ function channels = evaluateImprovedObserverChannels(state, sample, operating)
 
     trackAngleRate = sample.yawRate + sample.sideSlipAngleRate;
     trackAngleRateSquared = trackAngleRate.^2;
-    modelDerivative = [state(2); state(3); ...
-        trackAngleRateSquared .* state(2) - 2.0 .* trackAngleRate .* state(6); ...
-        state(5); state(6); ...
-        trackAngleRateSquared .* state(5) + 2.0 .* trackAngleRate .* state(3); ...
-        sample.yawRate];
+    chain=[0,1,0;0,0,1;0,0,0];
+    modelMatrix=blkdiag(chain,chain,0);
+    modelMatrix(3,2)=trackAngleRateSquared;modelMatrix(6,5)=trackAngleRateSquared;
+    modelMatrix(3,6)=-2*trackAngleRate;modelMatrix(6,3)=2*trackAngleRate;
+    modelInput=zeros(7,1);modelInput(7)=sample.yawRate;
+    modelDerivative=modelMatrix*state+modelInput;
 
     % Extend only h outside the physical operating box. Clipping its
     % arguments gives a globally bounded mean-value Jacobian already covered
@@ -57,6 +58,8 @@ function channels = evaluateImprovedObserverChannels(state, sample, operating)
     channels = struct();
     channels.trackAngleRate = trackAngleRate;
     channels.modelDerivative = modelDerivative;
+    channels.modelMatrix = modelMatrix;
+    channels.modelInput = modelInput;
     channels.invariantPrediction = invariantPrediction;
     channels.invariantExtensionActive = extensionActive;
     channels.invariantMeasurement = invariantMeasurement;

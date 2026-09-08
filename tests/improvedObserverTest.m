@@ -2,7 +2,8 @@ classdef improvedObserverTest < matlab.unittest.TestCase
 % improvedObserverTest Tests of the complete seven-state observer cascade.
 % Algebraic tests cover the nonsingular model, invariant outputs, lidar
 % full-matrix gain shaping, and robust timer-LMI construction. Runtime tests use
-% stored certified gains; only the explicitly named synthesis test needs a solver.
+% stored reference gains; only the explicitly named synthesis test needs a solver.
+% Runtime tests cover fixed-delay transport and immutable online state history.
 
     properties (Access = private)
         LateralDesign
@@ -22,13 +23,60 @@ classdef improvedObserverTest < matlab.unittest.TestCase
     end
 
     methods (Test)
+        function delayedYawTransportPreservesTheGyroAngleLift(testCase)
+            cfg=improvedObserverConfig();yaw0=pi-.03;
+            cfg.observer.initialState=[0;0;0;0;0;0;yaw0];
+            data=testCase.zeroMotionSensorData(.5);data.highRate.yawRate(:)=.4;
+            stamps=[0;.1;.2];headings=atan2(sin(yaw0+.4*stamps),cos(yaw0+.4*stamps));
+            data.lidar=struct('timestamp',stamps,'pose',[zeros(3,2),headings], ...
+                'information',repmat(100*eye(3),1,1,3));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            error=atan2(sin(e.heading-yaw0-.4*e.time),cos(e.heading-yaw0-.4*e.time));
+            testCase.verifyEqual(error,zeros(size(error)),AbsTol=1e-11);
+            testCase.verifyEqual(e.innovations.lidar,zeros(numel(e.time),3),AbsTol=1e-11);
+        end
+
+        function delayedCoupledNullspaceCannotChangeTheCorrection(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.4);row=[2,0,1];
+            data.lidar=struct('timestamp',0,'pose',[.2,.1,.1], ...
+                'information',100*(row.'*row+diag([0,1,0])));
+            original=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            data.lidar.pose=data.lidar.pose+[.05,0,-.1];
+            shifted=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(original.onlineZ,shifted.onlineZ,AbsTol=1e-11);
+        end
+
+        function currentGainIncludesTheNominalTransport(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.2);
+            data.lidar=struct('timestamp',0,'pose',[.1,0,0],'information',100*eye(3));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            tau=.15;chain=[1,tau,tau^2/2;0,1,tau;0,0,1];
+            expected=blkdiag(chain,chain,1)*diag(cfg.observer.theta.^cfg.observer.scalingExponents) ...
+                *testCase.ObserverDesign.K*(100/105);
+            sample=find(abs(e.time-.15)<1e-12,1);
+            testCase.verifyEqual(e.diagnostics.lidarPoseGain(:,:,sample),expected,AbsTol=1e-10);
+        end
+
+        function inputHistoryIsBoundedAndTooShortHistoryIsRejected(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(3);
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(e.diagnostics.integrationStepCount,300);
+            testCase.verifyLessThanOrEqual(e.diagnostics.maximumInputHistorySegments,103);
+            cfg.measurement.inputHistoryDuration=.14;
+            testCase.verifyError(@() runImprovedVehicleObserver(data,testCase.LateralDesign, ...
+                testCase.ObserverDesign,cfg),'VehicleLocalization:InputHistoryTooShort');
+        end
+
         function registeredPartialCurbCorrectsStationaryYawEndToEnd(testCase)
             cfg=improvedObserverConfig();cfg.observer.initialState=[0;0;0;0;0;0;.1];
             cloud=geometricRegistrationTest.parallelRoad();
             registration=registerSemanticProbabilityCloud(cloud,cloud,[.8 .2 .02]);
-            event=registrationSupport.registrationPoseMeasurement(registration,0,0);
+            event=registrationSupport.registrationPoseMeasurement(registration,0,.15);
             data=testCase.zeroMotionSensorData(.2);data.lidar=event;
-            data.gps=struct('timestamp',0,'arrivalTime',0,'pose',[0 0]);
+            data.gps=struct('timestamp',0,'arrivalTime',.15,'pose',[0 0]);
             e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
             testCase.verifyFalse(registration.accepted);
             testCase.verifyTrue(e.diagnostics.acceptedLidar);
@@ -42,7 +90,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             cloud=geometricRegistrationTest.parallelRoad();
             registration=registerSemanticProbabilityCloud(cloud,cloud,[.8 0 0]);
             data=testCase.zeroMotionSensorData(.2);
-            data.lidar=registrationSupport.registrationPoseMeasurement(registration,0,0);
+            data.lidar=registrationSupport.registrationPoseMeasurement(registration,0,.15);
             e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
             data.lidar.pose(1)=data.lidar.pose(1)+100;
             shifted=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
@@ -50,24 +98,23 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             testCase.verifyFalse(e.diagnostics.certificateConditions.informationWithinCertificate);
         end
 
-        function incorporationAuditIncludesWaitForTheOutputSample(testCase)
+        function fixedDelayArrivalDoesNotWaitForTheOutputGrid(testCase)
             cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
             data=testCase.zeroMotionSensorData(.3);
             data.lidar=struct('timestamp',.003,'arrivalTime',.153,'pose',[.2 0 0], ...
                 'information',100*eye(3));
             e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
             c=e.diagnostics.certificateConditions;
-            testCase.verifyEqual(c.lidarIncorporationTime,.16,'AbsTol',1e-12);
-            testCase.verifyEqual(c.lidarArrivalToProcessingWaitSeconds,.007,'AbsTol',1e-12);
-            testCase.verifyEqual(c.lidarAssimilationDelaySeconds,.157,'AbsTol',1e-12);
-            testCase.verifyEqual(c.configuredCausalLagBoundSeconds,.16,'AbsTol',1e-12);
-            testCase.verifyTrue(c.fixedDelayMatchesConfiguration);
-            testCase.verifyTrue(c.effectiveDelayWithinConfiguredBound);
-            before=e.time<c.lidarIncorporationTime;
+            testCase.verifyEqual(c.lidarIncorporationTime,.153,'AbsTol',1e-12);
+            testCase.verifyEqual(c.lidarArrivalToProcessingWaitSeconds,0,'AbsTol',1e-12);
+            testCase.verifyEqual(c.lidarAssimilationDelaySeconds,.15,'AbsTol',1e-12);
+            testCase.verifyEqual(c.configuredCausalLagBoundSeconds,.15,'AbsTol',1e-12);
+            before=e.time<.153;
             testCase.verifyEqual(e.pose(before,:),zeros(nnz(before),3),'AbsTol',1e-12);
+            testCase.verifyGreaterThan(norm(e.pose(find(e.time>.153,1),:)),0);
         end
 
-        function missingDeliveryMetadataIsReported(testCase)
+        function omittedDeliveryUsesTheDeclaredFixedDelay(testCase)
             cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
             cloud=geometricRegistrationTest.parallelRoad();
             registration=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
@@ -78,36 +125,48 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             data.lidar.arrivalTime=.15;
             delivered=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
             testCase.verifyTrue(delivered.diagnostics.certificateConditions.allAcceptedDeliveryTimesProvided);
+            testCase.verifyEqual(e.onlineZ,delivered.onlineZ,AbsTol=0);
+            testCase.verifyEqual(e.measurements.lidar.arrivalTime,.15,AbsTol=1e-12);
         end
 
-        function pendingDeliveryCannotAppearInTheSettledHistory(testCase)
+        function frameArrivingAfterTheRunRemainsUnincorporated(testCase)
             cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
             data=testCase.zeroMotionSensorData(.4);
-            data.lidar=struct('timestamp',[0;.1],'arrivalTime',[.15;.8], ...
+            data.lidar=struct('timestamp',[0;.3],'arrivalTime',[.15;.45], ...
                 'pose',zeros(2,3),'information',repmat(100*eye(3),1,1,2));
             e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
-            testCase.verifyEqual(e.diagnostics.certificateConditions.settledMeasurementTimeEnd,.1,'AbsTol',1e-12);
+            testCase.verifyEqual(e.diagnostics.acceptedLidar,[true;false]);
             testCase.verifyTrue(isnan(e.measurements.lidar.incorporationTime(2)));
+            testCase.verifyFalse(e.diagnostics.stateHistoryRecomputed);
         end
 
-        function exactMovingInitializationStillHasRawPoseHoldForcing(testCase)
+        function transportedPosePreservesExactMovingInitialization(testCase)
             cfg=improvedObserverConfig();cfg.observer.initialState=[0;10;0;0;0;0;0];
-            data=testCase.zeroMotionSensorData(.02);
-            data.highRate.longitudinalSpeed(:)=10;
-            data.lidar=struct('timestamp',0,'arrivalTime',0,'pose',[0 0 0], ...
-                'information',100*eye(3));
+            data=testCase.zeroMotionSensorData(.4);data.highRate.longitudinalSpeed(:)=10;
+            data.lidar=struct('timestamp',[0;.1;.2],'pose',[0,0,0;1,0,0;2,0,0], ...
+                'information',repmat(100*eye(3),1,1,3));
             e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
-            % At truth, the held residual would be exactly -10*t. The actual
-            % observer departs from truth under this deterministic forcing.
-            testCase.verifyEqual(data.lidar.pose(1)-10*e.time(end),-.2,'AbsTol',1e-12);
-            testCase.verifyEqual(e.innovations.base(end,1),-e.position(end,1),'AbsTol',1e-12);
-            testCase.verifyGreaterThan(.2-e.position(end,1),1e-4);
-            testCase.verifyEqual(e.innovations.base(1,:),zeros(1,3),'AbsTol',1e-12);
-            testCase.verifyFalse(e.observer.certified);
+            testCase.verifyEqual(e.position(:,1),10*e.time,'AbsTol',1e-11);
+            testCase.verifyEqual(e.innovations.lidar,zeros(numel(e.time),3),'AbsTol',1e-11);
+            testCase.verifyEqual(nnz(e.diagnostics.acceptedLidar),3);
+            testCase.verifyFalse(e.observer.certificateVerified);
+        end
+
+        function offGridTransportIsExactForConstantAcceleration(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=[0;2;1;0;0;0;0];
+            data=testCase.zeroMotionSensorData(.6);t=data.highRate.time;
+            data.highRate.longitudinalSpeed=2+t;data.highRate.longitudinalAcceleration(:)=1;
+            stamps=[.003;.117;.219];
+            data.lidar=struct('timestamp',stamps,'pose',[2*stamps+stamps.^2/2,zeros(3,2)], ...
+                'information',repmat(100*eye(3),1,1,3));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(e.position(:,1),2*t+t.^2/2,'AbsTol',1e-11);
+            testCase.verifyEqual(e.velocity(:,1),2+t,'AbsTol',1e-11);
+            testCase.verifyEqual(e.innovations.lidar,zeros(numel(t),3),'AbsTol',1e-11);
         end
 
         function partialPoseInitializationIgnoresUnobservedCoordinates(testCase)
-            cfg=improvedObserverConfig();
+            cfg=improvedObserverConfig();cfg.measurement.fixedLidarDelay=0;
             cfg.observer.fallbackPosition=[2;3];
             cfg.observer.fallbackHeading=.4;
             data=testCase.zeroMotionSensorData(.1);
@@ -122,7 +181,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
 
         function coupledNullspaceDoesNotChangeAutomaticInitialization(testCase)
-            cfg=improvedObserverConfig();data=testCase.zeroMotionSensorData(.1);
+            cfg=improvedObserverConfig();cfg.measurement.fixedLidarDelay=0;data=testCase.zeroMotionSensorData(.1);
             data.lidar=struct('timestamp',0,'arrivalTime',0,'pose',[.1,0,.1], ...
                 'information',[100,0,100;0,100,0;100,0,100]);
             a=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
@@ -132,7 +191,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
 
         function fullPoseInitializationRetainsGpsPositionPrecedence(testCase)
-            cfg=improvedObserverConfig();data=testCase.zeroMotionSensorData(.1);
+            cfg=improvedObserverConfig();cfg.measurement.fixedLidarDelay=0;data=testCase.zeroMotionSensorData(.1);
             data.lidar=struct('timestamp',0,'arrivalTime',0,'pose',[1,2,.3], ...
                 'information',100*eye(3));
             data.gps=struct('timestamp',0,'arrivalTime',0,'pose',[4,5]);
@@ -140,12 +199,16 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(e.pose(1,:),[4,5,.3],AbsTol=1e-12);
         end
 
-        function initialPoseUsesLatestPhysicalTimestamp(testCase)
-            cfg=improvedObserverConfig();data=testCase.zeroMotionSensorData(.1);
-            data.lidar=struct('timestamp',[-.1;-.02],'arrivalTime',[0;-.01], ...
+        function missingInputPrehistoryCannotInitializeFromAnOldPose(testCase)
+            cfg=improvedObserverConfig();cfg.observer.fallbackPosition=[2;3];
+            cfg.observer.fallbackHeading=.4;data=testCase.zeroMotionSensorData(.1);
+            data.lidar=struct('timestamp',[-.2;-.15],'arrivalTime',[-.05;0], ...
                 'pose',[1,2,.1;3,4,.2],'information',repmat(100*eye(3),1,1,2));
             e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
-            testCase.verifyEqual(e.pose(1,:),[3,4,.2],AbsTol=1e-12);
+            testCase.verifyEqual(e.pose(1,:),[2,3,.4],AbsTol=1e-12);
+            testCase.verifyFalse(any(e.diagnostics.acceptedLidar));
+            testCase.verifyEqual(e.measurements.lidar.rejectionReason, ...
+                repmat("inputHistoryUnavailable",2,1));
         end
 
         function curbHeadingInformationRequiresSpatialExtent(testCase)
@@ -166,7 +229,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
 
         function stationaryYawNeedsGeometryDespiteGpsPosition(testCase)
-            cfg=improvedObserverConfig();cfg.observer.initialState=[0;0;0;0;0;0;.1];
+            cfg=improvedObserverConfig();cfg.measurement.fixedLidarDelay=0;cfg.observer.initialState=[0;0;0;0;0;0;.1];
             data=testCase.zeroMotionSensorData(.5);stamps=(0:.1:.4).';
             data.gps=struct('timestamp',stamps,'arrivalTime',stamps,'pose',zeros(5,2));
             gpsOnly=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
@@ -183,14 +246,14 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         function gpsCompletesTheCurbSectorThroughoutEachPulse(testCase)
             cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
             data=testCase.zeroMotionSensorData(.7);stamps=(0:.1:.5).';
-            data.gps=struct('timestamp',stamps,'arrivalTime',stamps,'pose',zeros(6,2));
+            data.gps=struct('timestamp',stamps,'arrivalTime',stamps+.15,'pose',zeros(6,2));
             data.lidar=struct('timestamp',stamps,'arrivalTime',stamps+.15,'pose',zeros(6,3), ...
                 'information',repmat(diag([0,100,100]),1,1,6));
             e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
             c=e.diagnostics.certificateConditions;
-            testCase.verifyFalse(c.lidarInformationWithinCertificate);
-            testCase.verifyTrue(c.informationWithinCertificate);
-            testCase.verifyTrue(c.timingWithinCertificate);
+            testCase.verifyFalse(c.lidarInformationWithinReferenceSector);
+            testCase.verifyTrue(c.informationWithinReferenceSector);
+            testCase.verifyTrue(c.timingWithinReferenceSchedule);
             testCase.verifyGreaterThanOrEqual(c.minimumCombinedWeightEigenvalues, ...
                 cfg.lidar.certificateMinimumPoseWeight*ones(size(c.minimumCombinedWeightEigenvalues)));
             testCase.verifyFalse(e.observer.certified);
@@ -198,28 +261,24 @@ classdef improvedObserverTest < matlab.unittest.TestCase
 
         function gpsExpiryBetweenSamplesCannotHideMissingAnchoring(testCase)
             cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
-            data=testCase.zeroMotionSensorData(.7);stamps=(0:.1:.5).';
-            data.gps=struct('timestamp',stamps-.004,'arrivalTime',stamps,'pose',zeros(6,2));
+            data=testCase.zeroMotionSensorData(.9);stamps=(.1:.1:.6).';
+            data.gps=struct('timestamp',stamps-.004,'arrivalTime',stamps+.146,'pose',zeros(6,2));
             data.lidar=struct('timestamp',stamps,'arrivalTime',stamps+.15,'pose',zeros(6,3), ...
                 'information',repmat(diag([0,100,100]),1,1,6));
             e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
             c=e.diagnostics.certificateConditions;
-            testCase.verifyFalse(c.informationWithinCertificate);
-            testCase.verifyEqual(c.combinedWeightSectorViolationCount,6);
-            testCase.verifyEqual(c.posePulseInformationIntervals(2,:),[.026,.03],AbsTol=1e-12);
+            bad=c.minimumCombinedWeightEigenvalues<cfg.lidar.certificateMinimumPoseWeight;
+            testCase.verifyFalse(c.informationWithinReferenceSector);
+            testCase.verifyEqual(sum(diff(c.posePulseInformationIntervals(bad,:),1,2)),.024,AbsTol=1e-12);
         end
 
-        function variableArrivalReplayRetainsTheAcquisitionHistory(testCase)
+        function variableLidarDelayIsRejectedByTheFixedDelayContract(testCase)
             cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
             data=testCase.zeroMotionSensorData(.7);stamps=[.003;.107;.211;.315];
-            data.lidar=struct('timestamp',stamps,'arrivalTime',stamps, ...
-                'pose',repmat([.2,-.1,.01],4,1),'information',repmat(100*eye(3),1,1,4));
-            a=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
-            data.lidar.arrivalTime=stamps+[.23;.02;.18;.01];
-            b=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
-            testCase.verifyEqual(b.revisedZ,a.revisedZ,AbsTol=1e-11);
-            testCase.verifyFalse(b.diagnostics.certificateConditions.fixedDelayMatchesConfiguration);
-            testCase.verifyFalse(b.observer.certified);
+            data.lidar=struct('timestamp',stamps,'arrivalTime',stamps+[.23;.02;.18;.01], ...
+                'pose',zeros(4,3),'information',repmat(100*eye(3),1,1,4));
+            testCase.verifyError(@() runImprovedVehicleObserver(data,testCase.LateralDesign, ...
+                testCase.ObserverDesign,cfg),'VehicleLocalization:FixedLidarDelayMismatch');
         end
 
         function varyingMotionLeavesExplicitJerkAndRateResiduals(testCase)
@@ -340,7 +399,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
 
         function rankOneInformationCanInjectWithoutFullPoseQualification(testCase)
-            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            cfg=improvedObserverConfig();cfg.measurement.fixedLidarDelay=0;cfg.observer.initialState=zeros(7,1);
             data=testCase.zeroMotionSensorData(.1);
             data.lidar=struct('timestamp',0,'arrivalTime',0,'pose',[1,0,0], ...
                 'information',diag([100,0,0]));
@@ -352,7 +411,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
 
         function informationCrossTermsReachTheActualObserverGain(testCase)
-            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            cfg=improvedObserverConfig();cfg.measurement.fixedLidarDelay=0;cfg.observer.initialState=zeros(7,1);
             data=testCase.zeroMotionSensorData(.1);
             data.lidar=struct('timestamp',0,'arrivalTime',0,'pose',[0,0,.1], ...
                 'information',[100,0,40;0,100,0;40,0,100]);
@@ -436,7 +495,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             testCase.verifyLessThan(metrics.velocityRmse, 0.60);
             testCase.verifyLessThan(metrics.accelerationRmse, 1.10);
             testCase.verifyLessThan(metrics.trackAngleRateRmse, 0.01);
-            testCase.verifyGreaterThan(metrics.replayCount, 0);
+            testCase.verifyFalse(metrics.stateHistoryRecomputed);
             testCase.verifyGreaterThan(metrics.acceptedEventCount, 0);
             testCase.verifyEqual(metrics.rejectedEventCount, 0);
             testCase.verifyLessThan(metrics.degenerateLidarMinimumWeight,.05);
@@ -506,7 +565,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
 
         function wrappedHeadingInnovationUsesTheShortestArc(testCase)
         % wrappedHeadingInnovationUsesTheShortestArc Check the branch cut.
-            cfg = improvedObserverConfig();
+            cfg = improvedObserverConfig();cfg.measurement.fixedLidarDelay=0;
             cfg.observer.initialState = [0; 0; 0; 0; 0; 0; pi - 0.01];
             sensorData = testCase.zeroMotionSensorData(0.05);
             sensorData.lidar = struct("timestamp", 0.0, "arrivalTime", 0.0, ...
@@ -519,8 +578,8 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             testCase.verifyLessThan(estimate.heading, pi .* ones(size(estimate.heading)));
         end
 
-        function eventOlderThanReplayBufferIsRejected(testCase)
-        % eventOlderThanReplayBufferIsRejected Check bounded replay behavior.
+        function eventOlderThanInputHistoryIsRejected(testCase)
+        % eventOlderThanInputHistoryIsRejected Check the bounded input-map buffer.
             cfg = improvedObserverConfig();
             cfg.observer.initialState = zeros(7, 1);
             sensorData = testCase.zeroMotionSensorData(2.0);
@@ -544,22 +603,22 @@ classdef improvedObserverTest < matlab.unittest.TestCase
                 testCase.LateralDesign, testCase.ObserverDesign, cfg), "VehicleLocalization:CertificateMismatch");
         end
 
-        function delayedReplayRecoversTheSameMeasurementTimeHistory(testCase)
-            cfg = improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
-            data=testCase.zeroMotionSensorData(.60);
-            data.lidar=struct('timestamp',[0;.1;.2;.3], ...
-                'arrivalTime',[0;.1;.2;.3], 'pose',repmat([.2,-.1,.01],4,1), ...
-                'information',repmat(100*eye(3),1,1,4));
-            immediate=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
-            data.lidar.arrivalTime=data.lidar.timestamp+.15;
-            delayed=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
-            testCase.verifyEqual(delayed.z,immediate.z,AbsTol=1e-11);
-            testCase.verifyEqual(delayed.onlineZ(delayed.time<.15,:), ...
-                zeros(nnz(delayed.time<.15),7),AbsTol=1e-12);
+        function fixedDelayNeverRewritesPastStateHistory(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.6);
+            data.lidar=struct('timestamp',[0;.1;.2;.3],'arrivalTime',[.15;.25;.35;.45], ...
+                'pose',repmat([.2,-.1,.01],4,1),'information',repmat(100*eye(3),1,1,4));
+            prefix=data;prefix.highRate=structfun(@(v) v(1:21,:),data.highRate,'UniformOutput',false);
+            short=runImprovedVehicleObserver(prefix,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            full=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(full.z(1:21,:),short.z,AbsTol=0);
+            testCase.verifyEqual(full.z,full.onlineZ,AbsTol=0);
+            testCase.verifyFalse(isfield(full,'revisedZ'));
+            testCase.verifyFalse(full.diagnostics.stateHistoryRecomputed);
         end
 
         function irregularPulseEdgesAgreeWithAFinerInputGrid(testCase)
-            cfg=improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            cfg=improvedObserverConfig();cfg.measurement.fixedLidarDelay=0; cfg.observer.initialState=zeros(7,1);
             coarse=testCase.zeroMotionSensorData(.10);
             coarse.lidar=struct('timestamp',.003,'arrivalTime',.003, ...
                 'pose',[.2,-.1,.01],'information',100*eye(3));
@@ -577,9 +636,11 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             data.lidar=struct('timestamp',stamps,'arrivalTime',stamps+.15, ...
                 'pose',zeros(6,3),'information',repmat(100*eye(3),1,1,6));
             e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
-            testCase.verifyTrue(e.diagnostics.certificateConditions.timingWithinCertificate);
+            testCase.verifyTrue(e.diagnostics.certificateConditions.timingWithinReferenceSchedule);
             testCase.verifyTrue(e.diagnostics.certificateConditions.fixedDelayMatchesConfiguration);
-            testCase.verifyTrue(e.observer.certificateVerified);
+            testCase.verifyFalse(e.observer.certificateVerified);
+            testCase.verifyTrue(e.observer.referenceCertificateVerified);
+            testCase.verifyFalse(e.observer.verification.certified);
             testCase.verifyFalse(e.observer.certified);
         end
 
@@ -619,7 +680,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
 
         function gpsInAPoseGapDoesNotAddAnUncertifiedGain(testCase)
-            cfg=improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            cfg=improvedObserverConfig();cfg.measurement.fixedLidarDelay=0; cfg.observer.initialState=zeros(7,1);
             data=testCase.zeroMotionSensorData(.09);
             data.lidar=struct('timestamp',0,'arrivalTime',0, ...
                 'pose',[0,0,0],'information',100*eye(3));
@@ -630,7 +691,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
 
         function gpsAndLidarHaveSeparateGainsWithinThePosePulse(testCase)
-            cfg=improvedObserverConfig(); cfg.observer.initialState=zeros(7,1);
+            cfg=improvedObserverConfig();cfg.measurement.fixedLidarDelay=0; cfg.observer.initialState=zeros(7,1);
             data=testCase.zeroMotionSensorData(.03);
             data.lidar=struct('timestamp',0,'arrivalTime',0, ...
                 'pose',[0,0,0],'information',100*eye(3));
@@ -667,13 +728,13 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(e.pose(e.time<.15,:),zeros(nnz(e.time<.15),3),AbsTol=1e-12);
         end
 
-        function lidarOnlyTracksOnTheCertifiedSchedule(testCase)
+        function lidarOnlyTracksOnTheReferenceSchedule(testCase)
             cfg=improvedObserverConfig();
             cfg.simulation.gpsDropoutInterval=[0,cfg.simulation.finalTime+1];
             cfg.simulation.outOfOrderExtraDelay=0;
             result=simulateImprovedObserverScenario(testCase.ObserverDesign,testCase.LateralDesign,cfg);
             testCase.verifyEqual(nnz(result.estimate.diagnostics.acceptedGps),0);
-            testCase.verifyTrue(result.estimate.diagnostics.certificateConditions.timingWithinCertificate);
+            testCase.verifyTrue(result.estimate.diagnostics.certificateConditions.timingWithinReferenceSchedule);
             testCase.verifyLessThan(result.metrics.positionRmse,.25);
             testCase.verifyLessThan(result.metrics.headingRmse,.01);
         end

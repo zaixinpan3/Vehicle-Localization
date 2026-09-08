@@ -3,7 +3,7 @@ function summaries = validatePoseObserverImplementation(sequenceFolder,outputFol
 % Reuse the frozen Mississippi map and sourced/nominal vehicle inputs from a
 % prepared sequence. Default: rerun coarse perception and D2D on all 1170 raw
 % scans. RerunPerception=false explicitly reuses existing calls in OUTPUTFOLDER.
-% Every observer case scores causal online output, not revised history.
+% Every observer case advances once and scores causal output without state replay.
     arguments
         sequenceFolder (1,1) string
         outputFolder (1,1) string

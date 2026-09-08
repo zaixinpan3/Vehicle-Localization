@@ -1,124 +1,284 @@
-function estimate = runImprovedVehicleObserver(sensorData, lateralDesign, observerDesign, cfg)
-% runImprovedVehicleObserver Run the complete cascaded seven-state observer.
-% The independent 2DOF observer first estimates lateral velocity, side slip,
-% and side-slip rate. Its outputs then drive the nonsingular high-gain model.
-% Delayed GPS and lidar events are inserted at their physical timestamps and
-% the affected continuous-time state history is replayed to the present.
-
+function estimate = runImprovedVehicleObserver(sensorData,lateralDesign,observerDesign,cfg)
+% runImprovedVehicleObserver Fuse fixed-delay LiDAR without state replay.
+% A bounded buffer contains only affine nominal-flow maps derived from q/r.
+% Each delayed pose residual and its gain are transported to the current state.
+% Integration proceeds forward once; every returned state is causal and final.
     arguments
-        sensorData (1, 1) struct
-        lateralDesign (1, 1) struct
-        observerDesign (1, 1) struct
-        cfg (1, 1) struct = improvedObserverConfig()
+        sensorData (1,1) struct
+        lateralDesign (1,1) struct
+        observerDesign (1,1) struct
+        cfg (1,1) struct = improvedObserverConfig()
     end
-
-    validateObserverDesign(observerDesign, cfg);
-    scaling = diag(cfg.observer.theta.^cfg.observer.scalingExponents(:));
-    observerDesign.poseGain = scaling*observerDesign.K;
-    observerDesign.invariantPhysicalGain = scaling*observerDesign.N/cfg.observer.theta^3;
-    [highRate, gps, lidar] = normalizeSensorData(sensorData, cfg);
-    lateralCfg = lateralDesign.cfg;
-    lateralCfg.observer.initialState = double(lateralCfg.observer.initialState(:));
-    lateralEstimate = runLateralVelocityObserver(highRate, lateralDesign, lateralCfg);
-
-    stateCount = 7;
-    sampleCount = numel(highRate.time);
-    stateHistory = NaN(sampleCount, stateCount);
-    onlineState = NaN(sampleCount, stateCount);
-    replayCount = zeros(sampleCount, 1);
-    acceptedEventCount = zeros(sampleCount, 1);
-    rejectedEventCount = zeros(sampleCount, 1);
-    acceptedGps = false(numel(gps.timestamp), 1);
-    rejectedGps = false(numel(gps.timestamp), 1);
-    acceptedLidar = false(numel(lidar.timestamp), 1);
-    rejectedLidar = false(numel(lidar.timestamp), 1);
-    stateHistory(1, :) = buildInitialState(highRate, lateralEstimate, gps, lidar, cfg).';
-
-    for sampleIdx = 1:sampleCount
-        if sampleIdx > 1
-            stateHistory(sampleIdx, :) = propagateState(stateHistory(sampleIdx - 1, :).', ...
-                sampleIdx - 1, highRate, lateralEstimate, gps, lidar, acceptedGps, ...
-                acceptedLidar, observerDesign, cfg).';
-        end
-
-        currentTime = highRate.time(sampleIdx);
-        [acceptedGps, rejectedGps, newGps] = acceptArrivedEvents( ...
-            gps, acceptedGps, rejectedGps, currentTime, cfg);
-        [acceptedLidar, rejectedLidar, newLidar] = acceptArrivedEvents( ...
-            lidar, acceptedLidar, rejectedLidar, currentTime, cfg);
-        newTimestamps = [gps.timestamp(newGps); lidar.timestamp(newLidar)];
-        if ~isempty(newTimestamps)
-            replayAnchor = replayAnchorIndex(highRate.time, min(newTimestamps), cfg);
-            for replayIdx = (replayAnchor + 1):sampleIdx
-                stateHistory(replayIdx, :) = propagateState(stateHistory(replayIdx - 1, :).', ...
-                    replayIdx - 1, highRate, lateralEstimate, gps, lidar, acceptedGps, ...
-                    acceptedLidar, observerDesign, cfg).';
+    validateObserverDesign(observerDesign,cfg);
+    scaling=diag(cfg.observer.theta.^cfg.observer.scalingExponents(:));
+    observerDesign.poseGain=scaling*observerDesign.K;
+    observerDesign.invariantPhysicalGain=scaling*observerDesign.N/cfg.observer.theta^3;
+    [highRate,gps,lidar]=normalizeSensorData(sensorData,cfg);
+    lateral=runLateralVelocityObserver(highRate,lateralDesign,lateralDesign.cfg);
+    state=buildInitialState(highRate,lateral,gps,lidar,cfg);
+    count=numel(highRate.time);states=zeros(count,7);trace=cell(count,1);
+    history=cell(0,1);active=struct('gpsIndex',0,'lidarIndex',0, ...
+        'gpsFlow',eye(8),'lidarFlow',eye(8));
+    gps.accepted=false(numel(gps.timestamp),1);gps.rejected=gps.accepted;
+    lidar.accepted=false(numel(lidar.timestamp),1);lidar.rejected=lidar.accepted;
+    gps.rejectionReason=repmat("",numel(gps.timestamp),1);
+    lidar.rejectionReason=repmat("",numel(lidar.timestamp),1);
+    boundaries=unique([gps.arrivalTime;gps.arrivalTime+cfg.measurement.gpsMaximumAge; ...
+        lidar.arrivalTime;lidar.arrivalTime+cfg.measurement.lidarMaximumAge; ...
+        lidar.arrivalTime+cfg.measurement.maximumPoseInterval]);
+    integrationSteps=0;maximumHistorySegments=0;
+    intervals=zeros(0,2);sectorMinimum=zeros(0,1);
+    for sampleIdx=1:count
+        now=highRate.time(sampleIdx);
+        if sampleIdx>1
+            left=highRate.time(sampleIdx-1);right=now;
+            pieces=max(1,ceil((right-left)/cfg.measurement.maximumIntegrationStep-1e-10));
+            cuts=unique([linspace(left,right,pieces+1).';boundaries(boundaries>left & boundaries<right)]);
+            for part=1:numel(cuts)-1
+                t0=cuts(part);t1=cuts(part+1);
+                [gps,lidar,active]=receiveEvents(gps,lidar,active,history,t0,cfg);
+                fusion=activeFusion(t0,gps,lidar,active,cfg);
+                if fusion.lidarActive
+                    intervals(end+1,:)=[t0,t1]; %#ok<AGROW>
+                    sectorMinimum(end+1,1)=min(eig(fusion.normalizedWeight)); %#ok<AGROW>
+                end
+                [state,flow]=forwardStep(state,t0,t1,sampleIdx-1, ...
+                    highRate,lateral,active,fusion,observerDesign,cfg);
+                if fusion.gpsActive,active.gpsFlow=flow.map*active.gpsFlow;end
+                if fusion.lidarActive,active.lidarFlow=flow.map*active.lidarFlow;end
+                history{end+1,1}=flow; %#ok<AGROW>
+                cutoff=t1-cfg.measurement.inputHistoryDuration;
+                while ~isempty(history) && history{1}.right<cutoff
+                    history(1)=[];
+                end
+                maximumHistorySegments=max(maximumHistorySegments,numel(history));
+                integrationSteps=integrationSteps+1;
             end
-            replayCount(sampleIdx) = 1;
         end
-        % Incorporation is complete for this output sample after replay. This
-        % is the sensor/output clock, not a measured wall-clock compute time.
-        gps.incorporationTime(newGps) = currentTime;
-        lidar.incorporationTime(newLidar) = currentTime;
-
-        onlineState(sampleIdx, :) = stateHistory(sampleIdx, :);
-        acceptedEventCount(sampleIdx) = nnz(acceptedGps) + nnz(acceptedLidar);
-        rejectedEventCount(sampleIdx) = nnz(rejectedGps) + nnz(rejectedLidar);
+        [gps,lidar,active]=receiveEvents(gps,lidar,active,history,now,cfg);
+        fusion=activeFusion(now,gps,lidar,active,cfg);
+        sample=measurementSample(highRate,lateral,min(sampleIdx,count-1),double(sampleIdx==count),cfg);
+        [~,~,details]=currentDerivative(state,sample,eye(8),active,fusion,observerDesign,cfg);
+        details.accepted=nnz(gps.accepted)+nnz(lidar.accepted);
+        details.rejected=nnz(gps.rejected)+nnz(lidar.rejected);
+        details.fusion=fusion;trace{sampleIdx}=details;
+        states(sampleIdx,:)=state.';
     end
-
-    estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lidar, ...
-        acceptedGps, acceptedLidar, lateralEstimate, replayCount, acceptedEventCount, ...
-        rejectedEventCount, observerDesign, cfg);
+    estimate=assembleEstimate(states,trace,highRate,lateral,gps,lidar,observerDesign,cfg);
+    estimate.diagnostics.integrationStepCount=integrationSteps;
+    estimate.diagnostics.maximumInputHistorySegments=maximumHistorySegments;
+    estimate.diagnostics.inputHistoryDuration=cfg.measurement.inputHistoryDuration;
+    estimate.diagnostics.stateHistoryRecomputed=false;
+    estimate.diagnostics.certificateConditions=transportConditions( ...
+        highRate,gps,lidar,intervals,sectorMinimum,cfg);
 end
 
-function stateNext = propagateState(state, intervalIdx, highRate, lateralEstimate, gps, lidar, ...
-        acceptedGps, acceptedLidar, design, cfg)
-% propagateState Integrate one high-rate interval with event-aware RK4.
-    left = highRate.time(intervalIdx);
-    right = highRate.time(intervalIdx+1);
-    % Split at every active pulse boundary. All RK stages within a piece use
-    % its left-continuous terminal mode, so an endpoint cannot shorten a pulse.
-    gpsTimes = gps.timestamp(acceptedGps);
-    lidarTimes = lidar.timestamp(acceptedLidar);
-    edges = [gpsTimes; gpsTimes+cfg.measurement.gpsMaximumAge; ...
-        lidarTimes; lidarTimes+cfg.measurement.lidarMaximumAge; ...
-        lidarTimes+cfg.measurement.maximumPoseInterval];
-    edges = edges(edges>left & edges<right);
-    pieces = ceil((right-left)/cfg.measurement.maximumIntegrationStep-1e-10);
-    cuts = unique([linspace(left,right,max(1,pieces)+1).'; edges]);
-    stateNext = state;
-    for part = 1:numel(cuts)-1
-        t0 = cuts(part); t1 = cuts(part+1); dt = t1-t0;
-        alpha0 = (t0-left)/(right-left);
-        alpha1 = (t1-left)/(right-left);
-        middle = (alpha0+alpha1)/2;
-        endQuery = max(t0,t1-32*eps(max(1,abs(t1))));
-        k1 = observerDerivative(stateNext,intervalIdx,alpha0,t0,highRate,lateralEstimate, ...
-            gps,lidar,acceptedGps,acceptedLidar,design,cfg);
-        k2 = observerDerivative(stateNext+dt*k1/2,intervalIdx,middle,(t0+t1)/2, ...
-            highRate,lateralEstimate,gps,lidar,acceptedGps,acceptedLidar,design,cfg);
-        k3 = observerDerivative(stateNext+dt*k2/2,intervalIdx,middle,(t0+t1)/2, ...
-            highRate,lateralEstimate,gps,lidar,acceptedGps,acceptedLidar,design,cfg);
-        k4 = observerDerivative(stateNext+dt*k3,intervalIdx,alpha1,endQuery, ...
-            highRate,lateralEstimate,gps,lidar,acceptedGps,acceptedLidar,design,cfg);
-        stateNext = stateNext+dt*(k1+2*k2+2*k3+k4)/6;
-    end
-    stateNext(7) = wrapAngleToPi(stateNext(7));
-    assert(all(isfinite(stateNext)), ...
-        "The improved observer produced a nonfinite state in interval %d.", intervalIdx);
+function [state,flow]=forwardStep(state,left,right,index,high,lateral,active,fusion,design,cfg)
+% forwardStep Advance the estimate and input-only affine flow with the same RK4.
+    dt=right-left;start=high.time(index);span=high.time(index+1)-start;
+    first=measurementSample(high,lateral,index,(left-start)/span,cfg);
+    middle=measurementSample(high,lateral,index,((left+right)/2-start)/span,cfg);
+    last=measurementSample(high,lateral,index,(right-start)/span,cfg);
+    [k1,A1]=currentDerivative(state,first,eye(8),active,fusion,design,cfg);
+    P2=eye(8)+dt*A1/2;
+    [k2,A2]=currentDerivative(state+dt*k1/2,middle,P2,active,fusion,design,cfg);
+    V2=A2*P2;P3=eye(8)+dt*V2/2;
+    [k3,A3]=currentDerivative(state+dt*k2/2,middle,P3,active,fusion,design,cfg);
+    V3=A3*P3;P4=eye(8)+dt*V3;
+    [k4,A4]=currentDerivative(state+dt*k3,last,P4,active,fusion,design,cfg);
+    V4=A4*P4;
+    state=state+dt*(k1+2*k2+2*k3+k4)/6;
+    % Keep a continuous yaw lift internally. Only the public angle is wrapped.
+    assert(all(isfinite(state)),'VehicleLocalization:NonfiniteObserver', ...
+        'The forward observer produced a nonfinite state at %.9g seconds.',right);
+    flow=struct('left',left,'right',right,'map',eye(8)+dt*(A1+2*V2+2*V3+V4)/6, ...
+        'slopes',cat(3,A1,V2,V3,V4));
 end
 
-function derivative = observerDerivative(state, intervalIdx, alpha, queryTime, highRate, lateralEstimate, ...
-        gps, lidar, acceptedGps, acceptedLidar, design, cfg)
-% observerDerivative Use the certified full-pose gain in both source modes.
-    sample = measurementSample(highRate, lateralEstimate, intervalIdx, alpha, cfg);
-    channels = evaluateImprovedObserverChannels(state, sample, cfg.operating);
-    fusion = fusionMeasurementAt(queryTime, gps, lidar, acceptedGps, acceptedLidar, cfg);
-    lidarResidual=[fusion.lidarPosition-state([1,4]);wrapAngleToPi(fusion.lidarHeading-state(7))];
-    gpsResidual=[fusion.gpsPosition-state([1,4]);0];
-    correction=fusion.lidarWeight*lidarResidual+fusion.gpsWeight*gpsResidual;
-    derivative = channels.modelDerivative + design.poseGain*correction ...
-        + design.invariantPhysicalGain*channels.invariantInnovation;
+function [derivative,A,details]=currentDerivative(state,sample,stepFlow,active,fusion,design,cfg)
+    channels=evaluateImprovedObserverChannels(state,sample,cfg.operating);
+    A=[channels.modelMatrix,channels.modelInput;zeros(1,8)];
+    lidarResidual=zeros(3,1);gpsResidual=zeros(3,1);
+    lidarGain=zeros(7,3);gpsGain=zeros(7,3);
+    if fusion.lidarActive
+        M=stepFlow*active.lidarFlow;
+        past=M\[state;1];
+        lidarResidual=fusion.lidarPose-past([1,4,7]);
+        lidarResidual(3)=wrapAngleToPi(lidarResidual(3));
+        lidarGain=M(1:7,1:7)*design.poseGain*fusion.lidarWeight;
+    end
+    if any(fusion.gpsWeight,'all')
+        M=stepFlow*active.gpsFlow;
+        past=M\[state;1];
+        gpsResidual=[fusion.gpsPose-past([1,4]);0];
+        gpsGain=M(1:7,1:7)*design.poseGain*fusion.gpsWeight;
+    end
+    derivative=channels.modelDerivative+lidarGain*lidarResidual+gpsGain*gpsResidual ...
+        +design.invariantPhysicalGain*channels.invariantInnovation;
+    if nargout>2
+        base=lidarResidual;if ~fusion.lidarActive,base=gpsResidual;end
+        details=struct('base',base,'lidarResidual',lidarResidual,'gpsResidual',gpsResidual, ...
+            'invariant',channels.invariantInnovation,'sensitivity',channels.motionHeadingSensitivity, ...
+            'trackRate',channels.trackAngleRate,'lidarGain',lidarGain,'gpsGain',gpsGain);
+    end
+end
+
+function [gps,lidar,active]=receiveEvents(gps,lidar,active,history,time,cfg)
+    [gps,active.gpsIndex,active.gpsFlow]=receiveStream( ...
+        gps,active.gpsIndex,active.gpsFlow,history,time,cfg);
+    [lidar,active.lidarIndex,active.lidarFlow]=receiveStream( ...
+        lidar,active.lidarIndex,active.lidarFlow,history,time,cfg);
+end
+
+function [events,index,flow]=receiveStream(events,index,flow,history,time,cfg)
+% receiveStream A late pose changes the current correction, never stored states.
+    pending=find(~events.accepted & ~events.rejected & events.arrivalTime<=time);
+    for k=pending(:).'
+        reason="";
+        if ~events.qualified(k)
+            reason="invalidMeasurement";
+        elseif time-events.timestamp(k)>cfg.measurement.inputHistoryDuration
+            reason="inputHistoryExpired";
+        elseif index>0 && events.timestamp(k)<events.timestamp(index)
+            reason="supersededAcquisition";
+        else
+            [transport,available]=inputTransport(history,events.timestamp(k),time);
+            if ~available,reason="inputHistoryUnavailable";end
+        end
+        if strlength(reason)>0
+            events.rejected(k)=true;events.rejectionReason(k)=reason;
+        else
+            events.accepted(k)=true;events.incorporationTime(k)=time;
+            index=k;flow=transport;
+        end
+    end
+end
+
+function [transport,available]=inputTransport(history,timestamp,time)
+% inputTransport Compose stored nominal maps; no observer update is reexecuted.
+    transport=eye(8);available=timestamp==time;
+    if available,return;end
+    if isempty(history) || timestamp<history{1}.left || timestamp>time,return;end
+    available=true;
+    for k=1:numel(history)
+        segment=history{k};
+        if segment.right<=timestamp,continue;end
+        map=segment.map;
+        if timestamp>segment.left
+            u=(timestamp-segment.left)/(segment.right-segment.left);
+            % Third-order RK4 dense extension, exact for constant acceleration.
+            b=[u-1.5*u^2+2*u^3/3,u^2-2*u^3/3,u^2-2*u^3/3,-u^2/2+2*u^3/3];
+            prefix=eye(8)+(segment.right-segment.left)*sum( ...
+                segment.slopes.*reshape(b,1,1,4),3);
+            map=map/prefix;
+        end
+        transport=map*transport;
+    end
+end
+
+function fusion=activeFusion(time,gps,lidar,active,cfg)
+    fusion=struct('lidarActive',false,'gpsActive',false,'lidarWeight',zeros(3), ...
+        'gpsWeight',zeros(3),'normalizedWeight',zeros(3),'lidarPose',zeros(3,1), ...
+        'gpsPose',zeros(2,1),'gpsAge',NaN,'lidarAge',NaN);
+    g=active.gpsIndex;l=active.lidarIndex;recent=false;
+    if g>0
+        fusion.gpsActive=time-gps.incorporationTime(g)<cfg.measurement.gpsMaximumAge-1e-12;
+        fusion.gpsPose=gps.pose(g,1:2).';
+        if fusion.gpsActive,fusion.gpsAge=time-gps.timestamp(g);end
+    end
+    if l>0
+        age=time-lidar.incorporationTime(l);
+        recent=age<cfg.measurement.maximumPoseInterval-1e-12;
+        fusion.lidarActive=age<cfg.measurement.lidarMaximumAge-1e-12;
+        if fusion.lidarActive
+            fusion.lidarAge=time-lidar.timestamp(l);fusion.lidarPose=lidar.pose(l,:).';
+            fusion.lidarWeight=lidar.poseWeight(:,:,l);
+            fusion.normalizedWeight=lidar.normalizedWeight(:,:,l);
+            if fusion.gpsActive
+                fusion.lidarWeight=lidar.gpsFusedLidarWeight(:,:,l);
+                fusion.gpsWeight=lidar.gpsFusedGpsWeight(:,:,l);
+                fusion.normalizedWeight=lidar.gpsFusedNormalizedWeight(:,:,l);
+            end
+        end
+    end
+    if ~recent && fusion.gpsActive
+        fusion.gpsWeight=gps.poseWeight;fusion.normalizedWeight=gps.normalizedWeight;
+    end
+end
+
+function estimate=assembleEstimate(states,trace,high,lateral,gps,lidar,design,cfg)
+    n=numel(high.time);public=states;public(:,7)=wrapAngleToPi(public(:,7));
+    base=zeros(n,3);lr=zeros(n,3);gr=zeros(n,3);intrinsic=zeros(n,4);
+    sensitivity=zeros(n,1);track=zeros(n,1);accepted=zeros(n,1);rejected=zeros(n,1);
+    WL=zeros(3,3,n);WG=WL;W=WL;LL=zeros(7,3,n);LG=LL;
+    gpsAge=NaN(n,1);lidarAge=NaN(n,1);
+    for k=1:n
+        item=trace{k};fusion=item.fusion;
+        base(k,:)=item.base.';lr(k,:)=item.lidarResidual.';gr(k,:)=item.gpsResidual.';
+        intrinsic(k,:)=item.invariant.';sensitivity(k)=item.sensitivity;track(k)=item.trackRate;
+        accepted(k)=item.accepted;rejected(k)=item.rejected;
+        WL(:,:,k)=fusion.lidarWeight;WG(:,:,k)=fusion.gpsWeight;W(:,:,k)=fusion.normalizedWeight;
+        LL(:,:,k)=item.lidarGain;LG(:,:,k)=item.gpsGain;
+        gpsAge(k)=fusion.gpsAge;lidarAge(k)=fusion.lidarAge;
+    end
+    rawRate=high.yawRate+lateral.sideSlipAngleRate;
+    outsideV=any(abs(public(:,[2,5]))>cfg.operating.maximumSpeed,2);
+    outsideA=any(abs(public(:,[3,6]))>cfg.operating.maximumAcceleration,2);
+    diagnostics=struct('translationWeight',WL(1:2,1:2,:),'headingWeight',reshape(WL(3,3,:),[],1), ...
+        'lidarPoseWeight',WL,'gpsPoseWeight',WG,'totalNormalizedPoseWeight',W, ...
+        'lidarPoseGain',LL,'gpsPoseGain',LG,'informationTimeBasis',"causal delivery-time corrections", ...
+        'motionHeadingSensitivity',sensitivity,'gpsAge',gpsAge,'lidarAge',lidarAge, ...
+        'rawTrackAngleRate',rawRate,'outsideTrackRateEnvelope',abs(rawRate)>cfg.operating.maximumTrackAngleRate, ...
+        'estimatedVelocityOutsideEnvelope',outsideV,'estimatedAccelerationOutsideEnvelope',outsideA, ...
+        'acceptedEventCount',accepted,'rejectedEventCount',rejected,'acceptedGps',gps.accepted, ...
+        'acceptedLidar',lidar.accepted,'invariantExtensionActive',outsideV|outsideA);
+    estimate=struct('time',high.time,'z',public,'onlineZ',public,'pose',public(:,[1,4,7]), ...
+        'position',public(:,[1,4]),'velocity',public(:,[2,5]),'acceleration',public(:,[3,6]), ...
+        'heading',public(:,7),'speed',hypot(public(:,2),public(:,5)), ...
+        'sideSlipAngle',lateral.sideSlipAngle,'sideSlipAngleRate',lateral.sideSlipAngleRate, ...
+        'trackAngleRate',track,'lateral',lateral, ...
+        'measurements',struct('highRate',high,'gps',gps,'lidar',lidar), ...
+        'innovations',struct('base',base,'lidarPosition',lr(:,1:2),'lidar',lr,'gps',gr,'invariant',intrinsic), ...
+        'diagnostics',diagnostics);
+    estimate.observer=struct('kind',"fixed-delay-transport-v1",'P',design.P,'K',design.K,'N',design.N, ...
+        'theta',cfg.observer.theta,'sigma',cfg.observer.sigma,'certificateVerified',false,'certified',false, ...
+        'referenceCertificateVerified',design.certified,'referenceVerification',design.verification, ...
+        'verification',struct('certified',false,'scope',"fixed-delay transport inequalities not verified"), ...
+        'scope',"input-flow transport with fixed LiDAR delay; historical current-pose timer certificate is not applicable");
+end
+
+function conditions=transportConditions(high,gps,lidar,intervals,minimumWeights,cfg)
+    stamps=sort(lidar.timestamp(lidar.accepted));gaps=diff(stamps);
+    if isempty(gaps),largest=Inf;else,largest=max(gaps);end
+    values=zeros(nnz(lidar.accepted),1);selected=find(lidar.accepted);
+    for k=1:numel(selected),values(k)=min(eig(lidar.normalizedWeight(:,:,selected(k))));end
+    referenceSector=~isempty(minimumWeights) && all(minimumWeights>=cfg.lidar.certificateMinimumPoseWeight-1e-9);
+    short=gaps<cfg.measurement.minimumPoseInterval-1e-9;long=gaps>cfg.measurement.maximumPoseInterval+1e-9;
+    la=lidar.incorporationTime(lidar.accepted)-lidar.timestamp(lidar.accepted);
+    ga=gps.incorporationTime(gps.accepted)-gps.timestamp(gps.accepted);
+    conditions=struct('fixedDelayMatchesConfiguration',true, ...
+        'configuredFixedDelaySeconds',cfg.measurement.fixedLidarDelay, ...
+        'lidarIncorporationTime',lidar.incorporationTime,'gpsIncorporationTime',gps.incorporationTime, ...
+        'lidarAssimilationDelaySeconds',la,'gpsAssimilationDelaySeconds',ga, ...
+        'lidarArrivalToProcessingWaitSeconds',lidar.incorporationTime(lidar.accepted)-lidar.arrivalTime(lidar.accepted), ...
+        'gpsArrivalToProcessingWaitSeconds',gps.incorporationTime(gps.accepted)-gps.arrivalTime(gps.accepted), ...
+        'maximumObservedAssimilationDelaySeconds',max([0;la;ga]), ...
+        'configuredCausalLagBoundSeconds',cfg.measurement.fixedLidarDelay, ...
+        'maximumProcessingGridIntervalSeconds',max(diff(high.time)), ...
+        'assimilationTimeBasis',"event-driven sensor clock; wall-clock execution unbudgeted", ...
+        'allAcceptedDeliveryTimesProvided',all(lidar.deliveryTimeProvided(lidar.accepted)) && all(gps.deliveryTimeProvided(gps.accepted)), ...
+        'lidarDeliveryTimesAssumedFromFixedDelay',~lidar.deliveryTimeProvided, ...
+        'minimumLidarWeightEigenvalues',values,'weightSectorViolationCount',nnz(values<cfg.lidar.certificateMinimumPoseWeight-1e-9), ...
+        'lidarInformationWithinReferenceSector',~isempty(values) && all(values>=cfg.lidar.certificateMinimumPoseWeight-1e-9), ...
+        'posePulseInformationIntervals',intervals,'minimumCombinedWeightEigenvalues',minimumWeights, ...
+        'combinedWeightSectorViolationCount',nnz(minimumWeights<cfg.lidar.certificateMinimumPoseWeight-1e-9), ...
+        'informationWithinReferenceSector',referenceSector,'maximumQualifiedPoseGapSeconds',largest, ...
+        'qualifiedPoseIntervals',gaps,'shortIntervalCount',nnz(short),'longIntervalCount',nnz(long), ...
+        'timingWithinReferenceSchedule',~isempty(gaps) && ~any(short|long), ...
+        'informationWithinCertificate',false,'timingWithinCertificate',false,'certificateApplicable',false, ...
+        'informationAuditScope',"source-weight sector on actual delivery pulses; transport Jacobians require a new certificate", ...
+        'poseErrorBoundValidated',logical(cfg.lidar.errorBoundValidated), ...
+        'upstreamDisturbanceBoundValidated',false,'numericalErrorBoundValidated',false,'unconditionalStabilityClaimed',false);
 end
 
 function sample = measurementSample(highRate, lateralEstimate, intervalIdx, alpha, cfg)
@@ -143,66 +303,6 @@ function sample = measurementSample(highRate, lateralEstimate, intervalIdx, alph
     end
 end
 
-function [baseInnovation, lidarInnovation] = poseInnovations(state, fusion)
-% poseInnovations Form linear position residuals and a wrapped yaw residual.
-    baseInnovation = [fusion.basePosition(1) - state(1); ...
-        fusion.basePosition(2) - state(4); ...
-        wrapAngleToPi(fusion.lidarHeading - state(7))];
-    lidarInnovation = fusion.lidarPosition - state([1, 4]);
-end
-
-function fusion = fusionMeasurementAt(queryTime, gps, lidar, acceptedGps, acceptedLidar, cfg)
-% fusionMeasurementAt Return the latest physically available held samples.
-    fusion = emptyFusionMeasurement();
-    gpsIdx = latestEligibleEvent(gps, acceptedGps, queryTime);
-    if ~isempty(gpsIdx)
-        age = queryTime-gps.timestamp(gpsIdx);
-        if age < cfg.measurement.gpsMaximumAge && all(isfinite(gps.pose(gpsIdx,1:2)))
-            fusion.gpsPosition = gps.pose(gpsIdx,1:2).';
-            fusion.gpsValid = true;
-            fusion.gpsAge = age;
-        end
-    end
-    lidarIdx = latestEligibleEvent(lidar, acceptedLidar, queryTime);
-    recentLidar = false;
-    if ~isempty(lidarIdx)
-        age = queryTime-lidar.timestamp(lidarIdx);
-        recentLidar = age < cfg.measurement.maximumPoseInterval;
-        if age < cfg.measurement.lidarMaximumAge
-            fusion.lidarPosition = lidar.pose(lidarIdx,1:2).';
-            fusion.lidarHeading = lidar.pose(lidarIdx,3);
-            fusion.lidarWeight = lidar.poseWeight(:,:,lidarIdx);
-            fusion.normalizedWeight = lidar.normalizedWeight(:,:,lidarIdx);
-            fusion.lidarPositionValid = true;
-            fusion.lidarHeadingValid = true;
-            fusion.lidarAge = age;
-            fusion.basePosition = fusion.lidarPosition;
-            fusion.positionSource = "lidar";
-            % Combine independent residuals in information form. Cross terms
-            % remain active and the total normalized weight stays in [0,I].
-            if fusion.gpsValid
-                fusion.lidarWeight=lidar.gpsFusedLidarWeight(:,:,lidarIdx);
-                fusion.gpsWeight=lidar.gpsFusedGpsWeight(:,:,lidarIdx);
-                fusion.normalizedWeight=lidar.gpsFusedNormalizedWeight(:,:,lidarIdx);
-                fusion.positionSource="informationFusion";
-            end
-            fusion.omega=fusion.lidarWeight+fusion.gpsWeight;
-            fusion.translationWeight=fusion.lidarWeight(1:2,1:2);
-            fusion.headingWeight=fusion.lidarWeight(3,3);
-        end
-    end
-    if ~recentLidar && fusion.gpsValid
-        % Position-only continuation when no recent full pose exists. The
-        % missing-heading/gap conditions are reported as outside the full-pose
-        % certificate; GPS availability is not falsely labeled a yaw proof.
-        fusion.basePosition = fusion.gpsPosition;
-        fusion.positionSource = "gpsOnly";
-        fusion.gpsWeight=gps.poseWeight;
-        fusion.omega=gps.poseWeight;
-        fusion.normalizedWeight=gps.normalizedWeight;
-    end
-end
-
 function eventIdx = latestEligibleEvent(events, accepted, queryTime)
 % latestEligibleEvent Select the most recent accepted physical timestamp.
     eligible = accepted & events.timestamp <= queryTime;
@@ -212,54 +312,6 @@ function eventIdx = latestEligibleEvent(events, accepted, queryTime)
     end
     latestTimestamp = max(events.timestamp(eligible));
     eventIdx = find(eligible & events.timestamp == latestTimestamp, 1, "last");
-end
-
-function fusion = emptyFusionMeasurement()
-% emptyFusionMeasurement Return zero-weight residual placeholders.
-    fusion = struct();
-    fusion.basePosition = zeros(2,1);
-    fusion.positionSource = "none";
-    fusion.gpsPosition = zeros(2, 1);
-    fusion.lidarPosition = zeros(2, 1);
-    fusion.lidarHeading = 0.0;
-    fusion.translationWeight = zeros(2, 2);
-    fusion.headingWeight = 0.0;
-    fusion.omega = zeros(3, 3);
-    fusion.lidarWeight=zeros(3);fusion.gpsWeight=zeros(3);fusion.normalizedWeight=zeros(3);
-    fusion.Cl = zeros(2, 7);
-    fusion.gpsValid = false;
-    fusion.lidarPositionValid = false;
-    fusion.lidarHeadingValid = false;
-    fusion.gpsAge = NaN;
-    fusion.lidarAge = NaN;
-end
-
-function [accepted, rejected, newlyAccepted] = acceptArrivedEvents(events, accepted, rejected, currentTime, cfg)
-% acceptArrivedEvents Gate new arrivals by the bounded replay horizon.
-    tolerance = double(cfg.measurement.timestampTolerance);
-    arrived = ~accepted & ~rejected & events.arrivalTime <= currentTime + tolerance;
-    candidateIdx = find(arrived);
-    newlyAccepted = zeros(0, 1);
-    for candidateOffset = 1:numel(candidateIdx)
-        eventIdx = candidateIdx(candidateOffset);
-        age = currentTime - events.timestamp(eventIdx);
-        if age <= double(cfg.measurement.replayBufferDuration) + tolerance && events.qualified(eventIdx)
-            accepted(eventIdx) = true;
-            newlyAccepted(end + 1, 1) = eventIdx; %#ok<AGROW>
-        else
-            rejected(eventIdx) = true;
-        end
-    end
-end
-
-function anchorIdx = replayAnchorIndex(time, timestamp, cfg)
-% replayAnchorIndex Find the state just before a held event begins to act.
-    tolerance = double(cfg.measurement.timestampTolerance);
-    anchorIdx = find(time <= timestamp + tolerance, 1, "last");
-    if isempty(anchorIdx)
-        anchorIdx = 1;
-    end
-    anchorIdx = min(max(anchorIdx, 1), numel(time));
 end
 
 function initialState = buildInitialState(highRate, lateralEstimate, gps, lidar, cfg)
@@ -273,8 +325,8 @@ function initialState = buildInitialState(highRate, lateralEstimate, gps, lidar,
     end
 
     initialTime = highRate.time(1);
-    initialGps = gps.qualified & gps.arrivalTime <= initialTime & gps.timestamp <= initialTime;
-    initialLidar = lidar.qualified & lidar.arrivalTime <= initialTime & lidar.timestamp <= initialTime;
+    initialGps = gps.qualified & gps.arrivalTime <= initialTime & gps.timestamp == initialTime;
+    initialLidar = lidar.qualified & lidar.arrivalTime <= initialTime & lidar.timestamp == initialTime;
     position = double(cfg.observer.fallbackPosition(:));
     heading = double(cfg.observer.fallbackHeading);
     gpsIdx = latestEligibleEvent(gps, initialGps, initialTime);
@@ -290,7 +342,7 @@ function initialState = buildInitialState(highRate, lateralEstimate, gps, lidar,
         else
             % An arbitrary representative in a LiDAR nullspace is not an
             % initial measurement. Apply its bounded directional weight to
-            % the fallback/GPS prior, on the same local yaw branch as replay.
+            % the fallback/GPS prior, on the same local yaw branch.
             residual = [lidar.pose(lidarIdx, 1:2).'-position; ...
                 wrapAngleToPi(lidar.pose(lidarIdx, 3)-heading)];
             correction = lidar.poseWeight(:,:,lidarIdx)*residual;
@@ -308,116 +360,18 @@ function initialState = buildInitialState(highRate, lateralEstimate, gps, lidar,
         position(2); globalVelocity(2); globalAcceleration(2); wrapAngleToPi(heading)];
 end
 
-function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lidar, ...
-        acceptedGps, acceptedLidar, lateralEstimate, replayCount, acceptedEventCount, ...
-        rejectedEventCount, design, cfg)
-% buildEstimate Assemble states, innovations, weights, and replay diagnostics.
-    sampleCount = numel(highRate.time);
-    baseInnovation = zeros(sampleCount, 3);
-    lidarInnovation = zeros(sampleCount, 2);
-    invariantInnovation = zeros(sampleCount, 4);
-    motionHeadingSensitivity = zeros(sampleCount, 1);
-    translationWeight = zeros(2, 2, sampleCount);
-    headingWeight = zeros(sampleCount, 1);
-    lidarPoseWeight=zeros(3,3,sampleCount);gpsPoseWeight=zeros(3,3,sampleCount);
-    totalNormalizedPoseWeight=zeros(3,3,sampleCount);
-    gpsAge = NaN(sampleCount, 1);
-    lidarAge = NaN(sampleCount, 1);
-    trackAngleRate = zeros(sampleCount, 1);
-    rawTrackAngleRate = highRate.yawRate + lateralEstimate.sideSlipAngleRate;
-    outsideTrackRateEnvelope = abs(rawTrackAngleRate) > double(cfg.operating.maximumTrackAngleRate);
-    estimatedVelocityOutsideEnvelope = any(abs(stateHistory(:, [2, 5])) > ...
-        double(cfg.operating.maximumSpeed), 2);
-    estimatedAccelerationOutsideEnvelope = any(abs(stateHistory(:, [3, 6])) > ...
-        double(cfg.operating.maximumAcceleration), 2);
-
-    for sampleIdx = 1:sampleCount
-        sample = measurementSample(highRate, lateralEstimate, min(sampleIdx, sampleCount - 1), ...
-            double(sampleIdx == sampleCount), cfg);
-        channels = evaluateImprovedObserverChannels(stateHistory(sampleIdx, :).', sample, cfg.operating);
-        fusion = fusionMeasurementAt(highRate.time(sampleIdx), gps, lidar, acceptedGps, acceptedLidar, cfg);
-        [baseInnovation(sampleIdx, :), lidarInnovation(sampleIdx, :)] = ...
-            rowPoseInnovations(stateHistory(sampleIdx, :).', fusion);
-        invariantInnovation(sampleIdx, :) = channels.invariantInnovation.';
-        motionHeadingSensitivity(sampleIdx) = channels.motionHeadingSensitivity;
-        translationWeight(:, :, sampleIdx) = fusion.translationWeight;
-        headingWeight(sampleIdx) = fusion.headingWeight;
-        lidarPoseWeight(:,:,sampleIdx)=fusion.lidarWeight;
-        gpsPoseWeight(:,:,sampleIdx)=fusion.gpsWeight;
-        totalNormalizedPoseWeight(:,:,sampleIdx)=fusion.normalizedWeight;
-        gpsAge(sampleIdx) = fusion.gpsAge;
-        lidarAge(sampleIdx) = fusion.lidarAge;
-        trackAngleRate(sampleIdx) = channels.trackAngleRate;
-    end
-
-    estimate = struct();
-    estimate.time = highRate.time;
-    estimate.z = stateHistory; % Legacy revised history, not a causal output.
-    estimate.revisedZ = stateHistory;
-    estimate.pose = onlineState(:,[1,4,7]);
-    estimate.onlineZ = onlineState;
-    estimate.position = onlineState(:, [1, 4]);
-    estimate.velocity = onlineState(:, [2, 5]);
-    estimate.acceleration = onlineState(:, [3, 6]);
-    estimate.heading = onlineState(:, 7);
-    estimate.speed = hypot(onlineState(:, 2), onlineState(:, 5));
-    estimate.sideSlipAngle = lateralEstimate.sideSlipAngle;
-    estimate.sideSlipAngleRate = lateralEstimate.sideSlipAngleRate;
-    estimate.trackAngleRate = trackAngleRate;
-    estimate.lateral = lateralEstimate;
-    estimate.measurements = struct("highRate", highRate, "gps", gps, "lidar", lidar);
-    estimate.innovations = struct("base", baseInnovation, "lidarPosition", lidarInnovation, ...
-        "invariant", invariantInnovation);
-    estimate.diagnostics = struct();
-    estimate.diagnostics.translationWeight = translationWeight;
-    estimate.diagnostics.headingWeight = headingWeight;
-    estimate.diagnostics.lidarPoseWeight=lidarPoseWeight;
-    estimate.diagnostics.gpsPoseWeight=gpsPoseWeight;
-    estimate.diagnostics.totalNormalizedPoseWeight=totalNormalizedPoseWeight;
-    estimate.diagnostics.lidarPoseGain=pagemtimes(design.poseGain,lidarPoseWeight);
-    estimate.diagnostics.informationTimeBasis="revised measurement-time history";
-    estimate.diagnostics.motionHeadingSensitivity = motionHeadingSensitivity;
-    estimate.diagnostics.gpsAge = gpsAge;
-    estimate.diagnostics.lidarAge = lidarAge;
-    estimate.diagnostics.rawTrackAngleRate = rawTrackAngleRate;
-    estimate.diagnostics.outsideTrackRateEnvelope = outsideTrackRateEnvelope;
-    estimate.diagnostics.estimatedVelocityOutsideEnvelope = estimatedVelocityOutsideEnvelope;
-    estimate.diagnostics.estimatedAccelerationOutsideEnvelope = estimatedAccelerationOutsideEnvelope;
-    estimate.diagnostics.replayCount = replayCount;
-    estimate.diagnostics.acceptedEventCount = acceptedEventCount;
-    estimate.diagnostics.rejectedEventCount = rejectedEventCount;
-    estimate.diagnostics.acceptedGps = acceptedGps;
-    estimate.diagnostics.acceptedLidar = acceptedLidar;
-    estimate.diagnostics.invariantExtensionActive = any(abs(onlineState(:,[2,5]))>cfg.operating.maximumSpeed,2) ...
-        | any(abs(onlineState(:,[3,6]))>cfg.operating.maximumAcceleration,2);
-    estimate.diagnostics.certificateConditions = observerCertificateConditions( ...
-        highRate,gps,lidar,acceptedGps,acceptedLidar,onlineState,cfg);
-    estimate.observer = struct("P", design.P, "K", design.K, "N", design.N, ...
-        "theta", cfg.observer.theta, "sigma", cfg.observer.sigma, ...
-        "certificateVerified", design.certified, "certified", false, ...
-        "verification", design.verification, ...
-        "scope", "conditional flow certificate; runtime error/domain and discretization bounds are separate");
-end
-
-function [baseRow, lidarRow] = rowPoseInnovations(state, fusion)
-% rowPoseInnovations Return pose innovations as row vectors for storage.
-    [base, lidarPosition] = poseInnovations(state, fusion);
-    baseRow = base.';
-    lidarRow = lidarPosition.';
-end
-
 function [highRate, gps, lidar] = normalizeSensorData(sensorData, cfg)
 % normalizeSensorData Validate the common-rate stream and asynchronous events.
     assert(isfield(sensorData, "highRate") && isstruct(sensorData.highRate), ...
         "sensorData.highRate is required.");
     highRate = normalizeHighRate(sensorData.highRate);
     if isfield(sensorData, "gps")
-        gps = normalizePoseEvents(sensorData.gps, false);
+        gps = normalizePoseEvents(sensorData.gps, false, 0);
     else
         gps = emptyEvents(false);
     end
     if isfield(sensorData, "lidar")
-        lidar = normalizePoseEvents(sensorData.lidar, true);
+        lidar = normalizePoseEvents(sensorData.lidar, true, cfg.measurement.fixedLidarDelay);
     else
         lidar = emptyEvents(true);
     end
@@ -474,7 +428,7 @@ function highRate = normalizeHighRate(highRate)
         "sensorData.highRate.longitudinalSpeed must be nonnegative.");
 end
 
-function events = normalizePoseEvents(rawEvents, includeInformation)
+function events = normalizePoseEvents(rawEvents, includeInformation, fixedDelay)
 % normalizePoseEvents Normalize timestamped GPS or lidar event structures.
     if isempty(rawEvents) || (isstruct(rawEvents) && isempty(fieldnames(rawEvents)))
         events = emptyEvents(includeInformation);
@@ -515,6 +469,13 @@ function events = normalizePoseEvents(rawEvents, includeInformation)
         assert(isscalar(placeholder) || numel(placeholder)==eventCount, ...
             'Delivery placeholder flags must be scalar or aligned.');
         events.deliveryTimeProvided=events.deliveryTimeProvided & ~(placeholder & arrivalTime==timestamp);
+    end
+    if includeInformation
+        assumed=~events.deliveryTimeProvided;
+        events.arrivalTime(assumed)=timestamp(assumed)+fixedDelay;
+        assert(all(abs(events.arrivalTime-timestamp-fixedDelay)<1e-8), ...
+            'VehicleLocalization:FixedLidarDelayMismatch', ...
+            'LiDAR delivery must equal acquisition plus cfg.measurement.fixedLidarDelay.');
     end
     events.pose = pose;
     if includeInformation
@@ -581,9 +542,14 @@ function angle = interpolateAngle(values, intervalIdx, alpha, interpolation)
 end
 
 function validateObserverDesign(design, cfg)
-% validateObserverDesign Reject incomplete or mismatched gain artifacts.
+% validateObserverDesign Check gain provenance, not a transported-delay theorem.
+    assert(isfield(cfg.measurement,'inputHistoryDuration') ...
+        && isfinite(cfg.measurement.inputHistoryDuration) ...
+        && isfinite(cfg.measurement.fixedLidarDelay) && cfg.measurement.fixedLidarDelay>=0 ...
+        && cfg.measurement.inputHistoryDuration>=cfg.measurement.fixedLidarDelay+cfg.measurement.maximumIntegrationStep, ...
+        'VehicleLocalization:InputHistoryTooShort','Input history must cover the fixed delay and one integration step.');
     assert(isfield(design,'kind') && string(design.kind)=="aperiodic-anisotropic-pose-v2", ...
-        'VehicleLocalization:CertificateMismatch','Runtime requires the aperiodic pose certificate.');
+        'VehicleLocalization:CertificateMismatch','Runtime requires the verified reference gain artifact.');
     assert(design.certified && design.verification.certified, ...
         'VehicleLocalization:CertificateMismatch','The pose design is not verified.');
     assert(isfield(design.verification,'verifiedModel'), ...
@@ -621,124 +587,4 @@ end
 function wrappedAngle = wrapAngleToPi(angle)
 % wrapAngleToPi Wrap radians to [-pi, pi).
     wrappedAngle = mod(angle + pi, 2.0 .* pi) - pi;
-end
-
-function conditions = observerCertificateConditions(highRate,gps,lidar,acceptedGps,acceptedLidar,onlineState,cfg)
-% observerCertificateConditions Report observable hypotheses, not a theorem flag.
-% Qualified-pose gaps are measured at sensor timestamps. Arrival delay is
-% checked separately, so a stale delivery cannot masquerade as a fresh pose.
-    time = highRate.time;
-    stamps = sort(lidar.timestamp(acceptedLidar));
-    eventWeights=lidar.normalizedWeight(:,:,acceptedLidar);
-    minimumWeights=zeros(size(eventWeights,3),1);
-    for k=1:numel(minimumWeights),minimumWeights(k)=min(eig(eventWeights(:,:,k)));end
-    gaps = diff(stamps);
-    if isempty(gaps), largestGap = Inf; else, largestGap = max(gaps); end
-    fresh = false(size(time));
-    for k=1:numel(stamps)
-        fresh = fresh | (time>=stamps(k) & time<=stamps(k)+cfg.measurement.maximumPoseInterval);
-    end
-    delay = lidar.arrivalTime(acceptedLidar)-lidar.timestamp(acceptedLidar);
-    if isempty(delay), delayMatches=false; else
-        delayMatches=all(abs(delay-cfg.measurement.fixedLidarDelay)<1e-8);
-    end
-    tooShort = gaps<cfg.measurement.minimumPoseInterval-1e-9;
-    tooLong = gaps>cfg.measurement.maximumPoseInterval+1e-9;
-    if isempty(stamps), firstPose=Inf; else, firstPose=stamps(1); end
-    % Only the fully received measurement-time horizon can be audited. The
-    % causal prediction tail is checked separately through the delay model.
-    lidarAssimilation=lidar.incorporationTime(acceptedLidar)-lidar.timestamp(acceptedLidar);
-    gpsAssimilation=gps.incorporationTime(acceptedGps)-gps.timestamp(acceptedGps);
-    gridWaitBound=max(diff(time));
-    configuredCausalLag=cfg.measurement.fixedLidarDelay+gridWaitBound;
-    observedCausalLag=max([0;lidarAssimilation;gpsAssimilation]);
-    auditedCausalLag=max(configuredCausalLag,observedCausalLag);
-    settledEnd=time(end)-auditedCausalLag;
-    % A known qualified event not incorporated by the final output prevents
-    % calling its acquisition-time suffix settled, regardless of nominal lag.
-    pendingStamps=[lidar.timestamp(lidar.qualified & ~acceptedLidar); ...
-        gps.timestamp(gps.qualified & ~acceptedGps)];
-    settledEnd=min([settledEnd;pendingStamps]);
-    settled = time>=firstPose & time<=settledEnd;
-    velocityOutside = any(abs(onlineState(:,[2 5]))>cfg.operating.maximumSpeed,2);
-    accelerationOutside = any(abs(onlineState(:,[3 6]))>cfg.operating.maximumAcceleration,2);
-    gpsDelays=gps.arrivalTime(acceptedGps)-gps.timestamp(acceptedGps);
-    if isempty(gpsDelays), maximumGpsDelay=0; else, maximumGpsDelay=max(gpsDelays); end
-    conditions = struct('maximumGpsDelaySeconds',maximumGpsDelay, ...
-        'lidarIncorporationTime',lidar.incorporationTime, ...
-        'gpsIncorporationTime',gps.incorporationTime, ...
-        'lidarAssimilationDelaySeconds',lidarAssimilation, ...
-        'gpsAssimilationDelaySeconds',gpsAssimilation, ...
-        'lidarArrivalToProcessingWaitSeconds',lidar.incorporationTime(acceptedLidar)-lidar.arrivalTime(acceptedLidar), ...
-        'gpsArrivalToProcessingWaitSeconds',gps.incorporationTime(acceptedGps)-gps.arrivalTime(acceptedGps), ...
-        'maximumProcessingGridIntervalSeconds',gridWaitBound, ...
-        'configuredCausalLagBoundSeconds',configuredCausalLag, ...
-        'maximumObservedAssimilationDelaySeconds',observedCausalLag, ...
-        'effectiveDelayWithinConfiguredBound',observedCausalLag<=configuredCausalLag+1e-8, ...
-        'replayBufferCoversConfiguredCausalLag',cfg.measurement.replayBufferDuration>=configuredCausalLag, ...
-        'auditedCausalLagSeconds',auditedCausalLag, ...
-        'settledMeasurementTimeEnd',settledEnd, ...
-        'allAcceptedDeliveryTimesProvided',all(lidar.deliveryTimeProvided(acceptedLidar)) ...
-            && all(gps.deliveryTimeProvided(acceptedGps)), ...
-        'assimilationTimeBasis',"output sample clock after replay; wall-clock computation unbudgeted", ...
-        'minimumLidarWeightEigenvalues',minimumWeights, ...
-        'weightSectorViolationCount',nnz(minimumWeights<cfg.lidar.certificateMinimumPoseWeight-1e-9), ...
-        'informationWithinCertificate',~isempty(minimumWeights) ...
-            && all(minimumWeights>=cfg.lidar.certificateMinimumPoseWeight-1e-9), ...
-        'fixedLagBoundCoversGpsDelay',maximumGpsDelay<=cfg.measurement.fixedLidarDelay+1e-8, ...
-        'maximumQualifiedPoseGapSeconds',largestGap, ...
-        'qualifiedPoseIntervals',gaps,'shortIntervalCount',nnz(tooShort), ...
-        'longIntervalCount',nnz(tooLong),'fullPoseFreshAtMeasurementTime',fresh, ...
-        'freshFractionAfterStartup',mean(fresh(settled)), ...
-        'fixedDelayMatchesConfiguration',delayMatches, ...
-        'configuredFixedDelaySeconds',cfg.measurement.fixedLidarDelay, ...
-        'replayBufferCoversFixedDelay',cfg.measurement.replayBufferDuration ...
-            >=cfg.measurement.fixedLidarDelay+cfg.measurement.maximumIntegrationStep, ...
-        'informationRejectedCount',nnz(~lidar.qualified), ...
-        'acceptedGpsEvents',nnz(acceptedGps),'availableGpsEvents',numel(gps.timestamp), ...
-        'onlineVelocityOutsideEnvelope',velocityOutside, ...
-        'onlineAccelerationOutsideEnvelope',accelerationOutside, ...
-        'poseErrorBoundValidated',logical(cfg.lidar.errorBoundValidated), ...
-        'upstreamDisturbanceBoundValidated',false,'numericalErrorBoundValidated',false, ...
-        'unconditionalStabilityClaimed',false);
-    conditions.timingWithinCertificate = ~isempty(gaps) && any(settled) && ~any(tooShort | tooLong) ...
-        && all(fresh(settled));
-    conditions.lidarInformationWithinCertificate = conditions.informationWithinCertificate;
-    % Audit the matrix actually used throughout every settled LiDAR pulse.
-    % GPS starts/expiry can fall between high-rate samples; split exactly at
-    % those events so a short unanchored interval is not missed by sampling.
-    [intervals, combinedMinimum] = pulseInformationIntervals(highRate,gps,lidar, ...
-        acceptedGps,acceptedLidar,settledEnd,cfg);
-    conditions.posePulseInformationIntervals = intervals;
-    conditions.minimumCombinedWeightEigenvalues = combinedMinimum;
-    conditions.combinedWeightSectorViolationCount = nnz( ...
-        combinedMinimum<cfg.lidar.certificateMinimumPoseWeight-1e-9);
-    conditions.informationWithinCertificate = ~isempty(combinedMinimum) ...
-        && conditions.combinedWeightSectorViolationCount==0;
-    conditions.informationAuditScope = ...
-        "actual fused weights on event-split settled LiDAR pulses; prediction intervals excluded";
-end
-
-function [intervals, minimumWeights] = pulseInformationIntervals(highRate,gps,lidar, ...
-        acceptedGps,acceptedLidar,auditEnd,cfg)
-% pulseInformationIntervals Check every constant-weight piece, including expiry.
-    stamps = unique(lidar.timestamp(acceptedLidar));
-    gpsStamps = gps.timestamp(acceptedGps);
-    boundaries = unique([highRate.time(1); auditEnd; stamps; ...
-        stamps+cfg.measurement.lidarMaximumAge; gpsStamps; ...
-        gpsStamps+cfg.measurement.gpsMaximumAge]);
-    boundaries = boundaries(boundaries>=highRate.time(1) & boundaries<=auditEnd);
-    intervals = zeros(max(0,numel(boundaries)-1),2);
-    minimumWeights = zeros(size(intervals,1),1);
-    count = 0;
-    for k=1:numel(boundaries)-1
-        midpoint = boundaries(k)+(boundaries(k+1)-boundaries(k))/2;
-        fusion = fusionMeasurementAt(midpoint,gps,lidar,acceptedGps,acceptedLidar,cfg);
-        if ~fusion.lidarPositionValid, continue; end
-        count = count+1;
-        intervals(count,:) = boundaries(k:k+1).';
-        minimumWeights(count) = min(eig(fusion.normalizedWeight));
-    end
-    intervals = intervals(1:count,:);
-    minimumWeights = minimumWeights(1:count);
 end

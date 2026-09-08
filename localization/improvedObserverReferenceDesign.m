@@ -1,7 +1,7 @@
 function design = improvedObserverReferenceDesign(cfg)
-% improvedObserverReferenceDesign Load and verify the shipped pulse observer.
-% Certification concerns the homogeneous model and qualified-pose timing.
-% Runtime diagnostics separately report timing, delay and domain conditions.
+% improvedObserverReferenceDesign Load gains and verify their reference model.
+% Certification concerns the historical current-pose pulse equations only.
+% The fixed-delay transport runtime exposes this provenance separately.
     arguments
         cfg (1,1) struct = improvedObserverConfig()
     end

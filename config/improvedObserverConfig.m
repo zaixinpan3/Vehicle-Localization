@@ -1,7 +1,7 @@
 function cfg = improvedObserverConfig()
 % improvedObserverConfig Configure the seven-state improved vehicle observer.
 % The configuration covers the operating envelope used by the robust LMI,
-% the aperiodic full-pose pulse observer, fixed-delay replay, full-matrix
+% the fixed-delay transported-measurement observer, full-matrix
 % anisotropic information gains, and the deterministic validation scenario.
 
     cfg = struct();
@@ -34,12 +34,12 @@ function cfg = improvedObserverConfig()
     cfg.measurement = struct();
     cfg.measurement.sampleTime = 0.01;
     cfg.measurement.inputInterpolation = "linear";
-    % Low-rate absolute poses act as short zero-order-held correction pulses.
-    % Their physical timestamps, rather than their delayed arrival times, set
-    % the pulse window during replay.
+    % Poses act over short pulses beginning at delivery. The affine nominal
+    % flow transports acquisition-time residuals/gains to the current state.
+    % Only input-derived transition maps are buffered; states are never replayed.
     cfg.measurement.gpsMaximumAge = 0.03;
     cfg.measurement.lidarMaximumAge = 0.03;
-    cfg.measurement.replayBufferDuration = 1.0;
+    cfg.measurement.inputHistoryDuration = 1.0;
     cfg.measurement.timestampTolerance = 0.0;
 
     cfg.measurement.minimumPoseInterval = 0.05;
@@ -92,7 +92,6 @@ function cfg = improvedObserverConfig()
     cfg.simulation.gpsRateHz = 5.0;
     cfg.simulation.lidarRateHz = 10.0;
     cfg.simulation.gpsDelay = 0.10;
-    cfg.simulation.lidarDelay = cfg.measurement.fixedLidarDelay;
     cfg.simulation.outOfOrderExtraDelay = 0.14;
     cfg.simulation.gpsDropoutInterval = [8.0, 12.0];
     cfg.simulation.lidarDegeneracyInterval = [14.0, 18.0];

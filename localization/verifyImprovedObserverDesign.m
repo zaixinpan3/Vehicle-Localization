@@ -1,6 +1,6 @@
 function verification = verifyImprovedObserverDesign(design,cfg)
-% verifyImprovedObserverDesign Check full-matrix sector gains and timer LMIs.
-% Historical designs remain auditable but cannot be run as the new observer.
+% verifyImprovedObserverDesign Check the reference current-pose timer LMIs.
+% These inequalities do not certify the fixed-delay transport runtime.
     if ~isfield(design,'kind')
         verification=verifyContinuousObserverDesign(design,cfg);return;
     end
@@ -21,12 +21,12 @@ function verification = verifyImprovedObserverDesign(design,cfg)
         && isequal(cfg.lidar.poseScales(:),c.poseScales(:));
     verification=verifyAnisotropicPoseCertificate(c,fixture);
     verification.certified=compatible && verification.passed;
-    verification.productionImplemented=true;
+    verification.productionImplemented=false;
     verification.verifiedModel=struct('K',design.K,'N',design.N,'P',c.P, ...
         'multipliers',c.multipliers,'operating',cfg.operating, ...
         'scalingExponents',cfg.observer.scalingExponents,'poseScales',c.poseScales, ...
         'theta',c.theta,'knots',c.knots,'rate',c.rate,'alpha',c.alpha, ...
         'onTime',c.onTime,'tMin',c.tMin,'tMax',c.tMax);
     verification.checkedVertexCount=verification.flowInequalityCount;
-    verification.scope="arbitrarily oriented normalized pose weights alpha*I<=W<=I; conditional timing and disturbance bounds";
+    verification.scope="reference current-pose pulse LMIs; fixed-delay transport requires separate certification";
 end

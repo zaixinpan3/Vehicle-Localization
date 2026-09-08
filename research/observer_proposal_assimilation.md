@@ -1,5 +1,10 @@
 # Assimilating the observer proposal into the existing architecture
 
+> Timing update, 2026-09-08: the user subsequently selected fixed LiDAR delay
+> without observer replay. The replay feedback and its certificate described
+> here are historical. See [the current fixed-delay transport observer](fixed_delay_transport_observer.md).
+> The geometry, output coefficient bounds, and sensor/model contracts remain relevant.
+
 Date: 2026-09-08. Inspected baseline:
 1a1a202dd0a6c8d24e5ecf93d6afb1de262440c4.
 

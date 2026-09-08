@@ -1,5 +1,6 @@
 function design = designImprovedObserverGains(cfg)
-% designImprovedObserverGains Synthesize the production timer certificate.
+% designImprovedObserverGains Synthesize the reference current-pose certificate.
+% This does not certify the fixed-delay transported-measurement runtime.
 % The base pose gain is retained from the recorded full-pose design. YALMIP
 % solves for a timer metric; independent exhaustive verification decides
 % feasibility even when the solver returns a numerical-difficulty status.

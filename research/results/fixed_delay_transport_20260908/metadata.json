@@ -1,0 +1,34 @@
+{
+  "preparedAt": "2026-09-08T15:47:33.874228-05:00",
+  "baselineCommit": "cb3cf07a1272644688e6541babc223f3cce73184",
+  "matlabVersion": "R2026a Update 3",
+  "observerKind": "fixed-delay-transport-v1",
+  "fixedLidarDelaySeconds": 0.15,
+  "pulseSeconds": 0.03,
+  "inputHistorySeconds": 1,
+  "recordedSamplesPerScenario": 11690,
+  "recordedDurationSeconds": 116.89,
+  "sourceScanCount": 1170,
+  "availableFullPoseEvents": 963,
+  "incorporatedLidarEvents": 962,
+  "perceptionAndRegistrationReused": true,
+  "sensorFolder": "output/mississippi_20240607_120931_20260907/sensors",
+  "sourceSha256": {
+    "output/anisotropic_observer_20260908/recursive_8threads/calls.csv": "13ca46b8ec993f1217d2b49b7fcdf0d0eb3d1d26154fad31a136ca9a71fa3393",
+    "output/anisotropic_observer_20260908/final_design.mat": "1ff9207e9996cb03303b502f6fb6d6434e00331fd0e17f4065830666d02edf33",
+    "output/mississippi_20240607_120931_20260907/vehicle_parameters.json": "17cb26c4f39c5637605ead0b764e33c3597de4c3b24dda418edab7bd34948ac2"
+  },
+  "initialEstimate": "reference XY plus [0.5,-0.4] m; reference yaw plus 2 degrees; initial velocity and acceleration zero",
+  "scoreReference": "Recorded GNSS/INS body-origin XY and quaternion yaw; also used for mapping",
+  "outage": "GNSS XY input removed during [40,60) s; known recorded roll/pitch retained in D2D",
+  "realTimeLimit": "Fixed 150 ms is imposed on measurements; four reused registration calls exceeded 150 ms, and this experiment does not establish a deadline",
+  "nominalVehicleParameters": "Sourced unladen mass/geometry with nominal uncalibrated inertia/stiffness and offsets from separate calibration drive; original provenance retained in local metadata",
+  "limitations": [
+    "No robust fixed-delay transport certificate has been synthesized or verified.",
+    "The record contains 184 gaps above 110 ms and all 962 LiDAR weights below the reference 0.8 sector.",
+    "The fused and GNSS-outage cases each have 55 velocity-envelope violations.",
+    "Fused peak position error increases; no across-the-board improvement is claimed.",
+    "Rank-deficient and coupled geometry are tested with constructed cases, not newly identified recorded frames.",
+    "Signed reverse motion and new higher-order inputs are outside this change."
+  ]
+}

@@ -2,7 +2,8 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
 % runMncavObserverReplay Evaluate the actual lateral/global observer cascade.
 % D2D events come from recursive vehicle-motion-seeded matching and do not use
 % reference-seeded guesses. This feed-forward experiment does not feed global
-% observer predictions back to matching. Evaluate onlineZ, never revised z.
+% observer predictions back to matching. Replay here means dataset playback;
+% the observer processes delayed measurements once and never revises states.
     arguments
         replayFolder (1,1) string
         designFile (1,1) string
@@ -34,6 +35,14 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
     cfg.measurement.inputInterpolation="zoh";
     cfg.measurement.timestampTolerance=0;
     cfg.measurement.fixedLidarDelay=fixedLidarDelay;
+    cfg.measurement.inputHistoryDuration=max(1,fixedLidarDelay+.01);
+    if isfield(cfg.measurement,'replayBufferDuration')
+        cfg.measurement=rmfield(cfg.measurement,'replayBufferDuration');
+    end
+    % Recheck saved matrices with the current verifier; old MAT snapshots may
+    % predate fields in the provenance contract. This is reference validation.
+    designs.observerDesign.verification=verifyImprovedObserverDesign(designs.observerDesign,cfg);
+    designs.observerDesign.certified=designs.observerDesign.verification.certified;
     cfg.lidar.missingInformationTranslationWeight=0;
     cfg.lidar.missingInformationHeadingWeight=cfg.lidar.minimumHeadingWeight;
     initial=[reference.x(1)+.5;0;0;reference.y(1)-.4;0;0;reference.psi(1)+deg2rad(2)];
@@ -99,8 +108,8 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
         'outsideTrackRateEnvelope',nnz(estimate.diagnostics.outsideTrackRateEnvelope), ...
         'velocityOutsideEnvelope',nnz(any(abs(estimate.onlineZ(:,[2 5]))>cfg.operating.maximumSpeed,2)), ...
         'accelerationOutsideEnvelope',nnz(any(abs(estimate.onlineZ(:,[3 6]))>cfg.operating.maximumAcceleration,2)), ...
-        'revisedHistoryVelocityOutsideEnvelope',nnz(estimate.diagnostics.estimatedVelocityOutsideEnvelope), ...
-        'revisedHistoryAccelerationOutsideEnvelope',nnz(estimate.diagnostics.estimatedAccelerationOutsideEnvelope), ...
+        'stateHistoryRecomputed',estimate.diagnostics.stateHistoryRecomputed, ...
+        'maximumInputHistorySegments',estimate.diagnostics.maximumInputHistorySegments, ...
         'maximumAbsLateralVelocityMps',max(abs(estimate.lateral.lateralVelocity)), ...
         'maximumAbsSideSlipDeg',rad2deg(max(abs(estimate.lateral.sideSlipAngle))), ...
         'meanTranslationWeight',mean(tracePages(estimate.diagnostics.translationWeight)/2));
@@ -110,10 +119,10 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
     if ~isempty(calls)
         metadata.matchingCallsExceedingFixedDelay=nnz(calls.totalMs>1000*fixedLidarDelay);
     end
-    metadata.scoring="causal onlineZ, before future measurement replay revises past history";
+    metadata.scoring="causal onlineZ; all past states immutable, no observer replay";
     metadata.architecture="recorded CAN -> lateral observer; recursive D2D events -> seven-state global observer; no global-observer-to-D2D feedback";
     metadata.outageScope="synthetic GNSS XY input outage [40,60) only; D2D retains recorded known roll/pitch, so this is not a complete GNSS-device failure test";
-    metadata.certificateScope="verified aperiodic full-pose flows; actual timing, fixed delay and operating-envelope conditions reported separately; matching, cascade and numerical error budgets not calibrated";
+    metadata.certificateScope="reference current-pose timer inequalities retained; not a certificate for fixed-delay transport; matching, cascade and numerical budgets uncalibrated";
     conditions=estimate.diagnostics.certificateConditions;
     summary.maximumQualifiedPoseGapSeconds=conditions.maximumQualifiedPoseGapSeconds;
     summary.shortQualifiedIntervalCount=conditions.shortIntervalCount;
@@ -121,6 +130,9 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
     summary.fixedDelayMatchesConfiguration=conditions.fixedDelayMatchesConfiguration;
     summary.timingWithinCertificate=conditions.timingWithinCertificate;
     summary.flowCertificateVerified=estimate.observer.certificateVerified;
+    summary.referenceCertificateVerified=estimate.observer.referenceCertificateVerified;
+    summary.timingWithinReferenceSchedule=conditions.timingWithinReferenceSchedule;
+    summary.informationWithinReferenceSector=conditions.informationWithinReferenceSector;
     summary.unconditionalStabilityClaimed=false;
     metadata.gpsFusion="Full-matrix information fusion of separate LiDAR and GPS residuals during pose pulses; GPS-only continuation remains outside the full-pose certificate";
     summary.informationWithinCertificate=conditions.informationWithinCertificate;

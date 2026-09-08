@@ -223,15 +223,18 @@ reduced by a factor of ten; only
 the nonlinear invariant prediction is extended outside the physical state
 box. The state and its linear prediction are not clipped.
 
-The stored aperiodic certificate checks 720,896 robust block inequalities plus
-timer resets for 30 ms pulses separated by 50--110 ms, covering arbitrary
-normalized weight orientations in the sector `0.8*I <= W <= I`. This is a
-certificate condition, not a runtime floor on weak information. Event-split RK4 and physical
-measurement-time replay implement those pulse boundaries. Full-matrix
-information gain shaping, actual timing/delay diagnostics and the distinction
-between a verified model and a certified run are described in
-`localization/README.md`. The former continuous-GNSS design remains available
-for research audits but is rejected by the production runtime.
+The runtime assumes a fixed LiDAR delay, default 150 ms. It integrates forward
+once and transports each delayed residual and gain through the nominal motion
+flow. A bounded buffer stores input-derived maps; past estimates are never
+recomputed. All state outputs, including `z` and `onlineZ`, are causal.
+Delivery and pulse boundaries are handled by event-split RK4.
+
+The stored aperiodic certificate verifies the preceding current-pose pulse
+model, not this transported feedback. The runtime preserves the reference
+gain checks and explicitly reports that the new stability certificate is
+unverified. See [localization/README.md](localization/README.md) for the
+measurement contract and [the fixed-delay study](research/fixed_delay_transport_observer.md)
+for the equations, tests, and recorded performance limitations.
 
 ## Configuration (`config/`)
 
@@ -405,9 +408,9 @@ the vehicle parameters; its implementation no longer existed there.
 
 Global-observer tests independently check model/invariant equations,
 full-matrix anisotropic information gains, zero-speed and wrapped-angle behavior,
-physical-time replay, pulse-boundary integration, timer inequalities, stale
-certificate rejection and causal public pose outputs. Recorded full-sequence
-results and limitations are in `research/anisotropic_information_gain.md`.
+fixed-delay transport, pulse-boundary integration, reference timer inequalities,
+stale gain-verification rejection and immutable public outputs. The recorded
+comparison is in `research/fixed_delay_transport_observer.md`.
 
 Deliberately left behind: profiling and visualization scripts, the `legacy/`
 folder, the unused `seedOnly` and `iterativePca` ground modes, the

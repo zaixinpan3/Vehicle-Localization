@@ -1,0 +1,53 @@
+{
+  "tests": {
+    "passed": 82,
+    "failed": 0,
+    "incomplete": 0,
+    "globalObserver": 56,
+    "lateralObserver": 14,
+    "registrationInformation": 12,
+    "synthesisTests": "Two unchanged synthesis tests excluded; stored reference matrices are independently verified."
+  },
+  "codeAnalyzer": {
+    "files": 12,
+    "findings": 0,
+    "command": "checkcode(file,'-id','-config=factory')"
+  },
+  "nominalPeriodicScreen": {
+    "cases": 24,
+    "auxiliaryInjection": false,
+    "gps": false,
+    "fixedDelaySeconds": 0.15,
+    "constantCourseRates": [
+      0,
+      -0.6,
+      0.6
+    ],
+    "isotropicSourceWeights": [
+      0.8,
+      1
+    ],
+    "intervalsSeconds": [
+      0.05,
+      0.08,
+      0.1,
+      0.11
+    ],
+    "maximumHeldInnovationRadius": 1.19323200818311,
+    "maximumTransportRadius": 0.990101347310358,
+    "scope": "Nominal constant-coefficient diagnostic; not a robust runtime certificate."
+  },
+  "recordedRecheck": {
+    "scenarios": [
+      "fusion",
+      "positionOutage",
+      "lidarOnly"
+    ],
+    "maximumStateDifferenceAfterFinalLifecycleEdit": 0,
+    "stateHistoryRecomputed": false
+  },
+  "plotInspection": "Inspected recorded fusion trajectory, position/yaw error and sideslip plot; peaks are reported rather than hidden.",
+  "currentRuntimeCertificateVerified": false,
+  "referenceCertificateVerified": true,
+  "initialDiagnosticFailure": "An old saved verification snapshot lacked the onTime provenance field. The recorded runner now verifies the saved matrices again; all three scenarios completed. Failure is preserved in output/fixed_delay_transport_20260908/fusion_stale_reference/failure.json."
+}

@@ -1,0 +1,7 @@
+scenario,observer,positionRmseM,positionMaximumM,yawRmseDeg,outageWindowPositionRmseM,outageWindowPositionMaximumM,samples,acceptedLidarEvents,acceptedGpsEvents,velocityOutsideEnvelope,accelerationOutsideEnvelope,sourceSummary
+fusion,previousReplay,0.26796514359875934,2.0291425290999485,0.5550754593092279,0.2677045010550165,0.6089697833323937,11690,962,1168,31,0,output/anisotropic_observer_20260908/final_fusion/summary.json
+fusion,fixedDelayTransport,0.2667998897304177,2.6600368395387646,0.5428428371889708,0.19487350813616994,0.6085774270417369,11690,962,1168,55,0,output/fixed_delay_transport_20260908/fusion/summary.json
+positionOutage,previousReplay,0.2709767256437782,2.0291425294865246,0.556583559118413,0.2854172468591812,0.7330913139042333,11690,962,968,31,0,output/anisotropic_observer_20260908/final_positionOutage/summary.json
+positionOutage,fixedDelayTransport,0.27554901230483536,2.660036840630531,0.5432683634856337,0.2587787318512774,0.758065231225698,11690,962,968,55,0,output/fixed_delay_transport_20260908/positionOutage/summary.json
+lidarOnly,previousReplay,0.3905696053303012,1.8930955885009508,0.586722391414725,0.2857792223436584,0.7330872303031156,11690,962,0,0,0,output/anisotropic_observer_20260908/final_lidarOnly/summary.json
+lidarOnly,fixedDelayTransport,0.36675956478019645,1.7258093516984045,0.5624700183265591,0.25907048128532134,0.758069909736759,11690,962,0,0,0,output/fixed_delay_transport_20260908/lidarOnly/summary.json

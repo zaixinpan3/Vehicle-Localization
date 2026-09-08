@@ -1,5 +1,10 @@
 # Directional geometry and actual observer assimilation time
 
+> Timing update, 2026-09-08: the user subsequently selected fixed LiDAR delay
+> without observer replay. The replay feedback and its certificate described
+> here are historical. See [the current fixed-delay transport observer](fixed_delay_transport_observer.md).
+> The geometry, output coefficient bounds, and sensor/model contracts remain relevant.
+
 Date: 2026-09-08. Inspected baseline:
 `82703d4609d7d8e10d600f46cabeb69509aacc17`.
 
