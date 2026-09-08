@@ -1,0 +1,8 @@
+{
+  "legacyFullEvents": 3,
+  "fixtureFullEvents": 1,
+  "fixtureDirectionalEvents": 1,
+  "fixtureRejectedRows": 1,
+  "nullspacePreserved": true,
+  "scope": "Recorded sensor/clock adapter with explicitly constructed directional row; not a new recorded registration result"
+}

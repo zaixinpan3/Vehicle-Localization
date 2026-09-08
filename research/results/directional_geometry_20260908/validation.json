@@ -1,0 +1,43 @@
+{
+  "baselineCommit": "82703d4609d7d8e10d600f46cabeb69509aacc17",
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "distinctPassedTests": 150,
+  "failedTests": 0,
+  "incompleteTests": 0,
+  "testRunScope": "150 distinct cases; final distribution-registration class rerun after updating rejection-reason assertion; other passing classes retained",
+  "excludedGlobalSynthesis": true,
+  "gainsAndCertificateUnchanged": true,
+  "changedMatlabFiles": 13,
+  "codeAnalyzerFindings": 0,
+  "recordedFrameCalls": 21,
+  "recordedFullEvents": 21,
+  "recordedDirectionalEvents": 0,
+  "recordedFrameScope": "Seven cached Mississippi query-excluded 30-frame local maps, three starts; interface smoke check, not independent accuracy or timing benchmark",
+  "adapter": {
+    "legacyFullEvents": 3,
+    "fixtureFullEvents": 1,
+    "fixtureDirectionalEvents": 1,
+    "fixtureRejectedRows": 1,
+    "nullspacePreserved": true,
+    "scope": "Recorded sensor/clock adapter with explicitly constructed directional row; not a new recorded registration result"
+  },
+  "perfectMovingFixture": {
+    "speedMetersPerSecond": 10,
+    "elapsedSeconds": 0.02,
+    "truthHeldResidualMeters": -0.2,
+    "actualFinalPositionMeters": 0.16964217623235436,
+    "actualPositionErrorMeters": 0.030357823767645647,
+    "runtimeCertified": false
+  },
+  "offGridTiming": {
+    "acquisitionTime": 0.003,
+    "arrivalTime": 0.153,
+    "incorporationTime": 0.15999999999999998,
+    "processingWaitSeconds": 0.0069999999999999785,
+    "assimilationDelaySeconds": 0.15699999999999997,
+    "configuredCausalLagSeconds": 0.16,
+    "clockScope": "output sample clock after replay; wall-clock computation unbudgeted"
+  },
+  "remainingLimits": "Raw pose hold forcing retained; augmented intersample certificate, calibrated disturbances, wall-clock deadline, reverse-driving model, and higher-order nominal input validation remain outside this change",
+  "codeAnalyzerConfiguration": "factory; session custom configuration unavailable"
+}

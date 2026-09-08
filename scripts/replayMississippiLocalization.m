@@ -60,7 +60,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     deadReckoning=zeros(n,3);
     for k=1:n, deadReckoning(k,:)=compose(state,motion(k,:)); end
     cfg.registration.heightMode="xy";
-    radius=100; rows=cell(n,31); maxTimestampDifference=0;
+    radius=100; rows=cell(n,32); maxTimestampDifference=0;
     store=matfile(matPath); frameBlock=[]; firstInBlock=0;
     diskBlocks=zeros(0,3);
     for k=1:n
@@ -87,9 +87,13 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         selectionSeconds=toc(selectionTimer);
         [event,result]=localizeLidarFrame(frame,local,predicted,scanTime(k),cfg);
         elapsed=toc(timer);
-        assert(result.accepted==~isempty(event),'Acceptance/event mismatch.');
+        assert((result.accepted || result.directionalAccepted)==~isempty(event),'Acceptance/event mismatch.');
         state=predicted;
-        if result.accepted, state=result.poseXYTheta; end
+        information=result.information;
+        if ~isempty(event)
+            state=event.pose;
+            information=event.information;
+        end
         difference=state-poseReference(k,:); difference(3)=wrap(difference(3));
         pairCount=0;
         if isfield(result,'correspondences'), pairCount=height(result.correspondences); end
@@ -100,8 +104,8 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
             result.similarity,result.observableRank,result.iterations,pairCount, ...
             1000*elapsed,1000*result.perceptionSeconds,1000*result.registrationSeconds, ...
             1000*selectionSeconds,1000*loadSeconds, ...
-            result.information(1,1),result.information(1,2),result.information(1,3), ...
-            result.information(2,2),result.information(2,3),result.information(3,3)};
+            information(1,1),information(1,2),information(1,3), ...
+            information(2,2),information(2,3),information(3,3),result.directionalAccepted};
         if mod(k,50)==0 || k==n
             partial=callTable(rows(1:k,:));
             writetable(partial,fullfile(outputFolder,'calls.csv'));
@@ -173,12 +177,14 @@ function value=callTable(rows)
         'similarity','rank','iterations','matches','totalMs','perceptionMs', ...
         'registrationMs','mapSelectionMs','diskLoadMs', ...
         'informationXX','informationXY','informationXPsi','informationYY', ...
-        'informationYPsi','informationPsiPsi'});
+        'informationYPsi','informationPsiPsi','directionalAccepted'});
 end
 
 function summary=summarize(calls,deadReckoning,reference)
     error=hypot(deadReckoning(:,1)-reference(:,1),deadReckoning(:,2)-reference(:,2));
     summary=struct('frames',height(calls),'accepted',nnz(calls.accepted), ...
+        'directionalAccepted',nnz(calls.directionalAccepted), ...
+        'measurementEvents',nnz(calls.accepted | calls.directionalAccepted), ...
         'acceptanceFraction',mean(calls.accepted),'allFramePositionRmseM',sqrt(mean(calls.positionErrorM.^2)), ...
         'acceptedPositionRmseM',sqrt(mean(calls.positionErrorM(calls.accepted).^2)), ...
         'positionMedianM',median(calls.positionErrorM),'positionP95M',quantileLinear(calls.positionErrorM,.95), ...

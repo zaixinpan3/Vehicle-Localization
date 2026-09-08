@@ -54,11 +54,64 @@ classdef registrationInformationTest < matlab.unittest.TestCase
             second=registerSemanticProbabilityCloud(cloud,moving,[0 0 0]);
             testCase.verifyEqual(second.information,first.information,'AbsTol',1e-12);
         end
-        function roadTangentRemainsUnobservableAndEmitsNoEvent(testCase)
+        function roadTangentRemainsUnobservableInDirectionalEvent(testCase)
             cloud=geometricRegistrationTest.parallelRoad();
             result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
             testCase.verifyEqual(result.information*[1;0;0],zeros(3,1),'AbsTol',1e-12);
+            event=registrationSupport.registrationPoseMeasurement(result,0);
+            testCase.verifyFalse(result.accepted);
+            testCase.verifyTrue(result.directionalAccepted);
+            testCase.verifyEqual(event.measurementType,"directionalPose");
+            testCase.verifyEqual(event.observableRank,2);
+            testCase.verifyEqual(event.information*[1;0;0],zeros(3,1),'AbsTol',1e-12);
+        end
+        function unvalidatedPartialFlagCannotAuthorizeAnEvent(testCase)
+            result=struct('accepted',false,'partialPoseAvailable',true);
             testCase.verifyEmpty(registrationSupport.registrationPoseMeasurement(result,0));
+        end
+        function nonconvergedDirectionalGeometryEmitsNoEvent(testCase)
+            cloud=geometricRegistrationTest.parallelRoad();cfg=distributionRegistrationConfig();
+            cfg.maximumIterationsPerScale=1;
+            result=registerSemanticProbabilityCloud(cloud,cloud,[.8 .3 .02],cfg);
+            testCase.verifyTrue(result.partialPoseAvailable);
+            testCase.verifyFalse(result.directionalAccepted);
+            testCase.verifyEqual(result.reason,"notConverged");
+            testCase.verifyEmpty(registrationSupport.registrationPoseMeasurement(result,0));
+        end
+        function inconsistentPartialClassesEmitsNoEvent(testCase)
+            moving=conflictingRoad();fixed=moving;
+            fixed.components.mean(11:20,2)=fixed.components.mean(11:20,2)+.2;
+            cfg=distributionRegistrationConfig();cfg.geometric.maximumClassCorrection=.05;
+            result=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
+            testCase.verifyEqual(result.observableRank,2);
+            testCase.verifyEqual(result.reason,"inconsistentClasses");
+            testCase.verifyFalse(result.directionalAccepted);
+            testCase.verifyEmpty(registrationSupport.registrationPoseMeasurement(result,0));
+        end
+        function directionalInformationAndProjectorUsePhysicalCoordinates(testCase)
+            cloud=geometricRegistrationTest.parallelRoad();
+            cloud.components.mean(:,:)=repmat([3 1],10,1);
+            cfg=distributionRegistrationConfig();
+            result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0],cfg);
+            event=registrationSupport.registrationPoseMeasurement(result,0,.15);
+            scale=diag([1 1 1/cfg.yawLeverArm]);
+            testCase.verifyEqual(event.observableRank,1);
+            testCase.verifyEqual(event.observableProjector,scale*result.observableProjector/scale,'AbsTol',1e-12);
+            testCase.verifyEqual(event.information*[0;-3;1],zeros(3,1),'AbsTol',1e-10);
+            testCase.verifyGreaterThan(norm(event.observableProjector-event.observableProjector.'),.1);
+            testCase.verifyFalse(event.arrivalTimeIsPlaceholder);
+            testCase.verifyEqual(event.arrivalTime,.15,'AbsTol',0);
+        end
+        function filteredWeakDirectionsDoNotLeakIntoExport(testCase)
+            cloud=geometricRegistrationTest.parallelRoad();
+            angle=.001;r=[cos(angle) -sin(angle);sin(angle) cos(angle)];
+            cloud.components.covariance(:,:,1)=r*cloud.components.covariance(:,:,1)*r.';
+            result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
+            event=registrationSupport.registrationPoseMeasurement(result,0);
+            nullProjector=eye(3)-event.observableProjector;
+            testCase.verifyEqual(event.observableRank,2);
+            testCase.verifyGreaterThan(norm(result.information*nullProjector,'fro'),1e-8);
+            testCase.verifyLessThan(norm(event.information*nullProjector,'fro'),1e-10);
         end
         function acceptedPoseCannotOmitOrFakeInformation(testCase)
             result=struct('accepted',true,'poseXYTheta',[0 0 0]);
@@ -69,6 +122,14 @@ classdef registrationInformationTest < matlab.unittest.TestCase
                 'VehicleLocalization:InvalidRegistrationInformation');
         end
     end
+end
+
+function cloud=conflictingRoad()
+    cloud=geometricRegistrationTest.parallelRoad();c=cloud.components;
+    cloud.components=struct('mean',repmat(c.mean,2,1), ...
+        'covariance',repmat(c.covariance,1,1,2), ...
+        'semanticName',[c.semanticName;repmat("roadMarking",10,1)], ...
+        'mixtureWeight',ones(20,1)/20,'numComponents',20);
 end
 
 function cloud=poles()

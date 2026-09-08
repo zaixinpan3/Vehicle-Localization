@@ -17,7 +17,7 @@ function calls = measurePacedLocalizationPipeline(folder, period, repetitions)
     for pass = 1:repetitions
         order((pass-1)*cases+(1:cases)) = randperm(stream,cases);
     end
-    rows = cell(numel(order),10);
+    rows = cell(numel(order),11);
     % One untimed warm call prevents first-execution cost dominating the queue.
     item = loaded.inputs{1}; cfg = loaded.cfg;
     cfg.perception.coarseProbabilityCloud.projectionRotation = item.tilt;
@@ -35,13 +35,13 @@ function calls = measurePacedLocalizationPipeline(folder, period, repetitions)
         [event,result] = localizeLidarFrame(item.frame,item.mapCloud, ...
             item.pose+starts(start,:),double(item.frameIndex),cfg);
         finished = toc(clockStart);
-        assert(result.accepted == ~isempty(event),'Acceptance/event mismatch.');
+        assert((result.accepted || result.directionalAccepted) == ~isempty(event),'Acceptance/event mismatch.');
         rows(index,:) = {index,item.frameIndex,start,1000*available, ...
             1000*(began-available),1000*(finished-began), ...
-            1000*(finished-available),result.accepted,string(result.reason),period};
+            1000*(finished-available),result.accepted,string(result.reason),period,result.directionalAccepted};
     end
     calls = cell2table(rows,'VariableNames',{'order','frame','start','availableMs', ...
-        'waitingMs','computeMs','availabilityToPoseMs','accepted','reason','periodSeconds'});
+        'waitingMs','computeMs','availabilityToPoseMs','accepted','reason','periodSeconds','directionalAccepted'});
     writetable(calls,fullfile(folder,sprintf('paced_%.3fms.csv',1000*period)));
     fprintf('Paced %.3f ms: %d calls, maximum availability-to-output %.3f ms.\n', ...
         1000*period,height(calls),max(calls.availabilityToPoseMs));

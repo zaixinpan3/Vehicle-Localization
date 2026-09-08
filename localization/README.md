@@ -78,6 +78,33 @@ The information diagnostics also expose `marginalizedHeadingInformation`
 after eliminating unknown translation. The raw yaw diagonal alone does not
 establish independent geometric heading information.
 
+## Directional registration events
+
+`registerSemanticProbabilityCloud` keeps `accepted=true` for a complete pose.
+Rank-one or rank-two results can instead set `directionalAccepted=true` after
+passing overlap, correspondence, class-consistency, search-boundary and
+supported-convergence checks. `partialPoseAvailable` alone never authorizes
+an event. `localizeLidarFrame` exports both accepted types; consumers should
+check whether the event is empty, rather than equating event availability
+with the full-pose flag.
+
+Directional events carry `measurementType="directionalPose"`, nonzero PSD
+`information`, `observableRank`, and an explicitly labelled physical
+`observableProjector`. The projector is generally oblique: the orthogonal
+solver projector must be transformed through its yaw scaling. Information
+is projected into the solver's supported subspace before the physical
+congruence, suppressing weak directions the solver did not estimate.
+`result.information` retains the raw normal matrix for diagnostics;
+`result.directionalInformation` is the directional event matrix.
+
+The weighted measurement contract is that supported pose errors are bounded
+in a valid local registration/yaw chart. Unsupported coordinates remain a
+pose representative, not an absolute measurement. GNSS may complement partial
+geometry; the actual combined pulse weight still must meet the certificate
+sector. The recorded replay scripts retain the full-pose `accepted` column
+and add a separate `directionalAccepted` column; old full-pose CSVs remain
+readable.
+
 ## Pulse and delay model
 
 The invariant gain and acceleration rows of `K` retain the previous factor
@@ -93,6 +120,24 @@ left-limit terminal modes, zero future timestamp tolerance and at most 10 ms
 substeps. Physical-time replay handles the configured fixed 150 ms LiDAR delay
 with a 1-second buffer. `pose`, `position`, `heading`, `velocity`, `acceleration`
 and `onlineZ` are causal; `revisedZ` and the legacy `z` are revised history.
+
+Each accepted event now records `incorporationTime`: the output sample clock
+after its replay completes. Certificate diagnostics separate acquisition to
+delivery, delivery to processing, and total assimilation age. The configured
+causal lag includes the largest high-rate sample interval, not merely the RK4
+substep. The settled-history audit also accounts for observed longer delays
+and known qualified events still awaiting incorporation. This measures
+sample-clock causality; wall-clock computation and deadlines need separate
+measurements. `registrationPoseMeasurement(result,timestamp,arrivalTime)`
+can record an explicit delivery time. Omission produces a marked placeholder;
+the runtime reports missing delivery metadata without inventing a delay.
+
+Replay does not remove raw-pose aging during a pulse: even with exact
+tracking, the held position residual is `p(t_k)-p(t)`. This deterministic
+forcing is included in the conditional ISS disturbance model. Replacing
+the hold with an output predictor or a frozen acquisition innovation requires
+an augmented error model and a new certificate. The present feedback law and
+stored matrices are retained.
 
 ## Certificate scope
 
@@ -134,6 +179,9 @@ for all 13 exact incremental coefficient bounds, the four nominal-drift
 vertices, the straight-curb proposition, weighted LiDAR errors, explicit
 jerk/cascade/hold disturbances, and the conditional timer/replay ISS bound.
 These arguments require no new speed-jerk or angular-acceleration inputs.
+The [directional integration and timing follow-up](../research/directional_geometry_and_assimilation_timing.md)
+documents the frontend contract, physical subspace transformation, actual
+assimilation audit, exact-tracking counterexample and validation limits.
 
 ## Reproduction
 

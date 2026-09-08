@@ -1,0 +1,14 @@
+file,findings
+localization/localizeLidarFrame.m,0
+localization/registerSemanticProbabilityCloud.m,0
+localization/registrationSupport.m,0
+localization/runImprovedVehicleObserver.m,0
+scripts/benchmarkLocalizationPipeline.m,0
+scripts/compareLocalizationPipelineTiming.m,0
+scripts/measurePacedLocalizationPipeline.m,0
+scripts/prepareMncavObserverReplay.m,0
+scripts/replayMississippiLocalization.m,0
+tests/geometricRegistrationTest.m,0
+tests/improvedObserverTest.m,0
+tests/registrationInformationTest.m,0
+tests/distributionRegistrationTest.m,0

@@ -15,7 +15,7 @@ function report = compareLocalizationPipelineTiming(inputFolder, outputFolder, b
     functions={baselineFunction,@localizeLidarFrame};
     methods=["baseline","optimized"];
     cases=3*numel(loaded.inputs);
-    rows=cell(2*cases*repetitions,14); warm=cell(4*cases,14);
+    rows=cell(2*cases*repetitions,15); warm=cell(4*cases,15);
     stream=RandStream('mt19937ar','Seed',20260906);
     index=0;
     for pass=1:2
@@ -36,6 +36,9 @@ function report = compareLocalizationPipelineTiming(inputFolder, outputFolder, b
             end
             before=results{1}; after=results{2};
             assert(before.accepted==after.accepted && before.reason==after.reason, 'Acceptance changed.');
+            beforeDirectional=isfield(before,'directionalAccepted') && before.directionalAccepted;
+            afterDirectional=isfield(after,'directionalAccepted') && after.directionalAccepted;
+            assert(beforeDirectional==afterDirectional,'Directional acceptance changed.');
             maxPoseDifference=max(maxPoseDifference,max(abs(before.poseXYTheta-after.poseXYTheta)));
             exactClouds=exactClouds && isequaln(before.probabilityCloud,after.probabilityCloud);
             exactPairs=exactPairs && isequal(before.correspondences.source,after.correspondences.source) ...
@@ -43,7 +46,7 @@ function report = compareLocalizationPipelineTiming(inputFolder, outputFolder, b
         end
     end
     names={'method','frame','start','repetition','order','totalMs','perceptionMs', ...
-        'registrationMs','accepted','reason','iterations','x','y','psi'};
+        'registrationMs','accepted','reason','iterations','x','y','psi','directionalAccepted'};
     report.calls=cell2table(rows,'VariableNames',names);
     report.warmup=cell2table(warm,'VariableNames',names);
     report.quality=struct('maxPoseComponentDifference',maxPoseDifference, ...
@@ -71,11 +74,12 @@ function [row,result]=runCase(f,loaded,starts,caseIndex,method,pass,index)
     timer=tic;
     [event,result]=f(item.frame,item.mapCloud,item.pose+starts(start,:),item.frameIndex,cfg);
     elapsed=1000*toc(timer);
-    assert(result.accepted==~isempty(event),'Acceptance/event mismatch.');
+    directional=isfield(result,'directionalAccepted') && result.directionalAccepted;
+    assert((result.accepted || directional)==~isempty(event),'Acceptance/event mismatch.');
     if ~isempty(event)
         assert(isequal(size(event.pose),[1 3]) && all(isfinite(event.pose)),'Invalid accepted pose.');
     end
     row={method,item.frameIndex,start,pass,index,elapsed,1000*result.perceptionSeconds, ...
         1000*result.registrationSeconds,result.accepted,string(result.reason), ...
-        result.iterations,result.poseXYTheta(1),result.poseXYTheta(2),result.poseXYTheta(3)};
+        result.iterations,result.poseXYTheta(1),result.poseXYTheta(2),result.poseXYTheta(3),directional};
 end

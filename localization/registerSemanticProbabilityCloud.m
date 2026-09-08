@@ -1,7 +1,7 @@
 function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, initialPose, cfg)
 % registerSemanticProbabilityCloud: Estimate ONLY [X Y psi] from Gaussian clouds.
 % Default geometricD2D matches semantic distributions, constrains ground-line
-% normals and pole XY, and rejects incomplete SE(2) observability. Optional
+% normals and pole XY, and distinguishes full from directional acceptance. Optional
 % height is correspondence evidence, never another optimized pose state.
 % Map repeatability discounts class-balanced geometric weights. Missing
 % repeatability preserves legacy weights; mixture mass is not a substitute.
@@ -10,7 +10,8 @@ function result = registerSemanticProbabilityCloud(fixedCloud, movingCloud, init
 % geometricD2D exports local robust Gaussian information in map-frame
 % [X,Y,psi] coordinates (meters/radians), conditional on the final matches
 % and scatter model. It is not an empirically calibrated pose covariance.
-% densityOverlap remains a legacy score-only diagnostic. Never fuse a rejected pose.
+% densityOverlap remains a legacy score-only diagnostic. Only explicitly
+% accepted full or directional geometric results may produce observer events.
     if nargin < 4 || isempty(cfg)
         cfg = distributionRegistrationConfig();
     end
@@ -186,6 +187,9 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
         'initialSimilarity',0,'iterations',0,'converged',false,'scaledCurvature',zeros(3), ...
         'curvatureEigenvalues',zeros(3,1),'height',height,'observableRank',0, ...
         'observableProjector',zeros(3),'partialPoseAvailable',false, ...
+        'physicalObservableProjector',zeros(3),'directionalAccepted',false, ...
+        'directionalInformation',zeros(3),'supportedConverged',false, ...
+        'observableProjectorCoordinates',"scaled correction q=diag(1,1,yawLeverArm)*deltaPose", ...
         'curvatureSemantics',"uncalibratedGaussianGeometryNormalMatrix", ...
         'similaritySemantics',"repeatabilityWeightedClassGaussianCompatibilityWithCoverage", ...
         'repeatabilitySource',repeatabilitySource, ...
@@ -227,14 +231,14 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
     end
     pose=[q(1:2).',initialPose(3)+q(3)*scale(3)];
     system=linearize(f,m,pose,gcfg,scale,groups);
-    [~,projector,rank,eigenvalues]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
+    [finalStep,projector,rank,eigenvalues]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
     % Preserve the initial prediction in unsupported directions, rather than
     % silently replacing them with a drift accumulated through changing pairs.
     if rank<3
         q=projector*q;
         pose=[q(1:2).',initialPose(3)+q(3)*scale(3)];
         system=linearize(f,m,pose,gcfg,scale,groups);
-        [~,projector,rank,eigenvalues]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
+        [finalStep,projector,rank,eigenvalues]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
     end
     result.poseXYTheta=initialPose+(q.*scale).';
     result.poseXYTheta(3)=atan2(sin(result.poseXYTheta(3)),cos(result.poseXYTheta(3)));
@@ -242,6 +246,10 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
     result.similarity=system.similarity; result.scaledCurvature=system.H;
     result.curvatureEigenvalues=eigenvalues; result.observableRank=rank;
     result.observableProjector=projector;
+    result.physicalObservableProjector=diag(scale)*projector/diag(scale);
+    result.supportedConverged=converged && norm(finalStep,inf)<10*cfg.stepTolerance ...
+        && norm((eye(3)-projector)*q,inf)<10*cfg.stepTolerance;
+    result.partialPoseAvailable=rank>0 && rank<3 && system.numPairs>=cfg.minimumComponents;
     % q = diag(1,1,yawLeverArm) * deltaPose. Undo this numerical
     % conditioning before exporting physical pose information. The normal
     % matrix sums J_i' W_i J_i, where W_i contains summed source/map scatter,
@@ -249,24 +257,29 @@ function result = registerGeometricProbabilityCloud(fixedCloud,movingCloud,initi
     % Keep cross terms and genuine null directions; add no diagonal prior.
     inverseScale=diag(1./scale);
     result.information=inverseScale*((system.H+system.H.')/2)*inverseScale;
+    % Project in solver coordinates before transforming the bilinear form.
+    % Directions excluded by the observability threshold must not leak back
+    % through small positive eigenvalues of the raw normal matrix.
+    supported=projector*((system.H+system.H.')/2)*projector;
+    result.directionalInformation=inverseScale*supported*inverseScale;
+    result.directionalInformation=(result.directionalInformation+result.directionalInformation.')/2;
     result.correspondences=struct2table(system.pairs);
     result.matchedFraction=system.numPairs/max(1,m.numComponents);
     result.classDiagnostics=classDiagnostics(system,gcfg);
     result.height.medianConditionalResidual=median(system.pairs.heightResidual,'omitnan');
-    if system.numPairs==0 || result.matchedFraction<gcfg.minimumMatchFraction || ...
+    if system.numPairs<cfg.minimumComponents || result.matchedFraction<gcfg.minimumMatchFraction || ...
             system.similarity<cfg.minimumSimilarity
         result.reason="insufficientOverlap";
     elseif any(abs(q)>=bounds-1e-4)
         result.reason="searchBoundary";
-    elseif rank<3
+    elseif rank==0
         result.reason="degenerateGeometry";
-        result.partialPoseAvailable=system.numPairs>=cfg.minimumComponents;
-    elseif system.numPairs<cfg.minimumComponents
-        result.reason="insufficientOverlap";
     elseif any(result.classDiagnostics.observableCorrection>gcfg.maximumClassCorrection)
         result.reason="inconsistentClasses";
-    elseif ~converged
+    elseif ~converged || (rank<3 && ~result.supportedConverged)
         result.reason="notConverged";
+    elseif rank<3
+        result.directionalAccepted=true; result.reason="acceptedDirectional";
     else
         result.accepted=true; result.reason="accepted";
     end

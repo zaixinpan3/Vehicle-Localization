@@ -53,14 +53,26 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     sensorData.lidar=struct();
     if ~isempty(calls)
         assert(all(ismember(calls.accepted,[0 1])),'Invalid recorded acceptance flag.');
-        accepted=calls.accepted==1; n=nnz(accepted); c=calls(accepted,:);
+        directional=false(height(calls),1);
+        if ismember('directionalAccepted',calls.Properties.VariableNames)
+            assert(all(ismember(calls.directionalAccepted,[0 1])),'Invalid directional acceptance flag.');
+            directional=calls.directionalAccepted==1;
+            assert(~any(directional & calls.accepted==1),'Full and directional acceptance must be distinct.');
+        end
+        accepted=calls.accepted==1 | directional; n=nnz(accepted); c=calls(accepted,:);
         information=zeros(3,3,n);
         for k=1:n
             information(:,:,k)=[c.informationXX(k),c.informationXY(k),c.informationXPsi(k); ...
                 c.informationXY(k),c.informationYY(k),c.informationYPsi(k); ...
                 c.informationXPsi(k),c.informationYPsi(k),c.informationPsiPsi(k)];
-            [~,failure]=chol(information(:,:,k));
-            assert(failure==0,'Accepted scan lacks positive definite information.');
+            if c.accepted(k)
+                [~,failure]=chol(information(:,:,k));
+                assert(failure==0,'Accepted full scan lacks positive definite information.');
+            else
+                values=eig(information(:,:,k));tol=1e-10*max(1,max(abs(values)));
+                assert(min(values)>=-tol && max(values)>tol && ismember(c.rank(k),[1 2]), ...
+                    'Accepted directional scan lacks nonzero PSD information.');
+            end
         end
         sensorData.lidar=struct('timestamp',c.timeSeconds, ...
             'arrivalTime',c.timeSeconds+fixedLidarDelay,'pose',[c.x,c.y,c.psi],'information',information);
@@ -70,7 +82,7 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
         'inputInterpolation',"causal previous-sample hold", ...
         'reference',"NovAtel odom body-origin XY and quaternion yaw; also mapping reference", ...
         'gpsInput',"every fifth recorded odom position, approximately 10 Hz; no continuous GNSS heading input", ...
-        'lidarInput',"accepted fresh coarse-perception D2D poses and full information; fixed delivery delay", ...
+        'lidarInput',"accepted full/directional geometric D2D measurements; physical information; fixed delivery delay", ...
         'parameters',parameters,'sampleTimeSeconds',.01,'samples',numel(time), ...
         'maximumReferenceEdgeExtrapolationSeconds',edgeExtrapolation);
 end

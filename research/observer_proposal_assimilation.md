@@ -325,9 +325,13 @@ The LiDAR injection still annihilates its own nullspace.
 Also \(\|A_L\|\le1+\|G\|/s_I\), \(\|A_G\|\le\|G\|/s_I\);
 bounded weighted error is not invalidated by arbitrarily strong \(J_L\).
 
-The upstream D2D exporter continues to require full-rank accepted poses.
-Constructed curb/partial-rank observer tests do not establish a partial-rank
-D2D matching mode. Point-to-line geometry here is an explanatory local
+At this note's initial validation, the upstream D2D exporter required
+full-rank accepted poses. Constructed curb/partial-rank observer tests did not
+establish a partial-rank D2D matching mode. The subsequent
+[directional integration change](directional_geometry_and_assimilation_timing.md)
+adds separately validated directional exports and sample-clock assimilation
+diagnostics, without changing this observer or its conditional ISS equations.
+Point-to-line geometry here is an explanatory local
 example, not a replacement for the repository's Gaussian D2D information
 construction or a claim that ICP covariance formulas calibrate D2D errors.
 
@@ -451,8 +455,10 @@ The initial finite tail has the corresponding Gronwall bound.
 This composition permits bounded variable/out-of-order delivery; it is
 not the proposal's delay-differential observer with a frozen acquisition
 innovation applied continuously after arrival.
-The existing fixed-delay diagnostic remains explicit about its narrower
-assumption and does not certify arbitrary delivery schedules.
+The delivery-only fixed-delay diagnostic remains explicit about its narrower
+assumption and does not certify arbitrary delivery schedules. The subsequent
+assimilation audit records polling wait and observed incorporation ages;
+wall-clock execution is still an external condition.
 
 Increasing high gain can improve nominal contraction but also amplify sensor
 errors, acceleration transients and tail growth. In the proposal's different

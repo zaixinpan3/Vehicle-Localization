@@ -56,6 +56,10 @@ function estimate = runImprovedVehicleObserver(sensorData, lateralDesign, observ
             end
             replayCount(sampleIdx) = 1;
         end
+        % Incorporation is complete for this output sample after replay. This
+        % is the sensor/output clock, not a measured wall-clock compute time.
+        gps.incorporationTime(newGps) = currentTime;
+        lidar.incorporationTime(newLidar) = currentTime;
 
         onlineState(sampleIdx, :) = stateHistory(sampleIdx, :);
         acceptedEventCount(sampleIdx) = nnz(acceptedGps) + nnz(acceptedLidar);
@@ -418,6 +422,8 @@ function [highRate, gps, lidar] = normalizeSensorData(sensorData, cfg)
         lidar = emptyEvents(true);
     end
     gps.qualified = all(isfinite(gps.pose(:,1:2)),2);
+    gps.incorporationTime = NaN(numel(gps.timestamp),1);
+    lidar.incorporationTime = NaN(numel(lidar.timestamp),1);
     lidar.qualified = false(numel(lidar.timestamp),1);
     lidar.headingWeight = zeros(numel(lidar.timestamp),1);
     lidar.poseWeight=zeros(3,3,numel(lidar.timestamp));
@@ -503,6 +509,13 @@ function events = normalizePoseEvents(rawEvents, includeInformation)
     events = struct();
     events.timestamp = timestamp;
     events.arrivalTime = arrivalTime;
+    events.deliveryTimeProvided = repmat(isfield(rawEvents,"arrivalTime"),eventCount,1);
+    if isfield(rawEvents,"arrivalTimeIsPlaceholder")
+        placeholder=logical(rawEvents.arrivalTimeIsPlaceholder(:));
+        assert(isscalar(placeholder) || numel(placeholder)==eventCount, ...
+            'Delivery placeholder flags must be scalar or aligned.');
+        events.deliveryTimeProvided=events.deliveryTimeProvided & ~(placeholder & arrivalTime==timestamp);
+    end
     events.pose = pose;
     if includeInformation
         events.information = normalizeInformation(rawEvents, eventCount);
@@ -512,6 +525,7 @@ function events = normalizePoseEvents(rawEvents, includeInformation)
     [~, order] = sortrows([events.arrivalTime, events.timestamp]);
     events.timestamp = events.timestamp(order);
     events.arrivalTime = events.arrivalTime(order);
+    events.deliveryTimeProvided = events.deliveryTimeProvided(order);
     events.pose = events.pose(order, :);
     events.information = events.information(:, :, order);
 end
@@ -541,7 +555,8 @@ function events = emptyEvents(includeInformation)
 % emptyEvents Return a correctly shaped empty asynchronous stream.
     poseWidth = 2 + double(includeInformation);
     events = struct("timestamp", zeros(0, 1), "arrivalTime", zeros(0, 1), ...
-        "pose", zeros(0, poseWidth), "information", NaN(3, 3, 0));
+        "pose", zeros(0, poseWidth), "information", NaN(3, 3, 0), ...
+        "deliveryTimeProvided",false(0,1));
 end
 
 function value = interpolateValue(values, intervalIdx, alpha, interpolation)
@@ -632,12 +647,40 @@ function conditions = observerCertificateConditions(highRate,gps,lidar,acceptedG
     if isempty(stamps), firstPose=Inf; else, firstPose=stamps(1); end
     % Only the fully received measurement-time horizon can be audited. The
     % causal prediction tail is checked separately through the delay model.
-    settled = time>=firstPose & time<=time(end)-cfg.measurement.fixedLidarDelay;
+    lidarAssimilation=lidar.incorporationTime(acceptedLidar)-lidar.timestamp(acceptedLidar);
+    gpsAssimilation=gps.incorporationTime(acceptedGps)-gps.timestamp(acceptedGps);
+    gridWaitBound=max(diff(time));
+    configuredCausalLag=cfg.measurement.fixedLidarDelay+gridWaitBound;
+    observedCausalLag=max([0;lidarAssimilation;gpsAssimilation]);
+    auditedCausalLag=max(configuredCausalLag,observedCausalLag);
+    settledEnd=time(end)-auditedCausalLag;
+    % A known qualified event not incorporated by the final output prevents
+    % calling its acquisition-time suffix settled, regardless of nominal lag.
+    pendingStamps=[lidar.timestamp(lidar.qualified & ~acceptedLidar); ...
+        gps.timestamp(gps.qualified & ~acceptedGps)];
+    settledEnd=min([settledEnd;pendingStamps]);
+    settled = time>=firstPose & time<=settledEnd;
     velocityOutside = any(abs(onlineState(:,[2 5]))>cfg.operating.maximumSpeed,2);
     accelerationOutside = any(abs(onlineState(:,[3 6]))>cfg.operating.maximumAcceleration,2);
     gpsDelays=gps.arrivalTime(acceptedGps)-gps.timestamp(acceptedGps);
     if isempty(gpsDelays), maximumGpsDelay=0; else, maximumGpsDelay=max(gpsDelays); end
     conditions = struct('maximumGpsDelaySeconds',maximumGpsDelay, ...
+        'lidarIncorporationTime',lidar.incorporationTime, ...
+        'gpsIncorporationTime',gps.incorporationTime, ...
+        'lidarAssimilationDelaySeconds',lidarAssimilation, ...
+        'gpsAssimilationDelaySeconds',gpsAssimilation, ...
+        'lidarArrivalToProcessingWaitSeconds',lidar.incorporationTime(acceptedLidar)-lidar.arrivalTime(acceptedLidar), ...
+        'gpsArrivalToProcessingWaitSeconds',gps.incorporationTime(acceptedGps)-gps.arrivalTime(acceptedGps), ...
+        'maximumProcessingGridIntervalSeconds',gridWaitBound, ...
+        'configuredCausalLagBoundSeconds',configuredCausalLag, ...
+        'maximumObservedAssimilationDelaySeconds',observedCausalLag, ...
+        'effectiveDelayWithinConfiguredBound',observedCausalLag<=configuredCausalLag+1e-8, ...
+        'replayBufferCoversConfiguredCausalLag',cfg.measurement.replayBufferDuration>=configuredCausalLag, ...
+        'auditedCausalLagSeconds',auditedCausalLag, ...
+        'settledMeasurementTimeEnd',settledEnd, ...
+        'allAcceptedDeliveryTimesProvided',all(lidar.deliveryTimeProvided(acceptedLidar)) ...
+            && all(gps.deliveryTimeProvided(acceptedGps)), ...
+        'assimilationTimeBasis',"output sample clock after replay; wall-clock computation unbudgeted", ...
         'minimumLidarWeightEigenvalues',minimumWeights, ...
         'weightSectorViolationCount',nnz(minimumWeights<cfg.lidar.certificateMinimumPoseWeight-1e-9), ...
         'informationWithinCertificate',~isempty(minimumWeights) ...
@@ -665,7 +708,7 @@ function conditions = observerCertificateConditions(highRate,gps,lidar,acceptedG
     % GPS starts/expiry can fall between high-rate samples; split exactly at
     % those events so a short unanchored interval is not missed by sampling.
     [intervals, combinedMinimum] = pulseInformationIntervals(highRate,gps,lidar, ...
-        acceptedGps,acceptedLidar,cfg);
+        acceptedGps,acceptedLidar,settledEnd,cfg);
     conditions.posePulseInformationIntervals = intervals;
     conditions.minimumCombinedWeightEigenvalues = combinedMinimum;
     conditions.combinedWeightSectorViolationCount = nnz( ...
@@ -677,11 +720,10 @@ function conditions = observerCertificateConditions(highRate,gps,lidar,acceptedG
 end
 
 function [intervals, minimumWeights] = pulseInformationIntervals(highRate,gps,lidar, ...
-        acceptedGps,acceptedLidar,cfg)
+        acceptedGps,acceptedLidar,auditEnd,cfg)
 % pulseInformationIntervals Check every constant-weight piece, including expiry.
     stamps = unique(lidar.timestamp(acceptedLidar));
     gpsStamps = gps.timestamp(acceptedGps);
-    auditEnd = highRate.time(end)-cfg.measurement.fixedLidarDelay;
     boundaries = unique([highRate.time(1); auditEnd; stamps; ...
         stamps+cfg.measurement.lidarMaximumAge; gpsStamps; ...
         gpsStamps+cfg.measurement.gpsMaximumAge]);

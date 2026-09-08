@@ -53,13 +53,13 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
     % Warm every scene and initial condition twice, recording those calls
     % separately. No timeit batching hides a slow invocation.
     count = numel(frames)*size(starts,1);
-    warm = cell(2*count,19);
+    warm = cell(2*count,20);
     for index = 1:2*count
         scene = mod(floor((index-1)/3),numel(frames))+1;
         start = mod(index-1,3)+1;
         warm(index,:) = runCase(inputs{scene},starts(start,:),start,0,index,cfg);
     end
-    rows = cell(count*repetitions,19);
+    rows = cell(count*repetitions,20);
     stream = RandStream('mt19937ar','Seed',20260906);
     index = 0;
     for repetition = 1:repetitions
@@ -73,15 +73,16 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
     end
     names = {'frame','start','repetition','order','totalMs','perceptionMs', ...
         'registrationMs','overheadMs','accepted','reason','rank','iterations', ...
-        'sourceComponents','mapComponents','x','y','psi','positionDifferenceM','yawDifferenceDeg'};
+        'sourceComponents','mapComponents','x','y','psi','positionDifferenceM','yawDifferenceDeg','directionalAccepted'};
     report.calls = cell2table(rows,'VariableNames',names);
     report.warmup = cell2table(warm,'VariableNames',names);
-    groups = ["all","accepted","rejected"];
-    summary = cell(3,10);
-    for index = 1:3
+    groups = ["all","accepted","directional","rejected"];
+    summary = cell(4,10);
+    for index = 1:numel(groups)
         selected = true(height(report.calls),1);
         if groups(index)=="accepted", selected=report.calls.accepted; end
-        if groups(index)=="rejected", selected=~report.calls.accepted; end
+        if groups(index)=="directional", selected=report.calls.directionalAccepted; end
+        if groups(index)=="rejected", selected=~(report.calls.accepted | report.calls.directionalAccepted); end
         durations = report.calls.totalMs(selected);
         maximum = NaN;
         if ~isempty(durations), maximum=max(durations); end
@@ -119,7 +120,7 @@ function row = runCase(item,offset,start,repetition,index,cfg)
     [event,result] = localizeLidarFrame(item.frame,item.mapCloud,item.pose+offset, ...
         double(item.frameIndex),cfg);
     total = 1000*toc(timer);
-    assert(result.accepted == ~isempty(event),'Acceptance/event mismatch.');
+    assert((result.accepted || result.directionalAccepted) == ~isempty(event),'Acceptance/event mismatch.');
     if ~isempty(event)
         assert(isequal(size(event.pose),[1,3]) && all(isfinite(event.pose)), ...
             'An accepted event must carry a finite [X,Y,psi] pose.');
@@ -131,7 +132,7 @@ function row = runCase(item,offset,start,repetition,index,cfg)
         total-perception-registration,result.accepted,string(result.reason), ...
         result.observableRank,result.iterations,result.probabilityCloud.components.numComponents, ...
         item.mapCloud.components.numComponents,result.poseXYTheta(1),result.poseXYTheta(2), ...
-        result.poseXYTheta(3),norm(delta(1:2)),rad2deg(atan2(sin(delta(3)),cos(delta(3))))};
+        result.poseXYTheta(3),norm(delta(1:2)),rad2deg(atan2(sin(delta(3)),cos(delta(3)))),result.directionalAccepted};
 end
 
 function value = percentile(values,fraction)

@@ -43,7 +43,8 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
             cfg=geometricRegistrationTest.configuration();
             result=registerSemanticProbabilityCloud(cloud,cloud,[.8 .3 .02],cfg);
             testCase.verifyFalse(result.accepted);
-            testCase.verifyEqual(result.reason,"degenerateGeometry");
+            testCase.verifyEqual(result.reason,"acceptedDirectional");
+            testCase.verifyTrue(result.directionalAccepted);
             testCase.verifyEqual(result.observableRank,2);
             testCase.verifyTrue(result.partialPoseAvailable);
             testCase.verifyEqual(result.poseXYTheta,[.8 0 0],'AbsTol',1e-4);

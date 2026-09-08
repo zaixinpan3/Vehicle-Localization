@@ -11,11 +11,13 @@ function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initia
 % XYZ only with a known vertical reference and height in both clouds;
 % result.height describes the chosen mode. The state and event pose are ALWAYS
 % [X Y psi]; Z/roll/pitch are not optimized. Geometric D2D uses height only to
-% condition correspondence compatibility. Rank-deficient geometry emits no
-% full-pose event. Set cfg.perception.frameCalibration consistently with the
+% condition correspondence compatibility. Validated rank-deficient geometry
+% emits a directionalPose event; result.accepted still denotes full pose only.
+% Set cfg.perception.frameCalibration consistently with the
 % offline map; its default is identity and it never changes point selection.
 % An accepted event has timestamp, arrivalTime, pose, information fields consumed by
-% runImprovedVehicleObserver. The caller sets arrivalTime when it is delivered.
+% runImprovedVehicleObserver. The caller sets arrivalTime when it is delivered;
+% the acquisition-time default is explicitly marked arrivalTimeIsPlaceholder.
 % Empty measurement means rejection. Information is the final robust Gaussian
 % model information in physical map-frame [X,Y,psi] coordinates, not an
 % inverse empirically calibrated pose covariance or a density-score Hessian.

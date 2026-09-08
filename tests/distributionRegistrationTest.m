@@ -67,7 +67,9 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             cloud.components.covariance=repmat(eye(2),1,1,6);
             result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
             testCase.verifyFalse(result.accepted);
-            testCase.verifyEqual(result.reason,"degenerateGeometry");
+            testCase.verifyFalse(result.directionalAccepted);
+            testCase.verifyLessThan(result.observableRank,3);
+            testCase.verifyEqual(result.reason,"insufficientOverlap");
         end
         function rejectsNoOverlapAndIncompatibleSemantics(testCase)
             cloud=distributionRegistrationTest.exampleCloud();

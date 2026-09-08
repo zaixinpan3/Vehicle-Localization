@@ -2,6 +2,12 @@
 
 Date: 2026-09-07. State order is `[X,Y,psi]`, in meters and radians.
 
+Status update, 2026-09-08: the production observer now uses the full coupled
+matrix, and separately validated directional events are supported. See
+[the current directional event contract](directional_geometry_and_assimilation_timing.md)
+and [the localization interface](../localization/README.md). The original
+implementation account below records the earlier full-pose export stage.
+
 The geometric matcher now supplies its local Gaussian information directly to
 `localizeLidarFrame`, which emits `timestamp`, `arrivalTime`, `pose`, and
 `information`. `registrationSupport.registrationPoseMeasurement` rejects an

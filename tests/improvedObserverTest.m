@@ -22,6 +22,90 @@ classdef improvedObserverTest < matlab.unittest.TestCase
     end
 
     methods (Test)
+        function registeredPartialCurbCorrectsStationaryYawEndToEnd(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=[0;0;0;0;0;0;.1];
+            cloud=geometricRegistrationTest.parallelRoad();
+            registration=registerSemanticProbabilityCloud(cloud,cloud,[.8 .2 .02]);
+            event=registrationSupport.registrationPoseMeasurement(registration,0,0);
+            data=testCase.zeroMotionSensorData(.2);data.lidar=event;
+            data.gps=struct('timestamp',0,'arrivalTime',0,'pose',[0 0]);
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyFalse(registration.accepted);
+            testCase.verifyTrue(e.diagnostics.acceptedLidar);
+            testCase.verifyLessThan(abs(e.heading(end)),.1);
+            testCase.verifyEqual(event.information*[1;0;0],zeros(3,1),'AbsTol',1e-10);
+            testCase.verifyFalse(e.observer.certified);
+        end
+
+        function registeredCurbWithoutGpsRetainsLongitudinalAmbiguity(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            cloud=geometricRegistrationTest.parallelRoad();
+            registration=registerSemanticProbabilityCloud(cloud,cloud,[.8 0 0]);
+            data=testCase.zeroMotionSensorData(.2);
+            data.lidar=registrationSupport.registrationPoseMeasurement(registration,0,0);
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            data.lidar.pose(1)=data.lidar.pose(1)+100;
+            shifted=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(e.onlineZ,shifted.onlineZ,'AbsTol',1e-10);
+            testCase.verifyFalse(e.diagnostics.certificateConditions.informationWithinCertificate);
+        end
+
+        function incorporationAuditIncludesWaitForTheOutputSample(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.3);
+            data.lidar=struct('timestamp',.003,'arrivalTime',.153,'pose',[.2 0 0], ...
+                'information',100*eye(3));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            c=e.diagnostics.certificateConditions;
+            testCase.verifyEqual(c.lidarIncorporationTime,.16,'AbsTol',1e-12);
+            testCase.verifyEqual(c.lidarArrivalToProcessingWaitSeconds,.007,'AbsTol',1e-12);
+            testCase.verifyEqual(c.lidarAssimilationDelaySeconds,.157,'AbsTol',1e-12);
+            testCase.verifyEqual(c.configuredCausalLagBoundSeconds,.16,'AbsTol',1e-12);
+            testCase.verifyTrue(c.fixedDelayMatchesConfiguration);
+            testCase.verifyTrue(c.effectiveDelayWithinConfiguredBound);
+            before=e.time<c.lidarIncorporationTime;
+            testCase.verifyEqual(e.pose(before,:),zeros(nnz(before),3),'AbsTol',1e-12);
+        end
+
+        function missingDeliveryMetadataIsReported(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            cloud=geometricRegistrationTest.parallelRoad();
+            registration=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
+            data=testCase.zeroMotionSensorData(.2);
+            data.lidar=registrationSupport.registrationPoseMeasurement(registration,0);
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyFalse(e.diagnostics.certificateConditions.allAcceptedDeliveryTimesProvided);
+            data.lidar.arrivalTime=.15;
+            delivered=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyTrue(delivered.diagnostics.certificateConditions.allAcceptedDeliveryTimesProvided);
+        end
+
+        function pendingDeliveryCannotAppearInTheSettledHistory(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.4);
+            data.lidar=struct('timestamp',[0;.1],'arrivalTime',[.15;.8], ...
+                'pose',zeros(2,3),'information',repmat(100*eye(3),1,1,2));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(e.diagnostics.certificateConditions.settledMeasurementTimeEnd,.1,'AbsTol',1e-12);
+            testCase.verifyTrue(isnan(e.measurements.lidar.incorporationTime(2)));
+        end
+
+        function exactMovingInitializationStillHasRawPoseHoldForcing(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=[0;10;0;0;0;0;0];
+            data=testCase.zeroMotionSensorData(.02);
+            data.highRate.longitudinalSpeed(:)=10;
+            data.lidar=struct('timestamp',0,'arrivalTime',0,'pose',[0 0 0], ...
+                'information',100*eye(3));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            % At truth, the held residual would be exactly -10*t. The actual
+            % observer departs from truth under this deterministic forcing.
+            testCase.verifyEqual(data.lidar.pose(1)-10*e.time(end),-.2,'AbsTol',1e-12);
+            testCase.verifyEqual(e.innovations.base(end,1),-e.position(end,1),'AbsTol',1e-12);
+            testCase.verifyGreaterThan(.2-e.position(end,1),1e-4);
+            testCase.verifyEqual(e.innovations.base(1,:),zeros(1,3),'AbsTol',1e-12);
+            testCase.verifyFalse(e.observer.certified);
+        end
+
         function partialPoseInitializationIgnoresUnobservedCoordinates(testCase)
             cfg=improvedObserverConfig();
             cfg.observer.fallbackPosition=[2;3];
