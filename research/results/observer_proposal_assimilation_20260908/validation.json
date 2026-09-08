@@ -1,0 +1,23 @@
+{
+  "baselineCommit": "1a1a202dd0a6c8d24e5ecf93d6afb1de262440c4",
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "passedTests": 66,
+  "failedTests": 0,
+  "incompleteTests": 1,
+  "excludedGlobalSynthesis": true,
+  "skippedLateralSynthesisReason": "YALMIP/SDP solver absent from current session path; gains unchanged",
+  "flowInequalityCount": 720896,
+  "maximumFlowEigenvalue": -0.0074376705679547114,
+  "minimumPEigenvalue": 0.039698193013525486,
+  "maximumPEigenvalue": 2.7649945253443127,
+  "maximumResetEigenvalue": -9.9999788587016938E-5,
+  "normDecayPerSecond": 0.01,
+  "maximumContinuationLogNormPerSecond": 44.187335303174137,
+  "revisedInitialErrorFactor": 102.23458940138603,
+  "outputVertexCount": 8192,
+  "driftVertexCount": 4,
+  "runtimeCertified": false,
+  "syntheticScenarioSeed": 2026,
+  "newRegressionCases": 12,
+  "initialTestFailure": "Stationary sensitivity assertion incorrectly imposed on all corrected estimates; corrected to stationary state and GNSS-only trajectory, without changing gains or tolerances"
+}

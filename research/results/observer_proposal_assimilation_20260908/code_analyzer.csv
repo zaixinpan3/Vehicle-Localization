@@ -1,0 +1,5 @@
+file,factoryCodeAnalyzerFindings
+localization/computeLidarInformationWeights.m,0
+localization/evaluateImprovedObserverChannels.m,0
+localization/runImprovedVehicleObserver.m,0
+tests/improvedObserverTest.m,0

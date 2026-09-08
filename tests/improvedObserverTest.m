@@ -22,6 +22,153 @@ classdef improvedObserverTest < matlab.unittest.TestCase
     end
 
     methods (Test)
+        function partialPoseInitializationIgnoresUnobservedCoordinates(testCase)
+            cfg=improvedObserverConfig();
+            cfg.observer.fallbackPosition=[2;3];
+            cfg.observer.fallbackHeading=.4;
+            data=testCase.zeroMotionSensorData(.1);
+            data.lidar=struct('timestamp',0,'arrivalTime',0,'pose',[1000,4,-2], ...
+                'information',diag([0,100,0]));
+            a=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            data.lidar.pose=[-9000,4,1];
+            b=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(a.onlineZ,b.onlineZ,AbsTol=1e-12);
+            testCase.verifyEqual(a.pose(1,[1,3]),[2,.4],AbsTol=1e-12);
+            testCase.verifyGreaterThan(a.pose(1,2),3);
+        end
+
+        function coupledNullspaceDoesNotChangeAutomaticInitialization(testCase)
+            cfg=improvedObserverConfig();data=testCase.zeroMotionSensorData(.1);
+            data.lidar=struct('timestamp',0,'arrivalTime',0,'pose',[.1,0,.1], ...
+                'information',[100,0,100;0,100,0;100,0,100]);
+            a=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            data.lidar.pose=data.lidar.pose+[.2,0,-.2];
+            b=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(a.onlineZ,b.onlineZ,AbsTol=1e-11);
+        end
+
+        function fullPoseInitializationRetainsGpsPositionPrecedence(testCase)
+            cfg=improvedObserverConfig();data=testCase.zeroMotionSensorData(.1);
+            data.lidar=struct('timestamp',0,'arrivalTime',0,'pose',[1,2,.3], ...
+                'information',100*eye(3));
+            data.gps=struct('timestamp',0,'arrivalTime',0,'pose',[4,5]);
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(e.pose(1,:),[4,5,.3],AbsTol=1e-12);
+        end
+
+        function initialPoseUsesLatestPhysicalTimestamp(testCase)
+            cfg=improvedObserverConfig();data=testCase.zeroMotionSensorData(.1);
+            data.lidar=struct('timestamp',[-.1;-.02],'arrivalTime',[0;-.01], ...
+                'pose',[1,2,.1;3,4,.2],'information',repmat(100*eye(3),1,1,2));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(e.pose(1,:),[3,4,.2],AbsTol=1e-12);
+        end
+
+        function curbHeadingInformationRequiresSpatialExtent(testCase)
+            cfg=improvedObserverConfig();
+            extended=[0,0,0;0,3,0;0,0,2]; % lever arms [-1,0,1]
+            point=[0,0,0;0,3,6;0,6,12]; % three lever arms equal to 2
+            [~,~,a]=computeLidarInformationWeights(extended,cfg);
+            [~,~,b]=computeLidarInformationWeights(point,cfg);
+            testCase.verifyEqual(a.marginalizedHeadingInformation,2,AbsTol=1e-12);
+            testCase.verifyEqual(b.marginalizedHeadingInformation,0,AbsTol=1e-12);
+            testCase.verifyGreaterThan(b.headingInformation,0);
+        end
+
+        function tinyTranslationCurvatureDoesNotInventMarginalHeading(testCase)
+            cfg=improvedObserverConfig();row=[1e-8,0,1];
+            [~,~,info]=computeLidarInformationWeights(row.'*row,cfg);
+            testCase.verifyEqual(info.marginalizedHeadingInformation,0,AbsTol=1e-12);
+        end
+
+        function stationaryYawNeedsGeometryDespiteGpsPosition(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=[0;0;0;0;0;0;.1];
+            data=testCase.zeroMotionSensorData(.5);stamps=(0:.1:.4).';
+            data.gps=struct('timestamp',stamps,'arrivalTime',stamps,'pose',zeros(5,2));
+            gpsOnly=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            data.lidar=struct('timestamp',stamps,'arrivalTime',stamps,'pose',zeros(5,3), ...
+                'information',repmat(diag([0,100,100]),1,1,5));
+            geometric=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(gpsOnly.heading,.1*ones(size(gpsOnly.time)),AbsTol=1e-12);
+            testCase.verifyEqual(gpsOnly.diagnostics.motionHeadingSensitivity, ...
+                zeros(size(gpsOnly.time)),AbsTol=1e-12);
+            testCase.verifyEqual(geometric.diagnostics.motionHeadingSensitivity(1),0,AbsTol=1e-12);
+            testCase.verifyLessThan(abs(geometric.heading(end)),.1);
+        end
+
+        function gpsCompletesTheCurbSectorThroughoutEachPulse(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.7);stamps=(0:.1:.5).';
+            data.gps=struct('timestamp',stamps,'arrivalTime',stamps,'pose',zeros(6,2));
+            data.lidar=struct('timestamp',stamps,'arrivalTime',stamps+.15,'pose',zeros(6,3), ...
+                'information',repmat(diag([0,100,100]),1,1,6));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            c=e.diagnostics.certificateConditions;
+            testCase.verifyFalse(c.lidarInformationWithinCertificate);
+            testCase.verifyTrue(c.informationWithinCertificate);
+            testCase.verifyTrue(c.timingWithinCertificate);
+            testCase.verifyGreaterThanOrEqual(c.minimumCombinedWeightEigenvalues, ...
+                cfg.lidar.certificateMinimumPoseWeight*ones(size(c.minimumCombinedWeightEigenvalues)));
+            testCase.verifyFalse(e.observer.certified);
+        end
+
+        function gpsExpiryBetweenSamplesCannotHideMissingAnchoring(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.7);stamps=(0:.1:.5).';
+            data.gps=struct('timestamp',stamps-.004,'arrivalTime',stamps,'pose',zeros(6,2));
+            data.lidar=struct('timestamp',stamps,'arrivalTime',stamps+.15,'pose',zeros(6,3), ...
+                'information',repmat(diag([0,100,100]),1,1,6));
+            e=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            c=e.diagnostics.certificateConditions;
+            testCase.verifyFalse(c.informationWithinCertificate);
+            testCase.verifyEqual(c.combinedWeightSectorViolationCount,6);
+            testCase.verifyEqual(c.posePulseInformationIntervals(2,:),[.026,.03],AbsTol=1e-12);
+        end
+
+        function variableArrivalReplayRetainsTheAcquisitionHistory(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=zeros(7,1);
+            data=testCase.zeroMotionSensorData(.7);stamps=[.003;.107;.211;.315];
+            data.lidar=struct('timestamp',stamps,'arrivalTime',stamps, ...
+                'pose',repmat([.2,-.1,.01],4,1),'information',repmat(100*eye(3),1,1,4));
+            a=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            data.lidar.arrivalTime=stamps+[.23;.02;.18;.01];
+            b=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            testCase.verifyEqual(b.revisedZ,a.revisedZ,AbsTol=1e-11);
+            testCase.verifyFalse(b.diagnostics.certificateConditions.fixedDelayMatchesConfiguration);
+            testCase.verifyFalse(b.observer.certified);
+        end
+
+        function varyingMotionLeavesExplicitJerkAndRateResiduals(testCase)
+            cfg=improvedObserverConfig();s=4;sdot=-.7;sddot=.3;
+            chi=.6;omega=.2;alpha=-.04;rateError=.03;
+            t=[cos(chi);sin(chi)];n=[-sin(chi);cos(chi)];J=[0,-1;1,0];
+            v=s*t;a=sdot*t+s*omega*n;
+            jerk=(sddot-s*omega^2)*t+(2*sdot*omega+s*alpha)*n;
+            sample=struct('longitudinalSpeed',s,'lateralVelocity',0, ...
+                'longitudinalAcceleration',sdot,'lateralAcceleration',s*omega, ...
+                'yawRate',omega-rateError,'sideSlipAngle',0,'sideSlipAngleRate',0);
+            channels=evaluateImprovedObserverChannels([0;v(1);a(1);0;v(2);a(2);chi],sample,cfg.operating);
+            q=omega-rateError;
+            residual=sddot*t+alpha*J*v+(omega^2-q^2)*v+2*(omega-q)*J*a;
+            testCase.verifyEqual(jerk-channels.modelDerivative([3,6]),residual,AbsTol=1e-12);
+            testCase.verifyEqual(channels.invariantMeasurement(2),s*sdot,AbsTol=1e-12);
+            testCase.verifyEqual(channels.invariantMeasurement(3),s^2*omega,AbsTol=1e-12);
+        end
+
+        function exactIncrementAcrossClippingFitsTheScaledCoefficientBox(testCase)
+            cfg=improvedObserverConfig();data=buildImprovedObserverCertificateData(cfg);
+            sample=struct('longitudinalSpeed',2,'lateralVelocity',.1, ...
+                'longitudinalAcceleration',.3,'lateralAcceleration',.4, ...
+                'yawRate',.1,'sideSlipAngle',.2,'sideSlipAngleRate',0);
+            a=[1;30;-20;2;-40;12;3.1];b=[-2;-5;3;4;7;-2;3.2];
+            H=testCase.incrementalOutputMatrix(a,b,sample,cfg.operating);
+            ha=evaluateImprovedObserverChannels(a,sample,cfg.operating);
+            hb=evaluateImprovedObserverChannels(b,sample,cfg.operating);
+            scaled=H*data.Tsigma/cfg.observer.sigma^4;
+            testCase.verifyEqual(ha.invariantPrediction-hb.invariantPrediction,H*(a-b),AbsTol=1e-12);
+            testCase.verifyLessThanOrEqual(abs(scaled),max(abs(data.outputVertices),[],3)+1e-12);
+        end
+
         function certificateDataHasEveryRequiredVertexFamily(testCase)
         % certificateDataHasEveryRequiredVertexFamily Check the complete box.
             cfg = improvedObserverConfig();
@@ -461,6 +608,20 @@ classdef improvedObserverTest < matlab.unittest.TestCase
     end
 
     methods (Static, Access = private)
+        function H=incrementalOutputMatrix(a,b,sample,operating)
+        % incrementalOutputMatrix Form an exact coordinate telescoping secant.
+            H=zeros(4,7);previous=a;
+            for k=1:7
+                next=previous;next(k)=b(k);
+                hp=evaluateImprovedObserverChannels(previous,sample,operating);
+                hn=evaluateImprovedObserverChannels(next,sample,operating);
+                if a(k)~=b(k)
+                    H(:,k)=(hp.invariantPrediction-hn.invariantPrediction)/(a(k)-b(k));
+                end
+                previous=next;
+            end
+        end
+
         function highRate=stationaryHighRate(time)
             n=numel(time);
             highRate=struct('time',time,'steeringAngle',zeros(n,1), ...

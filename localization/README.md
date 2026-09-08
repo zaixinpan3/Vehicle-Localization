@@ -70,6 +70,14 @@ causal. The first two outputs of `computeLidarInformationWeights` are retained
 as compatibility summaries. The fourth output is the complete pose weight,
 which the runtime uses without discarding cross terms.
 
+Automatic initialization applies the bounded directional weight to a
+partial-rank LiDAR residual, preserving the fallback prior in unobserved
+directions. Full-rank initialization and GPS position precedence are retained;
+initial events are selected by physical timestamp among already arrived data.
+The information diagnostics also expose `marginalizedHeadingInformation`
+after eliminating unknown translation. The raw yaw diagonal alone does not
+establish independent geometric heading information.
+
 ## Pulse and delay model
 
 The invariant gain and acceleration rows of `K` retain the previous factor
@@ -99,8 +107,14 @@ most 0.6 rad/s. `designAnisotropicPoseCertificate` synthesizes the timer metric;
 
 **The 0.8 bound is a proof hypothesis, never a runtime floor or rejection
 rule.** The runtime accepts useful weaker/partial information and reports
-`informationWithinCertificate=false`. The LiDAR-only information audit is
-conservative when GPS adds information. The actual recorded drive also has
+`informationWithinCertificate=false` when the actual fused pulse weights
+violate the sector. The audit splits pulses at GPS starts and expirations,
+including boundaries between high-rate samples. The separate
+`lidarInformationWithinCertificate` field preserves the LiDAR-only check;
+`posePulseInformationIntervals` and `minimumCombinedWeightEigenvalues`
+identify the combined-weight segments on the settled measurement-time horizon.
+Prediction intervals are handled by the timer certificate, not required to
+have positive pose weight. The actual recorded drive also has
 pose gaps longer than 110 ms, so its empirical results are not covered by the
 uniform information/timing certificate. The old fixed-XY certificate is not
 reused. Gains, metric, multipliers, normalization and timing are checked
@@ -111,6 +125,15 @@ against the stored verification snapshot.
 calibration, heading-chart and discretization budgets are not established.
 The finite delay-tail bound includes all contraction weights and GPS-only
 continuation, but is conservative and is not an asymptotic stability result.
+
+`diagnostics.motionHeadingSensitivity` measures the fourth auxiliary
+output's local yaw sensitivity at the extended revised estimate. It vanishes
+at zero velocity; absolute stationary yaw correction requires geometry.
+See [the proposal assimilation and ISS derivation](../research/observer_proposal_assimilation.md)
+for all 13 exact incremental coefficient bounds, the four nominal-drift
+vertices, the straight-curb proposition, weighted LiDAR errors, explicit
+jerk/cascade/hold disturbances, and the conditional timer/replay ISS bound.
+These arguments require no new speed-jerk or angular-acceleration inputs.
 
 ## Reproduction
 

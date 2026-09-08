@@ -2,6 +2,10 @@ function channels = evaluateImprovedObserverChannels(state, sample, operating)
 % evaluateImprovedObserverChannels Evaluate the seven-state model and h map.
 % SAMPLE contains longitudinalSpeed, lateralVelocity, longitudinalAcceleration,
 % lateralAcceleration, yawRate, sideSlipAngle, and sideSlipAngleRate.
+% Body acceleration must be compensated inertial acceleration at the vehicle
+% reference point. Prediction uses q^2*v+2*q*J*a with q=r_m+betaDot_m;
+% omitted speed jerk, course angular acceleration and q error are additive
+% model disturbances, not zero-motion assumptions (see the assimilation note).
 
     arguments
         state (7, 1) double {mustBeFinite}
@@ -57,4 +61,8 @@ function channels = evaluateImprovedObserverChannels(state, sample, operating)
     channels.invariantExtensionActive = extensionActive;
     channels.invariantMeasurement = invariantMeasurement;
     channels.invariantInnovation = invariantMeasurement - invariantPrediction;
+    % Local sensitivity of h4 to yaw, not an absolute-heading observation.
+    % It vanishes at zero velocity even if geometric heading is available.
+    channels.motionHeadingSensitivity = -state(2)*cos(coupledAngle) ...
+        -state(5)*sin(coupledAngle);
 end

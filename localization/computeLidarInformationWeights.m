@@ -13,6 +13,7 @@ function [translationWeight,headingWeight,diagnostics,poseWeight] = computeLidar
         'minimumNormalizedEigenvalue',0,'informationMargin',NaN,'headingInformation',0, ...
         'translationInformationEigenvalues',zeros(2,1),'normalizedInformation',zeros(3), ...
         'normalizedWeight',zeros(3),'weightEigenvalues',zeros(3,1),'rank',0, ...
+        'marginalizedHeadingInformation',0, ...
         'gpsFusedLidarWeight',zeros(3),'gpsFusedGpsWeight',zeros(3), ...
         'gpsFusedNormalizedWeight',zeros(3));
     if isempty(informationMatrix),return;end
@@ -39,6 +40,12 @@ function [translationWeight,headingWeight,diagnostics,poseWeight] = computeLidar
     diagnostics.gpsFusedLidarWeight=gpsL;diagnostics.gpsFusedGpsWeight=gpsG;
     diagnostics.gpsFusedNormalizedWeight=gpsW;
     diagnostics.headingInformation=informationMatrix(3,3);
+    % Eliminate normalized translation as a nuisance variable. The raw yaw
+    % diagonal can be positive even when a coupled translation/yaw direction
+    % is unobservable. Use the PSD matrix with roundoff negatives removed.
+    translationInverse=pinv(J(1:2,1:2));
+    marginal=J(3,3)-J(3,1:2)*translationInverse*J(1:2,3);
+    diagnostics.marginalizedHeadingInformation=max(0,marginal)/D(3,3)^2;
     diagnostics.translationInformationEigenvalues=sort(eig(informationMatrix(1:2,1:2)),'descend');
     translationWeight=poseWeight(1:2,1:2);headingWeight=poseWeight(3,3);
 end

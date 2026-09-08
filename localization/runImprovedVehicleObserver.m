@@ -273,17 +273,25 @@ function initialState = buildInitialState(highRate, lateralEstimate, gps, lidar,
     initialLidar = lidar.qualified & lidar.arrivalTime <= initialTime & lidar.timestamp <= initialTime;
     position = double(cfg.observer.fallbackPosition(:));
     heading = double(cfg.observer.fallbackHeading);
+    gpsIdx = latestEligibleEvent(gps, initialGps, initialTime);
+    lidarIdx = latestEligibleEvent(lidar, initialLidar, initialTime);
     if any(initialGps)
-        eventIdx = find(initialGps, 1, "last");
-        position = gps.pose(eventIdx, 1:2).';
-    elseif any(initialLidar)
-        eventIdx = find(initialLidar, 1, "last");
-        position = lidar.pose(eventIdx, 1:2).';
+        position = gps.pose(gpsIdx, 1:2).';
     end
-    if any(initialLidar)
-        eventIdx = find(initialLidar & isfinite(lidar.pose(:, 3)), 1, "last");
-        if ~isempty(eventIdx)
-            heading = lidar.pose(eventIdx, 3);
+    if ~isempty(lidarIdx)
+        if lidar.informationDiagnostics{lidarIdx}.rank == 3
+            % Preserve full-pose initialization and GPS position precedence.
+            if isempty(gpsIdx), position = lidar.pose(lidarIdx, 1:2).'; end
+            heading = lidar.pose(lidarIdx, 3);
+        else
+            % An arbitrary representative in a LiDAR nullspace is not an
+            % initial measurement. Apply its bounded directional weight to
+            % the fallback/GPS prior, on the same local yaw branch as replay.
+            residual = [lidar.pose(lidarIdx, 1:2).'-position; ...
+                wrapAngleToPi(lidar.pose(lidarIdx, 3)-heading)];
+            correction = lidar.poseWeight(:,:,lidarIdx)*residual;
+            if isempty(gpsIdx), position = position+correction(1:2); end
+            heading = heading+correction(3);
         end
     end
 
@@ -304,6 +312,7 @@ function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lida
     baseInnovation = zeros(sampleCount, 3);
     lidarInnovation = zeros(sampleCount, 2);
     invariantInnovation = zeros(sampleCount, 4);
+    motionHeadingSensitivity = zeros(sampleCount, 1);
     translationWeight = zeros(2, 2, sampleCount);
     headingWeight = zeros(sampleCount, 1);
     lidarPoseWeight=zeros(3,3,sampleCount);gpsPoseWeight=zeros(3,3,sampleCount);
@@ -326,6 +335,7 @@ function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lida
         [baseInnovation(sampleIdx, :), lidarInnovation(sampleIdx, :)] = ...
             rowPoseInnovations(stateHistory(sampleIdx, :).', fusion);
         invariantInnovation(sampleIdx, :) = channels.invariantInnovation.';
+        motionHeadingSensitivity(sampleIdx) = channels.motionHeadingSensitivity;
         translationWeight(:, :, sampleIdx) = fusion.translationWeight;
         headingWeight(sampleIdx) = fusion.headingWeight;
         lidarPoseWeight(:,:,sampleIdx)=fusion.lidarWeight;
@@ -362,6 +372,7 @@ function estimate = buildEstimate(stateHistory, onlineState, highRate, gps, lida
     estimate.diagnostics.totalNormalizedPoseWeight=totalNormalizedPoseWeight;
     estimate.diagnostics.lidarPoseGain=pagemtimes(design.poseGain,lidarPoseWeight);
     estimate.diagnostics.informationTimeBasis="revised measurement-time history";
+    estimate.diagnostics.motionHeadingSensitivity = motionHeadingSensitivity;
     estimate.diagnostics.gpsAge = gpsAge;
     estimate.diagnostics.lidarAge = lidarAge;
     estimate.diagnostics.rawTrackAngleRate = rawTrackAngleRate;
@@ -649,7 +660,43 @@ function conditions = observerCertificateConditions(highRate,gps,lidar,acceptedG
         'unconditionalStabilityClaimed',false);
     conditions.timingWithinCertificate = ~isempty(gaps) && any(settled) && ~any(tooShort | tooLong) ...
         && all(fresh(settled));
-    % LiDAR-only sector qualification is conservative when GPS adds information.
-    % It reports a proof hypothesis; it never removes a partial-information event.
-    conditions.informationAuditScope="LiDAR alone; GPS can strengthen the total sector";
+    conditions.lidarInformationWithinCertificate = conditions.informationWithinCertificate;
+    % Audit the matrix actually used throughout every settled LiDAR pulse.
+    % GPS starts/expiry can fall between high-rate samples; split exactly at
+    % those events so a short unanchored interval is not missed by sampling.
+    [intervals, combinedMinimum] = pulseInformationIntervals(highRate,gps,lidar, ...
+        acceptedGps,acceptedLidar,cfg);
+    conditions.posePulseInformationIntervals = intervals;
+    conditions.minimumCombinedWeightEigenvalues = combinedMinimum;
+    conditions.combinedWeightSectorViolationCount = nnz( ...
+        combinedMinimum<cfg.lidar.certificateMinimumPoseWeight-1e-9);
+    conditions.informationWithinCertificate = ~isempty(combinedMinimum) ...
+        && conditions.combinedWeightSectorViolationCount==0;
+    conditions.informationAuditScope = ...
+        "actual fused weights on event-split settled LiDAR pulses; prediction intervals excluded";
+end
+
+function [intervals, minimumWeights] = pulseInformationIntervals(highRate,gps,lidar, ...
+        acceptedGps,acceptedLidar,cfg)
+% pulseInformationIntervals Check every constant-weight piece, including expiry.
+    stamps = unique(lidar.timestamp(acceptedLidar));
+    gpsStamps = gps.timestamp(acceptedGps);
+    auditEnd = highRate.time(end)-cfg.measurement.fixedLidarDelay;
+    boundaries = unique([highRate.time(1); auditEnd; stamps; ...
+        stamps+cfg.measurement.lidarMaximumAge; gpsStamps; ...
+        gpsStamps+cfg.measurement.gpsMaximumAge]);
+    boundaries = boundaries(boundaries>=highRate.time(1) & boundaries<=auditEnd);
+    intervals = zeros(max(0,numel(boundaries)-1),2);
+    minimumWeights = zeros(size(intervals,1),1);
+    count = 0;
+    for k=1:numel(boundaries)-1
+        midpoint = boundaries(k)+(boundaries(k+1)-boundaries(k))/2;
+        fusion = fusionMeasurementAt(midpoint,gps,lidar,acceptedGps,acceptedLidar,cfg);
+        if ~fusion.lidarPositionValid, continue; end
+        count = count+1;
+        intervals(count,:) = boundaries(k:k+1).';
+        minimumWeights(count) = min(eig(fusion.normalizedWeight));
+    end
+    intervals = intervals(1:count,:);
+    minimumWeights = minimumWeights(1:count);
 end
