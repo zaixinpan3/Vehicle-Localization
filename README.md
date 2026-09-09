@@ -5,8 +5,8 @@ road markings, and pole-like features. Perception now has a shared XY-pillar
 front end: online localization consumes coarse Gaussian distributions, while
 offline mapping independently reconstructs detailed structural candidates and
 validates their individual points.
-Historical detectors remain available through `executionMode="legacyFull"`
-for comparisons with the stored reference.
+The runtime contains only current implementations. Regression comparisons read
+frozen output data; they never select another executable implementation.
 
 ## Pipeline
 
@@ -72,7 +72,7 @@ result = perceiveFrame(frame, cfg);
 ```
 
 The list controls coarse detectors, candidate/cloud channels, and offline
-point refinement. Unrequested fine-mask fields remain false for compatibility;
+point refinement. Unrequested fine-mask fields remain false;
 `refinement` contains only requested channels. Shared ground segmentation and
 terrain preparation remain preprocessing. Marking-only perception retains
 curb/road-boundary evidence needed to delimit its road region, but publishes
@@ -82,8 +82,7 @@ pole and facade detection. Unknown/duplicate names are rejected.
 Modern calls reject the former nested `coarseProbabilityCloud.semanticNames`
 and `offGroundFeatures.facadeDetectionEnabled` selectors; use `featureNames`
 instead. The low-level standalone Gaussian builder still receives its internal
-`semanticNames` list from the caller. `legacyFull` retains the historical
-facade switch only for reproducing old reference artifacts.
+`semanticNames` list from the caller.
 
 Offline facades require robust vertical planes and per-point distance tests.
 Sign pillars use maximum intensity evidence; fine sign points must individually
@@ -109,7 +108,7 @@ its xz/yz coupling. Existing `mean` and `covariance` fields remain the exact XY
 marginal. `registrationSupport.projectSemanticProbabilityCloud(cloud,3)` returns
 standard XYZ component arrays; dimension 2 selects the marginal without changing
 weights.
-`semanticProbability` and `occupancyProbability` are compatibility field names
+`semanticProbability` and `occupancyProbability` name
 for **uncalibrated evidence and hit support**, not Bayesian semantic or free-space
 occupancy posteriors. Known IMU tilt can be supplied through
 `cfg.coarseProbabilityCloud.projectionRotation` before moment accumulation.
@@ -155,9 +154,8 @@ model-conditional repeatability, not occupancy or permanent existence.
 
 See [the formulation and migration contract](research/repeated_observation_map_design.md)
 for priors, the ELBO, publication, mass allocation, held-out model selection,
-query error bounds, and current validation limits. Legacy saved maps retain
-labelled legacy query/export behavior. Rebuild them from observations to obtain
-the new semantics; old score thresholds require reevaluation.
+query error bounds, and current validation limits. Query and export accept only
+schema-version-2 maps. Rebuild other artifacts from observations.
 
 The directory contains only five map algorithms and one shared support file:
 
@@ -167,7 +165,7 @@ The directory contains only five map algorithms and one shared support file:
 | `buildTemporalStabilityGmmMap.m` | Fit repeated-observation geometry and conditional height |
 | `buildSlidingWindowMap.m` | Ingest scheduled frames once and build canonical owned tiles |
 | `queryTemporalStabilityGmmMap.m` | Evaluate the Gaussian field against clutter with coverage and error bounds |
-| `temporalMapToProbabilityCloud.m` | Export the normalized field with retained mass; support legacy windows |
+| `temporalMapToProbabilityCloud.m` | Export the canonical normalized field with retained mass |
 | `mappingSupport.m` | Share logging, statistics, and numerical/schema validation |
 
 All six files are directly under `mapping/`, with no subdirectories. Internal
@@ -220,8 +218,8 @@ loop. `runLateralVelocityObserver` supplies exactly this interface:
   specific force and not the speed derivative;
 * `mode`, correction-channel histories, and `dynamicModelEvaluated`, which make
   the hybrid information flow auditable;
-* `lowSpeedHold`, retained as a compatibility flag indicating that the raw
-  side-slip direction is invalid; it no longer hard-zeroes the master state.
+* `diagnostics.sideSlipCommandValid`, which indicates whether the raw side-slip
+  direction is valid.
 
 The global stage is in `localization/`. Its internal state is
 `[X,Vx,Ax,Y,Vy,Ay,psi]`, with causal output `[X,Y,psi]`. LiDAR poses
@@ -300,15 +298,14 @@ result = simulateImprovedObserverScenario( ...
 `scripts/` holds the runnable entry points: `extractPointCloudsFromBag.m` and
 `extractGnssFromBag.py` (ROS bag → MAT frames and GNSS/INS CSV tables),
 `buildMississippiFeatureMap.m`, `runLateralObserverDesign.m`, and
-`runImprovedObserverDesign.m`. `evaluatePillarPerception` and
-`evaluatePillarRegistration` write reproducible comparison tables under `output/`.
+`runImprovedObserverDesign.m`. `benchmarkCoarseProbabilityCloud` measures current
+coarse/fine calls; `evaluateWholePillarPerception` compares frozen output data.
 `evaluateRepeatedObservationMap` records actual construction, convergence and
 query/export consistency on Mississippi frames 260--289.
 `showMississippiPerception(260,"","coarseProbabilityCloud")` displays the complete
 cloud with candidate pillar members colored; `"offline"` displays accepted fine points.
 
-For D2D, cache the canonical field as a Gaussian cloud. Legacy saved maps still
-require selecting one window rather than concatenating overlapping windows:
+For D2D, cache the canonical field as a Gaussian cloud:
 
 ```matlab
 mapCloud = temporalMapToProbabilityCloud(probabilityCloudMap);
@@ -330,10 +327,8 @@ Positive mixture masses do not attract the solution toward sampling-density
 peaks. Full-pose acceptance requires three observable directions and class
 consistency. A rejected result produces no observer event; partial geometry
 is available only as a diagnostic. Its normal matrix is not calibrated sensor
-information. Explicit `method="densityOverlap"` reproduces the old normalized
-L2 objective. The separate `scoreSemanticProbabilityCloudAlignment` function
-continues to evaluate that legacy objective, so its score is not comparable
-to the new solver's residual compatibility.
+information. The separate `scoreSemanticProbabilityCloudAlignment` function
+evaluates a Gaussian-overlap diagnostic; it does not select another pose solver.
 
 Full XYZ means/covariances, including xz and yz, remain in every supported
 probability-cloud component. The default `heightMode="xy"` uses the XY
@@ -349,8 +344,9 @@ from stored points to the recorded body frame. Their default is identity.
 `fitLidarPitchCalibration` produces an **offline pitch-only candidate** from
 static feature observations; it does not add a localization state or claim a
 complete sensor extrinsic calibration. Rebuild a map with the chosen transform
-before using it online. Known mismatched transforms are rejected; legacy
-identity maps with missing provenance are labeled `unverifiedLegacy`.
+before using it online. Missing or mismatched calibration provenance is rejected.
+Fixed map components must include repeatability; it is never synthesized from
+mixture mass or substituted with unit weights.
 
 See [algorithm, equations, configuration, and recorded validation](research/geometric_d2d_registration.md).
 
@@ -367,9 +363,10 @@ raw/Missisipi/gnss/<bag>_front_lidar_pose_match_1_1170.csv   from matchFramePose
 
 ## Verification
 
-`pipelineRegressionTest` explicitly selects `legacyFull` and preserves the
-original reference file unchanged. It verifies historical perception outputs
-and the new map's field contracts on the same recorded observations.
+`currentPerceptionReferenceTest` verifies all point masks on 30 frozen frames
+from revision `6bf426c`, stored as point-index JSON without recorded clouds.
+`pipelineRegressionTest` verifies current fine outputs and map field contracts
+on the recorded scenarios. Original reference evidence remains unchanged.
 `temporalStabilityGmmMapTest` checks hierarchical inference, mass conservation,
 query/export consistency, coverage, height and canonical ownership.
 `pillarPerceptionTest` tests the new execution boundary, sparse storage,
@@ -392,47 +389,23 @@ setenv("VEHICLE_LOCALIZATION_DATA_ROOT", "/path/to/data");
 runtests("tests");
 ```
 
-## Relation to the original repository
+## Current implementation policy
 
-| original | here |
-| --- | --- |
-| `VoxelizePointCloud` | `voxelizePointCloud` |
-| `groundSeg` (slopeGrid mode) | `segmentGround` |
-| `groundPointProcessing` + `curbExtraction` | `groundFeatures/extractGroundFeatures` and its stage files |
-| `offGroundFeatureExtraction` | `offGroundFeatures/extractOffGroundFeatures` and its stage files |
-| `buildSemanticVoxelGridProduct`, `coarseGridValidation` | `semanticProduct/buildSemanticVoxelGrid` |
-| `finePointValidation`, `perceptionValidationPipeline` | `semanticProduct/refineSemanticPoints`, `perceiveFrame` |
-| `buildSemanticTemporalStabilityGMMFeatureMap` | `buildTemporalStabilityGmmMap` with local stage functions |
-| `querySemanticTemporalStabilityGMMFeatureMap` | `queryTemporalStabilityGmmMap` |
-| `buildSemanticNDTGridMap` | `buildSemanticNdtGridMap` |
-| glue inside `runMissisipiSemanticTemporalStabilityGMMFeatureMapTest.m` | `mapping/*.m` functions |
-`localization/lateralObserver/` has no counterpart in the original repository. It
-is new code, so it is verified against its own mathematics rather than against a
-recorded baseline: the polytopic representation is checked for exactness and for
-nonnegative barycentric coordinates across the speed range, the scheduling rate
-against a finite difference, and every synthesized gain against the original
-certificate of the proposition (negative definite Lyapunov derivative,
-`trace(L' P L) < mu`, stable error matrix) at each grid point. The archived
-`legacy/config/hgoLateralObserverConfig.m` of the original repository supplied
-the vehicle parameters; its implementation no longer existed there.
+Only current algorithms and their validation tools belong in the source tree.
+Obsolete execution modes, format readers, compatibility wrappers and experiment
+scripts that require deleted algorithms are removed. Git history and frozen
+reference data preserve comparison evidence without providing runtime fallbacks.
 
-Global-observer tests independently check model/invariant equations,
-full-matrix anisotropic information gains, zero-speed and wrapped-angle behavior,
-fixed-delay transport, pulse-boundary integration, reference timer inequalities,
-stale gain-verification rejection and immutable public outputs. The recorded
-comparison is in `research/fixed_delay_transport_observer.md`.
+Coarse geometry comes from `pillarGridConfig`, detailed offline indexing from
+`fineVoxelizationConfig`, and detailed candidate settings from
+`fineStructuralConfig`. Coarse spacing must contain exactly two XY values.
+Only the fine stage constructs a sparse 3D index; no dense voxel-statistic or
+inverse-lookup alternative remains.
 
-Deliberately left behind: profiling and visualization scripts, the `legacy/`
-folder, the unused `seedOnly` and `iterativePca` ground modes, the
-representative-point curb selection and diagnostic tables that the tuned
-configuration never enabled, forty unreachable pole/facade helper functions, and
-the bundled YALMIP/SeDuMi/SDPT3 copies (install them separately for the gain
-design). Configuration fields that no code read were dropped as well.
-
-Result structs changed shape where the old ones carried compatibility fallbacks:
-`extractOffGroundFeatures` returns `columnMaps`, `trafficSign`, `facade`, and
-`pole` structs (the old flat `debug` fields live under these names), and the
-ground-branch `curb` config fields lost their `groundPointProcessing` prefix.
+Lateral-observer runtime configurations must include the current `hybrid` fields.
+Use `lateralObserverConfig` and `estimate.diagnostics.sideSlipCommandValid` for
+the current side-slip interface. Tests reuse stored gain matrices with explicit
+current runtime settings; stored references are not rewritten.
 
 ## Requirements
 

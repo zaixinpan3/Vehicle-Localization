@@ -7,7 +7,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
     end
     methods (Test)
         function wholePillarMomentsRetainAllXYZCorrelations(testCase)
-            cfg=frameVoxelizationConfig(); cfg.roiLimits=[0 2 0 2];
+            cfg=pillarGridConfig(); cfg.roiLimits=[0 2 0 2];
             cfg.exclusionHalfSize=0;
             p=[.01 .02 -4;.05 .08 1;.08 .14 8];
             grid=pillarizePointCloud(p,cfg);
@@ -20,16 +20,13 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyFalse(any(contains(string(fieldnames(grid)),["Voxel","voxelStatistics"])));
             testCase.verifySize(grid.pointPillarSub,[3 2]);
         end
-        function verticalBinSettingsCannotAffectPillars(testCase)
-            cfg=frameVoxelizationConfig(); cfg.roiLimits=[0 2 0 2]; cfg.exclusionHalfSize=0;
-            points=[.01 .02 -100;.05 .08 .3;.08 .14 100];
-            first=pillarizePointCloud(points,cfg);
-            cfg.voxelSize(3)=NaN; cfg.buildPointLookup=true;
-            second=pillarizePointCloud(points,cfg);
-            testCase.verifyEqual(second,first);
+        function rejectsVerticalPillarSpacing(testCase)
+            cfg=pillarGridConfig(); cfg.voxelSize(3)=0.5;
+            testCase.verifyError(@() pillarizePointCloud([10 2 3],cfg), ...
+                'perception:InvalidPillarSpacing');
         end
         function emptyInputRetainsValidStatistics(testCase)
-            grid=pillarizePointCloud(zeros(0,3),frameVoxelizationConfig());
+            grid=pillarizePointCloud(zeros(0,3),pillarGridConfig());
             testCase.verifySize(grid.statistics.meanXYZ,[0 3]);
             testCase.verifySize(grid.statistics.covarianceXYZ,[0 6]);
             testCase.verifyEmpty(grid.statistics.count);
@@ -43,7 +40,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(stats.meanXYZ,mean(points,1),'AbsTol',1e-12);
         end
         function splitBoundaryPoleUsesWholeNeighborPillars(testCase)
-            cfg=frameVoxelizationConfig(); cfg.roiLimits=[0 3 0 3]; cfg.exclusionHalfSize=0;
+            cfg=pillarGridConfig(); cfg.roiLimits=[0 3 0 3]; cfg.exclusionHalfSize=0;
             z=repelem(linspace(-1,3,12).',2);
             x=repmat([1.19;1.21],12,1); y=ones(size(x))*1.05;
             grid=pillarizePointCloud([x y z],cfg);
@@ -54,7 +51,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyFalse(isfield(result.columnMaps,'voxelStatistics'));
         end
         function horizontalDistributionIsNotAPole(testCase)
-            cfg=frameVoxelizationConfig(); cfg.roiLimits=[0 3 0 3]; cfg.exclusionHalfSize=0;
+            cfg=pillarGridConfig(); cfg.roiLimits=[0 3 0 3]; cfg.exclusionHalfSize=0;
             x=linspace(1.21,1.49,20).'; y=ones(size(x))*1.35;
             grid=pillarizePointCloud([x y zeros(size(x))],cfg);
             cloudCfg=coarseSemanticProbabilityCloudConfig(); cloudCfg.semanticNames="pole";

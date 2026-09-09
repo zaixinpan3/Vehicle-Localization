@@ -11,8 +11,9 @@ function cfg = coarseSemanticProbabilityCloudConfig()
 % Output:
 %   cfg: struct consumed by perceiveCoarseProbabilityCloud and
 %       buildCoarseSemanticProbabilityCloud
-    voxelCfg = frameVoxelizationConfig();
+    voxelCfg = pillarGridConfig();
     cfg = struct();
+    cfg.frameCalibration = lidarFrameCalibrationConfig();
     cfg.xMin = voxelCfg.roiLimits(1);
     cfg.xMax = voxelCfg.roiLimits(2);
     cfg.yMin = voxelCfg.roiLimits(3);

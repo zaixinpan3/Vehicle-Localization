@@ -1,7 +1,6 @@
 function params = resolvePoleDetectionParams(cfg)
 % resolvePoleDetectionParams: Read and sanitize the unified 2D pole
-% candidate parameters with compact defaults and optional compatibility
-% fallbacks.
+% candidate parameters with compact defaults.
 %
 % Input:
 %   cfg: off-ground processing configuration struct
@@ -17,8 +16,6 @@ function params = resolvePoleDetectionParams(cfg)
     params.baseConfidenceThreshold = 0.55;
     if isfield(cfg, "poleBaseConfidenceThreshold") && isscalar(cfg.poleBaseConfidenceThreshold) && isfinite(cfg.poleBaseConfidenceThreshold)
         params.baseConfidenceThreshold = double(cfg.poleBaseConfidenceThreshold);
-    elseif isfield(cfg, "poleThresholdAbs") && isscalar(cfg.poleThresholdAbs) && isfinite(cfg.poleThresholdAbs)
-        params.baseConfidenceThreshold = double(cfg.poleThresholdAbs);
     end
     params.baseConfidenceThreshold = min(max(params.baseConfidenceThreshold, 0), 1);
 
@@ -248,8 +245,6 @@ function params = resolvePoleDetectionParams(cfg)
     params.neighborhoodRadius = 2;
     if isfield(cfg, "poleAdaptiveNeighborhoodRadiusVoxels") && isscalar(cfg.poleAdaptiveNeighborhoodRadiusVoxels) && isfinite(cfg.poleAdaptiveNeighborhoodRadiusVoxels)
         params.neighborhoodRadius = max(0, round(double(cfg.poleAdaptiveNeighborhoodRadiusVoxels)));
-    elseif isfield(cfg, "poleRefineHorizontalStitchRadiusVoxels") && isscalar(cfg.poleRefineHorizontalStitchRadiusVoxels) && isfinite(cfg.poleRefineHorizontalStitchRadiusVoxels)
-        params.neighborhoodRadius = max(0, round(double(cfg.poleRefineHorizontalStitchRadiusVoxels)));
     end
 
     params.countQuantiles = [0.25, 0.90];

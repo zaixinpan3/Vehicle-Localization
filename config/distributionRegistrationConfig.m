@@ -3,8 +3,7 @@ function cfg = distributionRegistrationConfig()
 % Search limits describe the prediction basin, not global relocalization.
 % Similarity/curvature gates are engineering checks, not calibrated confidence.
     cfg = struct();
-    cfg.method = "geometricD2D"; % Explicit "densityOverlap" reproduces the old objective.
-    cfg.smoothingStandardDeviations = [1.0 0.35 0];
+    cfg.method = "geometricD2D";
     cfg.maximumIterationsPerScale = 40;
     cfg.maximumPoseCorrection = [3 3 deg2rad(12)];
     cfg.yawLeverArm = 10;

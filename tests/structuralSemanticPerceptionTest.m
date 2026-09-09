@@ -68,18 +68,18 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             accepted=validateFacadeCandidatePoints(points,offGround,finePerceptionConfig());
             testCase.verifyFalse(any(accepted));
         end
-        function recordedSignsMatchLegacyAndAllFinePointsHaveCandidates(testCase,dataset,frameIndex)
+        function recordedSignsMatchReferenceAndAllFinePointsHaveCandidates(testCase,dataset,frameIndex)
             file=fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','raw',dataset+'PointClouds.mat');
             testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,frameIndex);
             cfg=perceptionConfig(dataset); cfg.executionMode="offline";
             fine=perceiveFrame(frame,cfg);
-            cfg.executionMode="legacyFull"; legacy=perceiveFrame(frame,cfg);
+            reference=loadPerceptionMaskReference(dataset,frameIndex);
             audit=fine.refinement.trafficSign;
-            testCase.verifyEqual(fine.featureMasks.trafficSign,legacy.featureMasks.trafficSign);
+            testCase.verifyEqual(fine.featureMasks.trafficSign,reference.featureMasks.trafficSign);
             testCase.verifyEqual(audit.evaluatedPointIndices,audit.candidatePointIndices);
             testCase.verifyEqual(find(fine.featureMasks.trafficSign),sort(audit.candidatePointIndices(audit.accepted)));
-            testCase.verifyTrue(all(ismember(find(legacy.featureMasks.facade),facadeAudit(fine).candidatePointIndices)));
+            testCase.verifyTrue(all(ismember(find(reference.featureMasks.facade),facadeAudit(fine).candidatePointIndices)));
             testCase.verifyEqual(find(fine.featureMasks.facade), ...
                 sort(facadeAudit(fine).candidatePointIndices(facadeAudit(fine).accepted)));
         end

@@ -36,13 +36,14 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             testCase.verifyEqual(actual,registerPointsToGlobalFrame(points,row),'AbsTol',1e-12);
             testCase.verifyEqual(height,123,'AbsTol',0);
         end
-        function oldMapDoesNotInventHeight(testCase)
-            layer=struct('classLabel',"curb",'priorScore',0.5,'componentMeans',[0 0], ...
-                'componentCovariances',eye(2),'componentSupportAmplitudes',0.8);
-            cloud=temporalMapToProbabilityCloud(struct('layers',layer));
-            testCase.verifyFalse(cloud.components.heightAvailable);
-            testCase.verifyTrue(isnan(cloud.components.meanXYZ(3)));
-            testCase.verifyError(@() registrationSupport.projectSemanticProbabilityCloud(cloud,3),'VehicleLocalization:HeightUnavailable');
+        function planarMapDoesNotInventHeight(testCase)
+            [cfg,points,labels,frames]=heightProbabilityCloudTest.mapFixture();
+            map=buildTemporalStabilityGmmMap(points(:,1:2),labels,frames,cfg);
+            cloud=temporalMapToProbabilityCloud(map);
+            testCase.verifyFalse(any(cloud.components.heightAvailable));
+            testCase.verifyTrue(all(isnan(cloud.components.meanXYZ(:,3))));
+            testCase.verifyError(@() registrationSupport.projectSemanticProbabilityCloud(cloud,3), ...
+                'VehicleLocalization:HeightUnavailable');
         end
         function aggregatesWithinAndBetweenPillarHeight(testCase)
             [ground,offGround,cfg,points]=heightProbabilityCloudTest.groundFixture();

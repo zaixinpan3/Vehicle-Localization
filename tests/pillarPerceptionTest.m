@@ -7,7 +7,7 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
     end
     methods (Test)
         function sparsePillarsNeverAllocateHeightVolume(testCase)
-            cfg=frameVoxelizationConfig();
+            cfg=pillarGridConfig();
             cfg.roiLimits=[-30 30 -30 30 -1000 1000];
             cfg.maxRange=Inf;
             points=[10 2 0;10.01 2.01 50;11 3 5];
@@ -73,12 +73,11 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             dataRoot=string(getenv('VEHICLE_LOCALIZATION_DATA_ROOT'));
             matPath=fullfile(dataRoot,'raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(matPath));
-            legacyCfg=perceptionConfig(); legacyCfg.executionMode="legacyFull";
             cfg=perceptionConfig(); cfg.executionMode="offline";
             counts=zeros(1,3);
             for frameIndex=[260 300 326 370 450 550 700 850 1000 1150 150 600 900 1100 200 500 800 1050]
                 frame=loadPointCloudFrame(matPath,frameIndex);
-                reference=perceiveFrame(frame,legacyCfg);
+                reference=loadPerceptionMaskReference("Missisipi",frameIndex);
                 actual=perceiveFrame(frame,cfg);
                 for name=["curb" "roadMarking"]
                     testCase.verifyEqual(actual.featureMasks.(name),reference.featureMasks.(name), ...

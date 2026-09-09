@@ -1,12 +1,11 @@
 function pillars = pillarizePointCloud(frame, cfg)
 % pillarizePointCloud: Index whole XY pillars and retain their XYZ statistics.
-% Z is never quantized. voxelSize(1:2) supplies the compatibility XY spacing;
-% any third spacing, 3D lookup or statistics-mode setting is ignored.
+% Z is never quantized. voxelSize contains exactly two XY spacings.
 % Optional Z ROI limits crop returns but never divide a pillar.
     [xyz, indices, attributes, meta] = readPerceptionPoints(frame);
     spacing = double(cfg.voxelSize(:).');
-    if isscalar(spacing), spacing = [spacing spacing]; end
-    spacing = spacing(1:2);
+    assert(numel(spacing)==2,'perception:InvalidPillarSpacing', ...
+        'Whole pillars require exactly two XY spacings.');
     assert(all(isfinite(spacing) & spacing>0), 'Invalid XY pillar spacing.');
     roi = double(cfg.roiLimits(:).');
     assert(isempty(roi) || (any(numel(roi)==[4 6]) && all(isfinite(roi))), 'Invalid ROI.');

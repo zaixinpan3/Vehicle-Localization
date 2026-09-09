@@ -23,6 +23,8 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             run(fullfile(projectFolder, "setupVehicleLocalization.m"));
             loaded = load(fullfile(projectFolder, "tests", "reference", "lateralObserverDesign.mat"));
             testCase.StoredDesign = loaded.design;
+            current=lateralObserverConfig();
+            testCase.StoredDesign.cfg.hybrid=current.hybrid;
         end
     end
 
@@ -210,8 +212,8 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 "The scenario should exercise a nonzero vy*r correction.");
         end
 
-        function lowSpeedHoldZeroesTheSideSlipOutputs(testCase)
-        % lowSpeedHoldZeroesTheSideSlipOutputs: Below the valid side-slip speed
+        function invalidSideSlipSpeedZeroesTheOutputs(testCase)
+        % invalidSideSlipSpeedZeroesTheOutputs: Below the valid side-slip speed
         % the persistent interface tracks zero while the common lateral state
         % remains free to converge continuously.
             design = testCase.StoredDesign;
@@ -220,14 +222,14 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             measurements = struct();
             measurements.time = (0:(numSamples - 1)).' .* 0.01;
             measurements.steeringAngle = zeros(numSamples, 1);
-            measurements.longitudinalSpeed = 0.25 .* cfg.observer.minimumSpeed .* ones(numSamples, 1);
+            measurements.longitudinalSpeed = 0.25 .* cfg.hybrid.sideSlip.validSpeed .* ones(numSamples, 1);
             measurements.longitudinalAcceleration = zeros(numSamples, 1);
             measurements.lateralAcceleration = 0.2 .* ones(numSamples, 1);
             measurements.yawRate = 0.05 .* ones(numSamples, 1);
 
             estimate = runLateralVelocityObserver(measurements, design, cfg);
 
-            testCase.verifyTrue(all(estimate.lowSpeedHold));
+            testCase.verifyTrue(all(~estimate.diagnostics.sideSlipCommandValid));
             testCase.verifyEqual(estimate.sideSlipAngle, zeros(numSamples, 1), AbsTol=0);
             testCase.verifyEqual(estimate.sideSlipAngleRate, zeros(numSamples, 1), AbsTol=0);
             testCase.verifyTrue(all(isfinite(estimate.state(:))));

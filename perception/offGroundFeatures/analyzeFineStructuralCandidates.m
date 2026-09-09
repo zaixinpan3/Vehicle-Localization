@@ -8,7 +8,7 @@ function fineOffGround = analyzeFineStructuralCandidates(voxelGrid, offGroundCfg
 %
 % Input:
 %   voxelGrid: compact off-ground voxel metadata from perceiveFrame
-%   offGroundCfg: struct from offGroundFeatureConfig
+%   offGroundCfg: struct from fineStructuralConfig
 %   productCfg: struct from coarseSemanticProbabilityCloudConfig
 %
 % Output:
@@ -21,6 +21,7 @@ function fineOffGround = analyzeFineStructuralCandidates(voxelGrid, offGroundCfg
     [columnMaps, sparseFineGrid] = ...
         buildSparseColumnMaps(voxelGrid, offGroundCfg, productCfg);
     columnMaps.runLayerMap = single(columnMaps.maxRunLayerCount);
+    columnMaps.supportEvidence = columnMaps.runLayerMap;
     columnMaps.rawLayerCount = single(columnMaps.runLayerMap);
     columnMaps.supportScore = single(columnMaps.runLayerMap);
     columnMaps.pointScore = zeros(columnMaps.mapSize,"single");
@@ -28,16 +29,14 @@ function fineOffGround = analyzeFineStructuralCandidates(voxelGrid, offGroundCfg
     if any(ismember(string(productCfg.semanticNames),["pole","facade"]))
         [columnMaps.pointScore, columnMaps.lineScore, ...
             columnMaps.normalOrientation, columnMaps.blobness] = ...
-            buildFineColumnShapeScores(columnMaps.runLayerMap, ...
+            buildPillarShapeScores(columnMaps.runLayerMap, ...
             columnMaps.occupiedMask, offGroundCfg, columnMaps.dx, columnMaps.dy);
     end
 
     facade = struct("mask",false(columnMaps.mapSize));
     if any(string(productCfg.semanticNames)=="facade")
         facadeCfg = offGroundCfg;
-        facadeCfg.facadeDetectionEnabled = true;
-        facadeCfg.facadeRefineEnabled = false;
-        facade = extractFacadeFeatures(columnMaps, struct(), facadeCfg);
+        facade = extractFacadeFeatures(columnMaps, facadeCfg);
         facade = expandFacadePillarSupport(facade,columnMaps,offGroundCfg);
     end
 
@@ -257,7 +256,7 @@ function threshold = resolveTrafficThreshold(cfg)
 end
 
 function facade = expandFacadePillarSupport(facade,maps,cfg)
-% Move the legacy refinement halo into the offline candidate stage so every
+% Include the refinement halo into the offline candidate stage so every
 % point subsequently validated already belongs to a published candidate.
 % This expansion uses only pillar occupancy and distances between XY centers.
     if ~any(facade.mask(:)), return; end

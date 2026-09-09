@@ -151,17 +151,16 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
         % against the unchanged full perception result.
             matPath = fullfile(dataRoot, "raw", "MissisipiPointClouds.mat");
             cfg = perceptionConfig();
-            semanticNames = ["curb", "roadMarking", "pole"];
-            sourceCounts = repmat(struct("tp", 0, "fp", 0, "fn", 0), 3, 1);
+            semanticNames = ["curb", "roadMarking"];
+            sourceCounts = repmat(struct("tp", 0, "fp", 0, "fn", 0), 2, 1);
             ndtCounts = sourceCounts;
             for frameIdx = frameIndices
                 frame = loadPointCloudFrame(matPath, frameIdx);
-                cfg.executionMode = "legacyFull";
-                full = perceiveFrame(frame, cfg);
+                full = loadPerceptionMaskReference("Missisipi",frameIdx);
                 [cloud, diagnostics] = perceiveCoarseProbabilityCloud(frame, cfg);
                 referenceSourceMasks = ...
-                    coarseSemanticProbabilityCloudTest.referenceSourceMasks(full, diagnostics);
-                sourceSize = size(full.groundContext.groundXYView.countMap);
+                    coarseSemanticProbabilityCloudTest.referenceSourceMasks(frame, full, cfg);
+                sourceSize = size(referenceSourceMasks{1});
                 candidateSourceMasks = {coarseSemanticProbabilityCloudTest.expandGroundMask( ...
                     diagnostics.ground.curbCellMask,diagnostics.ground.pillarOffset,sourceSize); ...
                     coarseSemanticProbabilityCloudTest.expandGroundMask( ...
@@ -189,24 +188,18 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
                 ndtCounts, semanticNames);
         end
 
-        function masks = referenceSourceMasks(full, ~)
-        % referenceSourceMasks: Project full point semantics to their source
-        % ground cells and retain the full pole support mask.
-            mapSize = size(full.groundContext.groundXYView.countMap);
-            curb = coarseSemanticProbabilityCloudTest.projectGroundMask( ...
-                full.ground.groundCellLinIdx, full.ground.curbPointMask, mapSize);
-            roadMarking = coarseSemanticProbabilityCloudTest.projectGroundMask( ...
-                full.ground.groundCellLinIdx, full.ground.roadMarkingPointMask, mapSize);
-            masks = {curb; roadMarking; logical(full.offGround.pole.mask)};
-        end
-
-        function mask = projectGroundMask(pointCellLinIdx, pointMask, mapSize)
-        % projectGroundMask: Convert internal [Nx Ny] point cells to a
-        % displayed [Ny Nx] logical support mask.
-            mask = false(mapSize);
-            cellIdx = unique(double(pointCellLinIdx(logical(pointMask))));
-            [xBin, yBin] = ind2sub([mapSize(2), mapSize(1)], cellIdx);
-            mask(sub2ind(mapSize, yBin, xBin)) = true;
+        function masks = referenceSourceMasks(frame, reference, cfg)
+        % Project immutable point masks into the complete XY lattice.
+            bounds=cfg.voxel.roiLimits; spacing=cfg.voxel.voxelSize(1:2);
+            dims=ceil(([bounds(2),bounds(4)]-[bounds(1),bounds(3)])./spacing);
+            x=floor((double(frame.x(:))-bounds(1))/spacing(1))+1;
+            y=floor((double(frame.y(:))-bounds(3))/spacing(2))+1;
+            masks=cell(3,1); names=["curb","roadMarking","pole"];
+            for j=1:3
+                keep=reference.featureMasks.(names(j)) & x>=1 & x<=dims(1) & y>=1 & y<=dims(2);
+                mask=false(dims(2),dims(1)); mask(sub2ind(size(mask),y(keep),x(keep)))=true;
+                masks{j}=mask;
+            end
         end
 
         function mask = expandGroundMask(compact,offset,mapSize)

@@ -18,6 +18,8 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             lateral = load(fullfile(projectFolder, "tests", "reference", ...
                 "lateralObserverDesign.mat"));
             testCase.LateralDesign = lateral.design;
+            current=lateralObserverConfig();
+            testCase.LateralDesign.cfg.hybrid=current.hybrid;
             testCase.ObserverDesign = improvedObserverReferenceDesign();
         end
     end

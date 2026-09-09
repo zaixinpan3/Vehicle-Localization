@@ -220,19 +220,16 @@ function available=hasHeight(components)
 end
 
 function status = validateRegistrationCalibration(fixedCloud,movingCloud)
-% validateRegistrationCalibration: Refuse known inconsistent frame transforms.
-% Legacy clouds with no provenance remain usable only with an identity peer.
-    fixedKnown=isfield(fixedCloud,'frameCalibration');
-    movingKnown=isfield(movingCloud,'frameCalibration');
-    fixed=lidarFrameCalibrationConfig(); moving=fixed;
-    if fixedKnown, fixed=validateLidarFrameCalibration(fixedCloud.frameCalibration); end
-    if movingKnown, moving=validateLidarFrameCalibration(movingCloud.frameCalibration); end
+% Require explicit calibration provenance from both current cloud producers.
+    assert(isfield(fixedCloud,'frameCalibration') && isfield(movingCloud,'frameCalibration'), ...
+        'VehicleLocalization:MissingCalibration','Both clouds require frameCalibration.');
+    fixed=validateLidarFrameCalibration(fixedCloud.frameCalibration);
+    moving=validateLidarFrameCalibration(movingCloud.frameCalibration);
     same=norm(fixed.rotation-moving.rotation,'fro')<1e-8 && ...
         norm(fixed.translation-moving.translation)<1e-8;
     assert(same,'VehicleLocalization:CalibrationMismatch', ...
         'Map and source require the same frame calibration; rebuild the map with the selected transform.');
-    status="unverifiedLegacy";
-    if fixedKnown && movingKnown, status="verifiedTransform"; end
+    status="verifiedTransform";
 end
 
 function [energy, gradient] = spatialGaussianOverlap(fixed, moving, pose)

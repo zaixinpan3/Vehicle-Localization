@@ -28,15 +28,14 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     maps.moments=projectStatistics(stats,prod(mapSize),cloudCfg);
     facade=struct('mask',false(mapSize));
     if any(cloudCfg.semanticNames=="facade")
-        facadeCfg=cfg; facadeCfg.facadeDetectionEnabled=true;
-        facadeCfg.facadeRefineEnabled=false;
+        facadeCfg=cfg;
         % Facade voting uses return support along a line; pole contrast uses
         % vertical spread. Both maps remain one statistic per whole pillar.
         facadeMaps=maps;
         facadeMaps.supportEvidence=single(maps.pillarCounts);
         [~,facadeMaps.lineScore,facadeMaps.normalOrientation]=buildPillarShapeScores( ...
             facadeMaps.supportEvidence,maps.occupiedMask,cfg,maps.dx,maps.dy);
-        facade=extractFacadeFeatures(facadeMaps,struct(),facadeCfg);
+        facade=extractFacadeFeatures(facadeMaps,facadeCfg);
         facade=expandFacadePillarSupport(facade,maps,cfg);
         maps.facadeLineScore=facadeMaps.lineScore;
     end
@@ -87,7 +86,7 @@ function moments=projectStatistics(stats,numCells,cfg)
     moments.heightCovariance(ids,:)=projected(:,4:6);
 end
 function facade = expandFacadePillarSupport(facade,maps,cfg)
-% Move the legacy refinement halo into the coarse candidate stage so every
+% Include the refinement halo into the coarse candidate stage so every
 % point later considered offline already belongs to a published candidate.
 % This expansion uses only pillar occupancy and distances between XY centers.
     if ~any(facade.mask(:)), return; end

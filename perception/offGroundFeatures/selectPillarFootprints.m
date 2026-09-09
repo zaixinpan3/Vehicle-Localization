@@ -2,7 +2,7 @@ function [footprint,context,compact,ratio,componentSum,contextSum]= ...
         selectPillarFootprints(core,support,tieBreaker,evidence,cfg,additionalFootprint)
 % selectPillarFootprints: Select compact whole-pillar supports from XY maps.
 % Inputs are one scalar per pillar. The same XY geometry serves the modern
-% statistical detector and the explicitly offline historical detector.
+% statistical detector and the offline fine detector.
     footprint=buildPoleFootprintCandidates(core,support,tieBreaker,evidence,cfg);
     footprint=footprint | additionalFootprint;
     [context,ratio,componentSum,contextSum]=filterPoleCandidatesByContextContrast(footprint,evidence,cfg);

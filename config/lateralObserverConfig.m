@@ -66,10 +66,6 @@ function cfg = lateralObserverConfig()
     cfg.observer.integrationMethod = "rk4";
     cfg.observer.nonlinearity = @(x) zeros(2, 1);
     cfg.observer.initialState = [0.0; 0.0];
-    % Retained for compatibility. The hybrid side-slip interface uses the
-    % corresponding validSpeed field below and never hard-zeroes an estimate.
-    cfg.observer.minimumSpeed = 1.0;
-
     % Hybrid runtime. The common master state is [lateral velocity;
     % lateral-accelerometer bias]. The LPV state above remains a hidden,
     % continuously evolving information source and is evaluated only inside
@@ -128,7 +124,7 @@ function cfg = lateralObserverConfig()
     % It tracks zero while the velocity direction is undefined and tracks the
     % wrapped atan2 command when it is valid; the state is never reset.
     cfg.hybrid.sideSlip = struct();
-    cfg.hybrid.sideSlip.validSpeed = cfg.observer.minimumSpeed;
+    cfg.hybrid.sideSlip.validSpeed = 1.0;
     cfg.hybrid.sideSlip.fullParticipationSpeed = ...
         cfg.hybrid.dynamic.fullParticipationSpeed;
     cfg.hybrid.sideSlip.naturalFrequency = 12.0;

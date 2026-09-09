@@ -133,13 +133,13 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
     for k=1:numel(attributes), input.(attributes{k})=source.pointAttributes.(attributes{k}); end
     base=0;
     if ~isempty(context.voxelGrid.points), base=min(context.voxelGrid.points(:,3)); end
-    voxelCfg=frameVoxelizationConfig();
+    voxelCfg=fineVoxelizationConfig();
     voxelCfg.voxelSize=[source.pillarGeometry.cellSize,cfg.fine.poleSupportHeightResolution];
     voxelCfg.roiLimits=[]; voxelCfg.exclusionHalfSize=0;
     voxelCfg.minCorner=[source.pillarGeometry.origin,base];
-    voxelCfg.statisticsMode="sparse"; voxelCfg.buildPointLookup=false;
+
     fineGrid=voxelizePointCloud(input,voxelCfg);
-    fineCfg=offGroundFeatureConfig();
+    fineCfg=fineStructuralConfig();
     common=intersect(fieldnames(fineCfg),fieldnames(cfg.offGroundFeatures));
     for k=1:numel(common), fineCfg.(common{k})=cfg.offGroundFeatures.(common{k}); end
     fineCfg.useNativeKernels=isfield(cfg.offGroundFeatures,'useNativeKernels') && cfg.offGroundFeatures.useNativeKernels;

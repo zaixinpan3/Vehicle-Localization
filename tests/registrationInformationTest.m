@@ -129,7 +129,7 @@ function cloud=conflictingRoad()
     cloud.components=struct('mean',repmat(c.mean,2,1), ...
         'covariance',repmat(c.covariance,1,1,2), ...
         'semanticName',[c.semanticName;repmat("roadMarking",10,1)], ...
-        'mixtureWeight',ones(20,1)/20,'numComponents',20);
+        'mixtureWeight',ones(20,1)/20,'numComponents',20,'repeatability',ones(20,1));
 end
 
 function cloud=poles()
@@ -137,5 +137,6 @@ function cloud=poles()
         'covariance',repmat(.2*eye(2),1,1,4), ...
         'semanticName',repmat("pole",4,1), ...
         'mixtureWeight',ones(4,1)/4,'numComponents',4);
-    cloud=struct('components',c);
+    c.repeatability=ones(c.numComponents,1);
+    cloud=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());
 end

@@ -30,10 +30,8 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
     calibration=lidarFrameCalibrationConfig();
     if isfield(perceptionCfg,'frameCalibration'), calibration=validateLidarFrameCalibration(perceptionCfg.frameCalibration); end
 
-    if string(perceptionCfg.executionMode) ~= "legacyFull"
-        perceptionCfg.executionMode = "offline";
-        perceptionCfg.featureNames = featureNames;
-    end
+    perceptionCfg.executionMode = "offline";
+    perceptionCfg.featureNames = featureNames;
     mappingSupport.logStep(cfg, "feature.collect", "frameCount=%d | featureCount=%d", numRequestedFrames, numFeatures);
     for frameListIdx = 1:numRequestedFrames
         frameIdx = frameIndices(frameListIdx);

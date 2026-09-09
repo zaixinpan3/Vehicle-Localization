@@ -35,6 +35,7 @@ function map = buildTemporalStabilityGmmMap(points, labels, observations, cfg)
         'fieldSemantics',"referenceMassTimesRepeatabilityGaussianIntensity", ...
         'coverageSemantics',"ownedFittingRegionsNotVisibility", ...
         'observationBlockPolicy',"explicitIdsOrFixedFrameGroups",'config',cfg);
+    map.frameCalibration=validateLidarFrameCalibration(cfg.frameCalibration);
     if ~isempty(layers), map.layers=vertcat(layers{:}); end
     mappingSupport.validateRepeatedObservationMap(map);
 end

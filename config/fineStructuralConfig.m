@@ -1,19 +1,17 @@
-function cfg = offGroundFeatureConfig()
-% offGroundFeatureConfig: Parameters of the non-ground feature branch: fine
+function cfg = fineStructuralConfig()
+% fineStructuralConfig: Parameters of the non-ground feature branch: fine
 % voxel grid and column shape scores, traffic-sign channel, facade line
 % detection and refinement, and pole candidate detection and validation. The
 % values reproduce the tuned RobustVehicleLocalization configuration.
-% facadeDetectionEnabled is a dataset policy: the Mississippi suburban route
-% runs without facades, the Downtown route with them.
 %
 % Input:
 %   none
 %
 % Output:
-%   cfg: flat parameter struct consumed by extractOffGroundFeatures
+%   cfg: detailed offline structural candidate parameters
     cfg = struct();
 
-    % Fine-column point-versus-line shape scores (the voxel size comes from frameVoxelizationConfig)
+    % Fine-column point-versus-line shape scores (the voxel size comes from fineVoxelizationConfig)
     cfg.fineShapeScoreNeighborhoodRadiusCells = 2;
     cfg.fineShapeScoreWeightPower = 2.0;
     cfg.fineShapeScoreLinearityPower = 1.0;
@@ -24,7 +22,6 @@ function cfg = offGroundFeatureConfig()
     cfg.trafficSignIntensityThreshold = 1600;
 
     % Facade line detection by oriented weighted Hough voting on the fine-column map
-    cfg.facadeDetectionEnabled = false;
     cfg.thetaResolutionDeg = 5;
     cfg.thetaPriorRangeDeg = [];
     cfg.orientationToleranceDeg = 25;
@@ -56,15 +53,8 @@ function cfg = offGroundFeatureConfig()
     cfg.fitWeightExponent = 0.0;
     cfg.facadeMaskUseKeptPeaks = true;
 
-    % Facade refinement by local fine-grid patch planarity and normal alignment
-    cfg.facadeRefineEnabled = true;
+    % Horizontal search halo for offline plane validation.
     cfg.facadeRefineHorizontalSupportRadiusVoxels = 2;
-    cfg.facadeRefinePatchSizeVoxels = [4, 4, 6];
-    cfg.facadeRefineMinPatchVoxels = 8;
-    cfg.facadeRefineMinPatchPoints = 30;
-    cfg.facadeRefinePlanarityThreshold = 0.35;
-    cfg.facadeRefineMaxNormalAngleDeg = 20;
-    cfg.facadeRefineKeepSeedWhenEmpty = true;
 
     % Pole candidate detection on the fine-column run-layer map
     cfg.poleCountQuantiles = [0.25, 0.90];
@@ -118,18 +108,4 @@ function cfg = offGroundFeatureConfig()
     cfg.poleMaxFootprintSpanCells = 2;
     cfg.poleAdaptiveNeighborhoodRadiusVoxels = 0;
 
-    % Pole validation by local fine-grid slice density (refinePolesWithFineGrid)
-    cfg.poleRefineEnabled = true;
-    cfg.poleRefineMinCandidateSlices = 4;
-    cfg.poleRefineMinLocalRatio = 0.70;
-    cfg.poleRefineMinGlobalRatio = 0.70;
-    cfg.poleRefineMinMeanPointScore = 0.70;
-    cfg.purpleRatioThreshold = 0.60;
-    cfg.purpleRatioBlockSize = 1;
-    cfg.purpleMinSliceObjectPoints = 2;
-    cfg.poleRefineRelaxedMinCandidateSlicesEnabled = true;
-    cfg.poleRefineRelaxedMaxBaseHeightMeters = 0.5;
-    cfg.poleRefineRelaxedMinLocalRatio = 0.75;
-    cfg.poleRefineRelaxedMinGlobalRatio = 0.70;
-    cfg.poleVerticalBridgeRadiusVoxels = 1;
 end

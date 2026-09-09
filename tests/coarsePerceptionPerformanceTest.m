@@ -53,11 +53,11 @@ classdef coarsePerceptionPerformanceTest < matlab.unittest.TestCase
             run=single(randi(stream,12,shapeCase(1),shapeCase(2))-1);
             run(1)=NaN; run(end)=Inf;
             occupied=rand(stream,size(run))>0.2;
-            cfg=offGroundFeatureConfig(); cfg.fineShapeScoreNeighborhoodRadiusCells=shapeCase(3);
+            cfg=fineStructuralConfig(); cfg.fineShapeScoreNeighborhoodRadiusCells=shapeCase(3);
             cfg.useNativeKernels=false;
-            [point,line,orientation]=buildFineColumnShapeScores(run,occupied,cfg,0.2,0.4);
+            [point,line,orientation]=buildPillarShapeScores(run,occupied,cfg,0.2,0.4);
             cfg.useNativeKernels=true;
-            [nativePoint,nativeLine,nativeOrientation]=buildFineColumnShapeScores(run,occupied,cfg,0.2,0.4);
+            [nativePoint,nativeLine,nativeOrientation]=buildPillarShapeScores(run,occupied,cfg,0.2,0.4);
             testCase.verifyEqual(nativePoint,point);
             testCase.verifyEqual(nativeLine,line,'AbsTol',single(2e-7));
             testCase.verifyEqual(isnan(nativeOrientation),isnan(orientation));
@@ -70,7 +70,7 @@ classdef coarsePerceptionPerformanceTest < matlab.unittest.TestCase
             z=-1.44+0.01*x+0.03*sin(y);
             z(x>4 & y>1)=z(x>4 & y>1)+0.45;
             frame=[x(:),y(:),z(:)];
-            voxelCfg=frameVoxelizationConfig(); voxelCfg.statisticsMode="sparse";
+            voxelCfg=fineVoxelizationConfig();
             grid=voxelizePointCloud(frame,voxelCfg);
             cfg=groundSegmentationConfig(); cfg.slopeGridXYCellSize=spacing;
             cfg.useNativeKernels=false; reference=segmentGround(grid,cfg);
@@ -114,18 +114,15 @@ classdef coarsePerceptionPerformanceTest < matlab.unittest.TestCase
             testCase.verifyEqual(native.probabilityCloud.components.semanticProbability, ...
                 reference.probabilityCloud.components.semanticProbability,'AbsTol',1e-10);
         end
-        function omittedInverseLookupPreservesForwardMembership(testCase)
-            cfg=frameVoxelizationConfig(); cfg.statisticsMode="sparse";
+        function sparseFineIndexPreservesOriginalMembership(testCase)
+            cfg=fineVoxelizationConfig(); cfg.roiLimits=[-50 50 -50 50 -2 6];
             points=[10 2 -1;10.1 2.1 4;10.1 2.1 -0.8;11 3 0;NaN 0 0];
-            full=voxelizePointCloud(points,cfg);
-            cfg.buildPointLookup=false; lean=voxelizePointCloud(points,cfg);
-            testCase.verifyEqual(lean.points,full.points);
-            testCase.verifyEqual(lean.pointIndices,full.pointIndices);
-            testCase.verifyEqual(lean.pointVoxelSub,full.pointVoxelSub);
-            testCase.verifyEqual(lean.pointVoxelLinIdx,full.pointVoxelLinIdx);
-            testCase.verifyEmpty(lean.voxelPointLocalIdx);
-            testCase.verifyFalse(lean.hasPointLookup);
-            testCase.verifyTrue(isnan(lean.numOccupiedVoxels));
+            grid=voxelizePointCloud(points,cfg);
+            bins=floor((points(1:4,:)-grid.gridConfig.minCorner)./cfg.voxelSize)+1;
+            testCase.verifyEqual(grid.points,points(1:4,:));
+            testCase.verifyEqual(grid.pointIndices,int32((1:4).'));
+            testCase.verifyEqual(grid.pointVoxelSub,int32(bins));
+            testCase.verifyFalse(any(isfield(grid,{'count','sumX','voxelPointLocalIdx'})));
         end
         function recordedCompactRasterPreservesPublicPillarIdsAndFinePoints(testCase,frameIndex)
             root=fileparts(fileparts(mfilename('fullpath')));

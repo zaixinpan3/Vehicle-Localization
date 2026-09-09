@@ -8,7 +8,7 @@ function cfg = semanticNdtGridMapConfig()
 %
 % Output:
 %   cfg: struct consumed by buildSemanticNdtGridMap
-    voxelCfg = frameVoxelizationConfig();
+    voxelCfg = pillarGridConfig();
     cfg = struct();
     cfg.xMin = voxelCfg.roiLimits(1);
     cfg.xMax = voxelCfg.roiLimits(2);

@@ -101,22 +101,25 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
             testCase.verifyEqual([moments.mean,moments.meanZ],mean(expected,1),'AbsTol',1e-12);
             testCase.verifyEqual(heightProbabilityCloudTest.unpack(moments),cov(expected,1),'AbsTol',1e-12);
         end
-        function rejectsMismatchedCalibrationAndExposesLegacyProvenance(testCase)
+        function requiresMatchingExplicitCalibration(testCase)
             cloud=distributionRegistrationTest.exampleCloud();
             other=cloud; other.frameCalibration=lidarFrameCalibrationConfig();
             cfg=geometricRegistrationTest.configuration();
-            legacy=registerSemanticProbabilityCloud(cloud,other,[0 0 0],cfg);
+            current=registerSemanticProbabilityCloud(cloud,other,[0 0 0],cfg);
             other.frameCalibration.translation=[.1 0 0];
-            testCase.verifyEqual(legacy.height.calibrationStatus,"unverifiedLegacy");
+            testCase.verifyEqual(current.height.calibrationStatus,"verifiedTransform");
+            missing=rmfield(cloud,'frameCalibration');
+            testCase.verifyError(@() registerSemanticProbabilityCloud(missing,cloud,[0 0 0],cfg), ...
+                'VehicleLocalization:MissingCalibration');
             testCase.verifyError(@() registerSemanticProbabilityCloud(cloud,other,[0 0 0],cfg), ...
                 'VehicleLocalization:CalibrationMismatch');
         end
         function exportsCalibrationFromSelectedMapWindow(testCase)
-            layer=struct('classLabel',"curb",'priorScore',1,'componentMeans',[0 0], ...
-                'componentCovariances',eye(2),'componentSupportAmplitudes',1);
+            cfg=temporalStabilityMapConfig(); cfg.classes="curb";
             calibration=lidarFrameCalibrationConfig(); calibration.translation=[.1 .2 .3];
-            map=struct('layers',layer,'frameCalibration',calibration);
-            cloud=temporalMapToProbabilityCloud(struct('batchMaps',struct('gmmMap',map)));
+            cfg.frameCalibration=calibration;
+            map=buildTemporalStabilityGmmMap(zeros(0,2),strings(0,1),zeros(0,1),cfg);
+            cloud=temporalMapToProbabilityCloud(map);
             testCase.verifyEqual(cloud.frameCalibration,calibration);
         end
         function rejectsInvalidSemanticQuality(testCase)
@@ -162,7 +165,8 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
             means=[(-4:2:4).',zeros(5,1);(-4:2:4).',4*ones(5,1)];
             c=struct('mean',means,'covariance',repmat(diag([2 .01]),1,1,10), ...
                 'semanticName',repmat("curb",10,1),'mixtureWeight',ones(10,1)/10,'numComponents',10);
-            cloud=struct('components',c);
+            c.repeatability=ones(c.numComponents,1);
+            cloud=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());
         end
         function [observations,rotation]=calibrationFixture()
             angle=deg2rad(3);
@@ -187,5 +191,6 @@ function cloud=repeatedCloud(copies)
     cloud.components=struct('mean',repmat(c.mean,copies,1), ...
         'covariance',repmat(c.covariance,1,1,copies), ...
         'mixtureWeight',repmat(c.mixtureWeight,copies,1), ...
-        'semanticName',repmat(c.semanticName,copies,1),'numComponents',6*copies);
+        'semanticName',repmat(c.semanticName,copies,1),'numComponents',6*copies, ...
+        'repeatability',ones(6*copies,1));
 end

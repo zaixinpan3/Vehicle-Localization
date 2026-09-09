@@ -20,8 +20,8 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
 %       and yawRate. An optional logical dynamicValid series can immediately
 %       withdraw the LPV information channel without resetting any state.
 %   design: struct from designLateralObserverGains
-%   cfg: optional struct from lateralObserverConfig. Stored legacy designs
-%       without cfg.hybrid receive the current hybrid defaults.
+%   cfg: optional current struct from lateralObserverConfig. Designs
+%       must include the current hybrid runtime configuration.
 %
 % Output:
 %   estimate: struct containing the master and hidden dynamic states, smooth
@@ -30,7 +30,8 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     if nargin < 3 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
-    cfg = resolveRuntimeConfig(cfg);
+    assert(isfield(cfg,"hybrid"),"VehicleLocalization:MissingHybridConfiguration", ...
+        "Use the current lateralObserverConfig.");
     measurements = normalizeMeasurements(measurements);
     settings = validateRuntimeConfiguration(cfg, design);
     layout = stateLayout();
@@ -138,7 +139,6 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     estimate.sideSlipAngle = sideSlipHistory(:, 1);
     estimate.sideSlipAngleRate = sideSlipHistory(:, 2);
     estimate.sideSlipCommand = sideSlipCommand;
-    estimate.lowSpeedHold = ~sideSlipCommandValid;
     estimate.innovation = innovationHistory;
     estimate.gainNorm = gainNorm;
     estimate.scheduledSpeed = measurements.longitudinalSpeed;
@@ -428,29 +428,6 @@ function measurements = normalizeMeasurements(measurements)
     assert(all(diff(measurements.time) > 0), "measurements.time must be strictly increasing.");
     assert(all(measurements.longitudinalSpeed >= 0), ...
         "measurements.longitudinalSpeed must be nonnegative.");
-end
-
-function cfg = resolveRuntimeConfig(cfg)
-% resolveRuntimeConfig Add current hybrid defaults to stored legacy designs.
-    defaults = lateralObserverConfig();
-    hadHybridConfiguration = isfield(cfg, "hybrid");
-    cfg = fillMissingFields(cfg, defaults);
-    if ~hadHybridConfiguration && isfield(cfg.observer, "minimumSpeed")
-        cfg.hybrid.sideSlip.validSpeed = double(cfg.observer.minimumSpeed);
-    end
-end
-
-function resolved = fillMissingFields(resolved, defaults)
-% fillMissingFields Recursively preserve supplied values and add new defaults.
-    names = fieldnames(defaults);
-    for fieldIdx = 1:numel(names)
-        name = names{fieldIdx};
-        if ~isfield(resolved, name)
-            resolved.(name) = defaults.(name);
-        elseif isstruct(defaults.(name)) && isstruct(resolved.(name))
-            resolved.(name) = fillMissingFields(resolved.(name), defaults.(name));
-        end
-    end
 end
 
 function settings = validateRuntimeConfiguration(cfg, design)

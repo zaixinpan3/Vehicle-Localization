@@ -70,8 +70,8 @@ explicit design reference, not a claim of identified sensor precision.
 `diagnostics.lidarPoseWeight`, `gpsPoseWeight`, `totalNormalizedPoseWeight`
 and the complete 7x3 `lidarPoseGain` expose the actual matrices. These
 histories refer to causal delivery time. The first two outputs of
-`computeLidarInformationWeights` are retained
-as compatibility summaries. The fourth output is the complete pose weight,
+`computeLidarInformationWeights` report the translation block and heading
+diagonal for diagnostics. The fourth output is the complete pose weight,
 which the runtime uses without discarding cross terms.
 
 Automatic initialization applies the bounded directional weight to a

@@ -90,20 +90,17 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             cloud.components.covariance=[1 2;2 1];
             testCase.verifyError(@() mappingSupport.validateSemanticProbabilityCloud(cloud),'VehicleLocalization:InvalidCovariance');
         end
-        function temporalExportUsesIntegratedSupportAndOneWindow(testCase)
-            layer=struct('classLabel',"curb",'priorScore',0.5, ...
-                'componentMeans',[0 0;2 0],'componentCovariances',cat(3,eye(2),4*eye(2)), ...
-                'componentSupportAmplitudes',[0.8;0.4],'componentMixtureWeights',[0.99;0.01]);
-            map=struct('layers',layer);
-            batches=struct('batchMaps',repmat(struct('gmmMap',map),2,1));
-            cloud=temporalMapToProbabilityCloud(batches,2);
-            testCase.verifyEqual(cloud.components.numComponents,2);
-            testCase.verifyEqual(cloud.components.mixtureWeight,[1;2]/3,'AbsTol',1e-12);
-            testCase.verifyEqual(cloud.sourceBatchIndex,2);
-            testCase.verifyEqual(map.layers.componentMixtureWeights,[0.99;0.01]);
+        function rejectsUnsupportedMapExport(testCase)
+            map=struct('layers',struct());
+            testCase.verifyError(@() temporalMapToProbabilityCloud(map), ...
+                'VehicleLocalization:UnsupportedMapSchema');
+            testCase.verifyError(@() queryTemporalStabilityGmmMap(map,[0 0]), ...
+                'VehicleLocalization:UnsupportedMapSchema');
         end
         function emptyMapProducesRejectedResult(testCase)
-            empty=temporalMapToProbabilityCloud([]);
+            cfg=temporalStabilityMapConfig(); cfg.classes="pole";
+            map=buildTemporalStabilityGmmMap(zeros(0,2),strings(0,1),zeros(0,1),cfg);
+            empty=temporalMapToProbabilityCloud(map);
             testCase.verifyEqual(scoreSemanticProbabilityCloudAlignment(empty,empty,[0 0 0]),0);
             result=registerSemanticProbabilityCloud(empty,empty,[0 0 0]);
             testCase.verifyFalse(result.accepted);
@@ -125,7 +122,8 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             c=struct('mean',means,'covariance',covariance, ...
                 'semanticName',["curb";"pole";"roadMarking";"curb";"pole";"roadMarking"], ...
                 'mixtureWeight',ones(6,1)/6,'numComponents',6);
-            cloud=struct('components',c);
+            c.repeatability=ones(c.numComponents,1);
+            cloud=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());
         end
         function cloud=transform(cloud,pose)
             r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];

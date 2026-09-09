@@ -7,7 +7,7 @@ function ndtMap = buildSemanticNdtGridMap(frame, coarseProduct, cfg)
 %
 % Input:
 %   frame: organized point-cloud frame with x and y fields
-%   coarseProduct: buildSemanticVoxelGrid product or semanticGrid struct with
+%   coarseProduct: semanticGrid struct with
 %       primaryTagVolume, semanticNames, and recovery point mappings
 %   cfg: semanticNdtGridMapConfig struct with fixed 2D grid, semantic class,
 %       point-count, covariance, and storage controls

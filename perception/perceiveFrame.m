@@ -2,11 +2,10 @@ function perception = perceiveFrame(frame, cfg)
 % perceiveFrame: Shared pillar analysis for online localization and mapping.
 % coarseProbabilityCloud (default) returns semantic pillar candidates and
 % empirical planar Gaussian components, without point feature refinement.
-% offline (alias full) independently reconstructs detailed structural
+% offline independently reconstructs detailed structural
 % candidates and explicitly evaluates their points for mapping. Its featureMasks
 % address the original organized frame. Ground segmentation is common
 % preprocessing in both modes, not point-level semantic feature refinement.
-% legacyFull reproduces historical outputs solely for baseline comparisons.
 % cfg is produced by perceptionConfig; frame requires x, y, z fields.
     assert(isstruct(frame) && all(isfield(frame, ["x", "y", "z"])), ...
         "frame must be an organized point-cloud struct with x, y, and z fields.");
@@ -14,67 +13,27 @@ function perception = perceiveFrame(frame, cfg)
         "cfg must be a struct from perceptionConfig.");
 
     mode = string(cfg.executionMode);
-    legacyMode = mode == "legacyFull";
     featureNames = validatePerceptionFeatureNames(cfg.featureNames);
-    if ~legacyMode
-        assert(~isfield(cfg.offGroundFeatures,"facadeDetectionEnabled") && ...
-            (~isfield(cfg,"coarseProbabilityCloud") || ~isfield(cfg.coarseProbabilityCloud,"semanticNames")), ...
-            "perception:ObsoleteFeatureSelection", ...
-            "Select all invocation channels with cfg.featureNames; remove the old nested selectors.");
-    end
+    assert(~isfield(cfg.offGroundFeatures,"facadeDetectionEnabled") && ...
+        (~isfield(cfg,"coarseProbabilityCloud") || ~isfield(cfg.coarseProbabilityCloud,"semanticNames")), ...
+        "perception:ObsoleteFeatureSelection", ...
+        "Select all invocation channels with cfg.featureNames; remove the old nested selectors.");
     backend = "auto";
     if isfield(cfg, "executionBackend"), backend = cfg.executionBackend; end
-    useNative = ~legacyMode && perceptionNativeAvailable(backend);
-    if ~legacyMode
-        cfg.groundSegmentation.slopeGridXYCellSize=cfg.voxel.voxelSize(1:2);
-    elseif numel(cfg.voxel.voxelSize)==2
-        legacyGeometry=frameVoxelizationConfig();
-        cfg.voxel.voxelSize=[cfg.voxel.voxelSize,legacyGeometry.voxelSize(3)];
-        cfg.voxel.statisticsMode=legacyGeometry.statisticsMode;
-    end
+    useNative = perceptionNativeAvailable(backend);
+    cfg.groundSegmentation.slopeGridXYCellSize=cfg.voxel.voxelSize(1:2);
     cfg.voxel.useNativeKernels = useNative;
     cfg.groundSegmentation.useNativeKernels = useNative;
     cfg.groundFeatures.road.useNativeKernels = useNative;
     cfg.groundFeatures.curb.useNativeKernels = useNative;
-    cfg.groundFeatures.curb.compactRaster = ~legacyMode && ...
-        (~isfield(cfg,"compactGroundRaster") || cfg.compactGroundRaster);
+    cfg.groundFeatures.curb.compactRaster = (~isfield(cfg,"compactGroundRaster") || cfg.compactGroundRaster);
     cfg.offGroundFeatures.useNativeKernels = useNative;
-    assert(any(mode == ["coarseProbabilityCloud", "offline", "full", "legacyFull"]), ...
-        "Unknown perception execution mode.");
-    if legacyMode
-        legacyOffGround = offGroundFeatureConfig();
-        supplied = fieldnames(cfg.offGroundFeatures);
-        for k=1:numel(supplied)
-            name=supplied{k};
-            if isfield(legacyOffGround,name) && ~strcmp(name,'facadeRefineEnabled')
-                legacyOffGround.(name)=cfg.offGroundFeatures.(name);
-            end
-        end
-        if ~isfield(cfg.offGroundFeatures,'facadeDetectionEnabled')
-            legacyOffGround.facadeDetectionEnabled=any(featureNames=="facade");
-        end
-        cfg.offGroundFeatures=legacyOffGround;
-        if ~isfield(cfg.offGroundFeatures,"facadeDetectionEnabled")
-            cfg.offGroundFeatures.facadeDetectionEnabled = any(featureNames=="facade");
-        end
-        voxelGrid = voxelizePointCloud(frame, cfg.voxel);
-    else
-        voxelGrid = pillarizePointCloud(frame, cfg.voxel);
-    end
+    assert(any(mode == ["coarseProbabilityCloud", "offline"]), ...
+        "perception:InvalidExecutionMode", "Use coarseProbabilityCloud or offline.");
+    voxelGrid = pillarizePointCloud(frame, cfg.voxel);
     groundPointIdx = segmentGround(voxelGrid, cfg.groundSegmentation);
     [groundContext, offGroundVoxelGrid] = buildBranchInputs( ...
-        frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2), legacyMode, cfg.groundFeatures.curb);
-
-    % Explicit compatibility path for historical regression artifacts only.
-    if legacyMode
-        ground = extractGroundFeatures(groundContext, frame, cfg.groundFeatures);
-        offGround = extractOffGroundFeatures(offGroundVoxelGrid, cfg.offGroundFeatures);
-        perception = struct("voxelGrid", voxelGrid, "groundPointIdx", groundPointIdx, ...
-            "groundContext", groundContext, "offGroundVoxelGrid", offGroundVoxelGrid, ...
-            "ground", ground, "offGround", offGround);
-        perception.featureMasks = buildFeaturePointMasks(frame, ground, offGround, offGroundVoxelGrid, groundPointIdx);
-        return;
-    end
+        frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2), cfg.groundFeatures.curb);
 
     coarseCfg = resolveCoarseProbabilityCloudConfig(cfg);
     ground = struct("roadMarkingReflectivityThreshold",NaN);
@@ -97,7 +56,7 @@ function perception = perceiveFrame(frame, cfg)
     if logical(coarseCfg.storeDiagnostics)
         perception.diagnostics = struct("ground", ground, "offGround", offGround, "pillars", voxelGrid.statistics);
     end
-    if any(mode == ["offline", "full"])
+    if mode == "offline"
         context = struct("voxelGrid", voxelGrid, "groundContext", groundContext, ...
             "offGroundVoxelGrid", offGroundVoxelGrid, "ground", ground, "offGround", offGround);
         fine = refinePerceptionCandidates(frame, candidates, context, cfg);
@@ -108,27 +67,8 @@ function perception = perceiveFrame(frame, cfg)
     end
 end
 
-function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGrid, groundPointIdx, cellSizeXY, storeDenseOffGroundCount, curbCfg)
-% buildBranchInputs: Split the voxelized frame at the ground segmentation
-% into the inputs of the two feature branches: the ground context (ground
-% points, their XY raster cells, and reflectivity) and the canonical voxel
-% grid of the non-ground points, which is a compact reindexed subset of the
-% frame grid because both share the same voxel size.
-%
-% Input:
-%   frame: organized point-cloud frame with x, y, and z fields
-%   voxelGrid: canonical voxel grid of the frame
-%   groundPointIdx: original point indices returned by segmentGround
-%   cellSizeXY: [1 x 2] XY cell size of the ground raster in meters
-%   storeDenseOffGroundCount: logical scalar selecting the dense 3D count
-%       tensor required by the full point-refinement branch
-%
-% Output:
-%   groundContext: struct accepted by extractGroundFeatures
-%   offGroundVoxelGrid: canonical off-ground voxel grid
-    if nargin < 5
-        storeDenseOffGroundCount = true;
-    end
+function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGrid, groundPointIdx, cellSizeXY, curbCfg)
+% Split retained returns into ground and nonground whole-pillar statistics.
     pointIndices = double(voxelGrid.pointIndices(:));
     numFramePoints = numel(frame.x);
     groundMaskOriginal = buildMaskFromIndices(groundPointIdx, numFramePoints);
@@ -150,16 +90,12 @@ function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGri
     groundContext.groundReflectivity = extractFrameScalar(frame, voxelGrid.pointIndices, validGroundMap, "reflectivity", "intensity");
     groundContext.groundCellLinIdx = double(pointCellLinIdx(validGroundMap));
 
-    if storeDenseOffGroundCount
-        offGroundVoxelGrid = deriveLegacyOffGroundGrid(voxelGrid, find(offGroundPointMask), true);
-    else
-        offGroundVoxelGrid = subsetOffGroundPillars(voxelGrid, offGroundPointMask);
-    end
+    offGroundVoxelGrid = subsetOffGroundPillars(voxelGrid, offGroundPointMask);
 end
 
 function xyView = buildGroundXYView(voxelGrid, cellSizeXY, groundPointMask, curbCfg)
 % buildGroundXYView: Build the XY pillar view required by
-% extractGroundFeatures directly from a canonical voxel grid, including
+% ground analysis directly from whole pillars, including
 % per-point XY cell assignments and per-cell point lookup metadata.
 %
 % Input:

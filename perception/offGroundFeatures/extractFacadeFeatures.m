@@ -1,59 +1,18 @@
-function facade = extractFacadeFeatures(columnMaps, fineVoxelGrid, cfg)
-% extractFacadeFeatures: Detect building facades in the non-ground columns
-% with a global-to-local scheme. Globally, facade lines are dominant peaks
-% of an oriented, weighted Hough transform of the fine-column line score,
-% and every supporting column is assigned to its owning line. Locally, the
-% fine voxel grid under each assigned column is checked patch by patch for
-% planarity and normal alignment with the line, and columns without such
-% support are released. Facade detection is a dataset policy switch
-% (cfg.facadeDetectionEnabled); when it is off the result is empty but
-% keeps the full field set.
-%
-% Input:
-%   columnMaps: struct from buildFineColumnFeatureMaps extended with
-%       runLayerMap, lineScore, and normalOrientation
-%   fineVoxelGrid: struct from buildFineColumnFeatureMaps
-%   cfg: struct from offGroundFeatureConfig
-%
-% Output:
-%   facade: struct with enabled, mask [Ny x Nx], lineMap [Ny x Nx] uint16,
-%       pillarLinIdx, pillarLineIdx, detectedLines [L x 4] meters,
-%       detectedLinesRaw, detectorMask, detectorDiagnostics, and
-%       refineDiagnostics
-    mapSize = size(columnMaps.occupiedMask);
-    enabled = isFacadeDetectionEnabled(cfg);
-    if enabled
-        [detParams, fineFacadeCfg] = resolveFacadeDetectionParams(cfg, columnMaps.dx, columnMaps.dy);
-        if isfield(columnMaps,'supportEvidence')
-            evidence=columnMaps.supportEvidence;
-        else
-            evidence=columnMaps.runLayerMap; % Historical voxel detector only.
-        end
-        [detectedLinesRaw, detectorDiagnostics] = detectFacadeLines(columnMaps.lineScore, columnMaps.normalOrientation, ...
-            columnMaps.occupiedMask, evidence, [], columnMaps.origin, columnMaps.dx, columnMaps.dy, detParams);
-        detectedLines = detectedLinesRaw;
-        detectorMask = detectorDiagnostics.facadeMask;
-        [lineMap, mask] = assignFacadeColumnsToLines( ...
-            detectorDiagnostics, detectedLinesRaw, detectedLines, detectorMask, ...
-            columnMaps.xMap, columnMaps.yMap, columnMaps.dx, columnMaps.dy, fineFacadeCfg);
-        if cfg.facadeRefineEnabled
-            [lineMap, mask, refineDiagnostics] = refineFacadeWithFineGrid( ...
-                lineMap, mask, fineVoxelGrid, detectedLines, fineFacadeCfg);
-        else
-            refineDiagnostics = struct("enabled", false, "reason", "disabled");
-        end
-    else
-        detectedLinesRaw = zeros(0, 4);
-        detectedLines = zeros(0, 4);
-        detectorDiagnostics = buildDisabledFacadeDetectorDiagnostics(mapSize);
-        detectorMask = false(mapSize);
-        lineMap = zeros(mapSize, "uint16");
-        mask = false(mapSize);
-        refineDiagnostics = struct("enabled", false, "reason", "facadeDetectionDisabled");
-    end
+function facade = extractFacadeFeatures(columnMaps, cfg)
+% extractFacadeFeatures: Detect facade lines from whole-column XY evidence.
+% Coarse and fine callers supply their own supportEvidence. Per-point plane
+% validation belongs to validateFacadeCandidatePoints in offline perception.
+    [detParams, assignmentCfg] = resolveFacadeDetectionParams(cfg, columnMaps.dx, columnMaps.dy);
+    [detectedLinesRaw, detectorDiagnostics] = detectFacadeLines(columnMaps.lineScore, columnMaps.normalOrientation, ...
+        columnMaps.occupiedMask, columnMaps.supportEvidence, [], columnMaps.origin, columnMaps.dx, columnMaps.dy, detParams);
+    detectedLines = detectedLinesRaw;
+    detectorMask = detectorDiagnostics.facadeMask;
+    [lineMap, mask] = assignFacadeColumnsToLines( ...
+        detectorDiagnostics, detectedLinesRaw, detectedLines, detectorMask, ...
+        columnMaps.xMap, columnMaps.yMap, columnMaps.dx, columnMaps.dy, assignmentCfg);
 
     facade = struct();
-    facade.enabled = enabled;
+    facade.enabled = true;
     facade.mask = mask;
     facade.lineMap = lineMap;
     facade.pillarLinIdx = find(mask);
@@ -62,7 +21,6 @@ function facade = extractFacadeFeatures(columnMaps, fineVoxelGrid, cfg)
     facade.detectedLinesRaw = detectedLinesRaw;
     facade.detectorMask = detectorMask;
     facade.detectorDiagnostics = detectorDiagnostics;
-    facade.refineDiagnostics = refineDiagnostics;
 end
 
 function [detParams, fineFacadeCfg] = resolveFacadeDetectionParams(cfg, dx, dy)
@@ -95,7 +53,7 @@ function detParams = buildFacadeDetectionParams(cfg)
 % into the detectFacadeLines parameter struct.
 %
 % Input:
-%   cfg: struct from offGroundFeatureConfig
+%   cfg: struct from fineStructuralConfig
 %
 % Output:
 %   detParams: struct passed to detectFacadeLines
@@ -175,33 +133,4 @@ function hood = normalizeHoughSuppressionSize(hood)
 
     hood = max(1, round(hood));
     hood = hood + mod(hood + 1, 2);
-end
-
-function debug = buildDisabledFacadeDetectorDiagnostics(mapSize)
-% buildDisabledFacadeDetectorDiagnostics: Build a stable detector-debug
-% placeholder for scenarios where facade detection is intentionally
-% disabled, preserving downstream debug field availability.
-%
-% Input:
-%   mapSize: [1 x 2] size of the fine-column map [Ny Nx]
-%
-% Output:
-%   debug: struct matching the facade detector debug shape with empty masks
-    if numel(mapSize) < 2
-        mapSize = [0, 0];
-    end
-    debug = struct("scoreMap", zeros(mapSize, "single"), ...
-        "supportMask", false(mapSize), "facadeMask", false(mapSize), ...
-        "assignmentMap", zeros(mapSize, "uint16"), ...
-        "lineSegments", struct("point1", {}, "point2", {}, "theta", {}, "rho", {}), ...
-        "voteWeightMap", zeros(mapSize, "single"), ...
-        "fittedLines", zeros(0, 4), "peakStats", struct("peakId", zeros(0, 1), ...
-        "numPixels", zeros(0, 1), "weightSum", zeros(0, 1), "lengthMeters", zeros(0, 1), ...
-        "linearity", zeros(0, 1), "residualMedianMeters", zeros(0, 1)), ...
-        "fittedLinesRaw", zeros(0, 4), "peakStatsRaw", struct("peakId", zeros(0, 1), ...
-        "numPixels", zeros(0, 1), "weightSum", zeros(0, 1), "lengthMeters", zeros(0, 1), ...
-        "linearity", zeros(0, 1), "residualMedianMeters", zeros(0, 1)), ...
-        "selectedIdx", zeros(0, 1), "peaks", zeros(0, 2), "peakRho", zeros(0, 1), ...
-        "peakTheta", zeros(0, 1), "peakScores", zeros(0, 1), ...
-        "enabled", false, "reason", "facadeDetectionDisabled");
 end

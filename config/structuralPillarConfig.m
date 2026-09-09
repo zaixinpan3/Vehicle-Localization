@@ -3,7 +3,7 @@ function cfg = structuralPillarConfig()
 % XYZ moments, total support and XY neighbors replace all subpillar gates.
     cfg = struct();
 
-    % Whole-pillar point-versus-line shape scores (the voxel size comes from frameVoxelizationConfig)
+    % Whole-pillar point-versus-line shape scores (XY spacing comes from pillarGridConfig)
     cfg.fineShapeScoreNeighborhoodRadiusCells = 2;
     cfg.fineShapeScoreWeightPower = 2.0;
     cfg.fineShapeScoreLinearityPower = 1.0;

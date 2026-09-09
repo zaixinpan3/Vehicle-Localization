@@ -28,18 +28,11 @@ classdef repeatabilityRegistrationTest < matlab.unittest.TestCase
             testCase.verifyError(@() registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]), ...
                 'VehicleLocalization:InvalidRepeatability');
         end
-        function absentStabilityPreservesUnitWeightBehavior(testCase)
+        function requiresExplicitMapRepeatability(testCase)
             moving=distributionRegistrationTest.exampleCloud();
-            fixed=distributionRegistrationTest.transform(moving,[1.2 -.7 .16]);
-            legacy=registerSemanticProbabilityCloud(fixed,moving,[1 -.6 .12]);
-            fixed.components.repeatability=ones(6,1);
-            current=registerSemanticProbabilityCloud(fixed,moving,[1 -.6 .12]);
-            testCase.verifyTrue(current.accepted,current.reason);
-            testCase.verifyEqual(current.poseXYTheta,legacy.poseXYTheta,'AbsTol',0);
-            testCase.verifyEqual(current.scaledCurvature,legacy.scaledCurvature,'AbsTol',0);
-            testCase.verifyEqual(current.similarity,legacy.similarity,'AbsTol',0);
-            testCase.verifyEqual(legacy.repeatabilitySource,"legacyUnitWeight");
-            testCase.verifyEqual(current.repeatabilitySource,"mapPosterior");
+            fixed=moving; fixed.components=rmfield(fixed.components,'repeatability');
+            testCase.verifyError(@() registerSemanticProbabilityCloud(fixed,moving,[0 0 0]), ...
+                'VehicleLocalization:MissingRepeatability');
         end
         function classBalancingDoesNotEraseUniformLowStability(testCase)
             cloud=distributionRegistrationTest.exampleCloud();
@@ -119,6 +112,7 @@ function [moving,fixed]=conflictingPoles()
     means=[-8 -8;-8 8;8 -8;8 8;-16 -16;-16 16;16 -16;16 16];
     c=struct('mean',means,'covariance',repmat(.2*eye(2),1,1,8), ...
         'semanticName',repmat("pole",8,1),'mixtureWeight',ones(8,1)/8,'numComponents',8);
-    moving=struct('components',c); fixed=moving;
+    c.repeatability=ones(c.numComponents,1);
+    moving=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig()); fixed=moving;
     fixed.components.mean(5:8,1)=fixed.components.mean(5:8,1)+.6;
 end
