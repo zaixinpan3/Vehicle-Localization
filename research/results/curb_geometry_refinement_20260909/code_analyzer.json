@@ -1,0 +1,34 @@
+[
+  {
+    "file": "config/finePerceptionConfig.m",
+    "issues": []
+  },
+  {
+    "file": "config/groundFeatureConfig.m",
+    "issues": []
+  },
+  {
+    "file": "perception/groundFeatures/refineCurbGeometry.m",
+    "issues": []
+  },
+  {
+    "file": "perception/refinePerceptionCandidates.m",
+    "issues": []
+  },
+  {
+    "file": "perception/perceiveFrame.m",
+    "issues": []
+  },
+  {
+    "file": "tests/expectedFinePerception.m",
+    "issues": []
+  },
+  {
+    "file": "tests/pillarPerceptionTest.m",
+    "issues": []
+  },
+  {
+    "file": "tests/curbGeometryRefinementTest.m",
+    "issues": []
+  }
+]

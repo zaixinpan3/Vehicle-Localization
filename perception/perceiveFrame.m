@@ -4,11 +4,11 @@ function perception = perceiveFrame(frame, cfg)
 % empirical planar Gaussian components, without point feature refinement.
 % offline independently reconstructs detailed structural
 % candidates and explicitly evaluates their points for mapping. Its featureMasks
-% address the original organized frame. Ground segmentation is common
+% address the original input point order. Ground segmentation is common
 % preprocessing in both modes, not point-level semantic feature refinement.
 % cfg is produced by perceptionConfig; frame requires x, y, z fields.
     assert(isstruct(frame) && all(isfield(frame, ["x", "y", "z"])), ...
-        "frame must be an organized point-cloud struct with x, y, and z fields.");
+        "frame must be a point-cloud struct with x, y, and z fields.");
     assert(isstruct(cfg) && all(isfield(cfg, ["voxel", "groundSegmentation", "groundFeatures", "offGroundFeatures"])), ...
         "cfg must be a struct from perceptionConfig.");
 

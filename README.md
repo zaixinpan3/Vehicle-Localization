@@ -11,7 +11,7 @@ frozen output data; they never select another executable implementation.
 ## Pipeline
 
 ```text
-organized LiDAR frame (vehicle coordinates)
+LiDAR XYZ points, optionally organized (vehicle coordinates)
   -> pillarizePointCloud: XY membership + whole-pillar XYZ moments and bounds
   -> segmentGround: common slope-grid terrain preprocessing
   -> analyzeGroundPillars: curb geometry, road topology, reflectivity statistics
@@ -49,15 +49,20 @@ crossing an XY boundary retains its complete candidate footprint.
 Set `cfg.executionMode="offline"` to additionally return `featureMasks`,
 `fineCandidates` and `refinement`. `candidates` remains the online product;
 `fineCandidates` records the independent offline search support. Each semantic audit contains candidate indices, evaluated indices,
-and an acceptance decision for every member. Curbs use the established residual
-and boundary filters; markings use the road-derived reflectivity threshold;
+and an acceptance decision for every member. Curbs use metric neighborhoods
+of unorganized XYZ, local height-step evidence, and spatial boundary support.
+The fine detector retains original returns near narrow boundaries and samples
+them at metric spacing. Neither organized rows nor scan order are used. Nearby
+curb pillars are searched only offline; unsupported geometry emits no points.
+Markings use the road-derived reflectivity threshold;
 poles retain detailed support and robust vertical-line residual tests, built
 exclusively inside the offline branch. Those tests do not run online.
 The default fine pole recovery adds missed candidates only with strong
 whole-pillar geometry (at least 12 returns, 3 m height, at most 2 degrees tilt
 and 0.10 m transverse standard deviation), relaxed detailed seeding and the
 existing per-point validation. Original accepted pole points are preserved.
-See [the frame-260 recovery audit](research/fine_pole_recovery.md).
+See [the frame-260 pole audit](research/fine_pole_recovery.md) and
+[the thin-curb audit](research/curb_geometry_refinement.md).
 There is no fallback that republishes every candidate when fine validation
 rejects all points. The invocation's **only semantic selector** is
 `cfg.featureNames`. Dataset profiles select these channels:

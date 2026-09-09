@@ -69,7 +69,7 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
                 testCase.verifyGreaterThan(audit.numEvaluated,0);
             end
         end
-        function recordedPointFidelityPreservesBaseline(testCase)
+        function recordedFineDecisionsMatchReviewedExpectations(testCase)
             dataRoot=string(getenv('VEHICLE_LOCALIZATION_DATA_ROOT'));
             matPath=fullfile(dataRoot,'raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(matPath));
@@ -78,13 +78,11 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
                 frame=loadPointCloudFrame(matPath,frameIndex);
                 reference=loadPerceptionMaskReference("Missisipi",frameIndex);
                 actual=perceiveFrame(frame,cfg);
-                for name=["curb" "roadMarking"]
-                    testCase.verifyEqual(actual.featureMasks.(name),reference.featureMasks.(name), ...
-                        sprintf('frame %d %s',frameIndex,name));
-                end
+                testCase.verifyEqual(actual.featureMasks.roadMarking,reference.featureMasks.roadMarking);
                 testCase.verifyTrue(all(actual.featureMasks.pole(reference.featureMasks.pole)));
                 expected=expectedFinePerception("Missisipi",frameIndex);
                 testCase.verifyEqual(actual.featureMasks.pole,expected.featureMasks.pole);
+                testCase.verifyEqual(actual.featureMasks.curb,expected.featureMasks.curb);
             end
         end
     end

@@ -1,10 +1,8 @@
 function cfg = groundFeatureConfig()
 % groundFeatureConfig: Parameters of the ground-point feature branch: curb
-% energy maps, curb cell refinement, road-surface recovery, curb point
-% selection, and road-marking selection. The values reproduce the tuned
-% RobustVehicleLocalization configuration, including the dominant-boundary
-% point filter and its bidirectional continuation that the map-building
-% pipeline enabled on top of groundFeatureConfig().curb.
+% energy maps, whole-pillar curb refinement, road-surface recovery, and
+% road-marking selection. Fine curb XYZ geometry is configured separately
+% by finePerceptionConfig; this common stage contains no curb point thinning.
 %
 % Input:
 %   none
@@ -265,37 +263,7 @@ function curb = curbParameters()
     curb.continuationBaseEnergyThreshold = 0.35;
     curb.continuationCenterEvidenceMin = 0.25;
 
-    % Curb point selection inside accepted cells and dense near-road filtering (selectCurbPointsFromCells)
-    curb.curbPointLowerQuantile = 0.20;
-    curb.curbPointMinLowerResidualMeters = 0.025;
-    curb.curbPointResidualWeight = 0.15;
-    curb.curbPointQuantileWeight = 0.85;
-    curb.denseCurbNearRoadFilterEnabled = true;
-    curb.denseCurbNearRoadRadiusCells = 2;
-    curb.denseCurbMinResidualMeters = 0.025;
-    curb.denseCurbMinBaseEnergy = 0.75;
-    curb.denseCurbMinRoughnessMeters = 0.030;
-
-    % Dominant road-boundary thinning of curb points (thinCurbPointsToDominantBoundary)
-    curb.dominantBoundaryPointFilterEnabled = true;
-    curb.dominantBoundaryNeighborRows = 1;
-    curb.dominantBoundaryColumnTrackingEnabled = true;
-    curb.dominantBoundaryColumnSearchRadiusCells = 3;
-    curb.dominantBoundaryColumnMinPoints = 2;
-    curb.dominantBoundaryPointQuantile = 0.50;
-    curb.dominantBoundaryYBandMeters = 0.20;
-    curb.dominantBoundaryRoadFacingCellMarginMeters = 0.12;
-    curb.dominantBoundaryRoadAwayNeighborMarginMeters = Inf;
-    curb.dominantBoundaryRoadReferenceFilterEnabled = true;
-    curb.dominantBoundaryRoadReferenceRadiusCells = 16;
-    curb.dominantBoundaryWeakSupportFilterEnabled = true;
-    curb.dominantBoundaryWeakSupportMinBaseEnergy = 0.12;
-    curb.dominantBoundaryWeakSupportMinLinearity = 0.10;
-    curb.dominantBoundaryWeakSupportMinRoughnessMeters = 0.010;
-    curb.dominantBoundaryWeakSupportMinCenterEvidence = 0.75;
-    curb.dominantBoundaryWeakSupportHighStepMinMeters = 0.08;
-    curb.dominantBoundaryMinSidePoints = 12;
-    curb.dominantBoundaryRowMinCountFraction = 0.15;
+    % Whole-pillar boundary continuation used by road-adjacency refinement.
     curb.dominantBoundaryContinuationEnabled = true;
     curb.dominantBoundaryContinuationDirection = "both";
     curb.dominantBoundaryContinuationMaxGapCells = 8;

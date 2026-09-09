@@ -30,14 +30,13 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
         accepted = false(numel(pointIdx), 1);
         switch name
             case "curb"
-                [~, groundRows] = ismember(pointIdx, gc.groundOriginalPointIdx);
-                cellIdx = gc.groundCellLinIdx(groundRows);
-                accepted = selectCurbPointsFromCells(true(numel(pointIdx), 1), ...
-                    points, cellIdx, ground.stats, ground.energyMaps, ...
-                    ground.initialRoadResult.roadCellMask, cfg.groundFeatures.curb);
-                accepted = thinCurbPointsToDominantBoundary(accepted, points, ...
-                    cellIdx, gc.groundXYView, ground.initialRoadResult.roadSeedMask, ...
-                    ground.initialRoadResult.roadCellMask, ground.energyMaps, cfg.groundFeatures.curb);
+                radius = cfg.fine.curbCandidateRadiusCells;
+                support = conv2(double(ground.curbCellMask),ones(2*radius+1),'same')>0;
+                support = support.';
+                pointIdx = gc.groundOriginalPointIdx(support(gc.groundCellLinIdx));
+                [accepted,curbDetail] = refineCurbGeometry(xyz,pointIdx,groundPoint,cfg.fine);
+                candidateMembers = ismember(grid.pointIndices,pointIdx);
+                candidates.pillarIndices{k} = unique(grid.pointPillarLinIdx(candidateMembers));
             case "roadMarking"
                 [~, groundRows] = ismember(pointIdx, gc.groundOriginalPointIdx);
                 reflectivity = double(gc.groundReflectivity(groundRows));
@@ -62,6 +61,7 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
         decisions.(name) = struct("candidatePointIndices", pointIdx, ...
             "evaluatedPointIndices", pointIdx, "accepted", accepted, ...
             "numEvaluated", numel(pointIdx), "numAccepted", nnz(accepted));
+        if name=="curb", decisions.curb.geometry=curbDetail; end
     end
     fine = struct("featureMasks", masks, "refinement", decisions, "candidates", candidates);
 end
