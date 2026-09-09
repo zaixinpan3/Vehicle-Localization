@@ -1,0 +1,27 @@
+{
+  "initialPerceptionBaseline": "5acbdfd3e4f2b54fc3f7470dcc73000a99f42271",
+  "failureFrame": 1012,
+  "retainedVideoFrames": [
+    1,
+    1011
+  ],
+  "continuationVideoFrames": [
+    1012,
+    1170
+  ],
+  "recomputedObservationFrames": [
+    1,
+    1011
+  ],
+  "observationCheckpointMaximumFrames": 100,
+  "fix": "Return an empty boundary proposal when no anchor pair meets length constraints, before normalizing empty arrays. No detector or mapping threshold changes.",
+  "videoConcatenation": "FFmpeg concat demuxer and stream copy, then uniform drawtext annotation on all 1170 MP4 frames.",
+  "frameRate": 10.909039310638724,
+  "recoverySourceSha256": {
+    "perception/groundFeatures/refineCurbGeometry.m": "b1a8f80e87db46240f9fe5412d1cd0d357a63289d04140361cc82be06470ef05",
+    "scripts/runPerceptionVideoMap.m": "8d095ed1a9ca293a79bd170d2985f17ab5f96521f4141a25185b524a63bbc949",
+    "scripts/collectFeatureObservations.m": "0157ac896cb8572c7e1f9d496dd56bb6c8a5491ae4135b87e4fb1804a05295a6"
+  },
+  "initialFailureLog": "initial_failure.txt",
+  "initialExecutionProvenance": "execution_provenance.json"
+}

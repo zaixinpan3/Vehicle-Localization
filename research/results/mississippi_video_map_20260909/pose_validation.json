@@ -1,0 +1,9 @@
+{
+  "frameCount": 1170,
+  "onePosePerFrameInOrder": true,
+  "allTranslationsAndQuaternionsFinite": true,
+  "minimumQuaternionNorm": 0.9999999999999992,
+  "maximumQuaternionNorm": 1.0000000000000007,
+  "maximumAbsoluteOdomTimeOffsetSeconds": 0.0329816341400146,
+  "maximumAbsoluteInspvaTimeOffsetSeconds": 0.0190050601959229
+}

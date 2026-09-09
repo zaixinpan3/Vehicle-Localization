@@ -6,6 +6,20 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function noEligibleAnchorPairReturnsNoBoundary(testCase)
+            points=curbScene(3);cfg=finePerceptionConfig();
+            cfg.curbMinimumBoundaryLengthMeters=25;
+            mask=refineCurbGeometry(points,(1:size(points,1)).',true(size(points,1),1),cfg);
+            testCase.verifyFalse(any(mask));
+        end
+        function recordedFrameWithExhaustedAnchorsCompletes(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            path=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(path));
+            frame=loadPointCloudFrame(path,1012);cfg=perceptionConfig('Mississippi');cfg.executionMode="offline";
+            actual=perceiveFrame(frame,cfg);
+            testCase.verifySize(actual.featureMasks.curb,[numel(frame.x),1]);
+            testCase.verifyGreaterThan(nnz(actual.featureMasks.curb),0);
+        end
         function broadFacesBecomeNarrowOriginalPointBoundaries(testCase)
             points=curbScene([-3 3]);
             [mask,detail]=refineCurbGeometry(points,(1:size(points,1)).',true(size(points,1),1),finePerceptionConfig());

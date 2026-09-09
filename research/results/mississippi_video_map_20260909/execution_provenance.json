@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-09-09T17:33:23.798987-05:00",
+  "perceptionBaselineRevision": "5acbdfd3e4f2b54fc3f7470dcc73000a99f42271",
+  "sourceFiles": {
+    "scripts/runPerceptionVideoMap.m": "f68dd299f3109033ea700366d75e8c472ff522589f2379fe2f721442e00a2ed0",
+    "scripts/collectFeatureObservations.m": "0157ac896cb8572c7e1f9d496dd56bb6c8a5491ae4135b87e4fb1804a05295a6",
+    "config/finePerceptionConfig.m": "add8f602e32f6c199298b4dde6accc781e5009776e7c49459b8de789f5a6d705",
+    "perception/groundFeatures/refineCurbGeometry.m": "6e8fc507f26c36d9e4c476d14048c4181547c478746797a86d40505053fb4834",
+    "config/featureMapBuildConfig.m": "434c76015b99006ec35e36d1b45a1071f95cde30eb1edb9afb19284dfbcf8d27",
+    "config/temporalStabilityMapConfig.m": "44c5bcd88736a7632d36a84dd3bbd032e732de04d1b37b5a076a69387c0f5c22"
+  },
+  "inputPath": "data/raw/MissisipiPointClouds.mat",
+  "inputBytes": 1273317517,
+  "posePath": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_pose_match_1_1170.csv",
+  "rendering": "Existing visible niri MATLAB figure, captured with getframe; fixed user-selected camera and display settings",
+  "timing": "One output image per input frame; constant frame rate from mean LiDAR interval over this sequence"
+}

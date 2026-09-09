@@ -1,4 +1,4 @@
-function featureData = collectFeatureObservations(matPath, frameIndices, framePoseTable, perceptionCfg, cfg)
+function featureData = collectFeatureObservations(matPath, frameIndices, framePoseTable, perceptionCfg, cfg, frameCallback)
 % collectFeatureObservations: Run the perception module over a sequence of
 % frames and register every semantic feature observation into the global
 % map frame. For each frame the full-frame feature masks are converted to
@@ -13,11 +13,16 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
 %       the same order as frameIndices (see readFramePoseTable)
 %   perceptionCfg: struct from perceptionConfig
 %   cfg: struct from featureMapBuildConfig with featureNames and logEnabled
+%   frameCallback: optional consumer(frame, perception, frameIndex), called once
+%       after each frame is registered, without running perception again
 %
 % Output:
 %   featureData: struct with featureNames, frameIndices, framePoseTable,
 %       pointsByFeatureFrame {C x F} of [N x 3] global points, counts
 %       [F x C], numFrames, and frameSummaryTable
+    if nargin < 6, frameCallback = []; end
+    assert(isempty(frameCallback) || isa(frameCallback,'function_handle'), ...
+        'frameCallback must be empty or a function handle.');
     featureNames = validatePerceptionFeatureNames(cfg.featureNames);
     frameIndices = double(frameIndices(:).');
     numFeatures = numel(featureNames);
@@ -48,6 +53,7 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
             pointsByFeatureFrame{featureIdx, frameListIdx} = featurePoints;
             counts(frameListIdx, featureIdx) = size(featurePoints, 1);
         end
+        if ~isempty(frameCallback), frameCallback(frame, perception, frameIdx); end
         mappingSupport.logStep(cfg, "frame.done", "frame=%d/%d | %s", frameIdx, currentNumFrames, ...
             char(formatFrameCounts(featureNames, counts(frameListIdx, :))));
     end

@@ -146,6 +146,7 @@ function [normal,offset,extent] = bestBoundaryProposal(points,groups,score,rows,
     delta = points(anchors(last),:)-points(anchors(first),:);
     separationMeters = vecnorm(delta,2,2);
     valid = separationMeters>=cfg.curbMinimumBoundaryLengthMeters & separationMeters<=cfg.curbMaximumProposalLengthMeters;
+    if ~any(valid), return; end
     delta = delta(valid,:); separationMeters = separationMeters(valid); first = first(valid);
     normals = [-delta(:,2),delta(:,1)]./separationMeters;
     offsets = sum(points(anchors(first),:).*normals,2);

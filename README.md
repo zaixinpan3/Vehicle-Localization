@@ -152,6 +152,17 @@ background, and unique spatial ownership. It separates within-block geometry,
 block displacement, repeatability, and reference area. Frame windows schedule
 observations; their union contributes evidence once to `canonicalMap`.
 
+`runPerceptionVideoMap(outputFolder, figureHandle)` records all frames using
+an existing tagged `pcshow` preview's fixed camera and display settings while
+collecting the same fine-perception outputs for mapping. It writes an AVI
+master, registered observations, per-frame counts and timestamps, and the
+canonical map to a new output folder. The recording uses one image per input
+frame at the mean LiDAR cadence; processing speed does not set playback speed.
+Keep the recording window size fixed. A configuration from
+`featureMapBuildConfig` may be supplied as the third argument.
+The upper-left counter displays the current source frame and total frame count.
+See [the full-sequence video/map record](research/mississippi_perception_video_map.md).
+
 Queries evaluate `Lambda/(Lambda+kappa)` and return coverage/status metadata.
 Gaussian-cloud exports normalize the same field and retain total and per-class
 mass, so queries can be reconstructed exactly before bounded index truncation.

@@ -1,0 +1,12 @@
+{
+  "aviFrameCount": 1170,
+  "mp4FrameCount": 1170,
+  "imageWidth": 1910,
+  "imageHeight": 2086,
+  "firstCounter": "Frame 1 / 1170",
+  "lastCounter": "Frame 1170 / 1170",
+  "firstAndLastCounterVisuallyChecked": true,
+  "frame687ReferenceSizeEqual": true,
+  "frame687MeanAbsoluteRGBDifference": 0.48993790565876727,
+  "note": "Frame 687 is decoded from the unannotated Motion JPEG AVI and compared with the original lossless desktop capture. JPEG compression and dynamic legend text are permitted differences. Exact initial pre-recording capture equivalence is recorded separately."
+}

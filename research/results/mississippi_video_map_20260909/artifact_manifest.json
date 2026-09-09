@@ -1,0 +1,40 @@
+{
+  "artifacts": [
+    {
+      "path": "output/mississippi_video_map_20260909/full_sequence/perception.mp4",
+      "bytes": 359973742,
+      "sha256": "1fc80a4b4e109312c4ad58eddebbbf4bcc4b3a5e134fb779bff325ed8c44ddc7"
+    },
+    {
+      "path": "output/mississippi_video_map_20260909/full_sequence/perception.avi",
+      "bytes": 1135708914,
+      "sha256": "d80581c29de1f66a14b2c998ed23ce7e10538de2e3f8cf08d29aca8f2778f16b"
+    },
+    {
+      "path": "output/mississippi_video_map_20260909/full_sequence/probability_cloud_map.mat",
+      "bytes": 734751492,
+      "sha256": "5fc12ce639bf37638e56e3235b1e7ce8c267cc34ff251bbeb9c61b37533298f4"
+    },
+    {
+      "path": "output/mississippi_video_map_20260909/full_sequence/probability_cloud_export.mat",
+      "bytes": 364114,
+      "sha256": "4c827c93ce8827f4f710b30e039604e782dcb1533fa5ab8e700c135f86121a76"
+    },
+    {
+      "path": "output/mississippi_video_map_20260909/full_sequence/feature_observations.mat",
+      "bytes": 14602426,
+      "sha256": "e11a08e5217ebf6c61728eda692cce9268b82f3109e5ae5893eb191e6dc84ff5"
+    },
+    {
+      "path": "output/mississippi_video_map_20260909/full_sequence/map_overview.png",
+      "bytes": 149963,
+      "sha256": "68b3e64336783ab45d8ae81afab13399623d2a403a462dac475b027110ce23a7"
+    },
+    {
+      "path": "output/mississippi_video_map_20260909/full_sequence/run_configuration.mat",
+      "bytes": 11353,
+      "sha256": "05ca98b720c4fe9327ca368b1cadadb227ef5507dad4ad002b27bf4af0775e8a"
+    }
+  ],
+  "note": "Generated technical artifacts remain outside Git. Hashes identify the original output files."
+}

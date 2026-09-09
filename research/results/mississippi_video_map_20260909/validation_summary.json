@@ -1,0 +1,35 @@
+{
+  "frameCount": 1170,
+  "featureNames": [
+    "curb",
+    "roadMarking",
+    "pole",
+    "trafficSign"
+  ],
+  "featureObservationCounts": [
+    123225,
+    97901,
+    235379,
+    75530
+  ],
+  "mapWindowCount": 58,
+  "gaussianCount": 1902,
+  "totalMass": 2069.1662531839697,
+  "queriedComponents": 1902,
+  "validComponentQueries": 1902,
+  "minimumValidQueryProbability": 4.0100214958392266E-284,
+  "maximumValidQueryProbability": 0.99206097353954137,
+  "frameRate": 10.909039310638724,
+  "videoFrameCount": 1170,
+  "videoDurationSeconds": 107.25050727968241,
+  "imageSize": [
+    2086,
+    1910,
+    3
+  ],
+  "uniqueFrameIngestionPassed": true,
+  "positiveCovariancesPassed": true,
+  "boundedQueriesPassed": true,
+  "recoveryElapsedSeconds": 1081.815418,
+  "recoveryMethod": "Retain 1011 AVI images, record 159-image tail, recompute lost head observations in saved chunks, merge and fit all 1170 frames."
+}

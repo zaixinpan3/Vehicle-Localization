@@ -1,0 +1,74 @@
+{
+  "pilotFrameIndices": [
+    1,
+    2,
+    3
+  ],
+  "pilotVideoFrames": 3,
+  "pilotFeatureDataExactlyMatchesUnmodifiedCollection": true,
+  "pipelineRegressionTest": {
+    "passed": 2,
+    "failed": 0
+  },
+  "codeAnalyzer": {
+    "files": [
+      "scripts/collectFeatureObservations.m",
+      "scripts/runPerceptionVideoMap.m"
+    ],
+    "findings": 0
+  },
+  "note": "Pilots and pipeline regression ran before full recording; geometry, recorded frame 1012, reference and final analyzer checks ran after the empty-proposal guard. No fixture or detector threshold was changed.",
+  "frameCounterPilot": {
+    "frames": [
+      1,
+      2,
+      3
+    ],
+    "finalLabel": "Frame 3 / 1170",
+    "mappedObservationsUnchanged": true
+  },
+  "curbGeometryRefinementTest": {
+    "passed": 13,
+    "failed": 0,
+    "incomplete": 0,
+    "factoryAnalyzerFindings": 0,
+    "includesEmptyEligibleAnchorPairRegression": true,
+    "includesRecordedFrame1012Regression": true
+  },
+  "recordedFailureFrameProbe": {
+    "dataset": "Mississippi",
+    "frameIndex": 1012,
+    "completed": true,
+    "curbPointCount": 105
+  },
+  "currentPerceptionReferenceTest": {
+    "currentPerceptionReferencePassed": 31,
+    "failed": 0,
+    "incomplete": 0,
+    "files": [
+      "scripts/collectFeatureObservations.m",
+      "scripts/runPerceptionVideoMap.m",
+      "perception/groundFeatures/refineCurbGeometry.m",
+      "tests/curbGeometryRefinementTest.m"
+    ],
+    "analyzerFindings": [
+      [],
+      [],
+      [],
+      []
+    ]
+  },
+  "counterReusePilot": {
+    "counterCount": 1,
+    "sameCounterHandle": true,
+    "finalLabel": "Frame 3 / 1170",
+    "featureDataUnchanged": true,
+    "factoryAnalyzerFindings": 0
+  },
+  "finalSourceSha256": {
+    "scripts/collectFeatureObservations.m": "0157ac896cb8572c7e1f9d496dd56bb6c8a5491ae4135b87e4fb1804a05295a6",
+    "scripts/runPerceptionVideoMap.m": "97e0b6014b18ec5e277be25f7bffaf9dca838629156e122b86ebcb474f253eb7",
+    "perception/groundFeatures/refineCurbGeometry.m": "b1a8f80e87db46240f9fe5412d1cd0d357a63289d04140361cc82be06470ef05",
+    "tests/curbGeometryRefinementTest.m": "2882a0042dd734f6b160f497e7b91335945fd0469699ca9f203694d88b10e52d"
+  }
+}
