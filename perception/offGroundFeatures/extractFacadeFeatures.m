@@ -24,8 +24,13 @@ function facade = extractFacadeFeatures(columnMaps, fineVoxelGrid, cfg)
     enabled = isFacadeDetectionEnabled(cfg);
     if enabled
         [detParams, fineFacadeCfg] = resolveFacadeDetectionParams(cfg, columnMaps.dx, columnMaps.dy);
+        if isfield(columnMaps,'supportEvidence')
+            evidence=columnMaps.supportEvidence;
+        else
+            evidence=columnMaps.runLayerMap; % Historical voxel detector only.
+        end
         [detectedLinesRaw, detectorDiagnostics] = detectFacadeLines(columnMaps.lineScore, columnMaps.normalOrientation, ...
-            columnMaps.occupiedMask, columnMaps.runLayerMap, [], columnMaps.origin, columnMaps.dx, columnMaps.dy, detParams);
+            columnMaps.occupiedMask, evidence, [], columnMaps.origin, columnMaps.dx, columnMaps.dy, detParams);
         detectedLines = detectedLinesRaw;
         detectorMask = detectorDiagnostics.facadeMask;
         [lineMap, mask] = assignFacadeColumnsToLines( ...

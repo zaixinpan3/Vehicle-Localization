@@ -12,10 +12,10 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             cfg.maxRange=Inf;
             points=[10 2 0;10.01 2.01 50;11 3 5];
             pillars=pillarizePointCloud(points,cfg);
-            testCase.verifyEmpty(pillars.count);
-            testCase.verifyEmpty(pillars.sumXX);
+            testCase.verifyFalse(isfield(pillars,'pointVoxelSub'));
+            testCase.verifySize(pillars.statistics.covarianceXYZ,[2 6]);
             testCase.verifyEqual(pillars.pointPillarLinIdx(1),pillars.pointPillarLinIdx(2));
-            testCase.verifyNotEqual(pillars.pointVoxelLinIdx(1),pillars.pointVoxelLinIdx(2));
+            testCase.verifyEqual(pillars.statistics.count,[2;1]);
         end
         function momentAggregationUsesActualReturnLocations(testCase)
             moments=aggregatePlanarCellMoments([0 0;0.2 0.4;2 3],[1;1;2],3);

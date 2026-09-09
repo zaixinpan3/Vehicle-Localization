@@ -1,7 +1,8 @@
 classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
 % coarseSemanticProbabilityCloudTest: Verify the sparse pillar-only semantic
-% NDT product, its D2D alignment score, and fidelity to the full perception
-% baseline on recorded Mississippi frames.
+% NDT product, D2D alignment and unchanged ground-feature fidelity.
+% Whole-pillar structural semantics are checked by wholePillarPerceptionTest;
+% the retired height-count identity is intentionally no longer a contract.
 
     properties (Access = private)
         DataRoot
@@ -65,7 +66,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
                 ["curb"; "roadMarking"; "pole"; "trafficSign"]);
         end
 
-        function referenceFramesTrackFullPerception(testCase)
+        function referenceFramesPreserveGroundPerception(testCase)
         % referenceFramesTrackFullPerception: Tuned frames retain the full
         % baseline support after projection to cells and NDT components.
             testCase.assumeMississippiData();
@@ -79,15 +80,12 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             testCase.verifyGreaterThanOrEqual(metrics.source.curb.precision, 0.65);
             testCase.verifyGreaterThanOrEqual(metrics.source.curb.recall, 0.97);
             testCase.verifyEqual(metrics.source.roadMarking.f1, 1, AbsTol=1.0e-12);
-            testCase.verifyEqual(metrics.source.pole.f1, 1, AbsTol=1.0e-12);
             testCase.verifyGreaterThanOrEqual(metrics.ndt.curb.precision, 0.79);
             testCase.verifyGreaterThanOrEqual(metrics.ndt.curb.recall, 0.99);
             testCase.verifyEqual(metrics.ndt.roadMarking.f1, 1, AbsTol=1.0e-12);
-            testCase.verifyEqual(metrics.ndt.pole.f1, 1, AbsTol=1.0e-12);
-            testCase.verifyTrue(metrics.columnMapsExact);
         end
 
-        function dispersedFramesPreserveHighRecall(testCase)
+        function dispersedFramesPreserveGroundRecall(testCase)
         % dispersedFramesPreserveHighRecall: Dispersed Mississippi
         % frames retain high feature support against the historical baseline.
             testCase.assumeMississippiData();
@@ -97,17 +95,9 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             testCase.verifyGreaterThanOrEqual(metrics.source.curb.recall, 0.93);
             testCase.verifyGreaterThanOrEqual(metrics.source.roadMarking.precision, 0.99);
             testCase.verifyEqual(metrics.source.roadMarking.recall, 1, AbsTol=1.0e-12);
-            % Complete pole footprints can include a weaker boundary pillar.
-            % Allow three percentage points beyond the former per-pillar gate;
-            % retain exact recall and separately test offline point precision.
-            testCase.verifyGreaterThanOrEqual(metrics.source.pole.precision, 0.55);
-            testCase.verifyEqual(metrics.source.pole.recall, 1, AbsTol=1.0e-12);
             testCase.verifyGreaterThanOrEqual(metrics.ndt.curb.recall, 0.94);
             testCase.verifyGreaterThanOrEqual(metrics.ndt.roadMarking.precision, 0.98);
             testCase.verifyEqual(metrics.ndt.roadMarking.recall, 1, AbsTol=1.0e-12);
-            testCase.verifyGreaterThanOrEqual(metrics.ndt.pole.precision, 0.65);
-            testCase.verifyEqual(metrics.ndt.pole.recall, 1, AbsTol=1.0e-12);
-            testCase.verifyTrue(metrics.columnMapsExact);
         end
     end
 
@@ -164,7 +154,6 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             semanticNames = ["curb", "roadMarking", "pole"];
             sourceCounts = repmat(struct("tp", 0, "fp", 0, "fn", 0), 3, 1);
             ndtCounts = sourceCounts;
-            columnMapsExact = true;
             for frameIdx = frameIndices
                 frame = loadPointCloudFrame(matPath, frameIdx);
                 cfg.executionMode = "legacyFull";
@@ -192,16 +181,12 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
                         coarseSemanticProbabilityCloudTest.addSetCounts( ...
                         ndtCounts(semanticIdx), candidateNdtCells, referenceNdtCells);
                 end
-                columnMapsExact = columnMapsExact && ...
-                    coarseSemanticProbabilityCloudTest.sameColumnMaps( ...
-                    diagnostics.offGround.columnMaps, full.offGround.columnMaps);
             end
             metrics = struct();
             metrics.source = coarseSemanticProbabilityCloudTest.finishMetrics( ...
                 sourceCounts, semanticNames);
             metrics.ndt = coarseSemanticProbabilityCloudTest.finishMetrics( ...
                 ndtCounts, semanticNames);
-            metrics.columnMapsExact = columnMapsExact;
         end
 
         function masks = referenceSourceMasks(full, ~)
@@ -275,14 +260,5 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             end
         end
 
-        function isEqual = sameColumnMaps(first, second)
-        % sameColumnMaps: Confirm sparse and dense column reductions match.
-            fields = ["pillarCounts", "pillarZRange", "occupiedLayerCount", ...
-                "maxRunLayerCount", "pointScore", "lineScore"];
-            isEqual = true;
-            for fieldName = fields
-                isEqual = isEqual && isequal(first.(fieldName), second.(fieldName));
-            end
-        end
     end
 end

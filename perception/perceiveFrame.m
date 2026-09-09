@@ -2,8 +2,8 @@ function perception = perceiveFrame(frame, cfg)
 % perceiveFrame: Shared pillar analysis for online localization and mapping.
 % coarseProbabilityCloud (default) returns semantic pillar candidates and
 % empirical planar Gaussian components, without point feature refinement.
-% offline (alias full) recovers ground or structural members of candidate
-% pillars and explicitly evaluates each point for mapping. Its featureMasks
+% offline (alias full) independently reconstructs detailed structural
+% candidates and explicitly evaluates their points for mapping. Its featureMasks
 % address the original organized frame. Ground segmentation is common
 % preprocessing in both modes, not point-level semantic feature refinement.
 % legacyFull reproduces historical outputs solely for baseline comparisons.
@@ -25,6 +25,14 @@ function perception = perceiveFrame(frame, cfg)
     backend = "auto";
     if isfield(cfg, "executionBackend"), backend = cfg.executionBackend; end
     useNative = ~legacyMode && perceptionNativeAvailable(backend);
+    if ~legacyMode
+        cfg.groundSegmentation.slopeGridXYCellSize=cfg.voxel.voxelSize(1:2);
+    elseif numel(cfg.voxel.voxelSize)==2
+        legacyGeometry=frameVoxelizationConfig();
+        cfg.voxel.voxelSize=[cfg.voxel.voxelSize,legacyGeometry.voxelSize(3)];
+        cfg.voxel.statisticsMode=legacyGeometry.statisticsMode;
+    end
+    cfg.voxel.useNativeKernels = useNative;
     cfg.groundSegmentation.useNativeKernels = useNative;
     cfg.groundFeatures.road.useNativeKernels = useNative;
     cfg.groundFeatures.curb.useNativeKernels = useNative;
@@ -34,6 +42,18 @@ function perception = perceiveFrame(frame, cfg)
     assert(any(mode == ["coarseProbabilityCloud", "offline", "full", "legacyFull"]), ...
         "Unknown perception execution mode.");
     if legacyMode
+        legacyOffGround = offGroundFeatureConfig();
+        supplied = fieldnames(cfg.offGroundFeatures);
+        for k=1:numel(supplied)
+            name=supplied{k};
+            if isfield(legacyOffGround,name) && ~strcmp(name,'facadeRefineEnabled')
+                legacyOffGround.(name)=cfg.offGroundFeatures.(name);
+            end
+        end
+        if ~isfield(cfg.offGroundFeatures,'facadeDetectionEnabled')
+            legacyOffGround.facadeDetectionEnabled=any(featureNames=="facade");
+        end
+        cfg.offGroundFeatures=legacyOffGround;
         if ~isfield(cfg.offGroundFeatures,"facadeDetectionEnabled")
             cfg.offGroundFeatures.facadeDetectionEnabled = any(featureNames=="facade");
         end
@@ -75,7 +95,7 @@ function perception = perceiveFrame(frame, cfg)
         "numGroundPoints", double(size(groundContext.groundPoints, 1)), ...
         "numOffGroundPoints", double(size(offGroundVoxelGrid.points, 1)));
     if logical(coarseCfg.storeDiagnostics)
-        perception.diagnostics = struct("ground", ground, "offGround", offGround);
+        perception.diagnostics = struct("ground", ground, "offGround", offGround, "pillars", voxelGrid.statistics);
     end
     if any(mode == ["offline", "full"])
         context = struct("voxelGrid", voxelGrid, "groundContext", groundContext, ...
@@ -84,6 +104,7 @@ function perception = perceiveFrame(frame, cfg)
         perception.executionMode = "offline";
         perception.featureMasks = fine.featureMasks;
         perception.refinement = fine.refinement;
+        perception.fineCandidates = fine.candidates;
     end
 end
 
@@ -129,8 +150,11 @@ function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGri
     groundContext.groundReflectivity = extractFrameScalar(frame, voxelGrid.pointIndices, validGroundMap, "reflectivity", "intensity");
     groundContext.groundCellLinIdx = double(pointCellLinIdx(validGroundMap));
 
-    offGroundVoxelGrid = deriveOffGroundVoxelGrid( ...
-        voxelGrid, find(offGroundPointMask), logical(storeDenseOffGroundCount));
+    if storeDenseOffGroundCount
+        offGroundVoxelGrid = deriveLegacyOffGroundGrid(voxelGrid, find(offGroundPointMask), true);
+    else
+        offGroundVoxelGrid = subsetOffGroundPillars(voxelGrid, offGroundPointMask);
+    end
 end
 
 function xyView = buildGroundXYView(voxelGrid, cellSizeXY, groundPointMask, curbCfg)
@@ -281,175 +305,27 @@ function scalarValues = extractFrameScalar(frame, pointIndices, pointMask, prima
     scalarValues = double(scalarValues(:));
 end
 
-function offGroundVoxelGrid = deriveOffGroundVoxelGrid(sourceVoxelGrid, sourceLocalIdx, storeDenseCount)
-% deriveOffGroundVoxelGrid: Build a compact canonical voxel grid for
-% selected off-ground points by cropping and reindexing the source frame
-% voxel grid.
-%
-% Input:
-%   sourceVoxelGrid: canonical voxelizePointCloud output for the frame
-%   sourceLocalIdx: [K x 1] local retained-point indices to keep
-%   storeDenseCount: logical scalar; false keeps only sparse point/voxel
-%       lookup arrays for the coarse probability-cloud path
-%
-% Output:
-%   offGroundVoxelGrid: canonical voxelizePointCloud-compatible subset
-    if nargin < 3
-        storeDenseCount = true;
-    end
-    sourceLocalIdx = double(sourceLocalIdx(:));
-    sourceLocalIdx = sourceLocalIdx(isfinite(sourceLocalIdx) & sourceLocalIdx >= 1 & sourceLocalIdx <= size(sourceVoxelGrid.points, 1) & sourceLocalIdx == floor(sourceLocalIdx));
-    if any(diff(sourceLocalIdx)<=0), sourceLocalIdx = unique(sourceLocalIdx,"stable"); end
-    voxelSize = double(sourceVoxelGrid.gridConfig.voxelSize(1:3));
-    sourceMinCorner = double(sourceVoxelGrid.gridConfig.minCorner(1:3));
-    offGroundVoxelGrid = emptyDerivedVoxelGrid(sourceVoxelGrid, voxelSize);
-    if isempty(sourceLocalIdx)
-        return;
-    end
-    sourceSub = double(sourceVoxelGrid.pointVoxelSub(sourceLocalIdx, 1:3));
-    minSub = min(sourceSub, [], 1);
-    maxSub = max(sourceSub, [], 1);
-    dims = maxSub - minSub + 1;
-    shiftedSub = sourceSub - minSub + 1;
-    pointVoxelLinIdx = sub2ind(double(dims), shiftedSub(:, 1), shiftedSub(:, 2), shiftedSub(:, 3));
-    if storeDenseCount
-        count = single(accumarray(shiftedSub, 1, double(dims), @sum, 0));
-    else
-        count = zeros(0, 0, 0, "single");
-    end
-    if storeDenseCount
-        [occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets, voxelPointLocalIdx] = buildDerivedVoxelPointMapping(pointVoxelLinIdx, dims);
-    else
-        occupiedVoxelLinIdx = zeros(0,1,"int32"); occupiedVoxelSub = zeros(0,3,"int32");
-        voxelPointOffsets = int32(1); voxelPointLocalIdx = zeros(0,1,"int32");
-    end
-    selectedPointIndices = int32(sourceVoxelGrid.pointIndices(sourceLocalIdx));
-    voxelPointIndices = int32(selectedPointIndices(double(voxelPointLocalIdx(:))));
-    minCorner = sourceMinCorner + ((minSub - 1) .* voxelSize);
-    maxCorner = minCorner + (dims .* voxelSize);
-
-    offGroundVoxelGrid.gridConfig.dims = double(dims(:).');
-    offGroundVoxelGrid.gridConfig.origin = double(minCorner(:).' + (0.5 .* voxelSize(:).'));
-    offGroundVoxelGrid.gridConfig.minCorner = double(minCorner(:).');
-    offGroundVoxelGrid.gridConfig.maxCorner = double(maxCorner(:).');
-    offGroundVoxelGrid.gridConfig.roiLimits = [double(minCorner(1)), double(maxCorner(1)), double(minCorner(2)), double(maxCorner(2)), double(minCorner(3)), double(maxCorner(3))];
-    offGroundVoxelGrid.count = count;
-    offGroundVoxelGrid.sumX = zeros(0, 0, 0, "single");
-    offGroundVoxelGrid.sumY = zeros(0, 0, 0, "single");
-    offGroundVoxelGrid.sumZ = zeros(0, 0, 0, "single");
-    offGroundVoxelGrid.sumXX = zeros(0, 0, 0, "single");
-    offGroundVoxelGrid.sumYY = zeros(0, 0, 0, "single");
-    offGroundVoxelGrid.sumZZ = zeros(0, 0, 0, "single");
-    offGroundVoxelGrid.sumXY = zeros(0, 0, 0, "single");
-    offGroundVoxelGrid.sumXZ = zeros(0, 0, 0, "single");
-    offGroundVoxelGrid.sumYZ = zeros(0, 0, 0, "single");
-    offGroundVoxelGrid.points = double(sourceVoxelGrid.points(sourceLocalIdx, :));
-    offGroundVoxelGrid.pointIndices = selectedPointIndices;
-    offGroundVoxelGrid.pointVoxelSub = int32(shiftedSub);
-    offGroundVoxelGrid.pointVoxelLinIdx = int32(pointVoxelLinIdx(:));
-    offGroundVoxelGrid.occupiedVoxelLinIdx = int32(occupiedVoxelLinIdx(:));
-    offGroundVoxelGrid.occupiedVoxelSub = int32(occupiedVoxelSub);
-    offGroundVoxelGrid.voxelPointOffsets = int32(voxelPointOffsets(:));
-    offGroundVoxelGrid.voxelPointLocalIdx = int32(voxelPointLocalIdx(:));
-    offGroundVoxelGrid.voxelPointIndices = int32(voxelPointIndices(:));
-    offGroundVoxelGrid.pointAttributes = filterDerivedPointAttributes(sourceVoxelGrid.pointAttributes, sourceLocalIdx);
-    offGroundVoxelGrid.numFilteredPoints = double(numel(sourceLocalIdx));
-    offGroundVoxelGrid.numOccupiedVoxels = double(numel(occupiedVoxelLinIdx));
-    offGroundVoxelGrid.hasPointLookup = storeDenseCount;
-    if ~storeDenseCount, offGroundVoxelGrid.numOccupiedVoxels = NaN; end
-end
-
-function voxelGrid = emptyDerivedVoxelGrid(sourceVoxelGrid, voxelSize)
-% emptyDerivedVoxelGrid: Create an empty voxelizePointCloud-compatible
-% struct that can be filled by deriveOffGroundVoxelGrid or returned
-% directly when no off-ground points survive the ground split.
-%
-% Input:
-%   sourceVoxelGrid: source canonical voxel grid for metadata defaults
-%   voxelSize: [1 x 3] voxel size in meters
-%
-% Output:
-%   voxelGrid: empty canonical voxel-grid struct
-    voxelGrid = struct();
-    voxelGrid.spatialIndexType = "voxelGrid";
-    voxelGrid.gridConfig = struct("dims", [0, 0, 0], "voxelSize", double(voxelSize(:).'), "origin", [0, 0, 0], "minCorner", [0, 0, 0], "maxCorner", [0, 0, 0], "roiLimits", [0, 0, 0, 0, 0, 0], "countLayout", "NxNyNz");
-    voxelGrid.count = zeros(0, 0, 0, "single");
-    voxelGrid.sumX = zeros(0, 0, 0, "single");
-    voxelGrid.sumY = zeros(0, 0, 0, "single");
-    voxelGrid.sumZ = zeros(0, 0, 0, "single");
-    voxelGrid.sumXX = zeros(0, 0, 0, "single");
-    voxelGrid.sumYY = zeros(0, 0, 0, "single");
-    voxelGrid.sumZZ = zeros(0, 0, 0, "single");
-    voxelGrid.sumXY = zeros(0, 0, 0, "single");
-    voxelGrid.sumXZ = zeros(0, 0, 0, "single");
-    voxelGrid.sumYZ = zeros(0, 0, 0, "single");
-    voxelGrid.points = zeros(0, 3);
-    voxelGrid.pointIndices = zeros(0, 1, "int32");
-    voxelGrid.pointVoxelSub = zeros(0, 3, "int32");
-    voxelGrid.pointVoxelLinIdx = zeros(0, 1, "int32");
-    voxelGrid.occupiedVoxelLinIdx = zeros(0, 1, "int32");
-    voxelGrid.occupiedVoxelSub = zeros(0, 3, "int32");
-    voxelGrid.voxelPointOffsets = int32(1);
-    voxelGrid.voxelPointLocalIdx = zeros(0, 1, "int32");
-    voxelGrid.voxelPointIndices = zeros(0, 1, "int32");
-    voxelGrid.pointAttributes = filterDerivedPointAttributes(sourceVoxelGrid.pointAttributes, zeros(0, 1));
-    voxelGrid.inputType = "derived";
-    voxelGrid.inputSize = [0, 1];
-    voxelGrid.numInputPoints = double(sourceVoxelGrid.numFilteredPoints);
-    voxelGrid.numFilteredPoints = 0;
-    voxelGrid.numOccupiedVoxels = 0;
-end
-
-function pointAttributes = filterDerivedPointAttributes(sourceAttributes, sourceLocalIdx)
-% filterDerivedPointAttributes: Filter aligned per-point attribute
-% vectors from a source voxel grid to a derived off-ground voxel subset.
-%
-% Input:
-%   sourceAttributes: struct of source point attributes
-%   sourceLocalIdx: [K x 1] local retained-point indices to keep
-%
-% Output:
-%   pointAttributes: struct with filtered point attributes
-    pointAttributes = struct("range", zeros(0, 1));
-    if ~isstruct(sourceAttributes)
-        return;
-    end
-    fieldNames = string(fieldnames(sourceAttributes));
-    for fieldIdx = 1:numel(fieldNames)
-        fieldName = char(fieldNames(fieldIdx));
-        values = sourceAttributes.(fieldName);
-        if isvector(values) && max([sourceLocalIdx(:); 0]) <= numel(values)
-            pointAttributes.(fieldName) = values(sourceLocalIdx);
-        end
-    end
-end
-
-function [occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets, voxelPointLocalIdx] = buildDerivedVoxelPointMapping(pointVoxelLinIdx, dims)
-% buildDerivedVoxelPointMapping: Build CSR-style occupied-voxel
-% lookup arrays from compact derived point voxel indices.
-%
-% Input:
-%   pointVoxelLinIdx: [K x 1] linear voxel indices in compact grid layout
-%   dims: [1 x 3] compact voxel grid dimensions
-%
-% Output:
-%   occupiedVoxelLinIdx, occupiedVoxelSub, voxelPointOffsets,
-%       voxelPointLocalIdx: voxelizePointCloud-compatible mapping arrays
-    occupiedVoxelLinIdx = zeros(0, 1, "int32");
-    occupiedVoxelSub = zeros(0, 3, "int32");
-    voxelPointOffsets = int32(1);
-    voxelPointLocalIdx = zeros(0, 1, "int32");
-    if isempty(pointVoxelLinIdx)
-        return;
-    end
-    [sortedLinIdx, sortOrder] = sort(double(pointVoxelLinIdx(:)));
-    voxelPointLocalIdx = int32(sortOrder(:));
-    occupiedMask = [true; diff(sortedLinIdx) ~= 0];
-    occupiedStartIdx = find(occupiedMask);
-    occupiedVoxelLinIdx = int32(sortedLinIdx(occupiedStartIdx));
-    voxelPointOffsets = int32([occupiedStartIdx; numel(sortedLinIdx) + 1]);
-    [xSub, ySub, zSub] = ind2sub(double(dims), double(occupiedVoxelLinIdx));
-    occupiedVoxelSub = int32([xSub(:), ySub(:), zSub(:)]);
+function pillars = subsetOffGroundPillars(source, selected)
+% subsetOffGroundPillars: Retain branch members on the original XY lattice.
+% Crop empty XY margins only; never create a vertical index or a finer cell.
+    pillars = source;
+    pillars.points=source.points(selected,:);
+    pillars.pointIndices=source.pointIndices(selected);
+    pillars.pointAttributes=filterPerceptionAttributes(source.pointAttributes,find(selected));
+    bins=double(source.pointPillarSub(selected,:));
+    spacing=source.pillarGeometry.cellSize;
+    first=[1 1]; last=[1 1];
+    if ~isempty(bins), first=min(bins,[],1); last=max(bins,[],1); end
+    bins=bins-first+1;
+    dims=last-first+1;
+    lower=source.pillarGeometry.origin+(first-1).*spacing;
+    pillars.pillarGeometry=struct('origin',lower,'cellSize',spacing,'mapSize',dims([2 1]),'layout',"NyNx");
+    pillars.gridConfig=struct('dims',dims,'voxelSize',spacing,'minCorner',lower, ...
+        'maxCorner',lower+dims.*spacing,'origin',lower+spacing/2);
+    pillars.pointPillarSub=int32(bins);
+    pillars.pointPillarLinIdx=int32(sub2ind(dims([2 1]),bins(:,2),bins(:,1)));
+    pillars.numFilteredPoints=size(bins,1);
+    pillars=rmfield(pillars,'statistics');
 end
 
 function coarseCfg = resolveCoarseProbabilityCloudConfig(cfg)

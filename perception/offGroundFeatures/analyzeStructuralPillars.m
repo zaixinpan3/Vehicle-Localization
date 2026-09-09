@@ -1,265 +1,97 @@
-function coarseOffGround = analyzeStructuralPillars(voxelGrid, offGroundCfg, coarseCfg)
-% analyzeStructuralPillars: Detect poles, facades, and traffic signs from XY pillars and their
-% sparse height histograms. Semantic decisions use vertical runs, neighboring
-% pillar contrast and footprint shape. No dense 3D tensor or point-level
-% feature refinement is constructed.
-%
-% Input:
-%   voxelGrid: compact off-ground voxel metadata from perceiveFrame
-%   offGroundCfg: struct from offGroundFeatureConfig
-%   coarseCfg: struct from coarseSemanticProbabilityCloudConfig
-%
-% Output:
-%   coarseOffGround: pole cell mask/probability, sparse point-to-column
-%       assignments, and column diagnostics
-    assert(isstruct(voxelGrid) && all(isfield(voxelGrid, ...
-        ["gridConfig", "points", "pointVoxelSub", "pointAttributes"])), ...
-        "voxelGrid is missing coarse off-ground inputs.");
-
-    [columnMaps, sparseFineGrid] = ...
-        buildSparseColumnMaps(voxelGrid, offGroundCfg, coarseCfg);
-    columnMaps.runLayerMap = single(columnMaps.maxRunLayerCount);
-    columnMaps.rawLayerCount = single(columnMaps.runLayerMap);
-    columnMaps.supportScore = single(columnMaps.runLayerMap);
-    columnMaps.pointScore = zeros(columnMaps.mapSize,"single");
-    columnMaps.lineScore = zeros(columnMaps.mapSize,"single");
-    if any(ismember(string(coarseCfg.semanticNames),["pole","facade"]))
-        [columnMaps.pointScore, columnMaps.lineScore, ...
-            columnMaps.normalOrientation, columnMaps.blobness] = ...
-            buildFineColumnShapeScores(columnMaps.runLayerMap, ...
-            columnMaps.occupiedMask, offGroundCfg, columnMaps.dx, columnMaps.dy);
+function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
+% analyzeStructuralPillars: Classify whole pillars using XYZ distributions.
+% No vertical index, occupancy sequence, local voxel grid or semantic point
+% selection exists here. All off-ground returns contribute to each pillar.
+    useNative=isfield(cfg,'useNativeKernels') && cfg.useNativeKernels;
+    stats=aggregatePillarStatistics(pillars.points,pillars.pointPillarLinIdx, ...
+        pillars.pointAttributes,useNative);
+    geometry=pillars.pillarGeometry;
+    mapSize=geometry.mapSize;
+    ids=double(stats.pillarIndices);
+    maps=struct('origin',geometry.origin,'dx',geometry.cellSize(1), ...
+        'dy',geometry.cellSize(2),'mapSize',mapSize,'statistics',stats);
+    maps.pillarCounts=zeros(mapSize); maps.pillarCounts(ids)=stats.count;
+    maps.pillarZRange=zeros(mapSize); maps.pillarZRange(ids)=stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3);
+    maps.occupiedMask=maps.pillarCounts>0;
+    [maps.xMap,maps.yMap]=meshgrid(single(geometry.origin(1)+((1:mapSize(2))-.5)*maps.dx), ...
+        single(geometry.origin(2)+((1:mapSize(1))-.5)*maps.dy));
+    maps.xMap(~maps.occupiedMask)=NaN; maps.yMap(~maps.occupiedMask)=NaN;
+    % Whole-pillar height spread supplies XY shape and Hough evidence.
+    maps.supportEvidence=single(maps.pillarCounts);
+    maps.supportEvidence(maps.pillarCounts<3)=0;
+    maps.pointScore=zeros(mapSize,'single'); maps.lineScore=maps.pointScore;
+    maps.normalOrientation=nan(mapSize,'single'); maps.blobness=maps.pointScore;
+    if any(ismember(cloudCfg.semanticNames,["pole","facade"]))
+        [maps.pointScore,maps.lineScore,maps.normalOrientation,maps.blobness]= ...
+            buildPillarShapeScores(maps.supportEvidence,maps.occupiedMask,cfg,maps.dx,maps.dy);
     end
-
-    facade = struct("mask",false(columnMaps.mapSize));
-    if any(string(coarseCfg.semanticNames)=="facade")
-        facadeCfg = offGroundCfg;
-        facadeCfg.facadeDetectionEnabled = true;
-        facadeCfg.facadeRefineEnabled = false;
-        facade = extractFacadeFeatures(columnMaps, struct(), facadeCfg);
-        facade = expandFacadePillarSupport(facade,columnMaps,offGroundCfg);
+    maps.moments=projectStatistics(stats,prod(mapSize),cloudCfg);
+    facade=struct('mask',false(mapSize));
+    if any(cloudCfg.semanticNames=="facade")
+        facadeCfg=cfg; facadeCfg.facadeDetectionEnabled=true;
+        facadeCfg.facadeRefineEnabled=false;
+        % Facade voting uses return support along a line; pole contrast uses
+        % vertical spread. Both maps remain one statistic per whole pillar.
+        facadeMaps=maps;
+        facadeMaps.supportEvidence=single(maps.pillarCounts);
+        [~,facadeMaps.lineScore,facadeMaps.normalOrientation]=buildPillarShapeScores( ...
+            facadeMaps.supportEvidence,maps.occupiedMask,cfg,maps.dx,maps.dy);
+        facade=extractFacadeFeatures(facadeMaps,struct(),facadeCfg);
+        facade=expandFacadePillarSupport(facade,maps,cfg);
+        maps.facadeLineScore=facadeMaps.lineScore;
     end
-
-    probabilityFloor = max(0, min(1, double(coarseCfg.minimumSemanticProbability)));
-    poleCellMask = false(columnMaps.mapSize);
-    poleProbability = zeros(columnMaps.mapSize);
-    poleParams = struct(); candidates = struct();
-    if any(string(coarseCfg.semanticNames)=="pole")
-        poleParams = resolvePoleDetectionParams(offGroundCfg);
-        candidates = detectPoleCandidates( ...
-            columnMaps, facade.mask, sparseFineGrid, poleParams);
-        % Preserve candidate footprints as objects. Independent per-pillar
-        % post-gates can remove one half of a pole crossing a grid boundary.
-        poleCellMask = logical(candidates.candidateMask);
-        footprints = bwconncomp(poleCellMask,8);
-        for footprint = footprints.PixelIdxList
-            cells = footprint{1};
-            if mean(double(columnMaps.pointScore(cells))) < coarseCfg.poleMinimumFootprintScore
-                poleCellMask(cells) = false;
-            end
-        end
-
-        runScale = max(1, double(poleParams.coreMinRunLayerThreshold));
-        runConfidence = min(double(columnMaps.runLayerMap) ./ runScale, 1);
-        shapeConfidence = min(max(double(columnMaps.pointScore), 0), 1) .* ...
-            (1 - min(max(double(columnMaps.lineScore), 0), 1));
-        poleProbability = zeros(columnMaps.mapSize);
-        combinedConfidence = min(max(shapeConfidence .* runConfidence, 0), 1);
-        poleProbability(poleCellMask) = probabilityFloor + ...
-            ((1 - probabilityFloor) .* combinedConfidence(poleCellMask));
+    poleMask=false(mapSize); candidates=struct();
+    if any(cloudCfg.semanticNames=="pole")
+        candidates=detectPolePillars(maps,facade.mask,cfg.pole);
+        poleMask=candidates.candidateMask;
     end
-
-    coarseOffGround = struct();
-    coarseOffGround.facade = facade;
-    coarseOffGround.facadeCellMask = facade.mask;
-    coarseOffGround.facadeProbability = single(facade.mask .* ...
-        (probabilityFloor + (1-probabilityFloor).*double(columnMaps.lineScore)));
-    coarseOffGround.trafficSignCellMask = columnMaps.trafficSignCellMask;
-    coarseOffGround.trafficSignProbability = single(columnMaps.trafficSignCellMask .* ...
-        (probabilityFloor + (1-probabilityFloor).*columnMaps.trafficSignEvidence));
-    coarseOffGround.poleCellMask = poleCellMask;
-    coarseOffGround.poleProbability = single(poleProbability);
-    coarseOffGround.columnMaps = columnMaps;
-    coarseOffGround.candidates = candidates;
-    coarseOffGround.poleParams = poleParams;
+    signMask=false(mapSize); signEvidence=zeros(mapSize);
+    if any(cloudCfg.semanticNames=="trafficSign") && isfield(stats,'intensity')
+        maximum=stats.intensity.maximum;
+        selected=isfinite(maximum) & maximum>cfg.trafficSignIntensityThreshold;
+        signMask(ids(selected))=true;
+        signEvidence(ids(selected))=max(0,1-cfg.trafficSignIntensityThreshold./maximum(selected));
+    end
+    maps.trafficSignCellMask=signMask;
+    maps.trafficSignEvidence=signEvidence;
+    maps.trafficSignMoments=maps.moments;
+    floorProbability=cloudCfg.minimumSemanticProbability;
+    poleEvidence=double(maps.pointScore).*(1-double(maps.lineScore));
+    facadeEvidence=zeros(mapSize);
+    if isfield(maps,'facadeLineScore'), facadeEvidence=double(maps.facadeLineScore); end
+    result=struct('columnMaps',maps,'facade',facade,'facadeCellMask',facade.mask, ...
+        'facadeProbability',single(facade.mask.*(floorProbability+(1-floorProbability)*facadeEvidence)), ...
+        'poleCellMask',poleMask,'poleProbability',single(poleMask.*(floorProbability+(1-floorProbability)*poleEvidence)), ...
+        'trafficSignCellMask',signMask,'trafficSignProbability',single(signMask.*(floorProbability+(1-floorProbability)*signEvidence)), ...
+        'candidates',candidates);
 end
 
-function [columnMaps, sparseFineGrid] = buildSparseColumnMaps(voxelGrid, cfg, coarseCfg)
-% buildSparseColumnMaps: Compute the same column occupancy statistics as the
-% dense fine-grid branch from sorted occupied voxels and 2D accumulations.
-    dims = round(double(voxelGrid.gridConfig.dims(1:3)));
-    voxelSize = double(voxelGrid.gridConfig.voxelSize(1:3));
-    origin = double(voxelGrid.gridConfig.minCorner(1:3));
-    nx = max(0, dims(1));
-    ny = max(0, dims(2));
-    nz = max(0, dims(3));
-    mapSize = [ny, nx];
-    pointVoxelSub = double(voxelGrid.pointVoxelSub(:, 1:3));
-    numPoints = size(pointVoxelSub, 1);
-    validPoint = numPoints > 0 & all(isfinite(pointVoxelSub), 2) & ...
-        pointVoxelSub(:, 1) >= 1 & pointVoxelSub(:, 1) <= nx & ...
-        pointVoxelSub(:, 2) >= 1 & pointVoxelSub(:, 2) <= ny & ...
-        pointVoxelSub(:, 3) >= 1 & pointVoxelSub(:, 3) <= nz;
-    projectionRotation = coarseCfg.projectionRotation;
-    projectionTranslation = coarseCfg.projectionTranslation;
-    useNative = isfield(cfg,"useNativeKernels") && cfg.useNativeKernels;
-    intensity = nan(numPoints,1);
-    structuralPointMask = validPoint;
-    trafficThreshold = resolveTrafficThreshold(cfg);
-    if isfield(voxelGrid.pointAttributes, "intensity") && ...
-            numel(voxelGrid.pointAttributes.intensity) == numPoints
-        intensity = double(voxelGrid.pointAttributes.intensity(:));
-        structuralPointMask = structuralPointMask & ...
-            ~(isfinite(intensity) & intensity > trafficThreshold);
+function moments=projectStatistics(stats,numCells,cfg)
+% projectStatistics: Transform complete XYZ distributions and expose XY margins.
+    ids=double(stats.pillarIndices);
+    r=cfg.projectionRotation;
+    mu=stats.meanXYZ*r.'+cfg.projectionTranslation;
+    packed=stats.covarianceXYZ;
+    projected=zeros(size(packed));
+    pairs=[1 1;1 2;2 2;1 3;2 3;3 3];
+    for k=1:6
+        a=r(pairs(k,1),:); b=r(pairs(k,2),:);
+        factors=[a(1)*b(1),a(1)*b(2)+a(2)*b(1),a(2)*b(2), ...
+            a(1)*b(3)+a(3)*b(1),a(2)*b(3)+a(3)*b(2),a(3)*b(3)];
+        projected(:,k)=sum(packed.*factors,2);
     end
-
-    if ~any(ismember(string(coarseCfg.semanticNames),["pole","facade"]))
-        structuralPointMask(:) = false;
-    end
-    occupiedLayerMinPoints = resolvePoleOccupiedLayerMinPoints(cfg);
-    [pillarCounts, occupiedLayerCount, maxRunLayerCount, pillarZRange, sparseVoxels] = ...
-        accumulateSparseOccupancy(pointVoxelSub(structuralPointMask, :), ...
-        mapSize, nz, voxelSize(3), occupiedLayerMinPoints);
-    occupiedMask = occupiedLayerCount > 0;
-    [xMap, yMap] = coordinateMaps(mapSize, origin(1:2), voxelSize(1:2));
-    xMap(~occupiedMask) = NaN;
-    yMap(~occupiedMask) = NaN;
-
-    columnMaps = struct();
-    cellRows = sub2ind(mapSize, pointVoxelSub(structuralPointMask, 2), pointVoxelSub(structuralPointMask, 1));
-    columnMaps.moments = aggregatePlanarCellMoments(voxelGrid.points(structuralPointMask, :), cellRows, prod(mapSize), projectionRotation, projectionTranslation, useNative);
-    % Radiometric evidence selects whole pillars. Their Gaussian contains
-    % every off-ground member, including nonreflective support at other heights.
-    columnMaps.trafficSignCellMask = false(mapSize);
-    columnMaps.trafficSignEvidence = zeros(mapSize);
-    if any(string(coarseCfg.semanticNames) == "trafficSign")
-        allColumns = sub2ind(mapSize, pointVoxelSub(validPoint,2), pointVoxelSub(validPoint,1));
-        values = intensity(validPoint); values(~isfinite(values)) = 0;
-        maxima = accumarray(allColumns,values,[prod(mapSize),1],@max,0);
-        columnMaps.trafficSignCellMask = reshape(maxima > trafficThreshold,mapSize);
-        columnMaps.trafficSignEvidence = reshape(max(0,1-trafficThreshold./max(maxima,eps)),mapSize);
-        candidateMembers = columnMaps.trafficSignCellMask(allColumns);
-        validRows = find(validPoint);
-        columnMaps.trafficSignMoments = aggregatePlanarCellMoments(voxelGrid.points(validRows(candidateMembers),:), ...
-            allColumns(candidateMembers),prod(mapSize),projectionRotation,projectionTranslation,useNative);
-    end
-    columnMaps.voxelStatistics = sparseVoxels;
-    columnMaps.mapSize = double(mapSize);
-    columnMaps.origin = double(origin(1:2));
-    columnMaps.dx = double(voxelSize(1));
-    columnMaps.dy = double(voxelSize(2));
-    columnMaps.xMap = xMap;
-    columnMaps.yMap = yMap;
-    columnMaps.occupiedMask = occupiedMask;
-    columnMaps.pillarCounts = pillarCounts;
-    columnMaps.pillarZRange = pillarZRange;
-    columnMaps.occupiedLayerCount = occupiedLayerCount;
-    columnMaps.maxRunLayerCount = maxRunLayerCount;
-    columnMaps.occupiedLayerMinPoints = double(occupiedLayerMinPoints);
-    sparseFineGrid = struct( ...
-        "count3D", zeros(0, 0, 0, "single"), ...
-        "occupiedLayerMinPoints", double(occupiedLayerMinPoints), ...
-        "sparseVoxelColumnLinIdx", sparseVoxels.columnLinIdx, ...
-        "sparseVoxelZBin", sparseVoxels.zBin, ...
-        "sparseVoxelCount", sparseVoxels.count, ...
-        "sparseMapSize", double(mapSize), ...
-        "sparseNumZLayers", double(nz));
+    moments=struct('count',zeros(numCells,1),'mean',zeros(numCells,2), ...
+        'covariance',zeros(numCells,3),'meanZ',zeros(numCells,1),'heightCovariance',zeros(numCells,3));
+    moments.count(ids)=stats.count; moments.mean(ids,:)=mu(:,1:2);
+    moments.meanZ(ids)=mu(:,3); moments.covariance(ids,:)=projected(:,1:3);
+    moments.heightCovariance(ids,:)=projected(:,4:6);
 end
-
-function [pillarCounts, occupiedLayerCount, maxRunLayerCount, pillarZRange, sparseVoxels] = ...
-        accumulateSparseOccupancy(pointVoxelSub, mapSize, nz, dz, occupiedLayerMinPoints)
-% accumulateSparseOccupancy: Reduce structural point bins to dense 2D maps
-% while keeping the vertical occupancy representation sparse.
-    ny = double(mapSize(1));
-    nx = double(mapSize(2));
-    numColumns = ny .* nx;
-    pillarCounts = zeros(mapSize, "single");
-    occupiedLayerCount = zeros(mapSize, "single");
-    maxRunLayerCount = zeros(mapSize, "single");
-    pillarZRange = zeros(mapSize, "single");
-    sparseVoxels = struct( ...
-        "columnLinIdx", zeros(0, 1, "int32"), ...
-        "zBin", zeros(0, 1, "int32"), ...
-        "count", zeros(0, 1, "single"));
-    if isempty(pointVoxelSub)
-        return;
-    end
-    if any([numColumns, nz] < 1)
-        return;
-    end
-
-    xBin = double(pointVoxelSub(:, 1));
-    yBin = double(pointVoxelSub(:, 2));
-    zBin = double(pointVoxelSub(:, 3));
-    columnLinIdx = yBin + ((xBin - 1) .* ny);
-    pillarCountVector = accumarray(columnLinIdx, 1, [numColumns, 1], @sum, 0);
-    pillarCounts = reshape(single(pillarCountVector), mapSize);
-
-    voxelLinIdx = columnLinIdx + ((zBin - 1) .* numColumns);
-    sortedVoxelLinIdx = sort(voxelLinIdx);
-    voxelStartMask = [true; diff(sortedVoxelLinIdx) ~= 0];
-    voxelStartIdx = find(voxelStartMask);
-    voxelCounts = diff([voxelStartIdx; numel(sortedVoxelLinIdx) + 1]);
-    uniqueVoxelLinIdx = sortedVoxelLinIdx(voxelStartIdx);
-    voxelColumn = mod(uniqueVoxelLinIdx - 1, numColumns) + 1;
-    voxelZ = floor((uniqueVoxelLinIdx - 1) ./ numColumns) + 1;
-    sparseVoxels.columnLinIdx = int32(voxelColumn(:));
-    sparseVoxels.zBin = int32(voxelZ(:));
-    sparseVoxels.count = single(voxelCounts(:));
-    qualifiedMask = voxelCounts >= occupiedLayerMinPoints;
-    qualifiedVoxelLinIdx = uniqueVoxelLinIdx(qualifiedMask);
-    if isempty(qualifiedVoxelLinIdx)
-        return;
-    end
-
-    qualifiedColumn = mod(qualifiedVoxelLinIdx - 1, numColumns) + 1;
-    qualifiedZ = floor((qualifiedVoxelLinIdx - 1) ./ numColumns) + 1;
-    occupiedLayerVector = accumarray( ...
-        qualifiedColumn, 1, [numColumns, 1], @sum, 0);
-    minimumZ = accumarray(qualifiedColumn, qualifiedZ, ...
-        [numColumns, 1], @min, NaN);
-    maximumZ = accumarray(qualifiedColumn, qualifiedZ, ...
-        [numColumns, 1], @max, NaN);
-
-    orderedPairs = sortrows([qualifiedColumn, qualifiedZ], [1, 2]);
-    newRun = [true; diff(orderedPairs(:, 1)) ~= 0 | diff(orderedPairs(:, 2)) ~= 1];
-    runStartIdx = find(newRun);
-    runLengths = diff([runStartIdx; size(orderedPairs, 1) + 1]);
-    runColumns = orderedPairs(runStartIdx, 1);
-    maximumRunVector = accumarray( ...
-        runColumns, runLengths, [numColumns, 1], @max, 0);
-
-    zRangeVector = zeros(numColumns, 1);
-    validSpan = isfinite(minimumZ) & isfinite(maximumZ);
-    zRangeVector(validSpan) = ...
-        ((maximumZ(validSpan) - minimumZ(validSpan)) + 1) .* double(dz);
-    occupiedLayerCount = reshape(single(occupiedLayerVector), mapSize);
-    maxRunLayerCount = reshape(single(maximumRunVector), mapSize);
-    pillarZRange = reshape(single(zRangeVector), mapSize);
-end
-
-function [xMap, yMap] = coordinateMaps(mapSize, origin, voxelSize)
-% coordinateMaps: Build metric XY center maps for a [Ny Nx] raster.
-    xCenters = origin(1) + (((1:mapSize(2)) - 0.5) .* voxelSize(1));
-    yCenters = origin(2) + (((1:mapSize(1)) - 0.5) .* voxelSize(2));
-    [xMap, yMap] = meshgrid(single(xCenters), single(yCenters));
-end
-
-function threshold = resolveTrafficThreshold(cfg)
-% resolveTrafficThreshold: Read the high-intensity structural exclusion.
-    threshold = inf;
-    if isfield(cfg, "trafficSignIntensityThreshold") && ...
-            isscalar(cfg.trafficSignIntensityThreshold) && ...
-            isfinite(cfg.trafficSignIntensityThreshold)
-        threshold = max(0, double(cfg.trafficSignIntensityThreshold));
-    end
-end
-
 function facade = expandFacadePillarSupport(facade,maps,cfg)
 % Move the legacy refinement halo into the coarse candidate stage so every
 % point later considered offline already belongs to a published candidate.
 % This expansion uses only pillar occupancy and distances between XY centers.
     if ~any(facade.mask(:)), return; end
-    radius = max(0,round(cfg.facadeRefineHorizontalSupportRadiusVoxels));
+    radius = max(0,round(cfg.facadeSupportRadiusCells));
     seedMap = facade.lineMap;
     bestDistance = inf(maps.mapSize);
     [cols,rows] = meshgrid(1:maps.mapSize(2),1:maps.mapSize(1));

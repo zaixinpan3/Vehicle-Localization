@@ -3,7 +3,8 @@
 MATLAB research implementation of vehicle localization using road curbs,
 road markings, and pole-like features. Perception now has a shared XY-pillar
 front end: online localization consumes coarse Gaussian distributions, while
-offline mapping validates individual points only inside candidate pillars.
+offline mapping independently reconstructs detailed structural candidates and
+validates their individual points.
 Historical detectors remain available through `executionMode="legacyFull"`
 for comparisons with the stored reference.
 
@@ -11,7 +12,7 @@ for comparisons with the stored reference.
 
 ```text
 organized LiDAR frame (vehicle coordinates)
-  -> pillarizePointCloud: XY membership + sparse height histograms, no 3D volume
+  -> pillarizePointCloud: XY membership + whole-pillar XYZ moments and bounds
   -> segmentGround: common slope-grid terrain preprocessing
   -> analyzeGroundPillars: curb geometry, road topology, reflectivity statistics
   -> analyzeStructuralPillars: vertical support, compactness, neighbor contrast
@@ -22,7 +23,7 @@ organized LiDAR frame (vehicle coordinates)
        |    localizeLidarFrame: semantic D2D -> accepted observer pose event
        |
        +-> offline
-            refinePerceptionCandidates: evaluate candidate members individually
+            refinePerceptionCandidates: independent detailed geometry + point decisions
             collectFeatureObservations: fine points -> global coordinates
             buildSlidingWindowMap: canonical repeated-observation Gaussian field
             temporalMapToProbabilityCloud: normalized field with retained mass
@@ -32,9 +33,11 @@ organized LiDAR frame (vehicle coordinates)
 
 `perceiveFrame(frame, perceptionConfig())` returns `probabilityCloud`,
 `candidates`, and compact source counts. The analysis unit is a 0.3 m XY pillar.
-Vertical structure uses sparse 0.5 m height-bin counts; no semantic label is
-assigned to a height bin. Reading returns, rejecting invalid measurements,
-separating terrain, and accumulating statistics are common preprocessing.
+Every pillar stores its point count, XYZ mean, full XYZ covariance, bounds,
+and available intensity/reflectivity maxima with finite sample counts.
+The coarse path has no Z index, height bins, occupancy runs or finer cells.
+Reading returns, rejecting invalid measurements, separating terrain and
+accumulating whole-pillar statistics are common preprocessing.
 There is no online point-level feature refinement.
 
 Useful original ideas are retained: terrain-relative curb geometry, road-edge
@@ -43,11 +46,15 @@ relative to neighboring pillars. Redundant final curb-energy and independent
 pole-column post-gates were removed from the defaults. In particular, a pole
 crossing an XY boundary retains its complete candidate footprint.
 
-Set `cfg.executionMode="offline"` to additionally return `featureMasks` and
-`refinement`. Each semantic audit contains candidate indices, evaluated indices,
+Set `cfg.executionMode="offline"` to additionally return `featureMasks`,
+`fineCandidates` and `refinement`. `candidates` remains the online product;
+`fineCandidates` records the independent offline search support. Each semantic audit contains candidate indices, evaluated indices,
 and an acceptance decision for every member. Curbs use the established residual
 and boundary filters; markings use the road-derived reflectivity threshold;
-poles use sparse height support and a robust vertical-line residual test.
+poles retain detailed support and robust vertical-line residual tests, built
+exclusively inside the offline branch. Those tests do not run online.
+`cfg.fine.poleRecoveryEnabled=false` preserves the existing point baseline;
+the optional recovery path is experimental and can add unverified poles.
 There is no fallback that republishes every candidate when fine validation
 rejects all points. The invocation's **only semantic selector** is
 `cfg.featureNames`. Dataset profiles select these channels:
@@ -107,7 +114,9 @@ for **uncalibrated evidence and hit support**, not Bayesian semantic or free-spa
 occupancy posteriors. Known IMU tilt can be supplied through
 `cfg.coarseProbabilityCloud.projectionRotation` before moment accumulation.
 
-See [the design and measured limitations](research/pillar_perception_and_d2d.md).
+See [the whole-pillar boundary and baseline audit](research/whole_pillar_perception.md)
+for the current representation, and [the prior design](research/pillar_perception_and_d2d.md)
+for historical measurements.
 The [runtime optimization study](research/coarse_perception_runtime_optimization.md)
 measured median coarse latency of 56.5 ms versus 113.9 ms before optimization
 on 19 Mississippi frames, with identical ground labels, semantic candidates,
@@ -246,7 +255,8 @@ are explicit:
 | --- | --- |
 | `perceptionConfig` | `perceiveFrame` (aggregates the four below) |
 | `coarseSemanticProbabilityCloudConfig` | `perceiveCoarseProbabilityCloud`, `buildCoarseSemanticProbabilityCloud` |
-| `frameVoxelizationConfig` | `pillarizePointCloud`, historical `voxelizePointCloud` |
+| `frameVoxelizationConfig` | ROI defaults, offline and historical voxel geometry; online uses XY spacing only |
+| `structuralPillarConfig` | whole-pillar pole/facade/sign detection |
 | `finePerceptionConfig` | `refinePerceptionCandidates` (offline only) |
 | `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` |
 | `groundSegmentationConfig` | `segmentGround` |

@@ -1,7 +1,8 @@
 function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
-% refinePerceptionCandidates: Recover and validate only coarse candidate
-% members for offline mapping. Every recovered point has an explicit decision;
-% an empty accepted set stays empty. No full-frame detector is rerun.
+% refinePerceptionCandidates: Fine point classification for offline mapping.
+% Ground candidates reuse the common road raster. Structural candidates are
+% independently reconstructed offline; coarse misses cannot suppress fine
+% detection. Each fine candidate member receives an explicit point decision.
     n = numel(frame.x);
     grid = context.voxelGrid;
     ground = context.ground;
@@ -13,6 +14,9 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
         "roadMarking", false(n, 1), "pole", false(n, 1), ...
         "facade", false(n,1), "trafficSign", false(n,1));
     decisions = struct();
+    if any(ismember(candidates.semanticNames,["pole","facade","trafficSign"])) && isfield(context,'offGroundVoxelGrid')
+        [context,candidates]=prepareFineStructuralCandidates(frame,context,candidates,cfg);
+    end
     for k = 1:numel(candidates.semanticNames)
         name = candidates.semanticNames(k);
         inCandidate = ismember(grid.pointPillarLinIdx, candidates.pillarIndices{k});
@@ -46,14 +50,20 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                     accepted = isfinite(intensity(:)) & intensity(:) > cfg.offGroundFeatures.trafficSignIntensityThreshold;
                 end
             case "pole"
-                accepted = validatePolePoints(points, cfg.fine, context.offGround, context.offGroundVoxelGrid.gridConfig);
+                base=true(numel(pointIdx),1);
+                if isfield(candidates,'basePolePillarIndices')
+                    members=ismember(grid.pointPillarLinIdx,candidates.basePolePillarIndices);
+                    base=ismember(pointIdx,double(grid.pointIndices(members)));
+                end
+                accepted(base)=validatePolePoints(points(base,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig);
+                accepted(~base)=validatePolePoints(points(~base,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig);
         end
         masks.(name)(pointIdx(accepted)) = true;
         decisions.(name) = struct("candidatePointIndices", pointIdx, ...
             "evaluatedPointIndices", pointIdx, "accepted", accepted, ...
             "numEvaluated", numel(pointIdx), "numAccepted", nnz(accepted));
     end
-    fine = struct("featureMasks", masks, "refinement", decisions);
+    fine = struct("featureMasks", masks, "refinement", decisions, "candidates", candidates);
 end
 
 function accepted = validatePolePoints(points, cfg, offGround, geometry)
@@ -110,4 +120,67 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry)
         limit = min(cfg.poleMaximumRadius, mid + cfg.robustScale * sigma);
         accepted(rows) = supported & residual <= limit;
     end
+end
+
+function [context,candidates]=prepareFineStructuralCandidates(frame,context,candidates,cfg)
+% prepareFineStructuralCandidates: Rebuild detailed geometry exclusively offline.
+% Fine detection is independent of coarse candidate recall. Existing detailed
+% object support and per-point tests remain available for high-quality mapping.
+    source=context.offGroundVoxelGrid;
+    input=struct('x',source.points(:,1),'y',source.points(:,2),'z',source.points(:,3), ...
+        'pointIndices',source.pointIndices);
+    attributes=fieldnames(source.pointAttributes);
+    for k=1:numel(attributes), input.(attributes{k})=source.pointAttributes.(attributes{k}); end
+    base=0;
+    if ~isempty(context.voxelGrid.points), base=min(context.voxelGrid.points(:,3)); end
+    voxelCfg=frameVoxelizationConfig();
+    voxelCfg.voxelSize=[source.pillarGeometry.cellSize,cfg.fine.poleSupportHeightResolution];
+    voxelCfg.roiLimits=[]; voxelCfg.exclusionHalfSize=0;
+    voxelCfg.minCorner=[source.pillarGeometry.origin,base];
+    voxelCfg.statisticsMode="sparse"; voxelCfg.buildPointLookup=false;
+    fineGrid=voxelizePointCloud(input,voxelCfg);
+    fineCfg=offGroundFeatureConfig();
+    fineCfg.useNativeKernels=isfield(cfg.offGroundFeatures,'useNativeKernels') && cfg.offGroundFeatures.useNativeKernels;
+    fineCfg.poleOccupiedLayerMinPoints=cfg.fine.poleSupportMinimumPoints;
+    cloudCfg=coarseSemanticProbabilityCloudConfig();
+    cloudCfg.semanticNames=candidates.semanticNames;
+    offGround=analyzeFineStructuralCandidates(fineGrid,fineCfg,cloudCfg);
+    fineCandidates=buildPerceptionCandidates(context.voxelGrid,context.ground,offGround,candidates.semanticNames);
+    if cfg.fine.poleRecoveryEnabled && any(candidates.semanticNames=="pole")
+        % Add only strong whole-pillar 3D evidence missed by detailed seeding.
+        maps=context.offGround.columnMaps;
+        detailed=offGround.columnMaps;
+        vox=detailed.voxelStatistics;
+        fineSupport=struct('sparseVoxelColumnLinIdx',vox.columnLinIdx, ...
+            'sparseVoxelZBin',vox.zBin,'sparseVoxelCount',vox.count, ...
+            'sparseMapSize',detailed.mapSize,'sparseNumZLayers',fineGrid.gridConfig.dims(3), ...
+            'occupiedLayerMinPoints',detailed.occupiedLayerMinPoints);
+        relaxedParams=offGround.poleParams;
+        relaxedParams.coreMinRunLayerThreshold=3;
+        relaxed=detectPoleCandidates(detailed,offGround.facade.mask,fineSupport,relaxedParams);
+        stats=maps.statistics;
+        covar=stats.covarianceXYZ;
+        slope=covar(:,4:5)./max(covar(:,6),eps);
+        radial=sqrt(max(0,covar(:,1)+covar(:,3)-sum(covar(:,4:5).^2,2)./max(covar(:,6),eps)));
+        recover=stats.count>=cfg.fine.poleRecoveryMinimumPoints & ...
+            stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.fine.poleRecoveryMinimumHeight & ...
+            vecnorm(slope,2,2)<=tand(cfg.fine.poleRecoveryMaximumTiltDegrees) & ...
+            radial<=cfg.fine.poleRecoveryMaximumRadialStd & ...
+            context.offGround.poleCellMask(double(stats.pillarIndices));
+        [rows,cols]=ind2sub(maps.mapSize,double(stats.pillarIndices(recover)));
+        xy=maps.origin+([cols(:) rows(:)]-0.5).*[maps.dx maps.dy];
+        geometry=context.voxelGrid.pillarGeometry;
+        bins=floor((xy-geometry.origin)./geometry.cellSize)+1;
+        fineBins=floor((xy-detailed.origin)./[detailed.dx detailed.dy])+1;
+        fineIds=sub2ind(detailed.mapSize,fineBins(:,2),fineBins(:,1));
+        recovered=int32(sub2ind(geometry.mapSize,bins(:,2),bins(:,1)));
+        recovered=recovered(relaxed.candidateMask(fineIds));
+        channel=find(candidates.semanticNames=="pole");
+        fineCandidates.basePolePillarIndices=fineCandidates.pillarIndices{channel};
+        fineCandidates.pillarIndices{channel}=union(fineCandidates.pillarIndices{channel},recovered);
+    end
+    candidates=fineCandidates;
+    candidates.framePointCount=numel(frame.x);
+    context.offGround=offGround;
+    context.offGroundVoxelGrid=fineGrid;
 end
