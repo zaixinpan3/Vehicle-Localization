@@ -53,8 +53,11 @@ and an acceptance decision for every member. Curbs use the established residual
 and boundary filters; markings use the road-derived reflectivity threshold;
 poles retain detailed support and robust vertical-line residual tests, built
 exclusively inside the offline branch. Those tests do not run online.
-`cfg.fine.poleRecoveryEnabled=false` preserves the existing point baseline;
-the optional recovery path is experimental and can add unverified poles.
+The default fine pole recovery adds missed candidates only with strong
+whole-pillar geometry (at least 12 returns, 3 m height, at most 2 degrees tilt
+and 0.10 m transverse standard deviation), relaxed detailed seeding and the
+existing per-point validation. Original accepted pole points are preserved.
+See [the frame-260 recovery audit](research/fine_pole_recovery.md).
 There is no fallback that republishes every candidate when fine validation
 rejects all points. The invocation's **only semantic selector** is
 `cfg.featureNames`. Dataset profiles select these channels:

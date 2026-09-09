@@ -74,7 +74,6 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             matPath=fullfile(dataRoot,'raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(matPath));
             cfg=perceptionConfig(); cfg.executionMode="offline";
-            counts=zeros(1,3);
             for frameIndex=[260 300 326 370 450 550 700 850 1000 1150 150 600 900 1100 200 500 800 1050]
                 frame=loadPointCloudFrame(matPath,frameIndex);
                 reference=loadPerceptionMaskReference("Missisipi",frameIndex);
@@ -83,15 +82,10 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
                     testCase.verifyEqual(actual.featureMasks.(name),reference.featureMasks.(name), ...
                         sprintf('frame %d %s',frameIndex,name));
                 end
-                p=actual.featureMasks.pole; r=reference.featureMasks.pole;
-                tp=nnz(p&r); fp=nnz(p&~r); fn=nnz(~p&r);
-                counts=counts+[tp fp fn];
-                if nnz(p|r)>0
-                    testCase.verifyGreaterThanOrEqual(2*tp/(2*tp+fp+fn),0.80,sprintf('frame %d pole',frameIndex));
-                end
+                testCase.verifyTrue(all(actual.featureMasks.pole(reference.featureMasks.pole)));
+                expected=expectedFinePerception("Missisipi",frameIndex);
+                testCase.verifyEqual(actual.featureMasks.pole,expected.featureMasks.pole);
             end
-            testCase.verifyGreaterThanOrEqual(counts(1)/sum(counts([1 2])),0.95);
-            testCase.verifyGreaterThanOrEqual(counts(1)/sum(counts([1 3])),0.95);
         end
     end
 end

@@ -58,18 +58,24 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             result=analyzeStructuralPillars(grid,structuralPillarConfig(),cloudCfg);
             testCase.verifyFalse(any(result.poleCellMask,'all'));
         end
-        function reportedMissedPoleEntersCoarseAndOptionalFineRecovery(testCase)
+        function reportedMissedPoleEntersDefaultFineDetection(testCase)
             file=fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,260);
             cfg=perceptionConfig(); cfg.executionMode="offline";
-            cfg.fine.poleRecoveryEnabled=true;
             result=perceiveFrame(frame,cfg);
             grid=pillarizePointCloud(frame,cfg.voxel);
             row=find(grid.pointIndices==63010);
             pole=result.candidates.pillarIndices{result.candidates.semanticNames=="pole"};
             testCase.verifyTrue(ismember(grid.pointPillarLinIdx(row),pole));
             testCase.verifyTrue(result.featureMasks.pole(63010));
+            reference=loadPerceptionMaskReference("Missisipi",260);
+            added=find(result.featureMasks.pole & ~reference.featureMasks.pole);
+            xy=double([frame.x(added),frame.y(added)]);
+            center=double([frame.x(63010),frame.y(63010)]);
+            testCase.verifyNumElements(added,17);
+            testCase.verifyLessThan(max(vecnorm(xy-center,2,2)),0.35);
+            testCase.verifyTrue(all(result.featureMasks.pole(reference.featureMasks.pole)));
         end
         function coarseRuntimeHasNoSubpillarOrFineCalls(testCase)
             cfg=perceptionConfig("Downtown"); cfg.featureNames=["pole","facade","trafficSign"];

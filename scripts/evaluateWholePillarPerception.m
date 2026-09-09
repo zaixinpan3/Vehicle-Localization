@@ -37,7 +37,7 @@ function report=evaluateWholePillarPerception(snapshotFolder)
         {'dataset','frameIndex','baselineMedianSeconds','pillarMedianSeconds','pillarMaximumSeconds'});
     report.matlabVersion=string(version);
     report.baselineRevision="9dcd1aeab1a029ce374a27be6d5db37fb8acf066";
-    report.scope="Frozen-detector agreement; warm loaded-frame perception; default fine recovery disabled.";
+    report.scope="Frozen-detector agreement; warm loaded-frame perception; current default fine pole recovery enabled.";
     writetable(report.fine,fullfile(snapshotFolder,'fine_fidelity.csv'));
     writetable(report.coarse,fullfile(snapshotFolder,'coarse_fidelity.csv'));
     writetable(report.timing,fullfile(snapshotFolder,'timing.csv'));

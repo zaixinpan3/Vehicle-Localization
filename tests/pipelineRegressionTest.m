@@ -44,7 +44,7 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
                     if frameEntry.facadeDetectionEnabled, profile="Downtown"; end
                     cfg = perceptionConfig(profile); cfg.executionMode = "offline";
                     perception = perceiveFrame(frame, cfg);
-                    expected=loadPerceptionMaskReference(profile,frameEntry.frameIdx);
+                    expected=expectedFinePerception(profile,frameEntry.frameIdx);
                     for name = string(fieldnames(expected.featureMasks)).'
                         testCase.verifyEqual(perception.featureMasks.(name),expected.featureMasks.(name), ...
                             sprintf("frame %d channel %s",frameEntry.frameIdx,name));
