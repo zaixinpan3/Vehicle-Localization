@@ -36,6 +36,15 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(nnz(fine.featureMasks.trafficSign),1);
             testCase.verifyGreaterThan(fine.refinement.trafficSign.numEvaluated,1);
         end
+        function fineSignCandidatesHonorConfiguredIntensity(testCase)
+            [frame,cfg,~]=signScene();
+            frame.intensity(end)=1300;
+            cfg.offGroundFeatures.trafficSignIntensityThreshold=1200;
+            cfg.executionMode="offline";
+            result=perceiveFrame(frame,cfg);
+            testCase.verifyEqual(nnz(result.featureMasks.trafficSign),1);
+            testCase.verifyTrue(result.featureMasks.trafficSign(end));
+        end
         function signValidationNeverVisitsOutsideCandidates(testCase)
             frame=struct('x',[10;10.1;12],'y',[2;2.1;3],'z',[1;2;3], ...
                 'intensity',[1601;100;9000]);

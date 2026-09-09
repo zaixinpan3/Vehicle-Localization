@@ -140,6 +140,8 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
     voxelCfg.statisticsMode="sparse"; voxelCfg.buildPointLookup=false;
     fineGrid=voxelizePointCloud(input,voxelCfg);
     fineCfg=offGroundFeatureConfig();
+    common=intersect(fieldnames(fineCfg),fieldnames(cfg.offGroundFeatures));
+    for k=1:numel(common), fineCfg.(common{k})=cfg.offGroundFeatures.(common{k}); end
     fineCfg.useNativeKernels=isfield(cfg.offGroundFeatures,'useNativeKernels') && cfg.offGroundFeatures.useNativeKernels;
     fineCfg.poleOccupiedLayerMinPoints=cfg.fine.poleSupportMinimumPoints;
     cloudCfg=coarseSemanticProbabilityCloudConfig();

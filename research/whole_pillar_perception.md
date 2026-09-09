@@ -126,8 +126,12 @@ speedup over the frozen reference. A development timing batch included a
 registration and observer work, and are not a hard real-time guarantee.
 
 Full-suite validation: **295 passed, zero failed, two filtered by assumptions**.
+A final configuration-inheritance fix passed all 22 structural tests, including
+one new custom-intensity regression; merged distinct validation is **296 passed,
+zero failed, two filtered**. The default masks were rechecked exactly on all
+28 frozen frames after that fix.
 The two unexecuted tests require YALMIP and SDP synthesis dependencies that are
-not on this MATLAB session's path. All 23 changed/new MATLAB files have zero
+not on this MATLAB session's path. All 24 changed/new MATLAB files have zero
 factory Code Analyzer findings. New tests cover full XYZ moments, Z-spacing
 independence, empty inputs, radiometric membership, a pole straddling a pillar
 boundary, horizontal rejection, reported-point recovery and forbidden online
