@@ -20,7 +20,9 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             testCase.verifyTrue(baseline.featureMasks.pole(47906));
             testCase.verifyFalse(actual.featureMasks.pole(47906));
             testCase.verifyEqual(actual.featureMasks.pole,expected);
-            testCase.verifyEqual(nnz(actual.featureMasks.pole),284);
+            testCase.verifyTrue(baseline.featureMasks.pole(16728));
+            testCase.verifyFalse(actual.featureMasks.pole(16728));
+            testCase.verifyEqual(nnz(actual.featureMasks.pole),269);
             testCase.verifyEqual(rmfield(actual.featureMasks,'pole'), ...
                 rmfield(baseline.featureMasks,'pole'));
             testCase.verifyEqual(actual.probabilityCloud,baseline.probabilityCloud);
@@ -36,6 +38,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             restored=false(numel(order),1); restored(order)=reordered.featureMasks.pole;
             testCase.verifyEqual(restored,actual.featureMasks.pole);
             testCase.verifyFalse(restored(47906));
+            testCase.verifyFalse(restored(16728));
         end
     end
 end

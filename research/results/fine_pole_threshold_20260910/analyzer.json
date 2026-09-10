@@ -1,0 +1,7 @@
+{
+  "files": [
+    "config/finePerceptionConfig.m",
+    "tests/finePoleRejectionTest.m"
+  ],
+  "findings": 0
+}

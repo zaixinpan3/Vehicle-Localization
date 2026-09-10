@@ -1,5 +1,9 @@
 # Fine pole rejection for short, diffuse support
 
+This report records the 2026-09-09 configuration and experiment. The current
+0.10 m short-support RMS threshold and subsequent validation are documented
+in [the 2026-09-10 refinement](fine_pole_threshold_refinement.md).
+
 The default fine detector rejects Mississippi frame 91 point 47906
 (XYZ `[1.825752 -17.053820 -0.926266]` m), reported by the user as a false
 positive. The source index is used only for validation, never as a detector
