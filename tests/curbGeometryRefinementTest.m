@@ -6,6 +6,76 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function rejectsReportedNearlyPlanarPoints(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            path=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(path));
+            frame=loadPointCloudFrame(path,91);cfg=perceptionConfig();cfg.executionMode="offline";
+            cfg.fine.curbContinuationLengthMeters=0;
+            cfg.fine.curbMinimumOutputSupportCells=0;
+            baselineCfg=cfg;baselineCfg.fine.curbMinimumOutputPlaneResidualMeters=0.018;
+            baseline=perceiveFrame(frame,baselineCfg);actual=perceiveFrame(frame,cfg);
+            picks=[19904 18559 17727];
+            testCase.verifyTrue(all(baseline.featureMasks.curb(picks)));
+            testCase.verifyFalse(any(actual.featureMasks.curb(picks)));
+            testCase.verifyFalse(any(actual.featureMasks.curb & ~baseline.featureMasks.curb));
+            expected=baseline.featureMasks.curb;expected(picks)=false;
+            testCase.verifyEqual(actual.featureMasks.curb,expected);
+            testCase.verifyEqual(rmfield(actual.featureMasks,'curb'),rmfield(baseline.featureMasks,'curb'));
+            testCase.verifyEqual(actual.probabilityCloud,baseline.probabilityCloud);
+            stream=RandStream('mt19937ar','Seed',9119904);order=randperm(stream,numel(frame.x));
+            shuffled=frame;
+            for name=string(fieldnames(frame)).'
+                if numel(frame.(name))==numel(order),v=frame.(name);shuffled.(name)=reshape(v(order),[],1);end
+            end
+            reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;
+            testCase.verifyEqual(restored,actual.featureMasks.curb);
+        end
+        function extendsOnlyConnectedMeasuredBoundaries(testCase)
+            points=curbScene(3);cfg=finePerceptionConfig();ground=true(size(points,1),1);
+            candidates=find(points(:,1)<=0);
+            [~,detail]=refineCurbGeometry(points,candidates,ground,cfg);
+            [selected,evaluated]=extendCurbBoundaries(points,ground,candidates,detail.boundaryPointIndices,cfg);
+            testCase.verifyGreaterThan(numel(selected),10);
+            testCase.verifyGreaterThan(max(points(selected,1)),3);
+            testCase.verifyLessThan(max(abs(points(selected,2)-3)),0.1);
+            testCase.verifyFalse(any(ismember(evaluated,candidates)));
+            testCase.verifyTrue(all(ismember(selected,evaluated)));
+            % A real but disconnected step must not be called a continuation.
+            points=points(points(:,1)<=0 | points(:,1)>=2,:);ground=true(size(points,1),1);
+            candidates=find(points(:,1)<=0);
+            [~,detail]=refineCurbGeometry(points,candidates,ground,cfg);
+            selected=extendCurbBoundaries(points,ground,candidates,detail.boundaryPointIndices,cfg);
+            testCase.verifyEmpty(selected);
+        end
+        function recordedContinuationRecoversVicinityWithoutReplacingPoints(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            path=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(path));
+            frame=loadPointCloudFrame(path,91);cfg=perceptionConfig();cfg.executionMode="offline";
+            baselineCfg=cfg;baselineCfg.fine.curbContinuationLengthMeters=0;
+            baseline=perceiveFrame(frame,baselineCfg);actual=perceiveFrame(frame,cfg);
+            testCase.verifyTrue(all(actual.featureMasks.curb(baseline.featureMasks.curb)));
+            testCase.verifyFalse(any(actual.featureMasks.curb([19904 18559 17727 22080 18560])));
+            new=actual.refinement.curb.geometry.continuationPointIndices;
+            right=new(frame.y(new)<0);
+            testCase.verifyGreaterThan(numel(right),40);
+            testCase.verifyLessThan(min(frame.x(right)),1.5);
+            annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity91.json')));
+            ids=find(actual.featureMasks.curb);vicinity=annotation.vicinityIndices;
+            distance=min(hypot(double(frame.x(vicinity))-double(frame.x(ids)).', ...
+                double(frame.y(vicinity))-double(frame.y(ids)).'),[],2);
+            testCase.verifyGreaterThanOrEqual(nnz(distance<=0.20),numel(vicinity)-1);
+            testCase.verifyEqual(rmfield(actual.featureMasks,'curb'),rmfield(baseline.featureMasks,'curb'));
+            testCase.verifyEqual(actual.probabilityCloud,baseline.probabilityCloud);
+            stream=RandStream('mt19937ar','Seed',9135826);order=randperm(stream,numel(frame.x));
+            shuffled=frame;
+            for name=string(fieldnames(frame)).'
+                if numel(frame.(name))==numel(order),v=frame.(name);shuffled.(name)=reshape(v(order),[],1);end
+            end
+            reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;
+            testCase.verifyEqual(restored,actual.featureMasks.curb);
+        end
         function noEligibleAnchorPairReturnsNoBoundary(testCase)
             points=curbScene(3);cfg=finePerceptionConfig();
             cfg.curbMinimumBoundaryLengthMeters=25;

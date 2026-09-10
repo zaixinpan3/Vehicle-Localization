@@ -1,0 +1,21 @@
+{
+  "frameIndex": 91,
+  "reportedIndices": [
+    19904,
+    18559,
+    17727,
+    22080,
+    18560
+  ],
+  "labels": [
+    "source",
+    "source",
+    "source",
+    "source",
+    "source"
+  ],
+  "curbPoints": 132,
+  "polePoints": 225,
+  "signPoints": 126,
+  "cameraUnchanged": true
+}

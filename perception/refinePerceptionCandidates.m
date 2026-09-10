@@ -35,6 +35,11 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                 support = support.';
                 pointIdx = gc.groundOriginalPointIdx(support(gc.groundCellLinIdx));
                 [accepted,curbDetail] = refineCurbGeometry(xyz,pointIdx,groundPoint,cfg.fine);
+                [continued,evaluated,boundaries]=extendCurbBoundaries(xyz,groundPoint,pointIdx,curbDetail.boundaryPointIndices,cfg.fine);
+                % Append one disjoint evaluated set for this feature.
+                pointIdx=[pointIdx;evaluated];accepted=[accepted;ismember(evaluated,continued)]; %#ok<AGROW>
+                curbDetail.continuationPointIndices=continued;
+                curbDetail.boundaryPointIndices=[curbDetail.boundaryPointIndices,boundaries];
                 candidateMembers = ismember(grid.pointIndices,pointIdx);
                 candidates.pillarIndices{k} = unique(grid.pointPillarLinIdx(candidateMembers));
             case "facade"

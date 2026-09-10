@@ -12,6 +12,7 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
     xyCloud=pointCloud([xyz(groundIds,1:2),zeros(numel(groundIds),1)]);
     [~,order]=sortrows(xyz(pointIndices,:),[1 2 3]);indices=pointIndices(order);
     score=zeros(numel(indices),1);gradients=zeros(numel(indices),2);seed=false(size(indices));
+    planeResidual=zeros(size(indices));
     for k=1:numel(indices)
         origin=xyz(indices(k),:);
         rows=findNeighborsInRadius(xyCloud,[origin(1:2),0],cfg.curbNeighborhoodRadiusMeters);
@@ -26,6 +27,7 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         residual=points(:,3)-design*coefficients;
         spread=sqrt(mean(residual.^2));
         if spread<cfg.curbMinimumPlaneResidualMeters,continue;end
+        planeResidual(k)=spread;
         gradient=coefficients(2:3).';
         if norm(gradient)<cfg.curbMinimumSlope,continue;end
         normal=gradient/norm(gradient);
@@ -67,6 +69,7 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
     end
     valid=score>=cfg.curbMinimumSeedScore;
     indices=indices(valid);score=score(valid);gradients=gradients(valid,:);seed=seed(valid);
+    planeResidual=planeResidual(valid);
     detail.seedPointIndices=indices(seed);
     if ~any(seed),return;end
     points=xyz(indices,1:2);
@@ -98,7 +101,14 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         for bin=unique(arcBin).'
             rows=members(arcBin==bin);[~,best]=max(score(rows)-distance(rows));chosen(end+1,1)=rows(best); %#ok<AGROW>
         end
-        selected(chosen)=true;boundaries{end+1}=indices(chosen); %#ok<AGROW>
+        % Weak geometric support may stabilize a boundary without becoming an
+        % output feature. Gate after sampling to avoid moving/replacing points.
+        outputChosen=chosen(planeResidual(chosen)>=cfg.curbMinimumOutputPlaneResidualMeters);
+        % A boundary must retain spatial support after point confidence gates;
+        % sparse survivors of a weak hypothesis do not establish a curb.
+        if numel(unique(groups(outputChosen)))>=cfg.curbMinimumOutputSupportCells && ~isempty(outputChosen)
+            selected(outputChosen)=true;boundaries{end+1}=indices(outputChosen); %#ok<AGROW>
+        end
         sense=sign(gradients*normal.');boundarySense=sign(sum(sense(chosen)));
         sameFacing=sense==0 | sense==boundarySense | boundarySense==0;
         duplicate=distance<=cfg.curbDuplicateBandMeters & along>=min(along(chosen))-cfg.curbDuplicateEndpointMarginMeters ...

@@ -22,6 +22,7 @@ function cfg = finePerceptionConfig()
     cfg.curbMinimumReliefMeters = 0.07;
     cfg.curbMaximumReliefMeters = 0.30;
     cfg.curbMinimumPlaneResidualMeters = 0.018;
+    cfg.curbMinimumOutputPlaneResidualMeters = 0.020;
     cfg.curbMinimumSurfaceNeighbors = 6;
     cfg.curbMaximumSurfaceResidualMeters = 0.025;
     cfg.curbMaximumSurfaceSlope = 0.35;
@@ -33,6 +34,7 @@ function cfg = finePerceptionConfig()
     cfg.curbMinimumSeedScore = 0.1;
     cfg.curbProposalCellSizeMeters = 0.30;
     cfg.curbMinimumSupportCells = 6;
+    cfg.curbMinimumOutputSupportCells = 3;
     cfg.curbMaximumProposalAnchors = 128;
     cfg.curbMinimumBoundaryLengthMeters = 1.5;
     cfg.curbMaximumProposalLengthMeters = 25.0;
@@ -47,4 +49,10 @@ function cfg = finePerceptionConfig()
     cfg.curbCurveExtensionMeters = 1.0;
     cfg.curbOutputBandMeters = 0.06;
     cfg.curbOutputSpacingMeters = 0.15;
+    % Fine-only search beyond supported boundary endpoints, in metric XYZ.
+    cfg.curbContinuationLengthMeters = 12.0;
+    cfg.curbContinuationHalfWidthMeters = 1.0;
+    cfg.curbContinuationMaximumGapMeters = 0.75;
+    cfg.curbContinuationMaximumAngleDegrees = 30;
+    cfg.curbContinuationTangentLengthMeters = 2.0;
 end

@@ -1,0 +1,11 @@
+{
+  "files": [
+    "config/finePerceptionConfig.m",
+    "perception/groundFeatures/refineCurbGeometry.m",
+    "perception/groundFeatures/extendCurbBoundaries.m",
+    "perception/refinePerceptionCandidates.m",
+    "tests/curbGeometryRefinementTest.m",
+    "tests/expectedFinePerception.m"
+  ],
+  "findings": 0
+}

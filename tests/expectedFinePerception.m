@@ -33,4 +33,11 @@ function expected = expectedFinePerception(dataset, frameIndex)
             expected.featureMasks.curb(entry.curbIndices)=true;
         end
     end
+    changes=jsondecode(fileread(fullfile(root,'tests','reference','fineCurbRevision.json')));
+    for entry=changes.entries(:).'
+        if lower(string(entry.dataset))==dataset && entry.frameIndex==frameIndex
+            expected.featureMasks.curb(entry.removedCurbIndices)=false;
+            expected.featureMasks.curb(entry.addedCurbIndices)=true;
+        end
+    end
 end
