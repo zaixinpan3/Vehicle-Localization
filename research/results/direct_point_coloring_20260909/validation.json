@@ -1,0 +1,22 @@
+{
+  "singleOriginalPointCloud": true,
+  "rgbMatchesFeatureMasksExactly": true,
+  "legendHasNoFinitePoints": true,
+  "uniformMarkerSize": 8,
+  "frameUpdateCameraUnchanged": true,
+  "datatipFrameAndIndexVerified": true,
+  "pilotFrames": [
+    91,
+    92,
+    93
+  ],
+  "decodedVideoFrames": 3,
+  "mappedObservationsExactlyUnchanged": true,
+  "codeAnalyzerFiles": [
+    "scripts/showMississippiPerception.m",
+    "scripts/runPerceptionVideoMap.m",
+    "scripts/updatePerceptionDisplay.m",
+    "scripts/perceptionPointTip.m"
+  ],
+  "codeAnalyzerFindings": 0
+}

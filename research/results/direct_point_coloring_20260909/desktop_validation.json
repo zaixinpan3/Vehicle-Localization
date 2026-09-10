@@ -1,0 +1,15 @@
+{
+  "frameIndex": 91,
+  "singleScatter": true,
+  "renderedPoints": 65536,
+  "finiteSourcePoints": 65536,
+  "markerSize": 8,
+  "marker": ".",
+  "cameraUnchanged": true,
+  "datatipOriginalIndexVerified": true,
+  "featureNames": [
+    "curb",
+    "pole",
+    "trafficSign"
+  ]
+}

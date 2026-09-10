@@ -1,7 +1,7 @@
 function result = runPerceptionVideoMap(outputFolder, fig, cfg)
 % runPerceptionVideoMap: Render fine perception and map its identical outputs.
-% Supply the existing pcshow figure after adjusting its camera. Its source and
-% semantic scatter layers must carry PointLayerName appdata. All camera, axis,
+% Supply a figure from showMississippiPerception after adjusting its camera.
+% Its single pcshow cloud carries PerceptionPointCloud as its tag. All camera, axis,
 % palette, marker, and legend settings are retained. Frame cadence is the mean
 % recorded LiDAR cadence; an AVI master contains one image per input frame.
 % The mapping drive is registered with its matched GNSS/INS poses, then passed
@@ -26,14 +26,9 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
     assert(all(isfinite(stamps)) && all(diff(stamps)>0),'LiDAR timestamps must increase.');
     frameRate=(numel(frames)-1)/(stamps(end)-stamps(1));
     if isfield(cfg,'videoFrameRate'), frameRate=cfg.videoFrameRate; end
-    objects=findobj(fig,'Type','scatter');
-    names=arrayfun(@(h) string(getappdata(h,'PointLayerName')),objects);
-    assert(nnz(names=="source")==1 && all(ismember(cfg.featureNames,names)), ...
-        'Figure must have tagged source and requested semantic layers.');
-    unrequested=names~="source" & ~ismember(names,cfg.featureNames);
-    delete(objects(unrequested));
-    objects=objects(~unrequested);names=names(~unrequested);
-    ax=ancestor(objects(1),'axes');
+    cloud=findobj(fig,'Type','scatter','Tag','PerceptionPointCloud');
+    assert(isscalar(cloud),'Use a figure with one directly colored pcshow cloud.');
+    ax=ancestor(cloud,'axes');
     properties={'XLim','YLim','ZLim','DataAspectRatio','PlotBoxAspectRatio', ...
         'CameraPosition','CameraTarget','CameraUpVector','CameraViewAngle','Projection'};
     viewState=struct();for k=1:numel(properties),viewState.(properties{k})=get(ax,properties{k});end
@@ -41,7 +36,6 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
         'DataAspectRatioMode','manual','PlotBoxAspectRatioMode','manual', ...
         'CameraPositionMode','manual','CameraTargetMode','manual', ...
         'CameraUpVectorMode','manual','CameraViewAngleMode','manual');
-    legendHandle=findobj(fig,'Type','legend');
     datacursormode(fig,'off');
     savefig(fig,fullfile(outputFolder,'initial_view.fig'));
     initialImage=getframe(fig);imageSize=size(initialImage.cdata);
@@ -82,21 +76,7 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
     updateProgress("completed",completed);
 
     function renderFrame(frame,perception,index)
-        xyz=double([frame.x(:),frame.y(:),frame.z(:)]);
-        for j=1:numel(objects)
-            name=names(j);
-            if name=="source",mask=all(isfinite(xyz),2);else,mask=perception.featureMasks.(name);end
-            selected=find(mask);
-            set(objects(j),'XData',xyz(selected,1),'YData',xyz(selected,2),'ZData',xyz(selected,3));
-            setappdata(objects(j),'OriginalFramePointIndices',selected);
-        end
-        if ~isempty(legendHandle)
-            legendHandle.String=compose('%s: %d points',cfg.featureNames(:), ...
-                arrayfun(@(name) nnz(perception.featureMasks.(name)),cfg.featureNames(:)));
-        end
-        source=struct('xyz',xyz,'featureMasks',perception.featureMasks, ...
-            'frameSize',size(frame.x),'frameIndex',index);
-        setappdata(fig,'PointTipSource',source);
+        updatePerceptionDisplay(fig,frame,perception.featureMasks,cfg.featureNames,index,total);
         fig.Name=sprintf('Mississippi frame %d - fine perception video',index);
         frameCounter.String=sprintf('Frame %d / %d',index,total);
         for j=1:numel(properties),set(ax,properties{j},viewState.(properties{j}));end

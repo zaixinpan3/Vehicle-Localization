@@ -4,7 +4,7 @@ function result = showMississippiPerception(frameIndex, matPath, mode, cfg)
 %   displays all finite source points with pcshow, including points outside
 %   the perception ROI. The optional cfg selects invocation channels. Without
 %   cfg, the MAT filename selects the Downtown or Mississippi profile.
-%   Larger selected-feature markers overlay the complete gray point cloud.
+%   Original points receive semantic RGB colors at the same uniform size.
 %   These are the point masks returned by perceiveFrame, not ground truth.
 %
 %   An optional matPath selects another extracted point-cloud MAT file.
@@ -42,10 +42,6 @@ function result = showMississippiPerception(frameIndex, matPath, mode, cfg)
     finiteMask = all(isfinite(xyz), 2);
     assert(any(finiteMask), "The selected frame has no finite XYZ points.");
     featureNames = perception.featureNames;
-    paletteNames = ["curb","pole","facade","trafficSign"];
-    palette = [1 .25 .08;0 .85 1;.3 1 .4;1 .2 .9];
-    [~,colorRows]=ismember(featureNames,paletteNames);
-    featureColors=palette(colorRows,:);
     numFeatures=numel(featureNames);
     featureCounts = zeros(1, numFeatures);
     selected = false(size(xyz, 1), numFeatures);
@@ -71,22 +67,18 @@ function result = showMississippiPerception(frameIndex, matPath, mode, cfg)
 
     fig = figure("Name", sprintf("%s frame %d - %s", datasetName, frameIndex, mode), ...
         "NumberTitle", "off", "Color", [0.06, 0.06, 0.08], "Position", [100 100 1200 800]);
+    dataset="Mississippi";if contains(lower(datasetName),"downtown"),dataset="Downtown";end
+    setappdata(fig,'PerceptionDataset',dataset);
     ax = axes("Parent", fig);
     pcshow(xyz(finiteMask, :), [0.42, 0.42, 0.46], ...
         "Parent", ax, "MarkerSize", 8);
-    hold(ax, "on");
-    handles = gobjects(1, numFeatures);
-    for featureIndex = 1:numFeatures
-        points = xyz(selected(:, featureIndex), :);
-        handles(featureIndex) = scatter3(ax, points(:, 1), points(:, 2), ...
-            points(:, 3), 32, featureColors(featureIndex, :), "filled");
+    cloud=findobj(ax,'Type','scatter');cloud.Tag='PerceptionPointCloud';
+    displayMasks=struct();
+    for featureIndex=1:numFeatures
+        displayMasks.(featureNames(featureIndex))=selected(:,featureIndex);
     end
-    hold(ax, "off");
-    labels = compose("%s: %d points", featureNames(:), featureCounts(:));
-    if numFeatures>0
-        legend(ax, handles, labels, "TextColor", "white", ...
-            "Color", [0.1, 0.1, 0.12], "Location", "northeast");
-    end
+    updatePerceptionDisplay(fig,frame,displayMasks,featureNames,frameIndex,numFrames);
+    datacursormode(fig,'on');
     detail = sprintf("All %d finite source points shown; gray = source cloud", nnz(finiteMask));
     titleLines = {sprintf("%s frame %d | %s: %.3f s", ...
         datasetName, frameIndex, mode, elapsedSeconds), detail};

@@ -136,6 +136,10 @@ Original video, observations and map files are in
 
 ## Reproduction
 
+The interface below records the configuration used for this experiment. Current
+previews use one directly colored cloud; see
+[the current display contract](direct_point_coloring.md).
+
 With a preview figure containing source and semantic scatter layers tagged by
 `PointLayerName`, adjust its camera and run:
 
