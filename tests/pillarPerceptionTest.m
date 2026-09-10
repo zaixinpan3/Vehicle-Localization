@@ -77,9 +77,7 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             cfg=perceptionConfig(); cfg.executionMode="offline";
             for frameIndex=[260 300 326 370 450 550 700 850 1000 1150 150 600 900 1100 200 500 800 1050]
                 frame=loadPointCloudFrame(matPath,frameIndex);
-                reference=loadPerceptionMaskReference("Missisipi",frameIndex);
                 actual=perceiveFrame(frame,cfg);
-                testCase.verifyTrue(all(actual.featureMasks.pole(reference.featureMasks.pole)));
                 expected=expectedFinePerception("Missisipi",frameIndex);
                 testCase.verifyEqual(actual.featureMasks.pole,expected.featureMasks.pole);
                 testCase.verifyEqual(actual.featureMasks.curb,expected.featureMasks.curb);

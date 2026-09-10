@@ -111,6 +111,13 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry)
             continue;
         end
         residual = vecnorm(p(:, 1:2) - design * coefficients, 2, 2);
+        % Short vertical support must also be tightly concentrated about the
+        % fitted axis. Test the whole supported object before trimming points.
+        radialRms = sqrt(mean(residual(supported).^2));
+        if nnz(qualified)*geometry.voxelSize(3) < cfg.poleShortSupportHeight && ...
+                radialRms > cfg.poleShortSupportMaximumRadialRms
+            continue;
+        end
         mid = median(residual(supported));
         sigma = max(1.4826 * median(abs(residual(supported) - mid)), cfg.minimumResidualScale);
         limit = min(cfg.poleMaximumRadius, mid + cfg.robustScale * sigma);

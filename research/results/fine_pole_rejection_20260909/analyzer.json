@@ -1,0 +1,10 @@
+{
+  "files": [
+    "config/finePerceptionConfig.m",
+    "perception/refinePerceptionCandidates.m",
+    "tests/expectedFinePerception.m",
+    "tests/pillarPerceptionTest.m",
+    "tests/finePoleRejectionTest.m"
+  ],
+  "findings": 0
+}
