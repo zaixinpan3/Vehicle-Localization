@@ -1,8 +1,8 @@
-function [rejected, protected] = rejectWeakerRaisedCurbEdges(xyz, indices, score, gradients, cfg)
+function rejected = rejectWeakerRaisedCurbEdges(xyz, indices, score, gradients, cfg)
 % rejectWeakerRaisedCurbEdges: Prefer a supported lower step to a weak upper edge.
 % Compare only spatially separated, parallel local height transitions. Several
 % independent XY cells must support the stronger edge before suppressing one.
-    rejected=false(size(indices));protected=false(size(indices));
+    rejected=false(size(indices));
     valid=find(score>=cfg.curbMinimumSeedScore);
     if isempty(valid),return;end
     ids=indices(valid);strength=vecnorm(gradients(valid,:),2,2);
@@ -20,7 +20,7 @@ function [rejected, protected] = rejectWeakerRaisedCurbEdges(xyz, indices, score
             & abs(normal(rows,:)*normal(k,:).')>0.8);
         if numel(support)>=cfg.curbMinimumSurfaceNeighbors && ...
                 size(unique(floor(xyz(ids(support),1:2)/cfg.curbProposalCellSizeMeters),'rows'),1)>=cfg.curbMinimumOutputSupportCells
-            rejected(valid(k))=true;protected(valid(support))=true;
+            rejected(valid(k))=true;
         end
     end
 end

@@ -94,3 +94,12 @@ complex multi-level surfaces and needs further scene review.
 Final checks: 89 unique affected tests passed (19 focused curb tests and 70
 reference/integration tests), with zero failures or incomplete tests. Factory
 Code Analyzer reported zero findings in the four changed/new MATLAB files.
+
+## Follow-up boundary-placement correction
+
+The user's subsequent review found residual outer shortcuts and a shifted
+short boundary despite the 0.20 m proximity check. The
+[boundary-alignment follow-up](fine_curb_boundary_alignment.md) records the
+stronger measured-segment validation and the production local-ridge tracing
+checks. The earlier proximity figures above remain historical measurements
+and do not establish correct curb placement.
