@@ -1,0 +1,9 @@
+{
+  "files": [
+    "config/structuralPillarConfig.m",
+    "config/fineStructuralConfig.m",
+    "tests/structuralSemanticPerceptionTest.m",
+    "tests/expectedFinePerception.m"
+  ],
+  "findings": 0
+}

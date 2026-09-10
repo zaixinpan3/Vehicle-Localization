@@ -1,0 +1,322 @@
+[
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 75,
+    "before": 220,
+    "after": 201,
+    "removed": 19,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 37,
+    "coarseSignPillarsAfter": 32
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 100,
+    "before": 167,
+    "after": 157,
+    "removed": 10,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 34,
+    "coarseSignPillarsAfter": 30
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 150,
+    "before": 18,
+    "after": 18,
+    "removed": 0,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 9,
+    "coarseSignPillarsAfter": 9
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 200,
+    "before": 13,
+    "after": 12,
+    "removed": 1,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 3,
+    "coarseSignPillarsAfter": 2
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 225,
+    "before": 30,
+    "after": 24,
+    "removed": 6,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 8,
+    "coarseSignPillarsAfter": 8
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 260,
+    "before": 52,
+    "after": 49,
+    "removed": 3,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 8,
+    "coarseSignPillarsAfter": 8
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 300,
+    "before": 19,
+    "after": 19,
+    "removed": 0,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 3,
+    "coarseSignPillarsAfter": 3
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 326,
+    "before": 2,
+    "after": 2,
+    "removed": 0,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 2,
+    "coarseSignPillarsAfter": 2
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 370,
+    "before": 35,
+    "after": 34,
+    "removed": 1,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 5,
+    "coarseSignPillarsAfter": 5
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 400,
+    "before": 11,
+    "after": 11,
+    "removed": 0,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 7,
+    "coarseSignPillarsAfter": 7
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 450,
+    "before": 21,
+    "after": 21,
+    "removed": 0,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 4,
+    "coarseSignPillarsAfter": 4
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 475,
+    "before": 24,
+    "after": 20,
+    "removed": 4,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 14,
+    "coarseSignPillarsAfter": 10
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 500,
+    "before": 523,
+    "after": 507,
+    "removed": 16,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 30,
+    "coarseSignPillarsAfter": 25
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 550,
+    "before": 140,
+    "after": 138,
+    "removed": 2,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 15,
+    "coarseSignPillarsAfter": 14
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 600,
+    "before": 5,
+    "after": 5,
+    "removed": 0,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 3,
+    "coarseSignPillarsAfter": 3
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 700,
+    "before": 3,
+    "after": 2,
+    "removed": 1,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 2,
+    "coarseSignPillarsAfter": 1
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 775,
+    "before": 7,
+    "after": 5,
+    "removed": 2,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 3,
+    "coarseSignPillarsAfter": 3
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 800,
+    "before": 69,
+    "after": 66,
+    "removed": 3,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 9,
+    "coarseSignPillarsAfter": 8
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 850,
+    "before": 69,
+    "after": 57,
+    "removed": 12,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 15,
+    "coarseSignPillarsAfter": 14
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 900,
+    "before": 4,
+    "after": 4,
+    "removed": 0,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 2,
+    "coarseSignPillarsAfter": 2
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 1000,
+    "before": 12,
+    "after": 11,
+    "removed": 1,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 5,
+    "coarseSignPillarsAfter": 5
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 1050,
+    "before": 0,
+    "after": 0,
+    "removed": 0,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 0,
+    "coarseSignPillarsAfter": 0
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 1100,
+    "before": 3,
+    "after": 2,
+    "removed": 1,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 2,
+    "coarseSignPillarsAfter": 1
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 1125,
+    "before": 97,
+    "after": 95,
+    "removed": 2,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 10,
+    "coarseSignPillarsAfter": 10
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 1150,
+    "before": 7,
+    "after": 5,
+    "removed": 2,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 5,
+    "coarseSignPillarsAfter": 4
+  },
+  {
+    "dataset": "downTown",
+    "frameIndex": 100,
+    "before": 138,
+    "after": 109,
+    "removed": 29,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 35,
+    "coarseSignPillarsAfter": 33
+  },
+  {
+    "dataset": "downTown",
+    "frameIndex": 200,
+    "before": 62,
+    "after": 57,
+    "removed": 5,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 12,
+    "coarseSignPillarsAfter": 9
+  },
+  {
+    "dataset": "downTown",
+    "frameIndex": 300,
+    "before": 37,
+    "after": 32,
+    "removed": 5,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 13,
+    "coarseSignPillarsAfter": 10
+  },
+  {
+    "dataset": "downTown",
+    "frameIndex": 400,
+    "before": 61,
+    "after": 58,
+    "removed": 3,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 26,
+    "coarseSignPillarsAfter": 23
+  },
+  {
+    "dataset": "downTown",
+    "frameIndex": 500,
+    "before": 155,
+    "after": 143,
+    "removed": 12,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 39,
+    "coarseSignPillarsAfter": 32
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 91,
+    "before": 143,
+    "after": 126,
+    "removed": 17,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 34,
+    "coarseSignPillarsAfter": 30
+  },
+  {
+    "dataset": "Missisipi",
+    "frameIndex": 425,
+    "before": 240,
+    "after": 238,
+    "removed": 2,
+    "otherMasksUnchanged": true,
+    "coarseSignPillarsBefore": 13,
+    "coarseSignPillarsAfter": 13
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "frameIndex": 91,
+  "intensityThreshold": 1800,
+  "trafficSignPoints": 126,
+  "polePoints": 269,
+  "curbPoints": 73,
+  "cameraUnchanged": true,
+  "singleScatter": true,
+  "markerSize": 8
+}

@@ -19,7 +19,7 @@ function cfg = fineStructuralConfig()
     cfg.fineShapeScoreSaturatedSeedCount = 5;
 
     % Traffic-sign channel: high-intensity voxels removed before structural analysis
-    cfg.trafficSignIntensityThreshold = 1600;
+    cfg.trafficSignIntensityThreshold = 1800;
 
     % Facade line detection by oriented weighted Hough voting on the fine-column map
     cfg.thetaResolutionDeg = 5;

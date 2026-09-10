@@ -47,7 +47,7 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
         end
         function signValidationNeverVisitsOutsideCandidates(testCase)
             frame=struct('x',[10;10.1;12],'y',[2;2.1;3],'z',[1;2;3], ...
-                'intensity',[1601;100;9000]);
+                'intensity',[1801;100;9000]);
             grid=struct('pointPillarLinIdx',[1;1;2],'pointIndices',[1;2;3]);
             gc=struct('groundOriginalPointIdx',zeros(0,1));
             context=struct('voxelGrid',grid,'ground',struct(),'groundContext',gc);
@@ -55,6 +55,15 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             fine=refinePerceptionCandidates(frame,candidates,context,perceptionConfig());
             testCase.verifyEqual(fine.featureMasks.trafficSign,[true;false;false]);
             testCase.verifyEqual(fine.refinement.trafficSign.evaluatedPointIndices,[1;2]);
+        end
+        function defaultSignThresholdRejectsBoundaryInBothStages(testCase)
+            [frame,cfg,~]=signScene();
+            frame.intensity(end)=1800;
+            cfg.executionMode="offline";
+            result=perceiveFrame(frame,cfg);
+            testCase.verifyEqual(cfg.offGroundFeatures.trafficSignIntensityThreshold,1800);
+            testCase.verifyFalse(any(result.featureMasks.trafficSign));
+            testCase.verifyEmpty(result.candidates.pillarIndices{1});
         end
         function facadeDistanceTestRejectsPointsSharingAcceptedPillars(testCase)
             [points,offGround,n]=facadeScene();
@@ -74,7 +83,7 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             frame=loadPointCloudFrame(file,frameIndex);
             cfg=perceptionConfig(dataset); cfg.executionMode="offline";
             fine=perceiveFrame(frame,cfg);
-            reference=loadPerceptionMaskReference(dataset,frameIndex);
+            reference=expectedFinePerception(dataset,frameIndex);
             audit=fine.refinement.trafficSign;
             testCase.verifyEqual(fine.featureMasks.trafficSign,reference.featureMasks.trafficSign);
             testCase.verifyEqual(audit.evaluatedPointIndices,audit.candidatePointIndices);
@@ -149,7 +158,7 @@ function [frame,cfg,expected]=signScene()
     [x,y]=meshgrid(-15:0.3:15,-10:0.3:10);
     ground=[x(:),y(:),-1.44*ones(numel(x),1)];
     expected=[10.06 5.06 0.5;10.08 5.08 1.5;10.09 5.09 3.5;10.1 5.1 4.5];
-    xyz=[ground;expected]; intensity=zeros(size(xyz,1),1); intensity(end)=1700;
+    xyz=[ground;expected]; intensity=zeros(size(xyz,1),1); intensity(end)=1900;
     frame=struct('x',xyz(:,1),'y',xyz(:,2),'z',xyz(:,3),'intensity',intensity);
     cfg=perceptionConfig(); cfg.featureNames="trafficSign";
     cfg.frameCalibration.rotation=eye(3); cfg.frameCalibration.translation=[0 0 0];
