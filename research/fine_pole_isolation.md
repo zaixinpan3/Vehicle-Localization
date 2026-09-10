@@ -82,3 +82,9 @@ The native niri frame-91 display was refreshed with source label at 42593,
 147 pole points, current camera unchanged, and original-point RGB coloring.
 No full-route video/mapping rerun or new timing/accuracy qualification occurred.
 Raw diagnostics and native figures remain under `output/pole_isolation_20260910/`.
+
+## Subsequent threshold review
+
+The [frame-687 review](fine_pole_isolation687.md) raises the production core
+fraction from 75% to 80%. The measurements above describe the original
+75% implementation; the follow-up records the incremental effects.

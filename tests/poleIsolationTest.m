@@ -15,6 +15,15 @@ classdef poleIsolationTest < matlab.unittest.TestCase
             testCase.verifyEqual(detail.coreFraction,0.5);
             testCase.verifyEqual(detail.coreCount,size(shaft,1));
         end
+        function borderlineClutterRequiresEightyPercentCoreSupport(testCase)
+            [shaft,geometry,qualified]=scene();cfg=finePerceptionConfig();
+            core=shaft(1:19,:);clutter=shaft(1:5,:)+[0.5 0 0];
+            [isolated,detail]=validatePoleIsolation([core;clutter],[0 0 0],[0 0],qualified,geometry,cfg);
+            testCase.verifyFalse(isolated);
+            testCase.verifyEqual(detail.coreFraction,19/24);
+            testCase.verifyTrue(validatePoleIsolation([core;shaft(20,:);clutter], ...
+                [0 0 0],[0 0],qualified,geometry,cfg));
+        end
         function remoteAndUnsupportedHeightReturnsDoNotInvalidateShaft(testCase)
             [shaft,geometry,qualified]=scene();cfg=finePerceptionConfig();
             extra=[shaft+[2 0 0];shaft+[0.5 0 4]];

@@ -36,6 +36,26 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
                 rmfield(baseline.featureMasks,'pole'));
             testCase.verifyEqual(actual.probabilityCloud,baseline.probabilityCloud);
         end
+        function rejectsFrame687BorderlineClutterWithoutPointOrder(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
+            testCase.assumeTrue(isfile(file),'Recorded source data are required.');
+            frame=loadPointCloudFrame(file,687);
+            cfg=perceptionConfig();cfg.executionMode="offline";
+            previous=cfg;previous.fine.poleIsolationMinimumCoreFraction=0.75;
+            before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);
+            testCase.verifyTrue(before.featureMasks.pole(47135));
+            testCase.verifyFalse(actual.featureMasks.pole(47135));
+            testCase.verifyEqual(nnz(actual.featureMasks.pole),124);
+            testCase.verifyEqual(nnz(before.featureMasks.pole & ~actual.featureMasks.pole),12);
+            testCase.verifyEqual(rmfield(actual.featureMasks,'pole'),rmfield(before.featureMasks,'pole'));
+            testCase.verifyEqual(actual.probabilityCloud,before.probabilityCloud);
+            stream=RandStream('mt19937ar','Seed',68747135);order=randperm(stream,numel(frame.x));
+            shuffled=struct('x',frame.x(order).','y',frame.y(order).','z',frame.z(order).');
+            cfg.featureNames="pole";reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.pole;
+            testCase.verifyEqual(restored,actual.featureMasks.pole);
+        end
         function pointOrderDoesNotChangePoleDecisions(testCase)
             frame=recordedFrame(testCase);
             cfg=perceptionConfig(); cfg.executionMode="offline"; cfg.featureNames="pole";
