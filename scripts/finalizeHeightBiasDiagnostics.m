@@ -68,12 +68,14 @@ function summary = finalizeHeightBiasDiagnostics(inputFolder, artifactFolder)
     fig=figure('Name','D2D bias mechanisms: height drift and sampling density', ...
         'Color','w','Position',[40 80 1480 840]);
     layout=tiledlayout(fig,2,3,'TileSpacing','compact','Padding','compact');
-    colors=[0.18 .40 .72;.88 .39 .12;.22 .61 .43;.12 .12 .16];
+    residualClasses=unique(string(m.rawResiduals.class),'stable');
+    objectiveClasses=unique(string(m.objectiveScan.class),'stable');
+    colors=lines(max(numel(residualClasses),numel(objectiveClasses)));
     frames=[260 550 900];
     for i=1:3
         ax=nexttile(layout,i); hold(ax,'on');
-        for classIndex=1:2
-            name=["curb","roadMarking"]; name=name(classIndex);
+        for classIndex=1:numel(residualClasses)
+            name=residualClasses(classIndex);
             raw=m.rawResiduals(m.rawResiduals.frame==frames(i)&m.rawResiduals.class==name,:);
             cor=m.correctedResiduals(m.correctedResiduals.frame==frames(i)&m.correctedResiduals.class==name,:);
             plot(ax,raw.travelM,raw.medianZResidualM,'-o','Color',colors(classIndex,:), ...
@@ -87,12 +89,12 @@ function summary = finalizeHeightBiasDiagnostics(inputFolder, artifactFolder)
         ylim(ax,[-.06 .57]);
         if i==1, legend(ax,'Location','northwest','FontSize',9); end
         ax=nexttile(layout,i+3); hold(ax,'on');
-        classNames=["curb","roadMarking","pole","all"];
-        for j=1:4
+        classNames=objectiveClasses;
+        for j=1:numel(classNames)
             t=m.objectiveScan(m.objectiveScan.frame==frames(i)&m.objectiveScan.mode=="xy"& ...
                 m.objectiveScan.class==classNames(j),:);
             plot(ax,t.longitudinalOffsetM,t.score,'Color',colors(j,:), ...
-                'LineWidth',1.5+(j==4),'DisplayName',classNames(j));
+                'LineWidth',1.5+(classNames(j)=="all"),'DisplayName',classNames(j));
         end
         xline(ax,0,'--','Recorded pose','HandleVisibility','off'); grid(ax,'on');
         xlabel(ax,'Longitudinal offset (m), fixed recorded yaw'); ylabel(ax,'Normalized XY overlap');

@@ -7,7 +7,7 @@ function report = evaluateRepeatedObservationMap(dataRoot, outputFolder, frameIn
     if nargin<2 || strlength(string(outputFolder))==0, outputFolder=fullfile(root,'output','repeated_observation_map'); end
     if nargin<3, frameIndices=260:289; end
     cfg=featureMapBuildConfig(); cfg.logEnabled=false;
-    cfg.featureNames=["curb","roadMarking","pole","trafficSign"];
+    cfg.featureNames=["curb","pole","trafficSign"];
     poses=readFramePoseTable(fullfile(dataRoot,cfg.poseMatchCsvPath),frameIndices);
     perception=perceptionConfig(); perception.executionMode="offline";
     perception.featureNames=cfg.featureNames;

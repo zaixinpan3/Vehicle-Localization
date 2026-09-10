@@ -1,0 +1,12 @@
+{
+  "Passed": 325,
+  "Failed": 0,
+  "Incomplete": 2,
+  "filteredTests": [
+    "improvedObserverTest/synthesisProducesAnExhaustivelyCertifiedDesign",
+    "lateralObserverTest/synthesisReproducesTheStoredDesign"
+  ],
+  "filterReason": "YALMIP/SDP solver dependencies unavailable",
+  "factoryAnalyzerFiles": 24,
+  "factoryAnalyzerFindings": 0
+}

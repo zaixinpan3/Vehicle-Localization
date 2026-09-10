@@ -11,7 +11,7 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
     groundPoint = false(n, 1);
     groundPoint(gc.groundOriginalPointIdx) = true;
     masks = struct("groundPoint", groundPoint, "curb", false(n, 1), ...
-        "roadMarking", false(n, 1), "pole", false(n, 1), ...
+        "pole", false(n, 1), ...
         "facade", false(n,1), "trafficSign", false(n,1));
     decisions = struct();
     if any(ismember(candidates.semanticNames,["pole","facade","trafficSign"])) && isfield(context,'offGroundVoxelGrid')
@@ -37,10 +37,6 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                 [accepted,curbDetail] = refineCurbGeometry(xyz,pointIdx,groundPoint,cfg.fine);
                 candidateMembers = ismember(grid.pointIndices,pointIdx);
                 candidates.pillarIndices{k} = unique(grid.pointPillarLinIdx(candidateMembers));
-            case "roadMarking"
-                [~, groundRows] = ismember(pointIdx, gc.groundOriginalPointIdx);
-                reflectivity = double(gc.groundReflectivity(groundRows));
-                accepted = isfinite(reflectivity) & reflectivity > candidates.groundReflectivityThreshold;
             case "facade"
                 accepted = validateFacadeCandidatePoints(points, context.offGround, cfg.fine);
             case "trafficSign"

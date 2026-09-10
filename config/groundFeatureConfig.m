@@ -1,7 +1,7 @@
 function cfg = groundFeatureConfig()
 % groundFeatureConfig: Parameters of the ground-point feature branch: curb
-% energy maps, whole-pillar curb refinement, road-surface recovery, and
-% road-marking selection. Fine curb XYZ geometry is configured separately
+% energy maps, whole-pillar curb refinement, and road-surface recovery.
+% Fine curb XYZ geometry is configured separately
 % by finePerceptionConfig; this common stage contains no curb point thinning.
 %
 % Input:
@@ -11,11 +11,9 @@ function cfg = groundFeatureConfig()
 %   cfg: struct with fields
 %       curb: curb energy-map, cell refinement, and point selection parameters
 %       road: road-surface grid extraction parameters
-%       roadMarking: relative road reflectivity threshold parameters
     cfg = struct();
     cfg.curb = curbParameters();
     cfg.road = roadSurfaceParameters();
-    cfg.roadMarking = roadMarkingParameters();
 end
 
 function curb = curbParameters()
@@ -311,20 +309,4 @@ function road = roadSurfaceParameters()
     road.maxNeighborHeightStepMeters = 0.10;
     road.maxSeedHeightDeviationMeters = 0.60;
     road.minRoadCells = 8;
-end
-
-function roadMarking = roadMarkingParameters()
-% roadMarkingParameters: Relative road-surface reflectivity rule that selects
-% road-marking points: a high quantile of the road reflectivity plus a robust
-% spread multiple, floored by an absolute minimum reflectivity.
-%
-% Input:
-%   none
-%
-% Output:
-%   roadMarking: parameter struct consumed by extractRoadMarkings
-    roadMarking = struct();
-    roadMarking.roadReflectivityHighlightQuantile = 0.95;
-    roadMarking.roadReflectivityHighlightMadScale = 2.5;
-    roadMarking.roadReflectivityHighlightMinimum = 2.3e4;
 end

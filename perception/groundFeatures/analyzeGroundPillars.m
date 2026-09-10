@@ -1,5 +1,5 @@
 function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg)
-% analyzeGroundPillars: Classify curb and road-marking support
+% analyzeGroundPillars: Classify curb support
 % strictly on the 2D ground-cell raster. The function retains the tuned curb
 % energy and road-adjacency stages but skips curb point selection, dominant-
 % boundary thinning, and point-level semantic output.
@@ -13,7 +13,7 @@ function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg
 %   coarseGround: cell masks, evidence probabilities, and source geometry
 %       used to build sparse 2D NDT components
     assert(isstruct(groundContext) && all(isfield(groundContext, ...
-        ["groundPoints", "groundCellLinIdx", "groundXYView", "groundReflectivity"])), ...
+        ["groundPoints", "groundCellLinIdx", "groundXYView"])), ...
         "groundContext is missing coarse ground-feature inputs.");
 
     curbCfg = configureFastRefinement(groundCfg.curb, coarseCfg);
@@ -37,29 +37,6 @@ function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg
         double(energyMaps.total), curbCellMask, minimumEnergy, 1, coarseCfg);
 
     pointCellLinIdx = double(groundContext.groundCellLinIdx(:));
-    reflectivityThreshold = NaN;
-    maximumReflectivityMap = zeros(size(road.roadCellMask),'single');
-    roadMarkingCellMask = false(size(road.roadCellMask));
-    roadMarkingProbability = zeros(size(road.roadCellMask),'single');
-    if any(string(coarseCfg.semanticNames)=="roadMarking")
-        roadPointMask = sampleCellMapAtPoints(pointCellLinIdx, road.roadCellMask) > 0;
-        reflectivity = double(groundContext.groundReflectivity(:));
-        reflectivityThreshold = resolveRoadReflectivityThreshold( ...
-            reflectivity, roadPointMask, groundCfg.roadMarking);
-        maximumReflectivityMap = aggregateCellMaximum( ...
-            reflectivity, pointCellLinIdx, size(road.roadCellMask));
-        roadMarkingCellMask = logical(road.roadCellMask) & ...
-            isfinite(maximumReflectivityMap) & maximumReflectivityMap > reflectivityThreshold;
-        finiteRoadReflectivity = maximumReflectivityMap( ...
-            logical(road.roadCellMask) & isfinite(maximumReflectivityMap));
-        upperReflectivity = reflectivityThreshold;
-        if ~isempty(finiteRoadReflectivity)
-            upperReflectivity = max(finiteRoadReflectivity);
-        end
-        roadMarkingProbability = probabilityAboveThreshold( ...
-            maximumReflectivityMap, roadMarkingCellMask, reflectivityThreshold, ...
-            upperReflectivity, coarseCfg);
-    end
     if ~any(string(coarseCfg.semanticNames)=="curb")
         curbCellMask(:) = false;
         curbProbability(:) = 0;
@@ -75,11 +52,7 @@ function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg
     end
     coarseGround.curbCellMask = curbCellMask;
     coarseGround.curbProbability = single(curbProbability);
-    coarseGround.roadMarkingCellMask = roadMarkingCellMask;
-    coarseGround.roadMarkingProbability = single(roadMarkingProbability);
     coarseGround.roadCellMask = logical(road.roadCellMask);
-    coarseGround.roadMarkingReflectivityThreshold = double(reflectivityThreshold);
-    coarseGround.maximumReflectivityMap = single(maximumReflectivityMap);
     coarseGround.stats = cellStats;
     % Convert the internal [Nx Ny] ground indexing to the public [Ny Nx] layout.
     dims = size(road.roadCellMask);
@@ -105,25 +78,6 @@ function curbCfg = configureFastRefinement(curbCfg, coarseCfg)
             curbCfg.(stageName) = false;
         end
     end
-end
-
-function maximumMap = aggregateCellMaximum(values, pointCellLinIdx, mapSize)
-% aggregateCellMaximum: Aggregate finite point values into the ground
-% raster while respecting its internal [Nx Ny] point-index convention.
-    numRows = double(mapSize(1));
-    numCols = double(mapSize(2));
-    numCells = numRows .* numCols;
-    values = double(values(:));
-    pointCellLinIdx = double(pointCellLinIdx(:));
-    valid = isfinite(values) & isfinite(pointCellLinIdx) & ...
-        pointCellLinIdx >= 1 & pointCellLinIdx <= numCells & ...
-        pointCellLinIdx == floor(pointCellLinIdx);
-    maximumVector = -inf(numCells, 1);
-    if any(valid)
-        maximumVector = accumarray( ...
-            pointCellLinIdx(valid), values(valid), [numCells, 1], @max, -inf);
-    end
-    maximumMap = reshape(maximumVector, numCols, numRows).';
 end
 
 function probabilityMap = probabilityAboveThreshold(valueMap, selectionMask, lowerValue, upperValue, cfg)

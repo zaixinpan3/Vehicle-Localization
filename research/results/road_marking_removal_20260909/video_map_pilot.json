@@ -1,0 +1,20 @@
+{
+  "frames": [
+    91,
+    92,
+    93
+  ],
+  "decodedVideoFrames": 3,
+  "layers": [
+    "trafficSign",
+    "pole",
+    "curb",
+    "source"
+  ],
+  "mappedClasses": [
+    "curb",
+    "pole",
+    "trafficSign"
+  ],
+  "lastLabel": "Frame 93 / 1170"
+}

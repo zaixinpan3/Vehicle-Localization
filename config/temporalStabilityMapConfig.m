@@ -8,7 +8,7 @@ function cfg = temporalStabilityMapConfig()
     cfg.frameCalibration=lidarFrameCalibrationConfig();
     cfg.defaultParams = parameters("");
     cfg.classParams = arrayfun(@parameters, ...
-        ["curb";"roadMarking";"facade";"pole";"trafficSign"]);
+        ["curb";"facade";"pole";"trafficSign"]);
 end
 
 function p = parameters(name)

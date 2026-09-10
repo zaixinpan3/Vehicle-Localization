@@ -1,15 +1,15 @@
 function candidates = buildPerceptionCandidates(pillars, ground, offGround, semanticNames)
 % buildPerceptionCandidates: Publish semantic XY pillar IDs and geometry.
-% Height bins contribute statistics; only XY pillars receive semantic labels.
+% Whole-pillar XYZ statistics support labels without vertical subdivision.
     if nargin < 4
-        semanticNames = ["curb", "roadMarking", "pole", "facade", "trafficSign"];
+        semanticNames = ["curb", "pole", "facade", "trafficSign"];
     end
     semanticNames = string(semanticNames(:));
     geometry = pillars.pillarGeometry;
     ids = cell(numel(semanticNames),1);
     for k = 1:numel(semanticNames)
         name = semanticNames(k);
-        if ismember(name,["curb","roadMarking"])
+        if name=="curb"
             offset = [0 0];
             if isfield(ground,"pillarOffset"), offset = ground.pillarOffset; end
             [row,col] = find(ground.(name+"CellMask"));
@@ -26,6 +26,5 @@ function candidates = buildPerceptionCandidates(pillars, ground, offGround, sema
     end
     candidates = struct("productType", "sparseSemanticPillarCandidates", ...
         "geometry", geometry, "semanticNames", semanticNames, ...
-        "pillarIndices", {ids}, "framePointCount", pillars.numInputPoints, ...
-        "groundReflectivityThreshold", ground.roadMarkingReflectivityThreshold);
+        "pillarIndices", {ids}, "framePointCount", pillars.numInputPoints);
 end

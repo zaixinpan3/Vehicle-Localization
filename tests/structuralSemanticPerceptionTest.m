@@ -18,7 +18,7 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             testCase.verifyFalse(any(suburban.featureNames=="facade"));
             testCase.verifyTrue(any(urban.featureNames=="facade"));
             testCase.verifyEqual(urban.featureNames, ...
-                ["curb","roadMarking","pole","facade","trafficSign"]);
+                ["curb","pole","facade","trafficSign"]);
             mapCfg=featureMapBuildConfig();
             testCase.verifyTrue(any(mapCfg.featureNames=="trafficSign"));
         end

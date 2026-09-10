@@ -27,9 +27,9 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
 
             testCase.verifyEqual(cloud.mapType, "semanticNDTProbabilityCloud2D");
             testCase.verifyEqual(cloud.classificationStage, "pillarOnlyCoarseValidation");
-            testCase.verifyEqual(cloud.components.numComponents, 3);
+            testCase.verifyEqual(cloud.components.numComponents, 2);
             testCase.verifyEqual(sort(cloud.components.semanticName), ...
-                sort(["curb"; "roadMarking"; "pole"]));
+                sort(["curb"; "pole"]));
             testCase.verifyEqual(sum(cloud.components.mixtureWeight), 1, AbsTol=1.0e-12);
             testCase.verifyGreaterThanOrEqual(cloud.components.semanticProbability, 0);
             testCase.verifyLessThanOrEqual(cloud.components.semanticProbability, 1);
@@ -63,7 +63,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             testCase.verifyEqual(cloud.components.numComponents, 0);
             testCase.verifyEmpty(cloud.components.mean);
             testCase.verifyEqual(cloud.semanticNames, ...
-                ["curb"; "roadMarking"; "pole"; "trafficSign"]);
+                ["curb"; "pole"; "trafficSign"]);
         end
 
         function referenceFramesPreserveGroundPerception(testCase)
@@ -79,10 +79,8 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             % point fidelity is checked separately by pillarPerceptionTest.
             testCase.verifyGreaterThanOrEqual(metrics.source.curb.precision, 0.65);
             testCase.verifyGreaterThanOrEqual(metrics.source.curb.recall, 0.97);
-            testCase.verifyEqual(metrics.source.roadMarking.f1, 1, AbsTol=1.0e-12);
             testCase.verifyGreaterThanOrEqual(metrics.ndt.curb.precision, 0.79);
             testCase.verifyGreaterThanOrEqual(metrics.ndt.curb.recall, 0.99);
-            testCase.verifyEqual(metrics.ndt.roadMarking.f1, 1, AbsTol=1.0e-12);
         end
 
         function dispersedFramesPreserveGroundRecall(testCase)
@@ -93,11 +91,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
                 testCase.DataRoot, [370, 450, 550, 700, 850, 1000, 1150]);
 
             testCase.verifyGreaterThanOrEqual(metrics.source.curb.recall, 0.93);
-            testCase.verifyGreaterThanOrEqual(metrics.source.roadMarking.precision, 0.99);
-            testCase.verifyEqual(metrics.source.roadMarking.recall, 1, AbsTol=1.0e-12);
             testCase.verifyGreaterThanOrEqual(metrics.ndt.curb.recall, 0.94);
-            testCase.verifyGreaterThanOrEqual(metrics.ndt.roadMarking.precision, 0.98);
-            testCase.verifyEqual(metrics.ndt.roadMarking.recall, 1, AbsTol=1.0e-12);
         end
     end
 
@@ -114,10 +108,10 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
 
     methods (Static, Access = private)
         function [ground, offGround, cfg] = syntheticVoxelFeatures()
-        % syntheticVoxelFeatures: Three accepted source cells in one output
+        % syntheticVoxelFeatures: Two accepted source cells in one output
         % NDT cell, one for each supported semantic channel.
             cfg = coarseSemanticProbabilityCloudConfig();
-            cfg.semanticNames = ["curb", "roadMarking", "pole"];
+            cfg.semanticNames = ["curb", "pole"];
             cfg.xMin = 0;
             cfg.xMax = 2;
             cfg.yMin = 0;
@@ -130,8 +124,6 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             ground.stats = struct("countMap", single([4, 0; 0, 3]));
             ground.curbCellMask = logical([1, 0; 0, 0]);
             ground.curbProbability = single([0.8, 0; 0, 0]);
-            ground.roadMarkingCellMask = logical([0, 0; 0, 1]);
-            ground.roadMarkingProbability = single([0, 0; 0, 0.9]);
 
             [xMap, yMap] = meshgrid(single([0.15, 0.45]), single([0.15, 0.45]));
             columnMaps = struct();
@@ -151,8 +143,8 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
         % against the unchanged full perception result.
             matPath = fullfile(dataRoot, "raw", "MissisipiPointClouds.mat");
             cfg = perceptionConfig();
-            semanticNames = ["curb", "roadMarking"];
-            sourceCounts = repmat(struct("tp", 0, "fp", 0, "fn", 0), 2, 1);
+            semanticNames = "curb";
+            sourceCounts = repmat(struct("tp", 0, "fp", 0, "fn", 0), 1, 1);
             ndtCounts = sourceCounts;
             for frameIdx = frameIndices
                 frame = loadPointCloudFrame(matPath, frameIdx);
@@ -163,8 +155,6 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
                 sourceSize = size(referenceSourceMasks{1});
                 candidateSourceMasks = {coarseSemanticProbabilityCloudTest.expandGroundMask( ...
                     diagnostics.ground.curbCellMask,diagnostics.ground.pillarOffset,sourceSize); ...
-                    coarseSemanticProbabilityCloudTest.expandGroundMask( ...
-                    diagnostics.ground.roadMarkingCellMask,diagnostics.ground.pillarOffset,sourceSize); ...
                     diagnostics.offGround.poleCellMask};
                 for semanticIdx = 1:numel(semanticNames)
                     sourceCounts(semanticIdx) = ...
@@ -194,8 +184,8 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             dims=ceil(([bounds(2),bounds(4)]-[bounds(1),bounds(3)])./spacing);
             x=floor((double(frame.x(:))-bounds(1))/spacing(1))+1;
             y=floor((double(frame.y(:))-bounds(3))/spacing(2))+1;
-            masks=cell(3,1); names=["curb","roadMarking","pole"];
-            for j=1:3
+            masks=cell(2,1); names=["curb","pole"];
+            for j=1:2
                 keep=reference.featureMasks.(names(j)) & x>=1 & x<=dims(1) & y>=1 & y<=dims(2);
                 mask=false(dims(2),dims(1)); mask(sub2ind(size(mask),y(keep),x(keep)))=true;
                 masks{j}=mask;

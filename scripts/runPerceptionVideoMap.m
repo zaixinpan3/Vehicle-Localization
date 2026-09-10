@@ -30,6 +30,9 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
     names=arrayfun(@(h) string(getappdata(h,'PointLayerName')),objects);
     assert(nnz(names=="source")==1 && all(ismember(cfg.featureNames,names)), ...
         'Figure must have tagged source and requested semantic layers.');
+    unrequested=names~="source" & ~ismember(names,cfg.featureNames);
+    delete(objects(unrequested));
+    objects=objects(~unrequested);names=names(~unrequested);
     ax=ancestor(objects(1),'axes');
     properties={'XLim','YLim','ZLim','DataAspectRatio','PlotBoxAspectRatio', ...
         'CameraPosition','CameraTarget','CameraUpVector','CameraViewAngle','Projection'};

@@ -1,7 +1,7 @@
 # vehicleLocalization
 
-MATLAB research implementation of vehicle localization using road curbs,
-road markings, and pole-like features. Perception now has a shared XY-pillar
+MATLAB research implementation of vehicle localization using road curbs
+and pole-like features. Perception now has a shared XY-pillar
 front end: online localization consumes coarse Gaussian distributions, while
 offline mapping independently reconstructs detailed structural candidates and
 validates their individual points.
@@ -69,8 +69,11 @@ rejects all points. The invocation's **only semantic selector** is
 
 | Configuration | Requested channels |
 | --- | --- |
-| `perceptionConfig("Mississippi")` (default) | curb, roadMarking, pole, trafficSign |
-| `perceptionConfig("Downtown")` | curb, roadMarking, pole, facade, trafficSign |
+| `perceptionConfig("Mississippi")` (default) | curb, pole, trafficSign |
+| `perceptionConfig("Downtown")` | curb, pole, facade, trafficSign |
+
+Road-marking detection has been removed from both coarse and fine perception.
+See [the removal and regression record](research/road_marking_removal.md).
 
 ```matlab
 cfg = perceptionConfig("Downtown");
@@ -277,7 +280,7 @@ are explicit:
 | `finePerceptionConfig` | `refinePerceptionCandidates` (offline only) |
 | `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` |
 | `groundSegmentationConfig` | `segmentGround` |
-| `groundFeatureConfig` (`.curb`, `.road`, `.roadMarking`) | `extractGroundFeatures` |
+| `groundFeatureConfig` (`.curb`, `.road`) | `extractGroundFeatures` |
 | `offGroundFeatureConfig` | `extractOffGroundFeatures` (historical facade switch; modern calls use `featureNames`) |
 | `temporalStabilityMapConfig` | `buildTemporalStabilityGmmMap` |
 | `featureMapBuildConfig` | `buildFeatureMap` |

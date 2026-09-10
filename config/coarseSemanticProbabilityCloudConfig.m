@@ -26,7 +26,7 @@ function cfg = coarseSemanticProbabilityCloudConfig()
     cfg.projectionRotation = eye(3);
     cfg.projectionTranslation = [0 0 0];
     % Internal/standalone builder labels; perceiveFrame derives these from cfg.featureNames.
-    cfg.semanticNames = ["curb", "roadMarking", "pole", "facade", "trafficSign"];
+    cfg.semanticNames = ["curb", "pole", "facade", "trafficSign"];
 
     % Pillar selectors retain the tested geometric evidence rules.
     % The accepted cell mask already applies the curb evidence tests.

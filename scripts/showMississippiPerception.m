@@ -42,8 +42,8 @@ function result = showMississippiPerception(frameIndex, matPath, mode, cfg)
     finiteMask = all(isfinite(xyz), 2);
     assert(any(finiteMask), "The selected frame has no finite XYZ points.");
     featureNames = perception.featureNames;
-    paletteNames = ["curb","pole","roadMarking","facade","trafficSign"];
-    palette = [1 .25 .08;0 .85 1;1 .9 .05;.3 1 .4;1 .2 .9];
+    paletteNames = ["curb","pole","facade","trafficSign"];
+    palette = [1 .25 .08;0 .85 1;.3 1 .4;1 .2 .9];
     [~,colorRows]=ismember(featureNames,paletteNames);
     featureColors=palette(colorRows,:);
     numFeatures=numel(featureNames);

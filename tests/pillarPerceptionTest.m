@@ -37,15 +37,16 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
                 cov(expected(:,1:2),1),'AbsTol',1e-12);
         end
         function allRejectedCandidatesStayEmpty(testCase)
-            frame=struct('x',[10;10.1;12],'y',[2;2.1;3],'z',[-1;-1;-1]);
-            gc=struct('groundOriginalPointIdx',[1;2;3],'groundReflectivity',[4;5;100]);
+            frame=struct('x',[10;10.1;12],'y',[2;2.1;3],'z',[1;1;1],'intensity',[4;5;100]);
+            gc=struct('groundOriginalPointIdx',zeros(0,1));
             grid=struct('pointPillarLinIdx',[1;1;2],'pointIndices',[1;2;3]);
             context=struct('voxelGrid',grid,'ground',struct(),'groundContext',gc);
-            candidates=struct('semanticNames',"roadMarking",'pillarIndices',{{1}},'groundReflectivityThreshold',10);
-            fine=refinePerceptionCandidates(frame,candidates,context,perceptionConfig());
-            testCase.verifyFalse(any(fine.featureMasks.roadMarking));
-            testCase.verifyEqual(fine.refinement.roadMarking.evaluatedPointIndices,[1;2]);
-            testCase.verifyEqual(fine.refinement.roadMarking.accepted,false(2,1));
+            candidates=struct('semanticNames',"trafficSign",'pillarIndices',{{1}});
+            cfg=perceptionConfig();cfg.offGroundFeatures.trafficSignIntensityThreshold=10;
+            fine=refinePerceptionCandidates(frame,candidates,context,cfg);
+            testCase.verifyFalse(any(fine.featureMasks.trafficSign));
+            testCase.verifyEqual(fine.refinement.trafficSign.evaluatedPointIndices,[1;2]);
+            testCase.verifyEqual(fine.refinement.trafficSign.accepted,false(2,1));
         end
         function onlineAndOfflineShareCandidates(testCase)
             dataRoot=string(getenv('VEHICLE_LOCALIZATION_DATA_ROOT'));
@@ -61,7 +62,7 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             offline=perceiveFrame(frame,cfg);
             testCase.verifyEqual(offline.candidates,online.candidates);
             testCase.verifyEqual(offline.probabilityCloud.components,online.probabilityCloud.components);
-            for name=["curb","roadMarking","pole"]
+            for name=["curb","pole"]
                 audit=offline.refinement.(name);
                 testCase.verifyEqual(audit.evaluatedPointIndices,audit.candidatePointIndices);
                 testCase.verifyEqual(find(offline.featureMasks.(name)), ...
@@ -78,7 +79,6 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
                 frame=loadPointCloudFrame(matPath,frameIndex);
                 reference=loadPerceptionMaskReference("Missisipi",frameIndex);
                 actual=perceiveFrame(frame,cfg);
-                testCase.verifyEqual(actual.featureMasks.roadMarking,reference.featureMasks.roadMarking);
                 testCase.verifyTrue(all(actual.featureMasks.pole(reference.featureMasks.pole)));
                 expected=expectedFinePerception("Missisipi",frameIndex);
                 testCase.verifyEqual(actual.featureMasks.pole,expected.featureMasks.pole);

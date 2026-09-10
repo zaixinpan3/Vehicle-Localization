@@ -36,8 +36,8 @@ function perception = perceiveFrame(frame, cfg)
         frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2), cfg.groundFeatures.curb);
 
     coarseCfg = resolveCoarseProbabilityCloudConfig(cfg);
-    ground = struct("roadMarkingReflectivityThreshold",NaN);
-    if any(ismember(featureNames,["curb","roadMarking"]))
+    ground = struct();
+    if any(featureNames=="curb")
         ground = analyzeGroundPillars(groundContext, cfg.groundFeatures, coarseCfg);
     end
     offGround = struct();
@@ -86,8 +86,6 @@ function [groundContext, offGroundVoxelGrid] = buildBranchInputs(frame, voxelGri
     groundContext.groundXYView = groundXYView;
     groundContext.groundPoints = double(voxelGrid.points(validGroundMap, :));
     groundContext.groundOriginalPointIdx = double(pointIndices(validGroundMap));
-    groundContext.groundIntensity = extractFrameScalar(frame, voxelGrid.pointIndices, validGroundMap, "intensity", "reflectivity");
-    groundContext.groundReflectivity = extractFrameScalar(frame, voxelGrid.pointIndices, validGroundMap, "reflectivity", "intensity");
     groundContext.groundCellLinIdx = double(pointCellLinIdx(validGroundMap));
 
     offGroundVoxelGrid = subsetOffGroundPillars(voxelGrid, offGroundPointMask);
@@ -207,38 +205,6 @@ function xyView = buildGroundXYView(voxelGrid, cellSizeXY, groundPointMask, curb
         xyView.cellPointLocalIdx = int32(pointLocalIdx(sortOrder));
         xyView.cellPointIndices = int32(pointIndices(sortOrder));
     end
-end
-
-function scalarValues = extractFrameScalar(frame, pointIndices, pointMask, primaryField, fallbackField)
-% extractFrameScalar: Extract a scalar frame channel aligned with
-% selected retained voxel-grid points, preferring the requested primary
-% field and falling back to a secondary field when available.
-%
-% Input:
-%   frame: organized point-cloud frame
-%   pointIndices: [K x 1] original frame linear indices
-%   pointMask: [K x 1] logical selector aligned with pointIndices
-%   primaryField: string scalar preferred frame field name
-%   fallbackField: string scalar fallback frame field name
-%
-% Output:
-%   scalarValues: [N x 1] double values aligned with selected points
-    selectedPointIdx = double(pointIndices(logical(pointMask(:))));
-    scalarValues = NaN(numel(selectedPointIdx), 1);
-    sourceField = "";
-    if isfield(frame, primaryField)
-        sourceField = string(primaryField);
-    elseif isfield(frame, fallbackField)
-        sourceField = string(fallbackField);
-    end
-    if strlength(sourceField) == 0
-        return;
-    end
-    sourceValues = double(frame.(sourceField)(:));
-    validIdx = selectedPointIdx >= 1 & selectedPointIdx <= numel(sourceValues) & selectedPointIdx == floor(selectedPointIdx);
-    assert(all(validIdx), "Selected point indices must map into frame scalar fields.");
-    scalarValues = sourceValues(selectedPointIdx);
-    scalarValues = double(scalarValues(:));
 end
 
 function pillars = subsetOffGroundPillars(source, selected)

@@ -135,7 +135,7 @@ function groups=correspondenceGroups(f,m)
     names=intersect(unique(f.semanticName),unique(m.semanticName));
     groups=repmat(struct('source',[],'target',[],'line',false),numel(names),1);
     for k=1:numel(names)
-        groups(k).line=any(names(k)==["curb","roadMarking","facade"]);
+        groups(k).line=any(names(k)==["curb","facade"]);
         groups(k).source=find(m.semanticName==names(k) & m.quality>0);
         keep=f.semanticName==names(k) & f.quality>0 & f.repeatability>0;
         if groups(k).line, keep=keep & f.lineEligible; end

@@ -1,0 +1,11 @@
+{
+  "frameIndex": 91,
+  "layers": [
+    "trafficSign",
+    "pole",
+    "curb",
+    "source"
+  ],
+  "originalPointIndicesVerified": true,
+  "frameCounter": "Frame 91 / 1170"
+}

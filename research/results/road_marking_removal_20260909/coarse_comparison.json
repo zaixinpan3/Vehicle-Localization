@@ -1,0 +1,9 @@
+{
+  "frames": [
+    91,
+    260,
+    425
+  ],
+  "retainedCoarseGeometryAndEvidenceUnchanged": true,
+  "note": "Semantic IDs shift and mixture weights renormalize after removing the class."
+}

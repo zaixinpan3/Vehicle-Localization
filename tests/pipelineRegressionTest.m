@@ -60,7 +60,7 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
             reference = testCase.Reference.map;
             matPath = fullfile(testCase.DataRoot, testCase.Reference.mississippi.matFile);
             cfg = featureMapBuildConfig();
-            cfg.featureNames = ["curb", "roadMarking", "pole", "trafficSign"];
+            cfg.featureNames = ["curb", "pole", "trafficSign"];
             cfg.logEnabled = false;
             cfg.frameIndices = reference.frameIndices;
             perceptionCfg = perceptionConfig();

@@ -1,6 +1,6 @@
 function probabilityCloud = buildCoarseSemanticProbabilityCloud(coarseGround, coarseOffGround, cfg)
 % buildCoarseSemanticProbabilityCloud: Aggregate pillar-classified curb,
-% road-marking, pole, facade, and traffic-sign support into a sparse semantic cloud with XYZ
+% pole, facade, and traffic-sign support into a sparse semantic cloud with XYZ
 % moments and an exact XY marginal. Each
 % component stores a regularized Gaussian, semantic evidence probability,
 % hit-based occupancy probability, and normalized mixture weight without
@@ -119,10 +119,6 @@ function observations = selectSemanticObservations(semanticName, coarseGround, c
             observations = selectGroundCells( ...
                 coarseGround, coarseGround.curbCellMask, ...
                 coarseGround.curbProbability);
-        case "roadmarking"
-            observations = selectGroundCells( ...
-                coarseGround, coarseGround.roadMarkingCellMask, ...
-                coarseGround.roadMarkingProbability);
         case {"pole", "facade", "trafficsign"}
             name = string(semanticName);
             maps = coarseOffGround.columnMaps;

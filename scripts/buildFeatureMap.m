@@ -1,6 +1,6 @@
 function [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg)
 % buildFeatureMap: Offline mapping entry point. Frames of the mapping drive
-% are perceived one by one, their selected curb, road-marking, facade, pole, and traffic-sign
+% are perceived one by one, their selected curb, facade, pole, and traffic-sign
 % observations are registered into the global frame with the matched
 % GNSS/INS poses, and the registered observations are converted into the
 % sliding-window semantic temporal-stability probability-cloud map that the

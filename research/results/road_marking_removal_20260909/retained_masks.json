@@ -1,0 +1,30 @@
+{
+  "frames": [
+    91,
+    260,
+    425
+  ],
+  "retainedMasksExactlyUnchanged": true,
+  "featureNames": [
+    "curb",
+    "pole",
+    "trafficSign"
+  ],
+  "pointCounts": [
+    [
+      73,
+      315,
+      143
+    ],
+    [
+      131,
+      136,
+      52
+    ],
+    [
+      133,
+      21,
+      240
+    ]
+  ]
+}

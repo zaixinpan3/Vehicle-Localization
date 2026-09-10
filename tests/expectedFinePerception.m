@@ -3,6 +3,8 @@ function expected = expectedFinePerception(dataset, frameIndex)
 % Original output evidence stays unchanged. Separate fixtures record intended
 % fine-detector correction; they are regression expectations, not ground truth.
     expected=loadPerceptionMaskReference(dataset,frameIndex);
+    % Preserve the original evidence while comparing only retained channels.
+    expected.featureMasks=rmfield(expected.featureMasks,'roadMarking');
     root=fileparts(fileparts(mfilename('fullpath')));
     changes=jsondecode(fileread(fullfile(root,'tests','reference','finePoleRecovery.json')));
     dataset=lower(string(dataset));
