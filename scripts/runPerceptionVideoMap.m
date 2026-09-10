@@ -1,7 +1,7 @@
 function result = runPerceptionVideoMap(outputFolder, fig, cfg)
 % runPerceptionVideoMap: Render fine perception and map its identical outputs.
 % Supply a figure from showMississippiPerception after adjusting its camera.
-% Its single pcshow cloud carries PerceptionPointCloud as its tag. All camera, axis,
+% Its single pcshow cloud retains its native pcviewer tag. All camera, axis,
 % palette, marker, and legend settings are retained. Frame cadence is the mean
 % recorded LiDAR cadence; an AVI master contains one image per input frame.
 % The mapping drive is registered with its matched GNSS/INS poses, then passed
@@ -26,7 +26,7 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
     assert(all(isfinite(stamps)) && all(diff(stamps)>0),'LiDAR timestamps must increase.');
     frameRate=(numel(frames)-1)/(stamps(end)-stamps(1));
     if isfield(cfg,'videoFrameRate'), frameRate=cfg.videoFrameRate; end
-    cloud=findobj(fig,'Type','scatter','Tag','PerceptionPointCloud');
+    cloud=findobj(fig,'Type','scatter','Tag','pcviewer');
     assert(isscalar(cloud),'Use a figure with one directly colored pcshow cloud.');
     ax=ancestor(cloud,'axes');
     properties={'XLim','YLim','ZLim','DataAspectRatio','PlotBoxAspectRatio', ...

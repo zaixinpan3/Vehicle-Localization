@@ -1,0 +1,13 @@
+{
+  "files": [
+    "config/finePerceptionConfig.m",
+    "perception/refinePerceptionCandidates.m",
+    "tests/finePoleRejectionTest.m",
+    "scripts/showMississippiPerception.m",
+    "scripts/updatePerceptionDisplay.m",
+    "scripts/runPerceptionVideoMap.m",
+    "scripts/restorePerceptionFigure.m",
+    "tests/perceptionViewerInteractionTest.m"
+  ],
+  "findings": 0
+}

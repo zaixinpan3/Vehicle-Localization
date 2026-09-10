@@ -167,6 +167,12 @@ Each finite original point is drawn once with a semantic RGB color and the same
 marker size as the gray background. Datatips print the original index and
 current class in the MATLAB Command Window. The upper-left counter displays
 the current source frame and total frame count.
+The scatter keeps pcshow's native tag so Rotate 3D can find a point as its
+rotation center. In Rotate 3D mode, right-click and select **Rotate Around a
+Point**, then drag from the point of interest. After `openfig`, call
+`restorePerceptionFigure(fig)` to rebuild the live point-cloud interactions
+while preserving the saved view and colors. Double-click reset is unchanged.
+See [the point-rotation validation](research/perception_viewer_interaction.md).
 See [the direct-color rendering checks](research/direct_point_coloring.md).
 See [the full-sequence video/map record](research/mississippi_perception_video_map.md).
 

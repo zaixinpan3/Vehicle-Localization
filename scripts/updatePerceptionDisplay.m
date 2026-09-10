@@ -1,9 +1,9 @@
 function updatePerceptionDisplay(fig, frame, masks, featureNames, frameIndex, totalFrames)
 % updatePerceptionDisplay: Color each original point once at a uniform size.
-% The figure contains one pcshow scatter tagged PerceptionPointCloud. Later
+% The figure contains one pcshow scatter with its native pcviewer tag. Later
 % requested classes supply the display color when masks overlap; the masks
 % themselves remain unchanged. Legend proxies contain no finite points.
-    cloud=findobj(fig,'Type','scatter','Tag','PerceptionPointCloud');
+    cloud=findobj(fig,'Type','scatter','Tag','pcviewer');
     assert(isscalar(cloud),'Expected one tagged pcshow point cloud.');
     ax=ancestor(cloud,'axes');
     properties={'XLim','YLim','ZLim','DataAspectRatio','PlotBoxAspectRatio', ...
@@ -31,6 +31,15 @@ function updatePerceptionDisplay(fig, frame, masks, featureNames, frameIndex, to
         labels(selected)=names(k);counts(k)=nnz(selected);
     end
     manager=datacursormode(fig);removeAllDataCursors(manager);
+    % Native drag/zoom restores the full cloud from these transient caches.
+    % Keep them aligned with the latest frame and exact semantic RGB values.
+    assert(isprop(cloud,'PointCloud') && isprop(cloud,'ColorData'), ...
+        'perception:RestoreViewer','Call restorePerceptionFigure after openfig.');
+    cloud.PointCloud=pointCloud(xyz(indices,:));
+    cloud.ColorData=colors;
+    interaction=ax.PCUserData;
+    interaction.colorMapData="userspecified";
+    ax.PCUserData=interaction;
     set(cloud,'XData',xyz(indices,1),'YData',xyz(indices,2),'ZData',xyz(indices,3), ...
         'CData',colors,'MarkerEdgeColor','flat','MarkerFaceColor','flat','PickableParts','visible','HitTest','on');
     setappdata(cloud,'OriginalFramePointIndices',indices);

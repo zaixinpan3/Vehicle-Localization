@@ -1,0 +1,12 @@
+{
+  "frameIndex": 91,
+  "reportedIndex": 43363,
+  "label": "source",
+  "polePoints": 225,
+  "curbPoints": 73,
+  "trafficSignPoints": 126,
+  "cameraUnchanged": true,
+  "nativePcviewerTag": true,
+  "pointRotationEnabled": true,
+  "markerSize": 8
+}

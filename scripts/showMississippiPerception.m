@@ -72,7 +72,7 @@ function result = showMississippiPerception(frameIndex, matPath, mode, cfg)
     ax = axes("Parent", fig);
     pcshow(xyz(finiteMask, :), [0.42, 0.42, 0.46], ...
         "Parent", ax, "MarkerSize", 8);
-    cloud=findobj(ax,'Type','scatter');cloud.Tag='PerceptionPointCloud';
+    % Keep pcshow's native pcviewer tag: point-centered rotation uses it.
     displayMasks=struct();
     for featureIndex=1:numFeatures
         displayMasks.(featureNames(featureIndex))=selected(:,featureIndex);

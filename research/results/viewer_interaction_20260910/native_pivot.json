@@ -1,0 +1,16 @@
+{
+  "pivot": [
+    4.979987621307373,
+    -12.709070205688477,
+    -2.2915420532226562
+  ],
+  "nearestSourcePointDistance": 0,
+  "axesCenter": [
+    -5.8645858764648438,
+    -30.228872299194336,
+    -5.1765651702880859
+  ],
+  "orbitCameraChanged": true,
+  "orbitRadiusError": 0,
+  "method": "Invoke installed native mouse-down callback and native orbit kernel; physical mouse injection was inconclusive under XWayland"
+}

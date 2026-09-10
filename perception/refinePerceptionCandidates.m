@@ -121,6 +121,11 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry)
         mid = median(residual(supported));
         sigma = max(1.4826 * median(abs(residual(supported) - mid)), cfg.minimumResidualScale);
         limit = min(cfg.poleMaximumRadius, mid + cfg.robustScale * sigma);
+        % Weak separation from neighboring returns requires each accepted
+        % point to lie closer to the fitted axis; retain the narrow core.
+        if mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio
+            limit = min(limit,cfg.poleLowContrastMaximumRadius);
+        end
         accepted(rows) = supported & residual <= limit;
     end
 end
