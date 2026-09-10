@@ -73,6 +73,27 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
     detail.seedPointIndices=indices(seed);
     if ~any(seed),return;end
     points=xyz(indices,1:2);
+    protected=false(size(indices));
+    [selected,boundaries]=selectBoundaries(points,indices,score,gradients,seed,planeResidual,protected,cfg);
+    [dominated,protected]=rejectWeakerRaisedCurbEdges(xyz,indices,score,gradients,cfg);
+    conflict=selected & dominated;
+    cells=unique(floor((points(conflict,:)-min(points,[],1))/cfg.curbProposalCellSizeMeters),'rows');
+    if size(cells,1)>=cfg.curbMinimumOutputSupportCells && ...
+            norm(max(points(conflict,:),[],1)-min(points(conflict,:),[],1))>=cfg.curbMinimumBoundaryLengthMeters
+        % Reconsider only a spatially supported conflict in the initial output.
+        % Ambiguous unused candidates must not perturb established boundaries.
+        score(dominated)=0;seed(dominated)=false;
+        keep=~dominated;
+        [chosen,boundaries]=selectBoundaries(points(keep,:),indices(keep),score(keep), ...
+            gradients(keep,:),seed(keep),planeResidual(keep),protected(keep),cfg);
+        selected=false(size(indices));selected(keep)=chosen;
+    end
+    accepted=ismember(pointIndices,indices(selected));detail.boundaryPointIndices=boundaries;
+    if any(accepted),detail.status="supportedMetricBoundary";end
+end
+
+function [selected,boundaries]=selectBoundaries(points,indices,score,gradients,seed,planeResidual,protected,cfg)
+% Fit and sample candidates while protecting independently stronger neighbors.
     bins=floor((points-min(points,[],1))/cfg.curbProposalCellSizeMeters);
     [~,~,groups]=unique(bins,'rows');
     proposal=false(size(indices));
@@ -113,6 +134,7 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         sameFacing=sense==0 | sense==boundarySense | boundarySense==0;
         duplicate=distance<=cfg.curbDuplicateBandMeters & along>=min(along(chosen))-cfg.curbDuplicateEndpointMarginMeters ...
             & along<=max(along(chosen))+cfg.curbDuplicateEndpointMarginMeters & sameFacing;
+        duplicate=duplicate & (~protected | distance<=cfg.curbCompetingEdgeDuplicateBandMeters);
         duplicate(chosen)=true;active(duplicate)=false;available(duplicate)=false;
         if nnz(active)==previousActiveCount
             % Weak members can face away from the seeds; still guarantee progress.
@@ -120,8 +142,6 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
                 & along>=extent(1) & along<=extent(2))=false;
         end
     end
-    accepted=ismember(pointIndices,indices(selected));detail.boundaryPointIndices=boundaries;
-    if any(accepted),detail.status="supportedMetricBoundary";end
 end
 
 function [distance,along,extent]=refineBoundaryCurve(points,groups,score,active,normal,offset,extent,cfg)
