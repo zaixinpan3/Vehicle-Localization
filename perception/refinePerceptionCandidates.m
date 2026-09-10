@@ -119,8 +119,12 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
         % Short vertical support must also be tightly concentrated about the
         % fitted axis. Test the whole supported object before trimming points.
         radialRms = sqrt(mean(residual(supported).^2));
-        if nnz(qualified)*geometry.voxelSize(3) < cfg.poleShortSupportHeight && ...
-                radialRms > cfg.poleShortSupportMaximumRadialRms
+        supportHeight = nnz(qualified)*geometry.voxelSize(3);
+        shortSupport = supportHeight < cfg.poleShortSupportHeight;
+        % At the boundary, weakly separated objects also need a tight shaft.
+        weakBoundary = supportHeight <= cfg.poleShortSupportHeight && ...
+            mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio;
+        if (shortSupport || weakBoundary) && radialRms > cfg.poleShortSupportMaximumRadialRms
             continue;
         end
         % A narrow fitted core is insufficient when both local voxel support
@@ -192,11 +196,18 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
         [rows,cols]=ind2sub(maps.mapSize,double(stats.pillarIndices(recover)));
         xy=maps.origin+([cols(:) rows(:)]-0.5).*[maps.dx maps.dy];
         geometry=context.voxelGrid.pillarGeometry;
+        fineBins=floor((xy-detailed.origin)./[detailed.dx detailed.dy])+1;
+        fineIds=sub2ind(detailed.mapSize,fineBins(:,2),fineBins(:,1));
+        seedIds=double(stats.pillarIndices(recover));
+        seedIds=seedIds(relaxed.candidateMask(fineIds));
+        completed=completeRecoveredPoleShafts(stats,maps.mapSize,seedIds,cfg.fine);
+        [rows,cols]=ind2sub(maps.mapSize,completed);
+        xy=maps.origin+([cols(:) rows(:)]-0.5).*[maps.dx maps.dy];
         bins=floor((xy-geometry.origin)./geometry.cellSize)+1;
         fineBins=floor((xy-detailed.origin)./[detailed.dx detailed.dy])+1;
         fineIds=sub2ind(detailed.mapSize,fineBins(:,2),fineBins(:,1));
         recovered=int32(sub2ind(geometry.mapSize,bins(:,2),bins(:,1)));
-        recovered=recovered(relaxed.candidateMask(fineIds));
+        recovered=recovered(~offGround.facade.mask(fineIds));
         channel=find(candidates.semanticNames=="pole");
         fineCandidates.basePolePillarIndices=fineCandidates.pillarIndices{channel};
         fineCandidates.pillarIndices{channel}=union(fineCandidates.pillarIndices{channel},recovered);

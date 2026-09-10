@@ -91,3 +91,9 @@ current detector option. CSV/JSON exports are in
 `research/results/fine_pole_recovery_20260909/`. Original recorded clouds and
 local probe/plot artifacts remain outside Git. No full trajectory replay or
 new real-time qualification was performed.
+
+## Subsequent shaft completion
+
+The current recovery seed and neighboring-pillar completion rules are documented
+in [fine_pole_shaft_completion.md](fine_pole_shaft_completion.md). That revision
+supersedes the historical seed inclination limit reported above.
