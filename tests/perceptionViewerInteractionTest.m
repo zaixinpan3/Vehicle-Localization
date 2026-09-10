@@ -13,6 +13,7 @@ classdef perceptionViewerInteractionTest < matlab.unittest.TestCase
             cleanup=onCleanup(@() close(preview.figure));
             cloud=findobj(preview.figure,'Type','scatter','Tag','pcviewer');
             testCase.verifyNumElements(cloud,1);
+            verifyRotationMenu(testCase,preview.figure);
             testCase.verifyNumElements(cloud.XData,nnz(isfinite(preview.frame.x)));
             testCase.verifyEqual(getappdata(cloud,'OriginalFramePointIndices'), ...
                 find(all(isfinite([preview.frame.x(:),preview.frame.y(:),preview.frame.z(:)]),2)));
@@ -31,6 +32,7 @@ classdef perceptionViewerInteractionTest < matlab.unittest.TestCase
             testCase.verifyEqual(cameraAndCloud(restored),before);
             cloud=findobj(restored,'Tag','pcviewer');
             testCase.verifyEqual(string(rotate3d(restored).Enable),"on");
+            verifyRotationMenu(testCase,restored);
             tip=perceptionPointTip([],struct('Target',cloud,'DataIndex',2));
             testCase.verifyTrue(any(contains(string(tip),'Original index: 2')));
             testCase.verifyTrue(any(contains(string(tip),'Layer: pole')));
@@ -44,8 +46,29 @@ classdef perceptionViewerInteractionTest < matlab.unittest.TestCase
             testCase.verifyEqual(cloud.PointCloud.Location,after.xyz);
             testCase.verifyEqual(cloud.ColorData,after.rgb);
             testCase.verifyEqual(string(ancestor(cloud,'axes').PCUserData.colorMapData),"userspecified");
+            % Repeated restoration must bind one live menu, not accumulate it.
+            restorePerceptionFigure(restored);
+            verifyRotationMenu(testCase,restored);
         end
     end
+end
+
+function verifyRotationMenu(testCase,fig)
+    rotate3d(fig,'on');
+    mode=getuimode(fig,'Exploration.Rotate3D');
+    menu=findall(mode.UIContextMenu,'Tag','contextPCRotationCenter');
+    testCase.assertNumElements(menu,1,'Rotate 3D must own the point-cloud menu.');
+    testCase.verifyEqual(mode.UIContextMenu.Tag,'PCRotateContextMenu');
+    testCase.verifyNumElements(findall(fig,'Tag','contextPCRotationCenter'),1);
+    ax=ancestor(findobj(fig,'Tag','pcviewer'),'axes');
+    original=ax.PCUserData.rotateFromCenter;
+    callback=menu.Callback;
+    feval(callback{1},menu,[],callback{2:end});
+    testCase.verifyEqual(ax.PCUserData.rotateFromCenter,~original);
+    feval(callback{1},menu,[],callback{2:end});
+    testCase.verifyEqual(ax.PCUserData.rotateFromCenter,original);
+    datacursormode(fig,'on');rotate3d(fig,'on');
+    testCase.verifyEqual(getuimode(fig,'Exploration.Rotate3D').UIContextMenu,menu.Parent);
 end
 
 function fig=makeViewer()

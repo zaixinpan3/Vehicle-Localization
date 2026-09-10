@@ -23,6 +23,9 @@ function restorePerceptionFigure(fig)
     counterText='';if ~isempty(counter),counterText=counter.String;end
     datacursormode(fig,'off');rotate3d(fig,'off');
     legend(ax,'off');
+    % Serialized menus are detached from the new Rotate 3D mode. Their tags
+    % make pcshow skip menu creation, leaving the generic menu bound instead.
+    delete(findall(fig,'Type','uicontextmenu','Tag','PCRotateContextMenu'));
     % Re-enter the public renderer to install fresh point-cloud callbacks.
     hold(ax,'off');
     valid=all(isfinite(source.xyz),2);

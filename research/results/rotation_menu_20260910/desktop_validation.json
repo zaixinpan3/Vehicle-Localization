@@ -1,0 +1,8 @@
+{
+  "frameIndex": 91,
+  "menuAttachedToRotate3D": true,
+  "menuTag": "PCRotateContextMenu",
+  "menuText": "Rotate Around a Point",
+  "cameraUnchanged": true,
+  "pointMenuCount": 1
+}

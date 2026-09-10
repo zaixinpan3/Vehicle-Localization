@@ -1,0 +1,12 @@
+{
+  "passed": 2,
+  "failed": 0,
+  "incomplete": 0,
+  "analyzerFindings": 0,
+  "analyzerConfiguration": "factory (stale user R2025b settings path unavailable)",
+  "files": [
+    "scripts/restorePerceptionFigure.m",
+    "tests/perceptionViewerInteractionTest.m"
+  ],
+  "scope": "Rotate3D menu ownership, toggle, mode switching and repeated FIG restoration"
+}

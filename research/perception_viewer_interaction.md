@@ -39,9 +39,17 @@ fig = openfig('path/to/perception.fig');
 restorePerceptionFigure(fig);
 ```
 
+The restore helper deletes the serialized `PCRotateContextMenu` before
+re-entering pcshow. Otherwise the old menu tag makes pcshow skip construction,
+while the new Rotate 3D mode remains bound to its generic axes menu. Merely
+finding a menu somewhere in the figure does not establish that it is reachable.
+This missing binding was confirmed after the initial repair and corrected.
+
 In Rotate 3D mode, right-click and choose **Rotate Around a Point**, then drag
 from the point of interest. Choose **Rotate Around Axes Center** to switch
-back. The current native frame-91 figure was placed in point-centered mode.
+back. The menu offers the opposite of the current mode: after selecting point
+rotation, it displays **Rotate Around Axes Center**. The repaired frame-91
+window currently offers **Rotate Around a Point** for explicit selection.
 The toolbar's Data Tips mode still prints original indices and visible
 semantic classes. These are native controls described in the
 [MathWorks pcshow documentation](https://www.mathworks.com/help/vision/ref/pcshow.html).
@@ -81,3 +89,22 @@ was validated in the same working revision. No full-route recording was rerun.
 Check exports are in `research/results/viewer_interaction_20260910/`; native
 figures, callback evidence and the pilot remain in
 `output/viewer_interaction_20260910/` and the identified archive export bundle.
+
+## Follow-up: reachable Rotate 3D menu (2026-09-10)
+
+The user reported that the entry was still absent. Reopening the saved native
+frame-91 FIG and running the initial helper reproduced a generic bound menu
+with `Rotate_Options`, `SnapToXY`, `Reset`, and related entries. The point-cloud
+menu existed elsewhere in the figure but was detached. This narrows the earlier
+claim: pivot callbacks worked, but the right-click menu binding was not verified.
+
+Deleting the stale point-cloud context menu before pcshow initialization lets
+the renderer create and attach a fresh menu. Both viewer tests pass with new
+assertions that the active Rotate 3D mode owns exactly one point-rotation item,
+its callback changes/restores the pivot mode, the binding survives switching
+to Data Tips and back, and repeated restoration does not accumulate menus.
+The native niri frame-91 window was reopened from its last saved view; camera
+properties are identical. Its actual bound context menu was opened
+programmatically and visually inspected: **Rotate Around a Point** is visible.
+This verifies menu rendering/binding; it is not a physical mouse-drag test.
+No perception settings, point labels, or double-click behavior changed.
