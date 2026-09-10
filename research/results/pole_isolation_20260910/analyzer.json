@@ -1,0 +1,10 @@
+{
+  "files": [
+    "config/finePerceptionConfig.m",
+    "perception/refinePerceptionCandidates.m",
+    "perception/offGroundFeatures/validatePoleIsolation.m",
+    "tests/finePoleRejectionTest.m",
+    "tests/poleIsolationTest.m"
+  ],
+  "findings": 0
+}

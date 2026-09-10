@@ -65,3 +65,7 @@ See `research/results/pole_contrast_20260910/` for check summaries and
 `output/pole_contrast_20260910/` for native/diagnostic originals. The companion
 [point-rotation repair](perception_viewer_interaction.md) is independently
 specified and does not change semantic masks.
+
+A later [candidate-isolation review](fine_pole_isolation.md) rejects a weakly
+separated candidate as a whole when its shaft neighborhood is also cluttered.
+The point-radius rule above remains active for candidates that pass that check.

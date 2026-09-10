@@ -55,8 +55,8 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                     members=ismember(grid.pointPillarLinIdx,candidates.basePolePillarIndices);
                     base=ismember(pointIdx,double(grid.pointIndices(members)));
                 end
-                accepted(base)=validatePolePoints(points(base,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig);
-                accepted(~base)=validatePolePoints(points(~base,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig);
+                accepted(base)=validatePolePoints(points(base,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig,context.offGroundVoxelGrid.points);
+                accepted(~base)=validatePolePoints(points(~base,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig,context.offGroundVoxelGrid.points);
         end
         masks.(name)(pointIdx(accepted)) = true;
         decisions.(name) = struct("candidatePointIndices", pointIdx, ...
@@ -67,7 +67,7 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
     fine = struct("featureMasks", masks, "refinement", decisions, "candidates", candidates);
 end
 
-function accepted = validatePolePoints(points, cfg, offGround, geometry)
+function accepted = validatePolePoints(points, cfg, offGround, geometry, neighborhoodPoints)
 % validatePolePoints: Fit a vertical line to each connected candidate group,
 % then test every member against metric tilt, height and robust radial limits.
     accepted = false(size(points, 1), 1);
@@ -86,7 +86,7 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry)
         if size(p, 1) < cfg.poleMinimumPoints || (max(p(:, 3)) - min(p(:, 3))) < cfg.poleMinimumHeight
             continue;
         end
-        % Fine decisions use neighboring voxel counts, never neighboring raw points.
+        % Fine voxel support first qualifies the shaft's vertical extent.
         columns = unique(cellIdx(rows));
         maps = offGround.columnMaps;
         [r, c] = ind2sub(mapSize, columns);
@@ -121,6 +121,13 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry)
         radialRms = sqrt(mean(residual(supported).^2));
         if nnz(qualified)*geometry.voxelSize(3) < cfg.poleShortSupportHeight && ...
                 radialRms > cfg.poleShortSupportMaximumRadialRms
+            continue;
+        end
+        % A narrow fitted core is insufficient when both local voxel support
+        % and the wider raw-point neighborhood indicate a cluttered object.
+        if mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio && ...
+                ~validatePoleIsolation(neighborhoodPoints, ...
+                [coefficients(1,:),median(p(supported,3))],coefficients(2,:),qualified,geometry,cfg)
             continue;
         end
         mid = median(residual(supported));

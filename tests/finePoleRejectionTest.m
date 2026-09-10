@@ -1,5 +1,5 @@
 classdef finePoleRejectionTest < matlab.unittest.TestCase
-% finePoleRejectionTest: Reject short diffuse supports without ring metadata.
+% finePoleRejectionTest: Reject diffuse and cluttered supports without rings.
     methods (TestClassSetup)
         function paths(~)
             setupVehicleLocalization;
@@ -11,6 +11,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             cfg=perceptionConfig(); cfg.executionMode="offline";
             baselineCfg=cfg; baselineCfg.fine.poleShortSupportMaximumRadialRms=Inf;
             baselineCfg.fine.poleLowContrastMaximumRadius=Inf;
+            baselineCfg.fine.poleIsolationMinimumCoreFraction=0;
             baseline=perceiveFrame(frame,baselineCfg);
             actual=perceiveFrame(frame,cfg);
             changes=jsondecode(fileread(fullfile(fileparts(mfilename('fullpath')), ...
@@ -25,7 +26,12 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             testCase.verifyFalse(actual.featureMasks.pole(16728));
             testCase.verifyTrue(baseline.featureMasks.pole(43363));
             testCase.verifyFalse(actual.featureMasks.pole(43363));
-            testCase.verifyEqual(nnz(actual.featureMasks.pole),225);
+            testCase.verifyTrue(baseline.featureMasks.pole(42593));
+            testCase.verifyFalse(actual.featureMasks.pole(42593));
+            xyz=double([frame.x(:),frame.y(:),frame.z(:)]);
+            near=vecnorm(xyz(:,1:2)-xyz(42593,1:2),2,2)<=0.75;
+            testCase.verifyFalse(any(actual.featureMasks.pole & near));
+            testCase.verifyEqual(nnz(actual.featureMasks.pole),147);
             testCase.verifyEqual(rmfield(actual.featureMasks,'pole'), ...
                 rmfield(baseline.featureMasks,'pole'));
             testCase.verifyEqual(actual.probabilityCloud,baseline.probabilityCloud);
@@ -43,6 +49,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             testCase.verifyFalse(restored(47906));
             testCase.verifyFalse(restored(16728));
             testCase.verifyFalse(restored(43363));
+            testCase.verifyFalse(restored(42593));
         end
     end
 end

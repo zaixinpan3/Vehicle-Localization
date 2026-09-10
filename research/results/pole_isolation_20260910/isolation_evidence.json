@@ -1,0 +1,32 @@
+[
+  {
+    "axisCenter": [
+      2.977428358813206,
+      19.651863390068204,
+      2.4581035375595093
+    ],
+    "coreCount": 46,
+    "neighborhoodCount": 64,
+    "coreFraction": 0.71875
+  },
+  {
+    "axisCenter": [
+      8.66171873280329,
+      -13.101010067020393,
+      -1.1330907344818115
+    ],
+    "coreCount": 54,
+    "neighborhoodCount": 74,
+    "coreFraction": 0.72972972972972971
+  },
+  {
+    "axisCenter": [
+      16.577663793761875,
+      -9.6394272902873741,
+      -0.37786084413528442
+    ],
+    "coreCount": 37,
+    "neighborhoodCount": 52,
+    "coreFraction": 0.71153846153846156
+  }
+]
