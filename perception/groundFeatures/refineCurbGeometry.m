@@ -102,13 +102,16 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
     end
     dominated=rejectWeakerRaisedCurbEdges(xyz,indices,score,gradients,cfg);
     conflict=selected & dominated;
-    if hasSupportedCurbConflict(points,conflict,cfg)
+    reconstructed=hasSupportedCurbConflict(points,conflict,cfg);
+    if reconstructed
         % Strong evidence can reconstruct an initially ambiguous set of models.
         keep=~dominated;
         [chosen,boundaries]=traceCurbRidges(xyz,indices(keep),score(keep), ...
             gradients(keep,:),seed(keep),planeResidual(keep),cfg);
         selected=false(size(indices));selected(keep)=chosen;
-    else
+    end
+    if ~isempty(boundaries)
+        % Reconstruction can leave a separate, weaker raised boundary.
         % A modest strength advantage is useful only beside an already valid
         % boundary. Restrict this correction to the competing local models.
         [trusted,~]=retainSupportedCurbBoundaries(points,indices,gradients, ...
@@ -116,7 +119,21 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         alternativeCfg=cfg;alternativeCfg.curbCompetingEdgeGradientRatio=cfg.curbAlternativeEdgeGradientRatio;
         dominated=rejectWeakerRaisedCurbEdges(xyz,indices,score,gradients,alternativeCfg);
         conflict=trusted & dominated;
-        if hasSupportedCurbConflict(points,conflict,cfg)
+        if reconstructed
+            % Ridge components are already separated. Remove a component only
+            % when a spatially supported majority favors the lower competitor;
+            % retracing here could introduce an unrelated neighboring branch.
+            rejected=false(size(boundaries));
+            for j=1:numel(boundaries)
+                member=ismember(indices,boundaries{j});
+                competing=member & conflict;
+                if nnz(competing)/nnz(member)>=cfg.curbCompetingBoundaryMinimumFraction && ...
+                        hasSupportedCurbConflict(points,competing,cfg)
+                    selected(member)=false;rejected(j)=true;
+                end
+            end
+            boundaries(rejected)=[];
+        elseif hasSupportedCurbConflict(points,conflict,cfg)
             affected=cellfun(@(ids) any(ismember(ids,indices(conflict))),boundaries);
             affectedIds=vertcat(boundaries{affected});targets=xyz(affectedIds,1:2);
             nearby=min(hypot(points(:,1)-targets(:,1).',points(:,2)-targets(:,2).'),[],2) ...

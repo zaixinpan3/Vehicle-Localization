@@ -51,6 +51,29 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
             restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;
             testCase.verifyEqual(restored,actual.featureMasks.curb);
         end
+        function rejectsRaisedBoundaryAfterStrongReconstruction(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
+            frame=loadPointCloudFrame(file,615);cfg=perceptionConfig();cfg.executionMode="offline";
+            previous=cfg;previous.fine.curbAlternativeEdgeGradientRatio=1.4;
+            before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);
+            falsePoints=[27884 27692 26413 26285 26542 26799 26671 26543 26864 26544 25393 25265 25073 24945];
+            testCase.verifyTrue(all(before.featureMasks.curb(falsePoints)));
+            testCase.verifyFalse(any(actual.featureMasks.curb(falsePoints)));
+            followup=[23354 23419 23484 21885];
+            testCase.verifyFalse(any(actual.featureMasks.curb(followup)));
+            retained=before.featureMasks.curb;retained(falsePoints)=false;
+            testCase.verifyEqual(actual.featureMasks.curb,retained);
+            testCase.verifyTrue(all(actual.featureMasks.curb(retained)));
+            testCase.verifyEqual(actual.featureMasks.curb(frame.y(:)<0),before.featureMasks.curb(frame.y(:)<0));
+            testCase.verifyEqual(rmfield(actual.featureMasks,'curb'),rmfield(before.featureMasks,'curb'));
+            testCase.verifyEqual(actual.probabilityCloud,before.probabilityCloud);
+            stream=RandStream('mt19937ar','Seed',61527884);order=randperm(stream,numel(frame.x));
+            shuffled=struct('x',frame.x(order).','y',frame.y(order).','z',frame.z(order).');
+            cfg.featureNames="curb";reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;
+            testCase.verifyEqual(restored,actual.featureMasks.curb);
+        end
         function equalStrengthOrEqualHeightEdgesRemainSeparate(testCase)
             [xyz,g]=parallelEdges();cfg=finePerceptionConfig();ids=(1:size(xyz,1)).';
             xyz(:,3)=0;
