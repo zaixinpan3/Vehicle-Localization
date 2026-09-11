@@ -6,12 +6,16 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
 % recorded LiDAR cadence; an AVI master contains one image per input frame.
 % The mapping drive is registered with its matched GNSS/INS poses, then passed
 % to the current canonical repeated-observation mapping implementation.
+% Set cfg.buildMap=false to export perception and observations without fitting
+% a map. The default retains the combined video-and-map workflow.
     arguments
         outputFolder (1,1) string
         fig (1,1) matlab.ui.Figure
         cfg (1,1) struct = featureMapBuildConfig()
     end
     root=fileparts(fileparts(mfilename('fullpath')));
+    buildMap=true;if isfield(cfg,'buildMap'),buildMap=cfg.buildMap;end
+    assert(islogical(buildMap) && isscalar(buildMap),'cfg.buildMap must be a logical scalar.');
     dataRoot=fullfile(root,'data');
     if ~isfolder(outputFolder),mkdir(outputFolder);end
     videoPath=fullfile(outputFolder,'perception.avi');
@@ -63,24 +67,35 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
     save(fullfile(outputFolder,'feature_observations.mat'),'featureData','-v7.3');
     writetable(featureData.frameSummaryTable,fullfile(outputFolder,'frame_feature_counts.csv'));
     writetable(poses(:,{'frame_index','lidar_stamp_sec'}),fullfile(outputFolder,'frame_timestamps.csv'));
-    updateProgress("mapping",completed);
-    probabilityCloudMap=buildSlidingWindowMap(featureData,cfg);
-    probabilityCloudMap.sourceMatPath=string(matPath);probabilityCloudMap.poseMatchCsvPath=string(posePath);
-    save(fullfile(outputFolder,'probability_cloud_map.mat'),'probabilityCloudMap','-v7.3');
-    writetable(probabilityCloudMap.layerSummaryTable,fullfile(outputFolder,'map_layer_summary.csv'));
+    mapSummary=table();
+    if buildMap
+        updateProgress("mapping",completed);
+        probabilityCloudMap=buildSlidingWindowMap(featureData,cfg);
+        probabilityCloudMap.sourceMatPath=string(matPath);probabilityCloudMap.poseMatchCsvPath=string(posePath);
+        save(fullfile(outputFolder,'probability_cloud_map.mat'),'probabilityCloudMap','-v7.3');
+        mapSummary=probabilityCloudMap.layerSummaryTable;
+        writetable(mapSummary,fullfile(outputFolder,'map_layer_summary.csv'));
+    end
     result=struct('outputFolder',outputFolder,'frameCount',completed,'frameRate',frameRate, ...
         'videoDurationSeconds',completed/frameRate,'videoImageSize',imageSize, ...
         'elapsedSeconds',toc(timer),'featureCounts',sum(featureData.counts,1), ...
-        'featureNames',cfg.featureNames,'mapSummary',probabilityCloudMap.layerSummaryTable);
+        'featureNames',cfg.featureNames,'mapBuilt',buildMap,'mapSummary',mapSummary);
     save(fullfile(outputFolder,'run_result.mat'),'result');
     updateProgress("completed",completed);
 
     function renderFrame(frame,perception,index)
         updatePerceptionDisplay(fig,frame,perception.featureMasks,cfg.featureNames,index,total);
         fig.Name=sprintf('Mississippi frame %d - fine perception video',index);
+        ax.Title.String=sprintf('Mississippi frame %d - fine perception',index);
         frameCounter.String=sprintf('Frame %d / %d',index,total);
         for j=1:numel(properties),set(ax,properties{j},viewState.(properties{j}));end
         drawnow;
+        for j=1:numel(properties)
+            assert(isequal(get(ax,properties{j}),viewState.(properties{j})), ...
+                'Recording camera or axis geometry changed.');
+        end
+        assert(numel(cloud.XData)==nnz(isfinite(frame.x(:)) & isfinite(frame.y(:)) & isfinite(frame.z(:))), ...
+            'The recording must retain every finite original point.');
         imageFrame=getframe(fig);
         assert(isequal(size(imageFrame.cdata),imageSize),'Keep the recording window size fixed.');
         writeVideo(writer,imageFrame);
