@@ -11,6 +11,10 @@ classdef poleVerticalContinuityTest < matlab.unittest.TestCase
             actual=retainContinuousPoleSupport([shaft;fragment],cfg);
             testCase.verifyEqual(actual,[true(size(shaft));false(size(fragment))]);
         end
+        function separatedFragmentsCannotPoolTheirHeight(testCase)
+            cfg=finePerceptionConfig();z=[0:0.05:0.4,1.5:0.05:1.9,3:0.05:3.4];
+            testCase.verifyFalse(any(retainContinuousPoleSupport(z,cfg)));
+        end
         function independentlySupportedRunsRemainValid(testCase)
             cfg=finePerceptionConfig();z=[(0:0.1:2).';(3.2:0.1:4.4).'];
             testCase.verifyTrue(all(retainContinuousPoleSupport(z,cfg)));
@@ -28,6 +32,8 @@ classdef poleVerticalContinuityTest < matlab.unittest.TestCase
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
             frame=loadPointCloudFrame(file,1137);cfg=perceptionConfig();cfg.executionMode="offline";
+            % Isolate point-run trimming from the candidate-level continuity gate.
+            cfg.fine.poleShortSupportHeight=0;
             beforeCfg=cfg;beforeCfg.fine.poleMaximumVerticalGapMeters=Inf;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             testCase.verifyTrue(before.featureMasks.pole(54471));

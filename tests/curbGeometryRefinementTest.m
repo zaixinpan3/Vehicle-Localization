@@ -12,6 +12,7 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
             frame=loadPointCloudFrame(path,91);cfg=perceptionConfig();cfg.executionMode="offline";
             cfg.fine.curbContinuationLengthMeters=0;
             cfg.fine.curbMinimumOutputSupportCells=0;
+            cfg.fine.curbMinimumBoundaryNormalFraction=0;
             baselineCfg=cfg;baselineCfg.fine.curbMinimumOutputPlaneResidualMeters=0.018;
             baseline=perceiveFrame(frame,baselineCfg);actual=perceiveFrame(frame,cfg);
             picks=[19904 18559 17727];

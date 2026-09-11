@@ -42,6 +42,8 @@ classdef poleBoundaryRecoveryTest < matlab.unittest.TestCase
         function recoversSparseTallShaft(testCase)
             [frame,cfg]=recordedScene(testCase,214);
             beforeCfg=cfg;beforeCfg.fine.poleSparseRecoveryMinimumHeight=Inf;
+            % Isolate sparse recovery from the independent split-shaft fallback.
+            beforeCfg.fine.poleIndependentMaximumNeighborAxisRms=0;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             testCase.verifyFalse(before.featureMasks.pole(34450));
             testCase.verifyTrue(actual.featureMasks.pole(34450));
@@ -56,6 +58,7 @@ classdef poleBoundaryRecoveryTest < matlab.unittest.TestCase
         function rejectsReportedShortClutterSupport(testCase)
             [frame,cfg]=recordedScene(testCase,214);
             beforeCfg=cfg;beforeCfg.fine.poleIsolationMinimumCoreFraction=0;
+            beforeCfg.fine.poleShortSupportHeight=0;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             falsePoints=[12097 12225 12610 12482 12546];
             testCase.verifyTrue(all(before.featureMasks.pole(falsePoints)));

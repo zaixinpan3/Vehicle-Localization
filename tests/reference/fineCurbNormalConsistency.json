@@ -1,0 +1,67 @@
+{
+  "description": "Explicit regression deltas against commit 3361dfaf16685d62169c90cb7fe74b540e7542d2; these are not ground-truth labels.",
+  "entries": [
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 326,
+      "addedCurbIndices": [],
+      "removedCurbIndices": [
+        17785,
+        18170,
+        18359,
+        18619,
+        19068,
+        19584
+      ]
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 850,
+      "addedCurbIndices": [
+        20656,
+        20784,
+        20911,
+        20912,
+        21040,
+        21103,
+        21104,
+        21167,
+        21168,
+        21295,
+        21359,
+        21678,
+        21742,
+        21870
+      ],
+      "removedCurbIndices": [
+        18354,
+        18418,
+        19249,
+        21232,
+        21360,
+        21551,
+        21805,
+        22126,
+        23468,
+        23596,
+        23660,
+        23787,
+        23850,
+        23852,
+        23914,
+        23977,
+        23979,
+        23980,
+        24042,
+        24106,
+        24169,
+        24170,
+        24233,
+        24234,
+        24425,
+        25576,
+        25896
+      ]
+    }
+  ]
+}

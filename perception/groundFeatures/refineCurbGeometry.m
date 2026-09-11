@@ -117,6 +117,10 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
     rejected=false(size(boundaries));
     for j=1:numel(boundaries)
         member=ismember(indices,boundaries{j});
+        if ~hasConsistentCurbNormals(points(member,:),gradients(member,:),cfg)
+            selected(member)=false;rejected(j)=true;
+            continue;
+        end
         reversed=member & ~directionConsistent;
         cells=unique(floor(points(reversed,:)/cfg.curbProposalCellSizeMeters),'rows');
         if nnz(reversed)>=cfg.curbMinimumSupportCells && ...

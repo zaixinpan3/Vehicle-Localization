@@ -56,8 +56,11 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                     members=ismember(grid.pointPillarLinIdx,candidates.basePolePillarIndices);
                     base=ismember(pointIdx,double(grid.pointIndices(members)));
                 end
+                independent=ismember(pointIdx,double(grid.pointIndices(ismember(grid.pointPillarLinIdx,candidates.independentPolePillarIndices))));
+                base=base & ~independent;
+                accepted(independent)=validatePolePoints(points(independent,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig,context.offGroundVoxelGrid.points,true);
                 accepted(base)=validatePolePoints(points(base,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig,context.offGroundVoxelGrid.points);
-                accepted(~base)=validatePolePoints(points(~base,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig,context.offGroundVoxelGrid.points);
+                accepted(~base & ~independent)=validatePolePoints(points(~base & ~independent,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig,context.offGroundVoxelGrid.points);
         end
         masks.(name)(pointIdx(accepted)) = true;
         decisions.(name) = struct("candidatePointIndices", pointIdx, ...
@@ -68,7 +71,8 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
     fine = struct("featureMasks", masks, "refinement", decisions, "candidates", candidates);
 end
 
-function accepted = validatePolePoints(points, cfg, offGround, geometry, neighborhoodPoints)
+function accepted = validatePolePoints(points, cfg, offGround, geometry, neighborhoodPoints, requireOutputRun)
+    if nargin<6,requireOutputRun=false;end
 % validatePolePoints: Fit a vertical line to each connected candidate group,
 % then test every member against metric tilt, height and robust radial limits.
     accepted = false(size(points, 1), 1);
@@ -131,6 +135,14 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
         end
         supportHeight = nnz(qualified)*geometry.voxelSize(3);
         shortSupport = supportHeight < cfg.poleShortSupportHeight;
+        if supportHeight<=cfg.poleShortSupportHeight
+            edges=diff([false;qualified;false]);
+            runLength=find(edges==-1)-find(edges==1);
+            if max(runLength)*geometry.voxelSize(3)<cfg.poleMinimumSupportedHeight || ...
+                    norm(coefficients(2,:))>tand(cfg.poleShortSupportMaximumTiltDegrees)
+                continue;
+            end
+        end
         % At the boundary, weakly separated objects also need a tight shaft.
         weakBoundary = supportHeight <= cfg.poleShortSupportHeight && ...
             mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio;
@@ -139,11 +151,19 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
         end
         % A short supported shaft must be isolated even if it dominates its
         % immediate cells. Longer weak-contrast objects use the same check.
-        if (mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio || ...
-                supportHeight <= cfg.poleShortSupportHeight) && ...
-                ~validatePoleIsolation(neighborhoodPoints, ...
-                [coefficients(1,:),median(p(supported,3))],coefficients(2,:),qualified,geometry,cfg)
-            continue;
+        if mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio || ...
+                supportHeight <= cfg.poleShortSupportHeight
+            [isolated,separation]=validatePoleIsolation(neighborhoodPoints, ...
+                [coefficients(1,:),median(p(supported,3))],coefficients(2,:),qualified,geometry,cfg);
+            % A dense, tightly upright shaft may dominate per unit XY area
+            % without owning most returns in the much larger neighborhood.
+            areaRatio=(cfg.poleIsolationNeighborhoodRadius/cfg.poleIsolationCoreRadius)^2-1;
+            contrast=separation.coreCount/max(separation.neighborhoodCount-separation.coreCount,1)*areaRatio;
+            denseCore=separation.coreCount>=cfg.poleDenseCoreMinimumPoints && ...
+                contrast>=cfg.poleDenseCoreMinimumDensityContrast && ...
+                norm(coefficients(2,:))<=tand(cfg.poleSparseRecoveryMaximumTiltDegrees) && ...
+                radialRms<=cfg.poleSparseRecoveryMaximumRadialRms;
+            if ~isolated && ~denseCore,continue;end
         end
         mid = median(residual(supported));
         sigma = max(1.4826 * median(abs(residual(supported) - mid)), cfg.minimumResidualScale);
@@ -157,7 +177,23 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
         % sparse cells that do not independently qualify for output labeling.
         connected=residual<=limit;
         connected(connected)=retainContinuousPoleSupport(p(connected,3),cfg);
-        accepted(rows)=supported & connected;
+        keep=supported & connected;
+        % Independent recovery must prove continuity, compactness and isolation
+        % from the final labeled returns, not disconnected surrounding points.
+        if requireOutputRun
+            keep(keep)=retainContinuousPoleSupport(p(keep,3),cfg);
+            if ~any(keep) || max(p(keep,3))-min(p(keep,3))<cfg.poleRecoveryMinimumHeight,continue;end
+            origin=median(p(keep,3));fit=[ones(nnz(keep),1),p(keep,3)-origin]\p(keep,1:2);
+            fitResidual=p(keep,1:2)-[ones(nnz(keep),1),p(keep,3)-origin]*fit;
+            finalSupport=false(size(qualified));finalSupport(zBin(keep))=true;
+            isolationCfg=cfg;isolationCfg.poleIsolationMinimumCoreFraction=cfg.poleIndependentMinimumCoreFraction;
+            if norm(fit(2,:))>tand(cfg.poleRecoveryMaximumTiltDegrees) || ...
+                    sqrt(mean(sum(fitResidual.^2,2)))>cfg.poleIndependentMaximumRadialRms || ...
+                    ~validatePoleIsolation(neighborhoodPoints,[fit(1,:),origin],fit(2,:),finalSupport,geometry,isolationCfg)
+                continue;
+            end
+        end
+        accepted(rows)=keep;
     end
 end
 
@@ -187,6 +223,7 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
     cloudCfg.semanticNames=candidates.semanticNames;
     offGround=analyzeFineStructuralCandidates(fineGrid,fineCfg,cloudCfg);
     fineCandidates=buildPerceptionCandidates(context.voxelGrid,context.ground,offGround,candidates.semanticNames);
+    fineCandidates.independentPolePillarIndices=zeros(0,1,'int32');
     if cfg.fine.poleRecoveryEnabled && any(candidates.semanticNames=="pole")
         % Add only strong whole-pillar 3D evidence missed by detailed seeding.
         maps=context.offGround.columnMaps;
@@ -203,11 +240,11 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
         covar=stats.covarianceXYZ;
         slope=covar(:,4:5)./max(covar(:,6),eps);
         radial=sqrt(max(0,covar(:,1)+covar(:,3)-sum(covar(:,4:5).^2,2)./max(covar(:,6),eps)));
-        recover=stats.count>=cfg.fine.poleRecoveryMinimumPoints & ...
+        axisEligible=stats.count>=cfg.fine.poleRecoveryMinimumPoints & ...
             stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.fine.poleRecoveryMinimumHeight & ...
             vecnorm(slope,2,2)<=tand(cfg.fine.poleRecoveryMaximumTiltDegrees) & ...
-            radial<=cfg.fine.poleRecoveryMaximumRadialStd & ...
-            context.offGround.poleCellMask(double(stats.pillarIndices));
+            radial<=cfg.fine.poleRecoveryMaximumRadialStd;
+        recover=axisEligible & context.offGround.poleCellMask(double(stats.pillarIndices));
         [rows,cols]=ind2sub(maps.mapSize,double(stats.pillarIndices(recover)));
         xy=maps.origin+([cols(:) rows(:)]-0.5).*[maps.dx maps.dy];
         geometry=context.voxelGrid.pillarGeometry;
@@ -270,6 +307,24 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
             fineCandidates.basePolePillarIndices=setdiff(fineCandidates.basePolePillarIndices,find(ismember(components,touched)));
         end
         fineCandidates.pillarIndices{channel}=union(fineCandidates.pillarIndices{channel},recovered);
+        % Recover only a spatially split shaft supported by several compatible
+        % whole-pillar axes. Existing candidates retain their normal validator;
+        % newly recovered components require stronger output-level evidence.
+        mainBins=floor((centers-geometry.origin)./geometry.cellSize)+1;
+        mainIds=sub2ind(geometry.mapSize,mainBins(:,2),mainBins(:,1));
+        missing=find(axisEligible & ~ismember(mainIds,fineCandidates.pillarIndices{channel}));
+        independent=zeros(0,1);
+        independentCfg=cfg.fine;independentCfg.poleRecoveryMaximumNeighborAxisRms=cfg.fine.poleIndependentMaximumNeighborAxisRms;
+        for seed=missing(:).'
+            joined=completeRecoveredPoleShafts(stats,maps.mapSize,double(stats.pillarIndices(seed)),independentCfg);
+            members=ismember(double(stats.pillarIndices),joined);
+            if numel(joined)>1 && ~any(ismember(mainIds(members),fineCandidates.pillarIndices{channel}))
+                independent=union(independent,mainIds(members & ~offGround.facade.mask(sid)));
+            end
+        end
+        fineCandidates.independentPolePillarIndices=int32(independent);
+        fineCandidates.pillarIndices{channel}=union(fineCandidates.pillarIndices{channel},int32(independent));
+
     end
     candidates=fineCandidates;
     candidates.framePointCount=numel(frame.x);

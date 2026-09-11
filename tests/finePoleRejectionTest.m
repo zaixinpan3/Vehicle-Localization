@@ -13,6 +13,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             baselineCfg.fine.poleLowContrastMaximumRadius=Inf;
             baselineCfg.fine.poleIsolationMinimumCoreFraction=0;
             baselineCfg.fine.poleMaximumVerticalGapMeters=Inf;
+            baselineCfg.fine.poleShortSupportHeight=0;
             baseline=perceiveFrame(frame,baselineCfg);
             actual=perceiveFrame(frame,cfg);
             root=fileparts(mfilename('fullpath'));
