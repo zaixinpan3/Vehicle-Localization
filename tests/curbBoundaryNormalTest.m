@@ -32,11 +32,30 @@ classdef curbBoundaryNormalTest < matlab.unittest.TestCase
             testCase.verifyFalse(any(actual.featureMasks.curb(reported)));
             removed=sort([reported,19967,19710]).';
             testCase.verifyEqual(find(before.featureMasks.curb & ~actual.featureMasks.curb),removed);
-            testCase.verifyFalse(any(actual.featureMasks.curb & ~before.featureMasks.curb));
-            testCase.verifyEqual(nnz(actual.featureMasks.curb),127);
+            revisions=jsondecode(fileread(fullfile(root,'tests','reference','fineCurbOrientationRecovery.json')));
+            change=revisions.entries([revisions.entries.frameIndex]==384);
+            testCase.verifyEqual(find(actual.featureMasks.curb & ~before.featureMasks.curb),change.addedCurbIndices);
+            testCase.verifyEqual(nnz(actual.featureMasks.curb),127+numel(change.addedCurbIndices));
             testCase.verifyEqual(rmfield(actual.featureMasks,'curb'),rmfield(before.featureMasks,'curb'));
             testCase.verifyEqual(actual.probabilityCloud,before.probabilityCloud);
             stream=RandStream('mt19937ar','Seed',38421753);order=randperm(stream,numel(frame.x));
+            shuffled=struct('x',frame.x(order).','y',frame.y(order).','z',frame.z(order).');
+            cfg.featureNames="curb";reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;
+            testCase.verifyEqual(restored,actual.featureMasks.curb);
+        end
+        function recoversSparseObliqueCurbVicinity(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
+            annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity855.json')));
+            frame=loadPointCloudFrame(file,855);cfg=perceptionConfig();cfg.executionMode="offline";
+            actual=perceiveFrame(frame,cfg);xyz=double([frame.x(:),frame.y(:),frame.z(:)]);
+            picks=xyz(annotation.leftVicinityIndices,1:2);curb=xyz(actual.featureMasks.curb,1:2);
+            distance=min(hypot(picks(:,1)-curb(:,1).',picks(:,2)-curb(:,2).'),[],2);
+            testCase.verifyGreaterThanOrEqual(nnz(distance<=0.35),105);
+            testCase.verifyLessThan(median(distance),0.10);
+            testCase.verifyTrue(all(actual.featureMasks.curb(annotation.baselineCurbIndices)));
+            stream=RandStream('mt19937ar','Seed',85526534);order=randperm(stream,numel(frame.x));
             shuffled=struct('x',frame.x(order).','y',frame.y(order).','z',frame.z(order).');
             cfg.featureNames="curb";reordered=perceiveFrame(shuffled,cfg);
             restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;

@@ -146,9 +146,31 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
             boundaries=[boundaries(~affected),replacements];
         end
     end
+    recovered=zeros(0,1);recoveredBoundaries={};
+    if isempty(referenceNormal) && ~traceOnly
+        % Sparse transverse sampling can bias an isotropic neighborhood's
+        % gradient. Re-evaluate a rejected spatial model along its observed
+        % tangent; the ordinary relief, plane and normal gates still apply.
+        for j=1:numel(boundaries)
+            member=ismember(indices,boundaries{j});
+            if hasConsistentCurbNormals(points(member,:),gradients(member,:),cfg),continue;end
+            model=points(member,:);center=mean(model,1);
+            [~,~,basis]=svd(model-center,0);tangent=basis(:,1);normal=basis(:,2).';
+            delta=xyz(pointIndices,1:2)-center;
+            along=delta*tangent;extent=(model-center)*tangent;
+            nearby=abs(delta*normal.')<=cfg.curbContinuationHalfWidthMeters & ...
+                along>=min(extent)-cfg.curbCurveExtensionMeters & ...
+                along<=max(extent)+cfg.curbCurveExtensionMeters;
+            ids=pointIndices(nearby);
+            [mask,revalidated]=refineCurbGeometry(xyz,ids,groundMask,cfg,normal);
+            recovered=union(recovered,ids(mask));
+            recoveredBoundaries=[recoveredBoundaries,revalidated.boundaryPointIndices]; %#ok<AGROW>
+        end
+    end
     [selected,boundaries]=retainSupportedCurbBoundaries(points,indices,gradients, ...
         directionConsistent,selected,boundaries,cfg);
-    accepted=ismember(pointIndices,indices(selected));detail.boundaryPointIndices=boundaries;
+    accepted=ismember(pointIndices,union(indices(selected),recovered));
+    detail.boundaryPointIndices=[boundaries,recoveredBoundaries];
     if any(accepted),detail.status="supportedMetricBoundary";end
 end
 
