@@ -27,6 +27,13 @@ function expected = expectedFinePerception(dataset, frameIndex)
             expected.featureMasks.pole(entry.addedPoleIndices)=true;
         end
     end
+    changes=jsondecode(fileread(fullfile(root,'tests','reference','finePoleBoundaryRecovery.json')));
+    for entry=changes.entries(:).'
+        if lower(string(entry.dataset))==dataset && entry.frameIndex==frameIndex
+            expected.featureMasks.pole(entry.removedPoleIndices)=false;
+            expected.featureMasks.pole(entry.addedPoleIndices)=true;
+        end
+    end
     changes=jsondecode(fileread(fullfile(root,'tests','reference','trafficSignThreshold.json')));
     for entry=changes.entries(:).'
         if lower(string(entry.dataset))==dataset && entry.frameIndex==frameIndex
@@ -47,4 +54,12 @@ function expected = expectedFinePerception(dataset, frameIndex)
             expected.featureMasks.curb(entry.addedCurbIndices)=true;
         end
     end
+    changes=jsondecode(fileread(fullfile(root,'tests','reference','fineCurbGuidedExtension.json')));
+    for entry=changes.entries(:).'
+        if lower(string(entry.dataset))==dataset && entry.frameIndex==frameIndex
+            expected.featureMasks.curb(entry.removedCurbIndices)=false;
+            expected.featureMasks.curb(entry.addedCurbIndices)=true;
+        end
+    end
+
 end

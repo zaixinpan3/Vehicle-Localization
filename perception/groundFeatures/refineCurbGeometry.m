@@ -1,8 +1,10 @@
-function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, cfg)
+function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, cfg, referenceNormal, traceOnly)
 % refineCurbGeometry: Locate narrow curb boundaries using unorganized XYZ.
 % Metric XY neighborhoods test height relief and departure from a local plane.
 % Mid-height returns seed spatial boundary consensus; metric arc-length
 % sampling retains original returns without using ring, row, or scan order.
+    if nargin<5,referenceNormal=[];end
+    if nargin<6,traceOnly=false;end
     accepted=false(numel(pointIndices),1);
     detail=struct('seedPointIndices',zeros(0,1),'boundaryPointIndices',{{}},'status',"noSupportedBoundary");
     if isempty(pointIndices),return;end
@@ -12,10 +14,23 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
     xyCloud=pointCloud([xyz(groundIds,1:2),zeros(numel(groundIds),1)]);
     [~,order]=sortrows(xyz(pointIndices,:),[1 2 3]);indices=pointIndices(order);
     score=zeros(numel(indices),1);gradients=zeros(numel(indices),2);seed=false(size(indices));
+    rawGradients=zeros(numel(indices),2);
     planeResidual=zeros(size(indices));
     for k=1:numel(indices)
         origin=xyz(indices(k),:);
-        rows=findNeighborsInRadius(xyCloud,[origin(1:2),0],cfg.curbNeighborhoodRadiusMeters);
+        if isempty(referenceNormal)
+            rows=findNeighborsInRadius(xyCloud,[origin(1:2),0],cfg.curbNeighborhoodRadiusMeters);
+        else
+            % Gather sparse returns along an established curb without widening
+            % the neighborhood across the face or changing geometric gates.
+            alongRadius=cfg.curbContinuationAlongRadiusMeters;
+            acrossRadius=cfg.curbNeighborhoodRadiusMeters;
+            rows=findNeighborsInRadius(xyCloud,[origin(1:2),0],hypot(alongRadius,acrossRadius));
+            delta=xyz(groundIds(rows),1:2)-origin(1:2);
+            along=delta*[-referenceNormal(2);referenceNormal(1)];
+            across=delta*referenceNormal.';
+            rows=rows((along/alongRadius).^2+(across/acrossRadius).^2<=1);
+        end
         if numel(rows)<cfg.curbMinimumNeighbors,continue;end
         points=xyz(groundIds(rows),:)-origin;
         heights=quantile(points(:,3),[0.1 0.9]);relief=diff(heights);
@@ -28,9 +43,10 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         spread=sqrt(mean(residual.^2));
         if spread<cfg.curbMinimumPlaneResidualMeters,continue;end
         planeResidual(k)=spread;
-        gradient=coefficients(2:3).';
+        gradient=coefficients(2:3).';rawGradients(k,:)=gradient;
         if norm(gradient)<cfg.curbMinimumSlope,continue;end
         normal=gradient/norm(gradient);
+        if ~isempty(referenceNormal),normal=referenceNormal;end
         strip=abs(points(:,1:2)*normal.')<=cfg.curbLocalStripHalfWidthMeters;
         if nnz(strip)<cfg.curbMinimumStripNeighbors,continue;end
         % Estimate terrain grade on a supported side surface, away from the face.
@@ -55,6 +71,7 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         gradient=gradient-slope.';
         if norm(gradient)<cfg.curbMinimumSlope,continue;end
         normal=gradient/norm(gradient);
+        if ~isempty(referenceNormal),normal=referenceNormal;end
         strip=abs(points(:,1:2)*normal.')<=cfg.curbLocalStripHalfWidthMeters;
         if nnz(strip)<cfg.curbMinimumStripNeighbors,continue;end
         local=points(strip,:);
@@ -64,16 +81,25 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         midpoint=mean(heights);
         if abs(midpoint)>cfg.curbMidHeightBandMeters,continue;end
         score(k)=min(std(detrended,1)/0.04,1)*exp(-0.5*(midpoint/cfg.curbMidHeightBandMeters)^2);
-        seed(k)=abs(midpoint)<=cfg.curbSeedMidHeightBandMeters && neighborhoodRelief<=cfg.curbMaximumReliefMeters;
+        % Anchored continuation may follow a supported local strip beside
+        % taller terrain; its strip relief still passed the same height cap.
+        seed(k)=abs(midpoint)<=cfg.curbSeedMidHeightBandMeters && ...
+            (traceOnly || neighborhoodRelief<=cfg.curbMaximumReliefMeters);
         gradients(k,:)=gradient;
     end
     valid=score>=cfg.curbMinimumSeedScore;
     indices=indices(valid);score=score(valid);gradients=gradients(valid,:);seed=seed(valid);
     planeResidual=planeResidual(valid);
+    % Terrain correction must not manufacture a reversed local transition.
+    directionConsistent=sum(rawGradients(valid,:).*gradients,2)>0;
     detail.seedPointIndices=indices(seed);
     if ~any(seed),return;end
     points=xyz(indices,1:2);
-    [selected,boundaries]=selectBoundaries(points,indices,score,gradients,seed,planeResidual,cfg);
+    if traceOnly
+        [selected,boundaries]=traceCurbRidges(xyz,indices,score,gradients,seed,planeResidual,cfg);
+    else
+        [selected,boundaries]=selectBoundaries(points,indices,score,gradients,seed,planeResidual,cfg);
+    end
     dominated=rejectWeakerRaisedCurbEdges(xyz,indices,score,gradients,cfg);
     conflict=selected & dominated;
     cells=unique(floor((points(conflict,:)-min(points,[],1))/cfg.curbProposalCellSizeMeters),'rows');
@@ -86,6 +112,20 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
             gradients(keep,:),seed(keep),planeResidual(keep),cfg);
         selected=false(size(indices));selected(keep)=chosen;
     end
+    % A supported boundary can tolerate individual gradient ambiguity on a
+    % sloping road; reject only a spatially supported reversal consensus.
+    rejected=false(size(boundaries));
+    for j=1:numel(boundaries)
+        member=ismember(indices,boundaries{j});
+        reversed=member & ~directionConsistent;
+        cells=unique(floor(points(reversed,:)/cfg.curbProposalCellSizeMeters),'rows');
+        if nnz(reversed)>=cfg.curbMinimumSupportCells && ...
+                size(cells,1)>=cfg.curbMinimumOutputSupportCells && ...
+                nnz(reversed)/nnz(member)>=cfg.curbGradientReversalFraction
+            selected(member)=false;rejected(j)=true;
+        end
+    end
+    boundaries(rejected)=[];
     accepted=ismember(pointIndices,indices(selected));detail.boundaryPointIndices=boundaries;
     if any(accepted),detail.status="supportedMetricBoundary";end
 end

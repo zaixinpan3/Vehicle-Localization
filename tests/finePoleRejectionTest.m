@@ -12,12 +12,15 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             baselineCfg=cfg; baselineCfg.fine.poleShortSupportMaximumRadialRms=Inf;
             baselineCfg.fine.poleLowContrastMaximumRadius=Inf;
             baselineCfg.fine.poleIsolationMinimumCoreFraction=0;
+            baselineCfg.fine.poleMaximumVerticalGapMeters=Inf;
             baseline=perceiveFrame(frame,baselineCfg);
             actual=perceiveFrame(frame,cfg);
-            changes=jsondecode(fileread(fullfile(fileparts(mfilename('fullpath')), ...
-                'reference','finePoleRejection.json')));
+            root=fileparts(mfilename('fullpath'));
+            changes=jsondecode(fileread(fullfile(root,'reference','finePoleRejection.json')));
             entry=changes.entries([changes.entries.frameIndex]==91);
-            expected=baseline.featureMasks.pole;
+            expected=baseline.featureMasks.pole;expected(entry.removedPoleIndices)=false;
+            changes=jsondecode(fileread(fullfile(root,'reference','finePoleBoundaryRecovery.json')));
+            entry=changes.entries([changes.entries.frameIndex]==91);
             expected(entry.removedPoleIndices)=false;
             testCase.verifyTrue(baseline.featureMasks.pole(47906));
             testCase.verifyFalse(actual.featureMasks.pole(47906));
@@ -31,7 +34,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             xyz=double([frame.x(:),frame.y(:),frame.z(:)]);
             near=vecnorm(xyz(:,1:2)-xyz(42593,1:2),2,2)<=0.75;
             testCase.verifyFalse(any(actual.featureMasks.pole & near));
-            testCase.verifyEqual(nnz(actual.featureMasks.pole),147);
+            testCase.verifyEqual(nnz(actual.featureMasks.pole),143);
             testCase.verifyEqual(rmfield(actual.featureMasks,'pole'), ...
                 rmfield(baseline.featureMasks,'pole'));
             testCase.verifyEqual(actual.probabilityCloud,baseline.probabilityCloud);

@@ -36,8 +36,9 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                 pointIdx = gc.groundOriginalPointIdx(support(gc.groundCellLinIdx));
                 [accepted,curbDetail] = refineCurbGeometry(xyz,pointIdx,groundPoint,cfg.fine);
                 [continued,evaluated,boundaries]=extendCurbBoundaries(xyz,groundPoint,pointIdx,curbDetail.boundaryPointIndices,cfg.fine);
-                % Append one disjoint evaluated set for this feature.
-                pointIdx=[pointIdx;evaluated];accepted=[accepted;ismember(evaluated,continued)]; %#ok<AGROW>
+                % Guided continuation may revisit previously rejected points.
+                selected=union(pointIdx(accepted),continued);
+                pointIdx=union(pointIdx,evaluated);accepted=ismember(pointIdx,selected);
                 curbDetail.continuationPointIndices=continued;
                 curbDetail.boundaryPointIndices=[curbDetail.boundaryPointIndices,boundaries];
                 candidateMembers = ismember(grid.pointIndices,pointIdx);
@@ -119,6 +120,15 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
         % Short vertical support must also be tightly concentrated about the
         % fitted axis. Test the whole supported object before trimming points.
         radialRms = sqrt(mean(residual(supported).^2));
+        % A broad, elongated transverse surface can fit an upright line but
+        % represents a trunk arc or wall strip, not a compact shaft. Measure
+        % all supported returns before robust point trimming.
+        transverse=p(supported,1:2)-design(supported,:)*coefficients;
+        spread=sort(eig(cov(transverse)));
+        if spread(2)>cfg.poleWideSurfaceMinimumAxisStd^2 && ...
+                spread(2)>cfg.poleWideSurfaceMinimumAspectRatio^2*max(spread(1),eps)
+            continue;
+        end
         supportHeight = nnz(qualified)*geometry.voxelSize(3);
         shortSupport = supportHeight < cfg.poleShortSupportHeight;
         % At the boundary, weakly separated objects also need a tight shaft.
@@ -127,9 +137,10 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
         if (shortSupport || weakBoundary) && radialRms > cfg.poleShortSupportMaximumRadialRms
             continue;
         end
-        % A narrow fitted core is insufficient when both local voxel support
-        % and the wider raw-point neighborhood indicate a cluttered object.
-        if mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio && ...
+        % A short supported shaft must be isolated even if it dominates its
+        % immediate cells. Longer weak-contrast objects use the same check.
+        if (mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio || ...
+                supportHeight <= cfg.poleShortSupportHeight) && ...
                 ~validatePoleIsolation(neighborhoodPoints, ...
                 [coefficients(1,:),median(p(supported,3))],coefficients(2,:),qualified,geometry,cfg)
             continue;
@@ -142,7 +153,11 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
         if mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio
             limit = min(limit,cfg.poleLowContrastMaximumRadius);
         end
-        accepted(rows) = supported & residual <= limit;
+        % Establish continuity from actual axis-consistent returns, including
+        % sparse cells that do not independently qualify for output labeling.
+        connected=residual<=limit;
+        connected(connected)=retainContinuousPoleSupport(p(connected,3),cfg);
+        accepted(rows)=supported & connected;
     end
 end
 
@@ -198,9 +213,40 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
         geometry=context.voxelGrid.pillarGeometry;
         fineBins=floor((xy-detailed.origin)./[detailed.dx detailed.dy])+1;
         fineIds=sub2ind(detailed.mapSize,fineBins(:,2),fineBins(:,1));
+        % A long, tightly upright whole-pillar axis can bridge sparse detailed
+        % support. Ordinary recovery retains its existing seed evidence.
+        sparseAxis=stats.maximumXYZ(recover,3)-stats.minimumXYZ(recover,3)>=cfg.fine.poleSparseRecoveryMinimumHeight & ...
+            vecnorm(slope(recover,:),2,2)<=tand(cfg.fine.poleSparseRecoveryMaximumTiltDegrees) & ...
+            radial(recover)<=cfg.fine.poleSparseRecoveryMaximumRadialRms;
         seedIds=double(stats.pillarIndices(recover));
-        seedIds=seedIds(relaxed.candidateMask(fineIds));
+        seedIds=seedIds(relaxed.candidateMask(fineIds) | sparseAxis);
         completed=completeRecoveredPoleShafts(stats,maps.mapSize,seedIds,cfg.fine);
+        % Complete an existing detailed seed only when it is a small edge
+        % fragment beside a denser, upright shaft. Keep ordinary seeds intact.
+        [sr,sc]=ind2sub(maps.mapSize,double(stats.pillarIndices));
+        centers=maps.origin+([sc(:) sr(:)]-0.5).*[maps.dx maps.dy];
+        sb=floor((centers-detailed.origin)./[detailed.dx detailed.dy])+1;
+        sid=sub2ind(detailed.mapSize,sb(:,2),sb(:,1));
+        strong=stats.count>=cfg.fine.poleRecoveryMinimumPoints & ...
+            stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.fine.poleRecoveryMinimumHeight & ...
+            vecnorm(slope,2,2)<=tand(cfg.fine.poleRecoveryMaximumTiltDegrees) & ...
+            radial<=cfg.fine.poleSparseRecoveryMaximumRadialRms;
+        edgeSeeds=find(strong & offGround.poleCellMask(sid));
+        splitCompleted=zeros(0,1);
+        for seed=edgeSeeds(:).'
+            adjacent=strong & abs(sr-sr(seed))<=1 & abs(sc-sc(seed))<=1;
+            if ~any(stats.count(adjacent)>=cfg.fine.poleBoundaryMinimumCountRatio*stats.count(seed))
+                continue;
+            end
+            initial=double(stats.pillarIndices(seed));
+            joined=completeRecoveredPoleShafts(stats,maps.mapSize,initial,cfg.fine);
+            joined=completeRecoveredPoleShafts(stats,maps.mapSize,joined,cfg.fine);
+            % Never grow beyond the original seed's immediate XY neighbors.
+            local=abs(sr-sr(seed))<=1 & abs(sc-sc(seed))<=1;
+            joined=intersect(joined,double(stats.pillarIndices(local)));
+            if numel(joined)>1,splitCompleted=union(splitCompleted,joined);end
+        end
+        completed=union(completed,splitCompleted);
         [rows,cols]=ind2sub(maps.mapSize,completed);
         xy=maps.origin+([cols(:) rows(:)]-0.5).*[maps.dx maps.dy];
         bins=floor((xy-geometry.origin)./geometry.cellSize)+1;
@@ -210,6 +256,19 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
         recovered=recovered(~offGround.facade.mask(fineIds));
         channel=find(candidates.semanticNames=="pole");
         fineCandidates.basePolePillarIndices=fineCandidates.pillarIndices{channel};
+        if ~isempty(splitCompleted)
+            % Move the seed's entire connected base component with its added
+            % neighbors, so validation cannot mistake its own shaft for clutter.
+            baseMask=false(geometry.mapSize);
+            baseMask(fineCandidates.basePolePillarIndices)=true;
+            components=bwlabel(baseMask,8);
+            [rr,cc]=ind2sub(maps.mapSize,splitCompleted);
+            splitXY=maps.origin+([cc(:) rr(:)]-0.5).*[maps.dx maps.dy];
+            splitBins=floor((splitXY-geometry.origin)./geometry.cellSize)+1;
+            splitIds=sub2ind(geometry.mapSize,splitBins(:,2),splitBins(:,1));
+            touched=unique(components(splitIds));touched=touched(touched>0);
+            fineCandidates.basePolePillarIndices=setdiff(fineCandidates.basePolePillarIndices,find(ismember(components,touched)));
+        end
         fineCandidates.pillarIndices{channel}=union(fineCandidates.pillarIndices{channel},recovered);
     end
     candidates=fineCandidates;

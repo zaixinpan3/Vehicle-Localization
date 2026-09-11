@@ -39,7 +39,10 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(numel(selected),10);
             testCase.verifyGreaterThan(max(points(selected,1)),3);
             testCase.verifyLessThan(max(abs(points(selected,2)-3)),0.1);
-            testCase.verifyFalse(any(ismember(evaluated,candidates)));
+            % Guided extension can reevaluate rejected candidates, but never
+            % duplicates an already accepted primary boundary point.
+            testCase.verifyFalse(any(ismember(selected,vertcat(detail.boundaryPointIndices{:}))));
+            testCase.verifyEqual(numel(evaluated),numel(unique(evaluated)));
             testCase.verifyTrue(all(ismember(selected,evaluated)));
             % A real but disconnected step must not be called a continuation.
             points=points(points(:,1)<=0 | points(:,1)>=2,:);ground=true(size(points,1),1);
@@ -47,6 +50,31 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
             [~,detail]=refineCurbGeometry(points,candidates,ground,cfg);
             selected=extendCurbBoundaries(points,ground,candidates,detail.boundaryPointIndices,cfg);
             testCase.verifyEmpty(selected);
+        end
+        function revisitsCandidatesBeyondAnEstablishedEndpoint(testCase)
+            points=curbScene(3);cfg=finePerceptionConfig();ground=true(size(points,1),1);
+            [~,detail]=refineCurbGeometry(points,find(points(:,1)<=0),ground,cfg);
+            allCandidates=(1:size(points,1)).';
+            [selected,evaluated]=extendCurbBoundaries(points,ground,allCandidates,detail.boundaryPointIndices,cfg);
+            testCase.verifyGreaterThan(numel(selected),10);
+            testCase.verifyGreaterThan(max(points(selected,1)),3);
+            testCase.verifyLessThan(max(abs(points(selected,2)-3)),0.1);
+            testCase.verifyTrue(all(ismember(selected,evaluated)));
+            testCase.verifyFalse(any(ismember(selected,vertcat(detail.boundaryPointIndices{:}))));
+        end
+        function endpointDirectionCannotCreateAFeatureOnAPlane(testCase)
+            cfg=finePerceptionConfig();[x,y]=ndgrid(-4:.15:4,2:.1:4);
+            points=[x(:),y(:),-2+.015*x(:)];ground=true(size(x(:)));
+            primary=find(abs(points(:,2)-3)<1e-9 & points(:,1)<=0);
+            selected=extendCurbBoundaries(points,ground,(1:size(points,1)).',{primary},cfg);
+            testCase.verifyEmpty(selected);
+        end
+        function continuationDoesNotSwitchToParallelCurb(testCase)
+            points=curbScene([3 3.8]);cfg=finePerceptionConfig();ground=true(size(points,1),1);
+            primary=find(abs(points(:,2)-3)<1e-9 & points(:,1)<=0 & abs(points(:,3)+1.925-.015*points(:,1))<1e-9);
+            selected=extendCurbBoundaries(points,ground,(1:size(points,1)).',{primary},cfg);
+            testCase.verifyGreaterThan(numel(selected),10);
+            testCase.verifyLessThan(max(abs(points(selected,2)-3)),0.1);
         end
         function recordedContinuationRecoversVicinityWithoutReplacingPoints(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));

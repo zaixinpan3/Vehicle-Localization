@@ -48,3 +48,10 @@ alternative production algorithm. Local artifacts are
 `review.csv` records all supplied indices, XYZ coordinates and gate outcomes.
 The native niri preview remains on frame 538 with the prior camera preserved.
 No dataset-wide precision measurement, video or mapping rerun is claimed.
+
+## Subsequent implementation
+
+After the user clarified that extension was desired, the endpoint refinement
+was implemented and validated as described in
+[fine_perception_continuation_review.md](fine_perception_continuation_review.md).
+The diagnostic findings above remain a record of the earlier algorithm.
