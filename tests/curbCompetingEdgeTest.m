@@ -19,6 +19,38 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
             actual=rejectWeakerRaisedCurbEdges(xyz,ids,ones(size(ids)),g,cfg);
             testCase.verifyFalse(any(actual));
         end
+        function resolvesModestlyStrongerLowerStep(testCase)
+            [xyz,g]=parallelEdges();g(13:end,2)=-0.27;
+            cfg=finePerceptionConfig();cfg.curbCompetingEdgeGradientRatio=cfg.curbAlternativeEdgeGradientRatio;ids=(1:size(xyz,1)).';
+            previous=cfg;previous.curbCompetingEdgeGradientRatio=1.4;
+            testCase.verifyFalse(any(rejectWeakerRaisedCurbEdges(xyz,ids,ones(size(ids)),g,previous)));
+            actual=rejectWeakerRaisedCurbEdges(xyz,ids,ones(size(ids)),g,cfg);
+            testCase.verifyFalse(any(actual(1:12)));
+            testCase.verifyGreaterThanOrEqual(nnz(actual(13:end)),6);
+        end
+        function recoversLeftBoundaryWithoutResamplingRightBoundary(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
+            annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity276.json')));
+            frame=loadPointCloudFrame(file,276);cfg=perceptionConfig();cfg.executionMode="offline";
+            previous=cfg;previous.fine.curbAlternativeEdgeGradientRatio=1.4;
+            before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);
+            testCase.verifyTrue(all(before.featureMasks.curb(annotation.falsePositiveIndices)));
+            testCase.verifyFalse(any(actual.featureMasks.curb(annotation.falsePositiveIndices)));
+            xyz=double([frame.x(:),frame.y(:),frame.z(:)]);
+            near=annotation.leftBoundaryVicinityIndices;ids=find(actual.featureMasks.curb);
+            distance=min(hypot(xyz(near,1)-xyz(ids,1).',xyz(near,2)-xyz(ids,2).'),[],2);
+            testCase.verifyLessThan(max(distance),0.13);
+            testCase.verifyEqual(actual.featureMasks.curb(xyz(:,2)<0),before.featureMasks.curb(xyz(:,2)<0));
+            testCase.verifyLessThan(nnz(actual.featureMasks.curb),180);
+            testCase.verifyEqual(rmfield(actual.featureMasks,'curb'),rmfield(before.featureMasks,'curb'));
+            testCase.verifyEqual(actual.probabilityCloud,before.probabilityCloud);
+            stream=RandStream('mt19937ar','Seed',27625329);order=randperm(stream,numel(frame.x));
+            shuffled=struct('x',frame.x(order).','y',frame.y(order).','z',frame.z(order).');
+            cfg.featureNames="curb";reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;
+            testCase.verifyEqual(restored,actual.featureMasks.curb);
+        end
         function equalStrengthOrEqualHeightEdgesRemainSeparate(testCase)
             [xyz,g]=parallelEdges();cfg=finePerceptionConfig();ids=(1:size(xyz,1)).';
             xyz(:,3)=0;

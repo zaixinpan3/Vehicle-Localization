@@ -102,16 +102,41 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
     end
     dominated=rejectWeakerRaisedCurbEdges(xyz,indices,score,gradients,cfg);
     conflict=selected & dominated;
-    cells=unique(floor((points(conflict,:)-min(points,[],1))/cfg.curbProposalCellSizeMeters),'rows');
-    if size(cells,1)>=cfg.curbMinimumOutputSupportCells && ...
-            norm(max(points(conflict,:),[],1)-min(points(conflict,:),[],1))>=cfg.curbMinimumBoundaryLengthMeters
-        % Reconsider only a spatially supported conflict in the initial output.
-        % Ambiguous unused candidates must not perturb established boundaries.
+    if hasSupportedCurbConflict(points,conflict,cfg)
+        % Strong evidence can reconstruct an initially ambiguous set of models.
         keep=~dominated;
         [chosen,boundaries]=traceCurbRidges(xyz,indices(keep),score(keep), ...
             gradients(keep,:),seed(keep),planeResidual(keep),cfg);
         selected=false(size(indices));selected(keep)=chosen;
+    else
+        % A modest strength advantage is useful only beside an already valid
+        % boundary. Restrict this correction to the competing local models.
+        [trusted,~]=retainSupportedCurbBoundaries(points,indices,gradients, ...
+            directionConsistent,selected,boundaries,cfg);
+        alternativeCfg=cfg;alternativeCfg.curbCompetingEdgeGradientRatio=cfg.curbAlternativeEdgeGradientRatio;
+        dominated=rejectWeakerRaisedCurbEdges(xyz,indices,score,gradients,alternativeCfg);
+        conflict=trusted & dominated;
+        if hasSupportedCurbConflict(points,conflict,cfg)
+            affected=cellfun(@(ids) any(ismember(ids,indices(conflict))),boundaries);
+            affectedIds=vertcat(boundaries{affected});targets=xyz(affectedIds,1:2);
+            nearby=min(hypot(points(:,1)-targets(:,1).',points(:,2)-targets(:,2).'),[],2) ...
+                <=cfg.curbDuplicateBandMeters;
+            keep=nearby & ~dominated;
+            [chosen,replacements]=traceCurbRidges(xyz,indices(keep),score(keep), ...
+                gradients(keep,:),seed(keep),planeResidual(keep),cfg);
+            selected(ismember(indices,affectedIds))=false;
+            selected(keep)=selected(keep) | chosen;
+            boundaries=[boundaries(~affected),replacements];
+        end
     end
+    [selected,boundaries]=retainSupportedCurbBoundaries(points,indices,gradients, ...
+        directionConsistent,selected,boundaries,cfg);
+    accepted=ismember(pointIndices,indices(selected));detail.boundaryPointIndices=boundaries;
+    if any(accepted),detail.status="supportedMetricBoundary";end
+end
+
+function [selected,boundaries]=retainSupportedCurbBoundaries(points,indices,gradients,directionConsistent,selected,boundaries,cfg)
+% Validate models before acceptance or locally anchored competitor tracing.
     % A supported boundary can tolerate individual gradient ambiguity on a
     % sloping road; reject only a spatially supported reversal consensus.
     rejected=false(size(boundaries));
@@ -130,8 +155,13 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         end
     end
     boundaries(rejected)=[];
-    accepted=ismember(pointIndices,indices(selected));detail.boundaryPointIndices=boundaries;
-    if any(accepted),detail.status="supportedMetricBoundary";end
+end
+
+function supported=hasSupportedCurbConflict(points,conflict,cfg)
+% A competitor needs spatial extent and independently occupied XY cells.
+    cells=unique(floor((points(conflict,:)-min(points,[],1))/cfg.curbProposalCellSizeMeters),'rows');
+    supported=any(conflict) && size(cells,1)>=cfg.curbMinimumOutputSupportCells && ...
+        norm(max(points(conflict,:),[],1)-min(points(conflict,:),[],1))>=cfg.curbMinimumBoundaryLengthMeters;
 end
 
 function [selected,boundaries]=selectBoundaries(points,indices,score,gradients,seed,planeResidual,cfg)

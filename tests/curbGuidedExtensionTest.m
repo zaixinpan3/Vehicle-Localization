@@ -64,6 +64,8 @@ classdef curbGuidedExtensionTest < matlab.unittest.TestCase
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
             frame=loadPointCloudFrame(file,963);cfg=perceptionConfig();cfg.executionMode="offline";
+            % Isolate reversal rejection from the independent local competitor path.
+            cfg.fine.curbAlternativeEdgeGradientRatio=cfg.fine.curbCompetingEdgeGradientRatio;
             beforeCfg=cfg;beforeCfg.fine.curbGradientReversalFraction=Inf;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             falsePoints=[36718 38776 37881 38840 38394 38971 39548 38525 39102 38461 39551 40256];

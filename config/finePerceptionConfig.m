@@ -57,6 +57,7 @@ function cfg = finePerceptionConfig()
     cfg.curbCompetingEdgeRadiusMeters = 1.5;
     cfg.curbCompetingEdgeMinimumSeparationMeters = 0.2;
     cfg.curbCompetingEdgeGradientRatio = 1.4;
+    cfg.curbAlternativeEdgeGradientRatio = 1.0;
     cfg.curbRidgeMaximumGapMeters = 0.75;
     cfg.curbRidgeMaximumNormalAngleDegrees = 40;
     cfg.curbDuplicateEndpointMarginMeters = 3.0;
