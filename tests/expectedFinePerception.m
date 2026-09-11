@@ -77,4 +77,11 @@ function expected = expectedFinePerception(dataset, frameIndex)
         end
     end
 
+    changes=jsondecode(fileread(fullfile(root,'tests','reference','finePoleSupportBoundary.json')));
+    for entry=changes.entries(:).'
+        if lower(string(entry.dataset))==dataset && entry.frameIndex==frameIndex
+            expected.featureMasks.pole(entry.removedPoleIndices)=false;
+            expected.featureMasks.pole(entry.addedPoleIndices)=true;
+        end
+    end
 end

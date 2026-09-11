@@ -134,8 +134,8 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
             continue;
         end
         supportHeight = nnz(qualified)*geometry.voxelSize(3);
-        shortSupport = supportHeight < cfg.poleShortSupportHeight;
-        if supportHeight<=cfg.poleShortSupportHeight
+        shortSupport = supportHeight <= cfg.poleShortSupportHeight;
+        if shortSupport
             edges=diff([false;qualified;false]);
             runLength=find(edges==-1)-find(edges==1);
             if max(runLength)*geometry.voxelSize(3)<cfg.poleMinimumSupportedHeight || ...
@@ -143,10 +143,8 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
                 continue;
             end
         end
-        % At the boundary, weakly separated objects also need a tight shaft.
-        weakBoundary = supportHeight <= cfg.poleShortSupportHeight && ...
-            mean(ratio(qualified)) < cfg.poleLowContrastSupportRatio;
-        if (shortSupport || weakBoundary) && radialRms > cfg.poleShortSupportMaximumRadialRms
+        % Apply the same compactness limit at the short-support boundary.
+        if shortSupport && radialRms > cfg.poleShortSupportMaximumRadialRms
             continue;
         end
         % A short supported shaft must be isolated even if it dominates its
