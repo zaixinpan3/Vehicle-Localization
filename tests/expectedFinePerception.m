@@ -98,4 +98,12 @@ function expected = expectedFinePerception(dataset, frameIndex)
             expected.featureMasks.curb(entry.addedCurbIndices)=true;
         end
     end
+    changes=jsondecode(fileread(fullfile(root,'tests','reference','finePoleOutputContinuity.json')));
+    for entry=changes.entries(:).'
+        if lower(string(entry.dataset))==dataset && entry.frameIndex==frameIndex
+            expected.featureMasks.pole(entry.removedPoleIndices)=false;
+            expected.featureMasks.pole(entry.addedPoleIndices)=true;
+        end
+    end
+
 end

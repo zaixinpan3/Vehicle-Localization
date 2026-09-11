@@ -42,5 +42,20 @@ classdef poleVerticalContinuityTest < matlab.unittest.TestCase
             testCase.verifyEqual(rmfield(actual.featureMasks,'pole'),rmfield(before.featureMasks,'pole'));
             testCase.verifyEqual(actual.probabilityCloud,before.probabilityCloud);
         end
+        function unqualifiedBridgeCannotSupportDetachedOutput(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
+            annotation=jsondecode(fileread(fullfile(root,'tests','reference','poleOutputContinuity615.json')));
+            frame=loadPointCloudFrame(file,annotation.frameIndex);cfg=perceptionConfig();cfg.executionMode="offline";
+            actual=perceiveFrame(frame,cfg);
+            expected=false(numel(frame.x),1);expected(annotation.baselinePoleIndices)=true;
+            expected(annotation.detachedFragmentIndices)=false;
+            testCase.verifyEqual(actual.featureMasks.pole,expected);
+            stream=RandStream('mt19937ar','Seed',61538985);order=randperm(stream,numel(frame.x));
+            shuffled=struct('x',frame.x(order).','y',frame.y(order).','z',frame.z(order).');
+            cfg.featureNames="pole";reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.pole;
+            testCase.verifyEqual(restored,expected);
+        end
     end
 end

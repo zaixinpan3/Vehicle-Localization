@@ -1,0 +1,75 @@
+{
+  "description": "Explicit final-output continuity revisions against 17821231a206358abb9520fd4141223b0bb32af0. Only frame 615 index 38985 is user-annotated; other changes require visual accuracy review.",
+  "entries": [
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 100,
+      "removedPoleIndices": [
+        16209,
+        16273,
+        16458,
+        16522,
+        16526,
+        16590,
+        16594,
+        16658,
+        16911,
+        16975,
+        17039,
+        17296,
+        17360,
+        17424
+      ],
+      "addedPoleIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 900,
+      "removedPoleIndices": [
+        24257,
+        24578,
+        24642,
+        24706
+      ],
+      "addedPoleIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 950,
+      "removedPoleIndices": [
+        47825,
+        48206,
+        48210,
+        48595,
+        48980,
+        49044
+      ],
+      "addedPoleIndices": []
+    },
+    {
+      "dataset": "downTown",
+      "frameIndex": 350,
+      "removedPoleIndices": [
+        42125,
+        42189,
+        42506,
+        42570,
+        42891,
+        42955,
+        43276,
+        43340
+      ],
+      "addedPoleIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 615,
+      "removedPoleIndices": [
+        38985,
+        39751,
+        40136
+      ],
+      "addedPoleIndices": []
+    }
+  ]
+}

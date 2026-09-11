@@ -176,10 +176,14 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
         connected=residual<=limit;
         connected(connected)=retainContinuousPoleSupport(p(connected,3),cfg);
         keep=supported & connected;
+        % Sparse unqualified returns may bridge a tightly fitted shaft. A
+        % broad fit must instead prove continuity in its qualified output.
+        if requireOutputRun || radialRms>cfg.poleShortSupportMaximumRadialRms
+            keep(keep)=retainContinuousPoleSupport(p(keep,3),cfg);
+        end
         % Independent recovery must prove continuity, compactness and isolation
         % from the final labeled returns, not disconnected surrounding points.
         if requireOutputRun
-            keep(keep)=retainContinuousPoleSupport(p(keep,3),cfg);
             if ~any(keep) || max(p(keep,3))-min(p(keep,3))<cfg.poleRecoveryMinimumHeight,continue;end
             origin=median(p(keep,3));fit=[ones(nnz(keep),1),p(keep,3)-origin]\p(keep,1:2);
             fitResidual=p(keep,1:2)-[ones(nnz(keep),1),p(keep,3)-origin]*fit;
