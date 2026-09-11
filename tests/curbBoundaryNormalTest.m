@@ -34,8 +34,11 @@ classdef curbBoundaryNormalTest < matlab.unittest.TestCase
             testCase.verifyEqual(find(before.featureMasks.curb & ~actual.featureMasks.curb),removed);
             revisions=jsondecode(fileread(fullfile(root,'tests','reference','fineCurbOrientationRecovery.json')));
             change=revisions.entries([revisions.entries.frameIndex]==384);
-            testCase.verifyEqual(find(actual.featureMasks.curb & ~before.featureMasks.curb),change.addedCurbIndices);
-            testCase.verifyEqual(nnz(actual.featureMasks.curb),127+numel(change.addedCurbIndices));
+            ridge=jsondecode(fileread(fullfile(root,'tests','reference','fineCurbRidgeContinuation.json')));
+            changeRidge=ridge.entries([ridge.entries.frameIndex]==384);
+            expectedAdded=union(setdiff(change.addedCurbIndices,changeRidge.removedCurbIndices),changeRidge.addedCurbIndices);
+            testCase.verifyEqual(find(actual.featureMasks.curb & ~before.featureMasks.curb),expectedAdded);
+            testCase.verifyEqual(nnz(actual.featureMasks.curb),127+numel(expectedAdded));
             testCase.verifyEqual(rmfield(actual.featureMasks,'curb'),rmfield(before.featureMasks,'curb'));
             testCase.verifyEqual(actual.probabilityCloud,before.probabilityCloud);
             stream=RandStream('mt19937ar','Seed',38421753);order=randperm(stream,numel(frame.x));
@@ -60,6 +63,16 @@ classdef curbBoundaryNormalTest < matlab.unittest.TestCase
             cfg.featureNames="curb";reordered=perceiveFrame(shuffled,cfg);
             restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;
             testCase.verifyEqual(restored,actual.featureMasks.curb);
+        end
+        function labelsAtLeastHalfOfReportedContinuation(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
+            annotation=jsondecode(fileread(fullfile(root,'tests','reference','curb855Continuation.json')));
+            frame=loadPointCloudFrame(file,annotation.frameIndex);cfg=perceptionConfig();cfg.executionMode="offline";
+            actual=perceiveFrame(frame,cfg);
+            testCase.verifyGreaterThanOrEqual(nnz(actual.featureMasks.curb(annotation.reportedIndices)),21);
+            testCase.verifyEqual(nnz(actual.featureMasks.pole),23);
+            testCase.verifyEqual(nnz(actual.featureMasks.trafficSign),60);
         end
     end
 end

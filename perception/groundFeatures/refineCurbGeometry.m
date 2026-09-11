@@ -84,7 +84,7 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         % Anchored continuation may follow a supported local strip beside
         % taller terrain; its strip relief still passed the same height cap.
         seed(k)=abs(midpoint)<=cfg.curbSeedMidHeightBandMeters && ...
-            (traceOnly || neighborhoodRelief<=cfg.curbMaximumReliefMeters);
+            ((traceOnly && isempty(referenceNormal)) || neighborhoodRelief<=cfg.curbMaximumReliefMeters);
         gradients(k,:)=gradient;
     end
     valid=score>=cfg.curbMinimumSeedScore;
@@ -150,7 +150,8 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
     if isempty(referenceNormal) && ~traceOnly
         % Sparse transverse sampling can bias an isotropic neighborhood's
         % gradient. Re-evaluate a rejected spatial model along its observed
-        % tangent; the ordinary relief, plane and normal gates still apply.
+        % tangent and follow local ridges through bends. The ordinary relief,
+        % plane and normal gates still apply.
         for j=1:numel(boundaries)
             member=ismember(indices,boundaries{j});
             if hasConsistentCurbNormals(points(member,:),gradients(member,:),cfg),continue;end
@@ -162,7 +163,7 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
                 along>=min(extent)-cfg.curbCurveExtensionMeters & ...
                 along<=max(extent)+cfg.curbCurveExtensionMeters;
             ids=pointIndices(nearby);
-            [mask,revalidated]=refineCurbGeometry(xyz,ids,groundMask,cfg,normal);
+            [mask,revalidated]=refineCurbGeometry(xyz,ids,groundMask,cfg,normal,true);
             recovered=union(recovered,ids(mask));
             recoveredBoundaries=[recoveredBoundaries,revalidated.boundaryPointIndices]; %#ok<AGROW>
         end
