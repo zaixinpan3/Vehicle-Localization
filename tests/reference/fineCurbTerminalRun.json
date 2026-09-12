@@ -1,0 +1,172 @@
+{
+  "description": "Expected fine curb differences from cad9e568b3ebf7e62157508709d6771ac4fde436 after supported terminal-run validation. Five frame-28 removals are user-annotated; other differences are unannotated regression expectations, not ground truth.",
+  "entries": [
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 225,
+      "before": 95,
+      "after": 94,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 26412,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 400,
+      "before": 121,
+      "after": 120,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 40640,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 425,
+      "before": 133,
+      "after": 132,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 22335,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 500,
+      "before": 66,
+      "after": 64,
+      "removed": 2,
+      "added": 0,
+      "removedCurbIndices": [
+        29682,
+        29746
+      ],
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 825,
+      "before": 75,
+      "after": 74,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 29419,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 850,
+      "before": 149,
+      "after": 148,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 22317,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 1047,
+      "before": 128,
+      "after": 126,
+      "removed": 2,
+      "added": 0,
+      "removedCurbIndices": [
+        39423,
+        40064
+      ],
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 1050,
+      "before": 146,
+      "after": 135,
+      "removed": 11,
+      "added": 0,
+      "removedCurbIndices": [
+        17983,
+        18111,
+        18495,
+        19135,
+        19391,
+        19647,
+        19711,
+        20095,
+        20287,
+        20479,
+        20607
+      ],
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "downTown",
+      "frameIndex": 75,
+      "before": 60,
+      "after": 59,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 23087,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "downTown",
+      "frameIndex": 350,
+      "before": 117,
+      "after": 116,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 38208,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 963,
+      "before": 60,
+      "after": 58,
+      "removed": 2,
+      "added": 0,
+      "removedCurbIndices": [
+        38527,
+        39040
+      ],
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 384,
+      "before": 161,
+      "after": 160,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 28840,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 811,
+      "before": 99,
+      "after": 98,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 28906,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 28,
+      "before": 34,
+      "after": 29,
+      "removed": 5,
+      "added": 0,
+      "removedCurbIndices": [
+        36410,
+        36474,
+        36735,
+        37116,
+        37180
+      ],
+      "addedCurbIndices": []
+    }
+  ]
+}

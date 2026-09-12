@@ -6,10 +6,25 @@ classdef curbEndpointSupportTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function rejectsModeratelyMisalignedUnsupportedTip(testCase)
+            cfg=finePerceptionConfig();xy=[(0:0.2:2).',zeros(11,1)];
+            gradients=repmat([0 1],11,1);gradients(1,:)=[sind(21) cosd(21)];
+            previous=cfg;previous.curbMaximumEndpointNormalAngleDegrees=25;
+            testCase.verifyTrue(all(curbEndpointSupportMask(xy,gradients,previous)));
+            expected=true(11,1);expected(1)=false;
+            testCase.verifyEqual(curbEndpointSupportMask(xy,gradients,cfg),expected);
+        end
         function trimsMismatchedTipWithoutErodingInterior(testCase)
             cfg=finePerceptionConfig();xy=[(0:0.2:2).',zeros(11,1)];
             gradients=repmat([0 1],11,1);gradients(1,:)=[1 1];gradients(6,:)=[1 1];
             expected=true(11,1);expected(1)=false;
+            testCase.verifyEqual(curbEndpointSupportMask(xy,gradients,cfg),expected);
+        end
+        function trimsTerminalRunAndStopsAtSupportedInterior(testCase)
+            cfg=finePerceptionConfig();xy=[(0:0.2:3).',zeros(16,1)];
+            gradients=repmat([0 1],16,1);
+            gradients([1 2 3 8 15 16],:)=repmat([1 1],6,1);
+            expected=true(16,1);expected([1 2 3 15 16])=false;
             testCase.verifyEqual(curbEndpointSupportMask(xy,gradients,cfg),expected);
         end
         function preservesInconclusiveSparseTip(testCase)
@@ -32,9 +47,10 @@ classdef curbEndpointSupportTest < matlab.unittest.TestCase
             frame=loadPointCloudFrame(file,28);cfg=perceptionConfig();cfg.executionMode="offline";
             beforeCfg=cfg;beforeCfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
-            testCase.verifyTrue(before.featureMasks.curb(36671));
-            testCase.verifyFalse(actual.featureMasks.curb(36671));
-            expected=before.featureMasks.curb;expected(36671)=false;
+            reported=[36671 36735 37180 37116 36474 36410];
+            testCase.verifyTrue(all(before.featureMasks.curb(reported)));
+            testCase.verifyFalse(any(actual.featureMasks.curb(reported)));
+            expected=before.featureMasks.curb;expected(reported)=false;
             testCase.verifyEqual(actual.featureMasks.curb,expected);
             testCase.verifyEqual(rmfield(actual.featureMasks,'curb'),rmfield(before.featureMasks,'curb'));
             testCase.verifyEqual(actual.probabilityCloud,before.probabilityCloud);
