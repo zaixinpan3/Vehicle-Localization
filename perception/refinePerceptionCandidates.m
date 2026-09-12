@@ -129,12 +129,18 @@ function accepted = validatePolePoints(points, cfg, offGround, geometry, neighbo
         % all supported returns before robust point trimming.
         transverse=p(supported,1:2)-design(supported,:)*coefficients;
         spread=sort(eig(cov(transverse)));
-        if spread(2)>cfg.poleWideSurfaceMinimumAxisStd^2 && ...
+        supportHeight = nnz(qualified)*geometry.voxelSize(3);
+        shortSupport = supportHeight <= cfg.poleShortSupportHeight;
+        wideSurfaceStd = cfg.poleWideSurfaceMinimumAxisStd;
+        % Short support provides less evidence of a shaft. Reject elongated
+        % transverse strips at a smaller width before radial point trimming.
+        if shortSupport
+            wideSurfaceStd = min(wideSurfaceStd,cfg.poleShortSupportWideSurfaceMinimumAxisStd);
+        end
+        if spread(2)>wideSurfaceStd^2 && ...
                 spread(2)>cfg.poleWideSurfaceMinimumAspectRatio^2*max(spread(1),eps)
             continue;
         end
-        supportHeight = nnz(qualified)*geometry.voxelSize(3);
-        shortSupport = supportHeight <= cfg.poleShortSupportHeight;
         if shortSupport
             edges=diff([false;qualified;false]);
             runLength=find(edges==-1)-find(edges==1);

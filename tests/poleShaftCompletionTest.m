@@ -36,6 +36,7 @@ classdef poleShaftCompletionTest < matlab.unittest.TestCase
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
             frame=loadPointCloudFrame(file,1047);cfg=perceptionConfig();cfg.executionMode="offline";
             cfg.fine.poleWideSurfaceMinimumAxisStd=Inf;
+            cfg.fine.poleShortSupportWideSurfaceMinimumAxisStd=Inf;
             excludedBoundary=cfg;excludedBoundary.fine.poleShortSupportHeight=2-eps(2);
             before=perceiveFrame(frame,excludedBoundary);actual=perceiveFrame(frame,cfg);
             testCase.verifyTrue(before.featureMasks.pole(60330));
@@ -49,6 +50,7 @@ classdef poleShaftCompletionTest < matlab.unittest.TestCase
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
             frame=loadPointCloudFrame(file,1047);cfg=perceptionConfig();cfg.executionMode="offline";
             beforeCfg=cfg;beforeCfg.fine.poleWideSurfaceMinimumAxisStd=Inf;
+            beforeCfg.fine.poleShortSupportWideSurfaceMinimumAxisStd=Inf;
             beforeCfg.fine.poleRecoveryMaximumTiltDegrees=2;
             beforeCfg.fine.poleRecoveryMaximumNeighborAxisRms=0;
             beforeCfg.fine.poleShortSupportHeight=2-eps(2);

@@ -6,6 +6,29 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function rejectsShortElongatedSupportWithoutPointOrder(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
+            testCase.assumeTrue(isfile(file),'Recorded source data are required.');
+            frame=loadPointCloudFrame(file,28);cfg=perceptionConfig();cfg.executionMode="offline";
+            beforeCfg=cfg;beforeCfg.fine.poleShortSupportWideSurfaceMinimumAxisStd=0.12;
+            before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
+            testCase.verifyTrue(before.featureMasks.pole(37328));
+            testCase.verifyFalse(actual.featureMasks.pole(37328));
+            removed=before.featureMasks.pole & ~actual.featureMasks.pole;
+            xyz=double([frame.x(:),frame.y(:),frame.z(:)]);
+            testCase.verifyEqual(nnz(removed),14);
+            testCase.verifyLessThan(max(vecnorm(xyz(removed,1:2)-xyz(37328,1:2),2,2)),0.3);
+            testCase.verifyFalse(any(actual.featureMasks.pole & ~before.featureMasks.pole));
+            testCase.verifyEqual(nnz(actual.featureMasks.pole),127);
+            testCase.verifyEqual(rmfield(actual.featureMasks,'pole'),rmfield(before.featureMasks,'pole'));
+            testCase.verifyEqual(actual.probabilityCloud,before.probabilityCloud);
+            stream=RandStream('mt19937ar','Seed',2837328);order=randperm(stream,numel(frame.x));
+            shuffled=struct('x',frame.x(order).','y',frame.y(order).','z',frame.z(order).');
+            cfg.featureNames="pole";reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.pole;
+            testCase.verifyEqual(restored,actual.featureMasks.pole);
+        end
         function rejectsReportedFalsePositive(testCase)
             frame=recordedFrame(testCase);
             cfg=perceptionConfig(); cfg.executionMode="offline";

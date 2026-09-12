@@ -27,6 +27,7 @@ classdef poleBoundaryRecoveryTest < matlab.unittest.TestCase
         function rejectsBroadTrunkSurfaceWithoutLosingNarrowShaft(testCase)
             [frame,cfg]=recordedScene(testCase,746);
             beforeCfg=cfg;beforeCfg.fine.poleWideSurfaceMinimumAxisStd=Inf;
+            beforeCfg.fine.poleShortSupportWideSurfaceMinimumAxisStd=Inf;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             testCase.verifyTrue(before.featureMasks.pole(19993));
             testCase.verifyFalse(actual.featureMasks.pole(19993));
