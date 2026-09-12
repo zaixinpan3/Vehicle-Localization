@@ -1,0 +1,188 @@
+{
+  "description": "Output revisions from f6d4116e3323e49bd23d6134a3f18c37dfed7838 after geometric endpoint validation. Only Mississippi frame 28 OriginalIndex 36671 is user-annotated; other changes are regression expectations, not independent ground truth.",
+  "entries": [
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 91,
+      "before": 140,
+      "after": 139,
+      "removed": 2,
+      "added": 1,
+      "removedCurbIndices": [
+        22912,
+        31784
+      ],
+      "addedCurbIndices": 31848
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 300,
+      "before": 135,
+      "after": 133,
+      "removed": 3,
+      "added": 1,
+      "removedCurbIndices": [
+        34982,
+        35235,
+        35684
+      ],
+      "addedCurbIndices": 35046
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 350,
+      "before": 186,
+      "after": 185,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 21184,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 450,
+      "before": 132,
+      "after": 131,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 21568,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 475,
+      "before": 145,
+      "after": 144,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 26473,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 700,
+      "before": 98,
+      "after": 96,
+      "removed": 2,
+      "added": 0,
+      "removedCurbIndices": [
+        21952,
+        27312
+      ],
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 825,
+      "before": 76,
+      "after": 75,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 29034,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 1050,
+      "before": 147,
+      "after": 146,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 17663,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "downTown",
+      "frameIndex": 75,
+      "before": 62,
+      "after": 60,
+      "removed": 2,
+      "added": 0,
+      "removedCurbIndices": [
+        23280,
+        27880
+      ],
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "downTown",
+      "frameIndex": 150,
+      "before": 42,
+      "after": 41,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 42611,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "downTown",
+      "frameIndex": 450,
+      "before": 9,
+      "after": 8,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 37295,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 746,
+      "before": 98,
+      "after": 97,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 31651,
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 384,
+      "before": 163,
+      "after": 161,
+      "removed": 2,
+      "added": 0,
+      "removedCurbIndices": [
+        28904,
+        28968
+      ],
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 811,
+      "before": 101,
+      "after": 99,
+      "removed": 2,
+      "added": 0,
+      "removedCurbIndices": [
+        28521,
+        28585
+      ],
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 6,
+      "before": 33,
+      "after": 30,
+      "removed": 3,
+      "added": 0,
+      "removedCurbIndices": [
+        27440,
+        28523,
+        28587
+      ],
+      "addedCurbIndices": []
+    },
+    {
+      "dataset": "Missisipi",
+      "frameIndex": 28,
+      "before": 35,
+      "after": 34,
+      "removed": 1,
+      "added": 0,
+      "removedCurbIndices": 36671,
+      "addedCurbIndices": []
+    }
+  ]
+}

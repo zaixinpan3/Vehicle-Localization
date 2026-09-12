@@ -33,6 +33,8 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity276.json')));
             frame=loadPointCloudFrame(file,276);cfg=perceptionConfig();cfg.executionMode="offline";
+            % Isolate edge competition from independent endpoint rejection.
+            cfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
             previous=cfg;previous.fine.curbAlternativeEdgeGradientRatio=1.4;
             before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);
             testCase.verifyTrue(all(before.featureMasks.curb(annotation.falsePositiveIndices)));

@@ -170,6 +170,13 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
     end
     [selected,boundaries]=retainSupportedCurbBoundaries(points,indices,gradients, ...
         directionConsistent,selected,boundaries,cfg);
+    for j=1:numel(boundaries)
+        [~,rows]=ismember(boundaries{j},indices);
+        supported=curbEndpointSupportMask(points(rows,:),gradients(rows,:),cfg);
+        selected(rows(~supported))=false;
+        boundaries{j}=boundaries{j}(supported);
+    end
+    boundaries=boundaries(~cellfun(@isempty,boundaries));
     accepted=ismember(pointIndices,union(indices(selected),recovered));
     detail.boundaryPointIndices=[boundaries,recoveredBoundaries];
     if any(accepted),detail.status="supportedMetricBoundary";end

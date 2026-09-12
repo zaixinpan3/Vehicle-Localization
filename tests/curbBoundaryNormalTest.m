@@ -25,6 +25,8 @@ classdef curbBoundaryNormalTest < matlab.unittest.TestCase
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
             frame=loadPointCloudFrame(file,384);cfg=perceptionConfig();cfg.executionMode="offline";
+            % Isolate boundary-normal consensus from independent tip trimming.
+            cfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
             beforeCfg=cfg;beforeCfg.fine.curbMinimumBoundaryNormalFraction=0;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             reported=[21753 21628 20477 19007 17664 17600];
