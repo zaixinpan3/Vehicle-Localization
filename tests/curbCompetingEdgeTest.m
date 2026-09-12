@@ -6,6 +6,41 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function confidenceResolvesComparableGradients(testCase)
+            [xyz,g]=parallelEdges();g(13:end,2)=-0.31;
+            cfg=finePerceptionConfig();cfg.curbCompetingEdgeGradientRatio=1;
+            ids=(1:size(xyz,1)).';score=[ones(12,1);0.6*ones(12,1)];
+            testCase.verifyFalse(any(rejectWeakerRaisedCurbEdges(xyz,ids,score,g,cfg)));
+            actual=rejectWeakerRaisedCurbEdges(xyz,ids,score,g,cfg,true);
+            testCase.verifyFalse(any(actual(1:12)));
+            testCase.verifyGreaterThanOrEqual(nnz(actual(13:end)),6);
+            xyz(:,3)=0;
+            testCase.verifyFalse(any(rejectWeakerRaisedCurbEdges(xyz,ids,score,g,cfg,true)));
+        end
+        function recoversReportedRightBoundary600(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
+            annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity600.json')));
+            frame=loadPointCloudFrame(file,600);cfg=perceptionConfig();cfg.executionMode="offline";
+            previous=cfg;previous.fine.curbCompetingEdgeScoreWeight=0;
+            before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);
+            xyz=double([frame.x(:),frame.y(:),frame.z(:)]);near=annotation.rightBoundaryVicinityIndices;
+            ids=find(actual.featureMasks.curb);old=find(before.featureMasks.curb);
+            distance=min(hypot(xyz(near,1)-xyz(ids,1).',xyz(near,2)-xyz(ids,2).'),[],2);
+            oldDistance=min(hypot(xyz(near,1)-xyz(old,1).',xyz(near,2)-xyz(old,2).'),[],2);
+            testCase.verifyGreaterThanOrEqual(nnz(distance<=0.20),60);
+            testCase.verifyEqual(nnz(oldDistance<=0.20),0);
+            testCase.verifyLessThan(median(distance),0.08);
+            testCase.verifyLessThan(nnz(actual.featureMasks.curb),80);
+            testCase.verifyFalse(any(actual.featureMasks.curb(annotation.falsePositiveVicinityIndices)));
+            testCase.verifyEqual(rmfield(actual.featureMasks,'curb'),rmfield(before.featureMasks,'curb'));
+            testCase.verifyEqual(actual.probabilityCloud,before.probabilityCloud);
+            stream=RandStream('mt19937ar','Seed',60036972);order=randperm(stream,numel(frame.x));
+            shuffled=struct('x',frame.x(order).','y',frame.y(order).','z',frame.z(order).');
+            cfg.featureNames="curb";reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;
+            testCase.verifyEqual(restored,actual.featureMasks.curb);
+        end
         function requiresSeveralSupportedCellsAndSeparation(testCase)
             [xyz,g]=parallelEdges();cfg=finePerceptionConfig();ids=(1:size(xyz,1)).';
             rejected=rejectWeakerRaisedCurbEdges(xyz,ids,ones(size(ids)),g,cfg);
@@ -33,8 +68,9 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity276.json')));
             frame=loadPointCloudFrame(file,276);cfg=perceptionConfig();cfg.executionMode="offline";
-            % Isolate edge competition from independent endpoint rejection.
+            % Isolate the gradient-ratio correction from later validation gates.
             cfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
+            cfg.fine.curbCompetingEdgeScoreWeight=0;
             previous=cfg;previous.fine.curbAlternativeEdgeGradientRatio=1.4;
             before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);
             testCase.verifyTrue(all(before.featureMasks.curb(annotation.falsePositiveIndices)));

@@ -117,7 +117,7 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
         [trusted,~]=retainSupportedCurbBoundaries(points,indices,gradients, ...
             directionConsistent,selected,boundaries,cfg);
         alternativeCfg=cfg;alternativeCfg.curbCompetingEdgeGradientRatio=cfg.curbAlternativeEdgeGradientRatio;
-        dominated=rejectWeakerRaisedCurbEdges(xyz,indices,score,gradients,alternativeCfg);
+        dominated=rejectWeakerRaisedCurbEdges(xyz,indices,score,gradients,alternativeCfg,true);
         conflict=trusted & dominated;
         if reconstructed
             % Ridge components are already separated. Remove a component only

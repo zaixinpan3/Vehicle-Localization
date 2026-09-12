@@ -64,7 +64,9 @@ function [selected, evaluated, boundaries] = extendCurbBoundaries(xyz, groundMas
                     stop=find(gaps>cfg.curbContinuationMaximumGapMeters,1);
                     if ~isempty(stop),member=member(1:stop-1);p=xyz(member,:);end
                     cells=unique(floor(p(:,1:2)/cfg.curbProposalCellSizeMeters),'rows');
-                    if size(cells,1)<cfg.curbMinimumSupportCells || ...
+                    % The overlap already establishes a boundary; require
+                    % output support for its measured continuation segment.
+                    if size(cells,1)<cfg.curbMinimumOutputSupportCells || ...
                             max(forward(member))-min(forward(member))<cfg.curbMinimumBoundaryLengthMeters
                         continue;
                     end
