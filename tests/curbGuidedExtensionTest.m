@@ -66,6 +66,8 @@ classdef curbGuidedExtensionTest < matlab.unittest.TestCase
             frame=loadPointCloudFrame(file,963);cfg=perceptionConfig();cfg.executionMode="offline";
             cfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
             cfg.fine.curbCompetingEdgeScoreWeight=0; % Isolate the earlier boundary-validation gate.
+            cfg.fine.curbMaximumRoadSurfaceResidualMeters=Inf;
+            cfg.fine.curbCompetingBoundaryRoadResidualRatio=Inf;
             % Isolate reversal rejection from the independent local competitor path.
             cfg.fine.curbAlternativeEdgeGradientRatio=cfg.fine.curbCompetingEdgeGradientRatio;
             beforeCfg=cfg;beforeCfg.fine.curbGradientReversalFraction=Inf;

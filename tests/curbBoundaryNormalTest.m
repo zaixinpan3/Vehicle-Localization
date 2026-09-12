@@ -28,6 +28,8 @@ classdef curbBoundaryNormalTest < matlab.unittest.TestCase
             % Isolate boundary-normal consensus from independent tip trimming.
             cfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
             cfg.fine.curbCompetingEdgeScoreWeight=0; % Isolate the earlier boundary-validation gate.
+            cfg.fine.curbMaximumRoadSurfaceResidualMeters=Inf;
+            cfg.fine.curbCompetingBoundaryRoadResidualRatio=Inf;
             beforeCfg=cfg;beforeCfg.fine.curbMinimumBoundaryNormalFraction=0;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             reported=[21753 21628 20477 19007 17664 17600];

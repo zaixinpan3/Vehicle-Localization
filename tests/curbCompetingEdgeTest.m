@@ -93,6 +93,9 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,615);cfg=perceptionConfig();cfg.executionMode="offline";
+            % Isolate local edge competition from subsequent road validation.
+            cfg.fine.curbMaximumRoadSurfaceResidualMeters=Inf;
+            cfg.fine.curbCompetingBoundaryRoadResidualRatio=Inf;
             previous=cfg;previous.fine.curbAlternativeEdgeGradientRatio=1.4;
             before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);
             falsePoints=[27884 27692 26413 26285 26542 26799 26671 26543 26864 26544 25393 25265 25073 24945];

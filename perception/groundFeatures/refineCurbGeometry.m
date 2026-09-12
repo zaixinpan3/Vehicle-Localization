@@ -146,7 +146,7 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
             boundaries=[boundaries(~affected),replacements];
         end
     end
-    recovered=zeros(0,1);recoveredBoundaries={};
+    recoveredBoundaries={};
     if isempty(referenceNormal) && ~traceOnly
         % Sparse transverse sampling can bias an isotropic neighborhood's
         % gradient. Re-evaluate a rejected spatial model along its observed
@@ -163,22 +163,22 @@ function [accepted, detail] = refineCurbGeometry(xyz, pointIndices, groundMask, 
                 along>=min(extent)-cfg.curbCurveExtensionMeters & ...
                 along<=max(extent)+cfg.curbCurveExtensionMeters;
             ids=pointIndices(nearby);
-            [mask,revalidated]=refineCurbGeometry(xyz,ids,groundMask,cfg,normal,true);
-            recovered=union(recovered,ids(mask));
+            [~,revalidated]=refineCurbGeometry(xyz,ids,groundMask,cfg,normal,true);
             recoveredBoundaries=[recoveredBoundaries,revalidated.boundaryPointIndices]; %#ok<AGROW>
         end
     end
-    [selected,boundaries]=retainSupportedCurbBoundaries(points,indices,gradients, ...
+    [~,boundaries]=retainSupportedCurbBoundaries(points,indices,gradients, ...
         directionConsistent,selected,boundaries,cfg);
     for j=1:numel(boundaries)
         [~,rows]=ismember(boundaries{j},indices);
         supported=curbEndpointSupportMask(points(rows,:),gradients(rows,:),cfg);
-        selected(rows(~supported))=false;
         boundaries{j}=boundaries{j}(supported);
     end
     boundaries=boundaries(~cellfun(@isempty,boundaries));
-    accepted=ismember(pointIndices,union(indices(selected),recovered));
-    detail.boundaryPointIndices=[boundaries,recoveredBoundaries];
+    boundaries=validateCurbRoadSupport(xyz,xyz(groundIds,:),xyCloud, ...
+        [boundaries,recoveredBoundaries],cfg);
+    accepted=ismember(pointIndices,vertcat(boundaries{:}));
+    detail.boundaryPointIndices=boundaries;
     if any(accepted),detail.status="supportedMetricBoundary";end
 end
 
