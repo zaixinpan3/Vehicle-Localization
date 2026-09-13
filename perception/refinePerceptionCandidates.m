@@ -34,13 +34,18 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                 support = conv2(double(ground.curbCellMask),ones(2*radius+1),'same')>0;
                 support = support.';
                 pointIdx = gc.groundOriginalPointIdx(support(gc.groundCellLinIdx));
-                [accepted,curbDetail] = refineCurbGeometry(xyz,pointIdx,groundPoint,cfg.fine);
+                [~,curbDetail] = refineCurbGeometry(xyz,pointIdx,groundPoint,cfg.fine);
                 [continued,evaluated,boundaries]=extendCurbBoundaries(xyz,groundPoint,pointIdx,curbDetail.boundaryPointIndices,cfg.fine);
-                % Guided continuation may revisit previously rejected points.
-                selected=union(pointIdx(accepted),continued);
-                pointIdx=union(pointIdx,evaluated);accepted=ismember(pointIdx,selected);
-                curbDetail.continuationPointIndices=continued;
                 curbDetail.boundaryPointIndices=[curbDetail.boundaryPointIndices,boundaries];
+                % Compare extensions with all observed boundaries, including
+                % competitors outside an individual endpoint search window.
+                groundXYZ=xyz(groundPoint & all(isfinite(xyz),2),:);
+                groundXYCloud=pointCloud([groundXYZ(:,1:2),zeros(size(groundXYZ,1),1)]);
+                curbDetail.boundaryPointIndices=validateCurbRoadSupport(xyz,groundXYZ,groundXYCloud, ...
+                    curbDetail.boundaryPointIndices,cfg.fine);
+                selected=vertcat(curbDetail.boundaryPointIndices{:});
+                pointIdx=union(pointIdx,evaluated);accepted=ismember(pointIdx,selected);
+                curbDetail.continuationPointIndices=intersect(continued,selected);
                 candidateMembers = ismember(grid.pointIndices,pointIdx);
                 candidates.pillarIndices{k} = unique(grid.pointPillarLinIdx(candidateMembers));
             case "facade"

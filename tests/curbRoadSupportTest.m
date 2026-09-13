@@ -36,6 +36,24 @@ classdef curbRoadSupportTest < matlab.unittest.TestCase
             xyz=xyz*rotation+[7 -11 .8];ground=ground*rotation+[7 -11 .8];
             testCase.verifyEqual(validateCurbRoadSupport(xyz,ground,xyCloud(ground),boundaries,cfg),boundaries(1));
         end
+        function rejectsCompetingContinuation458(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
+            annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbFalsePositive458.json')));
+            frame=loadPointCloudFrame(file,458);cfg=perceptionConfig();cfg.executionMode="offline";
+            actual=perceiveFrame(frame,cfg);
+            testCase.verifyFalse(any(actual.featureMasks.curb(annotation.falsePositiveIndices)));
+            testCase.verifyEqual(nnz(actual.featureMasks.curb),183);
+            geometry=actual.refinement.curb.geometry;
+            selected=find(actual.featureMasks.curb);
+            testCase.verifyEqual(unique(vertcat(geometry.boundaryPointIndices{:})),selected);
+            testCase.verifyTrue(all(ismember(geometry.continuationPointIndices,selected)));
+            stream=RandStream('mt19937ar','Seed',45836260);order=randperm(stream,numel(frame.x));
+            shuffled=struct('x',frame.x(order).','y',frame.y(order).','z',frame.z(order).');
+            cfg.featureNames="curb";reordered=perceiveFrame(shuffled,cfg);
+            restored=false(numel(order),1);restored(order)=reordered.featureMasks.curb;
+            testCase.verifyEqual(restored,actual.featureMasks.curb);
+        end
         function rejectsReportedClutterAndPreservesRightBoundary943(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));

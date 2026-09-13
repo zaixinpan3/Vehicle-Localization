@@ -42,8 +42,13 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
         'CameraUpVectorMode','manual','CameraViewAngleMode','manual');
     datacursormode(fig,'off');
     savefig(fig,fullfile(outputFolder,'initial_view.fig'));
-    initialImage=getframe(fig);imageSize=size(initialImage.cdata);
-    imwrite(initialImage.cdata,fullfile(outputFolder,'initial_view.png'));
+    % Export the complete scatter: software interactive rendering may sample
+    % markers even when XData retains every source point.
+    pixels=getpixelposition(fig);
+    fig.PaperUnits='inches';fig.PaperPosition=[0 0 pixels(3:4)/72];
+    fig.PaperPositionMode='manual';
+    initialImage=print(fig,'-RGBImage','-r72');imageSize=size(initialImage);
+    imwrite(initialImage,fullfile(outputFolder,'initial_view.png'));
     frameCounter=findall(fig,'Tag','PerceptionFrameCounter');
     if isempty(frameCounter)
         frameCounter=annotation(fig,'textbox',[.02 .94 .38 .045], ...
@@ -96,11 +101,11 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
         end
         assert(numel(cloud.XData)==nnz(isfinite(frame.x(:)) & isfinite(frame.y(:)) & isfinite(frame.z(:))), ...
             'The recording must retain every finite original point.');
-        imageFrame=getframe(fig);
-        assert(isequal(size(imageFrame.cdata),imageSize),'Keep the recording window size fixed.');
+        imageFrame=print(fig,'-RGBImage','-r72');
+        assert(isequal(size(imageFrame),imageSize),'Keep the recording window size fixed.');
         writeVideo(writer,imageFrame);
         if mod(index,100)==0 || index==frames(1) || index==frames(end)
-            imwrite(imageFrame.cdata,fullfile(outputFolder,sprintf('frame_%04d.png',index)));
+            imwrite(imageFrame,fullfile(outputFolder,sprintf('frame_%04d.png',index)));
         end
         completed=completed+1;
         updateProgress("perception",completed);

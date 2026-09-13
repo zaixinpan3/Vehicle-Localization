@@ -1,0 +1,25 @@
+{
+  "description": "User-identified false curb points in Mississippi frame 458. Indices are validation annotations only.",
+  "frameIndex": 458,
+  "falsePositiveIndices": [
+    36260,
+    35301,
+    35365,
+    35750,
+    35814,
+    35942,
+    36327,
+    36391,
+    36455,
+    36519,
+    37096,
+    37160,
+    36009,
+    36073,
+    36329,
+    37163,
+    37419,
+    37932,
+    37101
+  ]
+}
