@@ -1,25 +1,21 @@
 function design = improvedObserverReferenceDesign(cfg)
-% improvedObserverReferenceDesign Load gains and verify their reference model.
-% Certification concerns the historical current-pose pulse equations only.
-% The fixed-delay transport runtime exposes this provenance separately.
+% improvedObserverReferenceDesign Load and recheck one continuous-mode design.
     arguments
         cfg (1,1) struct = improvedObserverConfig()
     end
-    root = fileparts(fileparts(mfilename('fullpath')));
-    data = jsondecode(fileread(fullfile(root,'config','poseObserverCertificate.json')));
-    design = struct('kind',string(data.kind),'K',data.K,'N',data.N, ...
-        'P',data.timer.P(:,:,1),'theta',data.theta,'sigma',data.theta, ...
-        'scalingExponents',data.scalingExponents,'timer',data.timer, ...
-        'knownInputIncludedExactly',true,'cfg',cfg);
-    assert(cfg.observer.theta==data.theta && cfg.observer.sigma==data.theta, ...
-        'VehicleLocalization:CertificateMismatch','The stored design requires theta=sigma=3.5.');
-    assert(cfg.operating.maximumSpeed<=data.operating.maximumSpeed ...
-        && cfg.operating.maximumAcceleration<=data.operating.maximumAcceleration ...
-        && cfg.operating.maximumTrackAngleRate<=data.operating.maximumTrackAngleRate ...
-        && isequal(cfg.lidar.poseScales(:),data.timer.poseScales(:)), ...
-        'VehicleLocalization:CertificateMismatch','The requested envelope exceeds the stored certificate.');
-    design.verification = verifyImprovedObserverDesign(design,cfg);
-    design.certified = design.verification.certified;
+    root=fileparts(fileparts(mfilename('fullpath')));
+    stored=jsondecode(fileread(fullfile(root,'config','continuousObserverCertificate.json')));
+    source=stored.(cfg.mode);
+    design=struct('kind',"continuous-mo-hgo-v1",'mode',cfg.mode,'theta',cfg.observer.theta);
+    if cfg.mode=="gnss"
+        design.P=source.P6;design.K=[source.K;zeros(1,2)];
+        design.N=zeros(7,4);design.N(1:6,1:3)=source.N;
+        design.N(7,4)=-cfg.observer.yawGain*design.theta^2;
+    else
+        for name=["P","Q","R","g","rate","K","N"],design.(name)=source.(name);end
+    end
+    design.verification=verifyImprovedObserverDesign(design,cfg);
+    design.certified=design.verification.certified;
     assert(design.certified,'VehicleLocalization:CertificateMismatch', ...
-        'The stored pulse observer failed exhaustive verification.');
+        'The reference matrices do not certify the requested continuous configuration.');
 end

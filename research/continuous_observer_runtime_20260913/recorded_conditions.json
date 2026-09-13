@@ -1,0 +1,16 @@
+{
+  "minimumMeasuredSpeed": 0,
+  "maximumTrackRate": 0.354975175657248,
+  "anyStageOutsideTrackRateEnvelope": false,
+  "motionProxySamplesBelowMinimum": 246,
+  "reconstruction": {
+    "representation": "offline piecewise-linear reconstruction",
+    "maximumOriginalPoseGapSeconds": 0.020991949394499443,
+    "declaredMaximumGapSeconds": 0.12,
+    "fixedDelaySeconds": 0,
+    "trimmedInputSamples": 4,
+    "physicalContinuityVerified": false,
+    "onlineCausalityClaimed": false,
+    "headingUnwrapAssumption": "Adjacent recorded yaw changes are less than pi; cycle slips are not verified."
+  }
+}

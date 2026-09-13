@@ -271,12 +271,16 @@ The [reproducible certificate checks](research/continuous_observer_iss_20260913/
 record a constructive GNSS block certificate and a conservative 150 ms LiDAR
 example with all four auxiliary channels. These are new theoretical designs.
 
-The existing `runImprovedVehicleObserver` still implements the earlier
-experimental delivery/pulse and input-transport algorithm. Its migration to
-the continuous equations is pending; its stored gains and earlier trajectory
-results do not establish the new theorems. See the implementation contract in
-[localization/README.md](localization/README.md) and the historical
-[fixed-delay experiment](research/fixed_delay_transport_observer.md).
+The MATLAB `runImprovedVehicleObserver` now integrates these same continuous
+ODE/DDE equations. Select `improvedObserverConfig("gnss")` or
+`improvedObserverConfig("lidar")`; each mode uses independently verified,
+constant certificate matrices. Delayed LiDAR requires an explicit estimate
+history, and the innovation compares measurements with that past estimate.
+See [the runtime contract](localization/README.md) and
+[implementation validation](research/continuous_observer_runtime_20260913/validation.md).
+Recorded data require an explicitly declared continuous reconstruction; they do
+not establish physical sensor continuity. Earlier transport and pulse results
+remain historical evidence at their recorded Git versions.
 
 ## Configuration (`config/`)
 

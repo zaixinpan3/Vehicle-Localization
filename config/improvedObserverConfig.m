@@ -1,107 +1,28 @@
-function cfg = improvedObserverConfig()
-% improvedObserverConfig Configure the seven-state improved vehicle observer.
-% The configuration covers the operating envelope used by the robust LMI,
-% the fixed-delay transported-measurement observer, full-matrix
-% anisotropic information gains, and the deterministic validation scenario.
-
-    cfg = struct();
-
-    cfg.operating = struct();
-    cfg.operating.maximumSpeed = 16.0;
-    cfg.operating.maximumAcceleration = 5.0;
-    cfg.operating.maximumTrackAngleRate = 0.60;
-
-    cfg.observer = struct();
-    cfg.observer.theta = 3.5;
-    cfg.observer.sigma = 3.5;
-    cfg.observer.scalingExponents = [1; 2; 3; 1; 2; 3; 1];
-    cfg.observer.integrationMethod = "rk4";
-    cfg.observer.initialState = [];
-    cfg.observer.fallbackPosition = [0.0; 0.0];
-    cfg.observer.fallbackHeading = 0.0;
-    % Preserve q = r_m + betaDot exactly. Samples outside the certified
-    % operating box are reported by the runtime rather than silently altered.
-    cfg.observer.clampTrackAngleRateToDesignEnvelope = false;
-    cfg.observer.invariantGain = zeros(7, 4);
-    cfg.observer.invariantGain(2, 1) = 0.002;
-    cfg.observer.invariantGain(5, 1) = 0.002;
-    cfg.observer.invariantGain(3, 2) = 0.002;
-    cfg.observer.invariantGain(6, 2) = 0.002;
-    cfg.observer.invariantGain(3, 3) = 0.002;
-    cfg.observer.invariantGain(6, 3) = -0.002;
-    cfg.observer.invariantGain(7, 4) = -0.01;
-
-    cfg.measurement = struct();
-    cfg.measurement.sampleTime = 0.01;
-    cfg.measurement.inputInterpolation = "linear";
-    % Poses act over short pulses beginning at delivery. The affine nominal
-    % flow transports acquisition-time residuals/gains to the current state.
-    % Only input-derived transition maps are buffered; states are never replayed.
-    cfg.measurement.gpsMaximumAge = 0.03;
-    cfg.measurement.lidarMaximumAge = 0.03;
-    cfg.measurement.inputHistoryDuration = 1.0;
-    cfg.measurement.timestampTolerance = 0.0;
-
-    cfg.measurement.minimumPoseInterval = 0.05;
-    cfg.measurement.maximumPoseInterval = 0.11;
-    cfg.measurement.fixedLidarDelay = 0.15;
-    cfg.measurement.maximumIntegrationStep = 0.01;
-
-    cfg.lidar = struct();
-    % Full information shapes every pose-gain direction, including cross terms.
-    cfg.lidar.poseScales = [1.0; 1.0; 1.0]; % meters, meters, radians
-    cfg.lidar.gainInformationScale = 5.0;
-    % A certificate hypothesis, never an online gain floor or rejection gate.
-    cfg.lidar.certificateMinimumPoseWeight = 0.8;
-    cfg.lidar.errorBoundValidated = false;
-    cfg.gps.positionInformation = [25.0;25.0]; % Design reference, m^-2.
-    % Retained only for historical continuous-design research utilities.
-    cfg.lidar.translationInformationScale = 25.0;
-    cfg.lidar.headingInformationScale = 50.0;
-    cfg.lidar.minimumHeadingWeight = 0.15;
-    cfg.lidar.missingInformationTranslationWeight = 0.0;
-    cfg.lidar.missingInformationHeadingWeight = 0.0;
-
-    cfg.synthesis = struct();
-    cfg.synthesis.solver = "sedumi";
-    cfg.synthesis.verbose = 0;
-    cfg.synthesis.dualize = 0;
-    cfg.synthesis.normalizationTrace = 7.0;
-    cfg.synthesis.minimumPEigenvalue = 0.14;
-    cfg.synthesis.minimumLambda = 1.0e-5;
-    cfg.synthesis.maximumLambda = 10.0;
-    cfg.synthesis.strictnessEpsilon = 1.0e-7;
-    cfg.synthesis.violationTolerance = 1.0e-7;
-    cfg.synthesis.gainDecisionWeight = 2.0e-5;
-    cfg.synthesis.lambdaSafetyFactor = 0.75;
-    cfg.synthesis.schurSafetyFactor = 4.0;
-    cfg.synthesis.maximumCuttingPlaneIterations = 40;
-    cfg.synthesis.outputFolder = "";
-    cfg.synthesis.saveFileName = "improvedObserverDesign.mat";
-
-    cfg.simulation = struct();
-    cfg.simulation.sampleTime = 0.01;
-    cfg.simulation.finalTime = 24.0;
-    cfg.simulation.initialPosition = [2.0; -1.0];
-    cfg.simulation.initialHeading = deg2rad(8.0);
-    cfg.simulation.initialLongitudinalSpeed = 6.0;
-    cfg.simulation.longitudinalSpeedAmplitude = 0.8;
-    cfg.simulation.longitudinalSpeedPeriod = 16.0;
-    cfg.simulation.steeringAmplitude = deg2rad(2.2);
-    cfg.simulation.steeringPeriod = 10.0;
-    cfg.simulation.gpsRateHz = 5.0;
-    cfg.simulation.lidarRateHz = 10.0;
-    cfg.simulation.gpsDelay = 0.10;
-    cfg.simulation.outOfOrderExtraDelay = 0.14;
-    cfg.simulation.gpsDropoutInterval = [8.0, 12.0];
-    cfg.simulation.lidarDegeneracyInterval = [14.0, 18.0];
-    cfg.simulation.wheelSpeedNoiseStandardDeviation = 0.01;
-    cfg.simulation.steeringNoiseStandardDeviation = deg2rad(0.02);
-    cfg.simulation.gyroNoiseStandardDeviation = 0.0015;
-    cfg.simulation.accelerationNoiseStandardDeviation = 0.025;
-    cfg.simulation.gpsPositionNoiseStandardDeviation = 0.035;
-    cfg.simulation.lidarPositionNoiseStandardDeviation = 0.020;
-    cfg.simulation.lidarHeadingNoiseStandardDeviation = deg2rad(0.25);
-    cfg.simulation.initialEstimateError = [0.30; -0.20; deg2rad(4.0)];
-    cfg.simulation.randomSeed = 2026;
+function cfg = improvedObserverConfig(mode)
+% improvedObserverConfig Configure one continuous measurement mode.
+% MODE is "gnss" (position only) or "lidar" (continuous delayed full pose).
+% The LiDAR reference certificate has a deliberately narrow declared sector;
+% runtime diagnostics report coefficient excursions without clamping inputs.
+    arguments
+        mode (1,1) string {mustBeMember(mode,["gnss","lidar"])} = "lidar"
+    end
+    root=fileparts(fileparts(mfilename('fullpath')));
+    reference=jsondecode(fileread(fullfile(root,'config','continuousObserverCertificate.json')));
+    selected=reference.(mode);
+    cfg.mode=mode;
+    cfg.operating=struct('maximumSpeed',16,'maximumAcceleration',5, ...
+        'maximumTrackAngleRate',selected.maximumCourseRate);
+    cfg.observer=struct('theta',selected.theta, ...
+        'scalingExponents',[1;2;3;1;2;3;1], ...
+        'initialState',[],'initialHeading',0,'yawGain',.5);
+    cfg.measurement=struct('fixedLidarDelay',.15,'maximumIntegrationStep',.005);
+    cfg.lidar=struct('poseScales',[1;1;1],'gainInformationScale',5, ...
+        'minimumPoseWeight',reference.lidar.minimumInformationWeight);
+    cfg.gnss=struct('minimumSpeed',1,'headingErrorLimit',pi/3);
+    cfg.synthesis=struct('solver',"sedumi",'rate',.05,'tolerance',1e-8, ...
+        'outputFolder',"",'saveFileName',"continuousObserverDesign.mat");
+    cfg.simulation=struct('sampleTime',.01,'finalTime',20, ...
+        'speed',8,'courseRate',.001,'initialHeading',.2, ...
+        'positionNoiseAmplitude',.01,'headingNoiseAmplitude',deg2rad(.1), ...
+        'initialError',[.1;0;0;-.1;0;0;deg2rad(2)]);
 end

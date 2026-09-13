@@ -1,12 +1,10 @@
-% runImprovedObserverDesign Synthesize the reference current-pose pulse metric.
-% YALMIP and SeDuMi must already be on the MATLAB path. The design is left in
-% the workspace only after every robust-LMI vertex combination has been checked.
-% These inequalities do not certify the fixed-delay transported runtime.
-
-projectFolder = fileparts(fileparts(mfilename("fullpath")));
-run(fullfile(projectFolder, "setupVehicleLocalization.m"));
-cfg = improvedObserverConfig();
-design = designImprovedObserverGains(cfg);
-
-fprintf("Verified %d reference timer flow inequalities; maximum margin %.6g.\n", ...
-    design.verification.checkedVertexCount, design.verification.maximumFlowEigenvalue);
+% runImprovedObserverDesign Construct a continuous-mode ISS certificate.
+% Select improvedObserverConfig("gnss") for the position-only GNSS mode.
+% The default LiDAR synthesis requires YALMIP and the configured SDP solver.
+projectFolder=fileparts(fileparts(mfilename('fullpath')));
+addpath(projectFolder);
+setupVehicleLocalization;
+cfg=improvedObserverConfig("lidar");
+design=designImprovedObserverGains(cfg);
+fprintf('Continuous %s certificate: margin %.6g, rate %.6g /s.\n', ...
+    cfg.mode,design.verification.uniformMargin,design.verification.rate);

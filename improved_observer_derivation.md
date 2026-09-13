@@ -21,10 +21,15 @@ separately below. LiDAR measures all three planar pose coordinates and its
 fixed delay is retained explicitly. Neither measurement continuity nor
 full-rank information alone is a stability certificate.
 
-The existing `runImprovedVehicleObserver.m` is the earlier experimental
-implementation. Its stored gains, delivery logic and numerical results are
-not certificates for the equations in this document. This revision changes
-the theoretical design; it does not migrate that runtime.
+The current `runImprovedVehicleObserver.m` integrates the GNSS equations (8)
+and the delayed LiDAR equation (23). Its numerical steps approximate these
+continuous equations. The implementation uses separate, reverified constant
+certificates, an explicit LiDAR initial history, and immutable state outputs.
+See [the runtime contract](localization/README.md) and
+[implementation validation](research/continuous_observer_runtime_20260913/validation.md).
+Numerical success does not verify all physical, initial-error or disturbance
+hypotheses. Earlier event/pulse and transport algorithms remain historical
+implementations in Git; their results do not certify the present equations.
 
 ## 1. State, continuous plant, and disturbance interface
 

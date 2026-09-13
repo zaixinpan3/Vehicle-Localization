@@ -1,0 +1,11 @@
+{
+  "mode": "gnss",
+  "completed": true,
+  "samples": 11686,
+  "positionRmseM": 0.041379378731932967,
+  "yawRmseDeg": 2.8880066450724513,
+  "computationSeconds": 7.538964,
+  "matrixCertificateVerified": true,
+  "coefficientBoundsSatisfied": false,
+  "unconditionalStabilityClaimed": false
+}

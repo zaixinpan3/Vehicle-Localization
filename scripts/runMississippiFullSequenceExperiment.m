@@ -43,35 +43,16 @@ function results = runMississippiFullSequenceExperiment(outputFolder,parameterFi
     replayFolder=fullfile(outputFolder,'recursive_8threads');
     results.d2d=replayMississippiLocalization(compactMap,fullfile(outputFolder,'sensors'),replayFolder);
     certificates=struct();
-    for factor=[1 .7 1.3]
-        designFile=fullfile(outputFolder,sprintf('mncavObserverDesign_%.1f.mat',factor));
-        if factor==1, designFile=fullfile(outputFolder,'mncavObserverDesign.mat'); end
-        designMncavReplayObserver(parameterFile,designFile,factor);
+    for mode=["gnss","lidar"]
+        designFile=fullfile(outputFolder,"continuous_"+mode+"_design.mat");
+        designMncavReplayObserver(parameterFile,designFile,1,mode);
         design=load(designFile);
-        name=matlab.lang.makeValidName(sprintf('factor_%.1f',factor));
-        certificates.(name)=struct('factor',factor,'vehicle',design.lateralCfg.vehicle, ...
-            'lateralCertified',design.lateralDesign.certified, ...
-            'lateralWorstMargin',design.lateralDesign.maxCertificateMargin, ...
-            'globalVerification',design.observerDesign.verification, ...
-            'globalCfg',design.observerCfg,'synthesisSeconds',design.synthesisSeconds);
-        if factor~=1
-            report=runMncavObserverReplay(replayFolder,designFile,parameterFile, ...
-                fullfile(outputFolder,sprintf('observer_fusion_%.1f',factor)),"fusion");
-            results.(name)=report.summary;
-        end
-    end
-    writeJson(fullfile(outputFolder,'design_certificates.json'),certificates);
-    designFile=fullfile(outputFolder,'mncavObserverDesign.mat');
-    for scenario=["gpsOnly","fusion","positionOutage","outageNoLidar"]
+        certificates.(mode)=design.observerDesign.verification;
         report=runMncavObserverReplay(replayFolder,designFile,parameterFile, ...
-            fullfile(outputFolder,"observer_"+scenario),scenario);
-        results.(scenario)=report.summary;
+            fullfile(outputFolder,"continuous_"+mode),mode);
+        results.(mode)=report.summary;
     end
-    report=runMncavObserverReplay(replayFolder,designFile,parameterFile, ...
-        fullfile(outputFolder,'observer_fusion_delay0.30'),"fusion",.30);
-    results.delay300ms=report.summary;
-    results.outageCertificate=auditMncavOutageCertificate(designFile, ...
-        fullfile(outputFolder,'outage_certificate_audit.csv'));
+    writeJson(fullfile(outputFolder,'continuous_design_certificates.json'),certificates);
     plotMississippiExperiment(outputFolder);
 end
 

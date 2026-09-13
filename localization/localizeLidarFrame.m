@@ -15,9 +15,9 @@ function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initia
 % emits a directionalPose event; result.accepted still denotes full pose only.
 % Set cfg.perception.frameCalibration consistently with the
 % offline map; its default is identity and it never changes point selection.
-% An accepted event has timestamp, arrivalTime, pose, information fields consumed by
-% runImprovedVehicleObserver. The caller sets arrivalTime when it is delivered;
-% the acquisition-time default is explicitly marked arrivalTimeIsPlaceholder.
+% The returned timestamped record is a registration product, not the input
+% contract of the continuous observer. An offline reconstruction must explicitly
+% provide continuous, uniformly informative pose output before using it there.
 % Empty measurement means rejection. Information is the final robust Gaussian
 % model information in physical map-frame [X,Y,psi] coordinates, not an
 % inverse empirically calibrated pose covariance or a density-score Hessian.

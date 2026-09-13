@@ -4,6 +4,9 @@ Theoretical scope update, 2026-09-13: the current design is the
 [continuous GNSS / fixed-delay continuous LiDAR ISS derivation](../improved_observer_derivation.md).
 This dated report preserves the earlier experimental model and results;
 its timing constructs and certificates are not part of the new theory.
+The [current MATLAB runtime](../localization/README.md) now integrates that
+continuous design; the transport implementation below is preserved only in
+Git and the original experimental evidence.
 
 Date: 2026-09-08. Starting implementation:
 `cb3cf07a1272644688e6541babc223f3cce73184`.

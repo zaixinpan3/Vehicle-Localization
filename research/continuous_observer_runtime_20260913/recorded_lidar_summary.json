@@ -1,0 +1,7 @@
+{
+  "mode": "lidar",
+  "completed": false,
+  "errorIdentifier": "VehicleLocalization:ReconstructionGap",
+  "message": "The recorded pose gap 1.2987 s exceeds the declared reconstruction limit 0.12 s.",
+  "computationSeconds": 0.001454
+}

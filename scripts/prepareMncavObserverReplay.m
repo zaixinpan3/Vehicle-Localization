@@ -1,9 +1,12 @@
 function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFolder,parameterFile,calls,fixedLidarDelay)
-% prepareMncavObserverReplay Align recorded inputs and timestamped pose events.
-% CAN inputs use previous-sample hold and independent-drive fixed corrections.
-% GNSS positions and interpolated GNSS/INS yaw are reference data; only GPS XY
-% events and one initial heading enter the global observer. Lidar events carry
-% the matching algorithm's full physical [X,Y,psi] information matrix.
+% prepareMncavObserverReplay Export recorded inputs and physical pose samples.
+% This is a data exporter. Its physical timestamp metadata is not an observer
+% timing model. reconstructContinuousObserverSignals supplies the separately
+% declared offline input reconstruction for the current continuous runner.
+% Inputs use linear reconstruction and independent-drive fixed corrections.
+% GNSS/INS yaw is reference data; only GNSS XY enters the measurement channel.
+% LiDAR samples carry the full physical [X,Y,psi] information matrix.
+% No delivery timestamps or artificial GNSS downsampling are introduced.
     arguments
         sensorFolder (1,1) string
         parameterFile (1,1) string
@@ -30,13 +33,13 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     time=(0:.01:last).';
     assert(max([motionTime(1),imuTime(1),steeringTime(1)])<=0,'Inputs do not cover replay start.');
     high=struct('time',time);
-    high.longitudinalSpeed=interp1(motionTime,twist.linear_x_mps,time,'previous');
-    high.steeringAngle=interp1(steeringTime,steering.steering_wheel_angle_rad,time,'previous')/parameters.steeringRatio;
+    high.longitudinalSpeed=interp1(motionTime,twist.linear_x_mps,time,'linear');
+    high.steeringAngle=interp1(steeringTime,steering.steering_wheel_angle_rad,time,'linear')/parameters.steeringRatio;
     rawFields=["acceleration_x_mps2","acceleration_y_mps2","angular_z_radps"];
     names=["longitudinalAcceleration","lateralAcceleration","yawRate"];
     for k=1:3
         correction=parameters.input_correction.(names(k));
-        high.(names(k))=correction.sign*interp1(imuTime,imu.(rawFields(k)),time,'previous')+correction.offset;
+        high.(names(k))=correction.sign*interp1(imuTime,imu.(rawFields(k)),time,'linear')+correction.offset;
     end
     sensorData=struct('highRate',high);
     odomTime=bridge(odom.stamp_sec)-start;
@@ -46,9 +49,8 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     reference=array2table([time,interp1(odomTime,[odom.x_m,odom.y_m,yaw],time,'linear','extrap')], ...
         'VariableNames',{'time','x','y','psi'});
     assert(all(isfinite(reference{:,:}),'all'),'Reference does not cover replay.');
-    selected=(1:5:height(odom)).'; selected=selected(odomTime(selected)>=0 & odomTime(selected)<=time(end));
+    selected=find(odomTime>=0 & odomTime<=time(end));
     sensorData.gps=struct('timestamp',odomTime(selected), ...
-        'arrivalTime',max(odomTime(selected),bridge(odom.bag_time_sec(selected))-start), ...
         'pose',[odom.x_m(selected),odom.y_m(selected)]);
     sensorData.lidar=struct();
     if ~isempty(calls)
@@ -75,14 +77,14 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
             end
         end
         sensorData.lidar=struct('timestamp',c.timeSeconds, ...
-            'arrivalTime',c.timeSeconds+fixedLidarDelay,'pose',[c.x,c.y,c.psi],'information',information);
+            'pose',[c.x,c.y,c.psi],'information',information);
     end
     metadata=struct('fixedLidarDelaySeconds',fixedLidarDelay, ...
         'clock',"INSPVA receiver time bridged from ROS headers; no pose used to fit the clock", ...
-        'inputInterpolation',"causal previous-sample hold", ...
+        'inputInterpolation',"offline linear reconstruction of recorded input samples", ...
         'reference',"NovAtel odom body-origin XY and quaternion yaw; also mapping reference", ...
-        'gpsInput',"every fifth recorded odom position, approximately 10 Hz; no continuous GNSS heading input", ...
-        'lidarInput',"accepted full/directional geometric D2D measurements; physical information; fixed delivery delay", ...
+        'gpsInput',"all covered recorded odom positions; no GNSS heading measurement", ...
+        'lidarInput',"accepted full/directional geometric samples; the continuous adapter rejects insufficient information", ...
         'parameters',parameters,'sampleTimeSeconds',.01,'samples',numel(time), ...
         'maximumReferenceEdgeExtrapolationSeconds',edgeExtrapolation);
 end

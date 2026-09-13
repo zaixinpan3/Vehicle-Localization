@@ -1,3 +1,10 @@
+> Historical experiment at Git revision
+> `f14e9a5cab326798d6c247ce3f887ba4a0dff1ae`. The transport/pulse diagnostic
+> executable was retired with the continuous runtime refactor. Its findings
+> and original results below are preserved; see
+> [current runtime validation](continuous_observer_runtime_20260913/validation.md)
+> for the replacement equations, gains and experiments.
+
 # Causes of standalone observer convergence limitations
 
 Executed on 2026-09-13, MATLAB R2026a Update 3. This diagnosis follows

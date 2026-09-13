@@ -147,3 +147,9 @@ No vehicle simulation, dataset replay, production gain replacement, runtime
 migration, or full repository test suite was run. The new driver evaluates
 mathematical certificates and algebra only. The previous event-based runtime
 and its historical results remain explicitly outside this theorem's scope.
+
+
+Subsequent implementation update, 2026-09-13: the theory-only scope statement
+above describes this original certificate experiment. The separate
+[runtime validation](../continuous_observer_runtime_20260913/validation.md)
+records the later MATLAB migration, actual simulations and regression tests.

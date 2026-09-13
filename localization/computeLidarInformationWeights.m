@@ -1,51 +1,39 @@
 function [translationWeight,headingWeight,diagnostics,poseWeight] = computeLidarInformationWeights(informationMatrix,cfg)
-% computeLidarInformationWeights Turn full information into directional gain.
-% In normalized pose coordinates J=D*I*D, W=J/(scale*I+J). Eigenvectors and
-% cross terms are retained, weak directions receive smaller gains, and zero
-% information gives zero gain in that direction. Rank deficiency is usable.
-% This shaping is not an assertion that D2D curvature is calibrated precision.
+% computeLidarInformationWeights Normalize full pose information and shape gain.
+% W=J/(lambda*I+J), J=S'*information*S. All returned weights use normalized
+% pose coordinates; the observer multiplies them by a normalized residual.
+% No eigenvalue floor or source fusion is applied. The continuous LiDAR mode
+% requires the configured uniformly positive weight sector.
     arguments
         informationMatrix double
         cfg (1,1) struct
     end
     poseWeight=zeros(3);translationWeight=zeros(2);headingWeight=0;
-    diagnostics=struct('hadInformation',false,'qualified',false,'reason',"missingInformation", ...
-        'minimumNormalizedEigenvalue',0,'informationMargin',NaN,'headingInformation',0, ...
-        'translationInformationEigenvalues',zeros(2,1),'normalizedInformation',zeros(3), ...
-        'normalizedWeight',zeros(3),'weightEigenvalues',zeros(3,1),'rank',0, ...
-        'marginalizedHeadingInformation',0, ...
-        'gpsFusedLidarWeight',zeros(3),'gpsFusedGpsWeight',zeros(3), ...
-        'gpsFusedNormalizedWeight',zeros(3));
+    diagnostics=struct('qualified',false,'reason',"missingInformation", ...
+        'rank',0,'minimumNormalizedEigenvalue',0,'normalizedWeight',zeros(3), ...
+        'normalizedInformation',zeros(3),'weightEigenvalues',zeros(3,1));
     if isempty(informationMatrix),return;end
-    assert(isequal(size(informationMatrix),[3,3]),'Information must be 3-by-3.');
-    if any(~isfinite(informationMatrix),'all'),return;end
-    diagnostics.hadInformation=true;
-    D=diag(cfg.lidar.poseScales(:));
-    assert(all(isfinite(diag(D)) & diag(D)>0) && size(D,1)==3);
-    J=D*((informationMatrix+informationMatrix.')/2)*D;
-    [U,S]=eig(J);values=diag(S);tol=1e-10*max(1,max(abs(values)));
-    if min(values)<-tol
-        diagnostics.reason="invalidIndefiniteInformation";return;
+    if ~isreal(informationMatrix) || ~isequal(size(informationMatrix),[3,3]) ...
+            || any(~isfinite(informationMatrix),'all')
+        diagnostics.reason="invalidInformation";return;
     end
-    values=max(values,0);J=U*diag(values)*U.';J=(J+J.')/2;
-    diagnostics.normalizedInformation=J;
+    tolerance=1e-10*max(1,norm(informationMatrix,2));
+    if norm(informationMatrix-informationMatrix.','fro')>tolerance
+        diagnostics.reason="asymmetricInformation";return;
+    end
+    S=diag(cfg.lidar.poseScales(:));J=S*((informationMatrix+informationMatrix.')/2)*S;
+    [U,D]=eig(J);values=diag(D);
+    if min(values)<0
+        diagnostics.reason="nonpositiveInformation";return;
+    end
+    weights=values./(values+cfg.lidar.gainInformationScale);
+    poseWeight=U*diag(weights)*U.';poseWeight=(poseWeight+poseWeight.')/2;
+    diagnostics.rank=nnz(values>1e-12*max(1,max(values)));
     diagnostics.minimumNormalizedEigenvalue=min(values);
-    diagnostics.rank=nnz(values>tol);
-    diagnostics.qualified=any(values>tol);
-    if ~diagnostics.qualified,diagnostics.reason="zeroInformation";return;end
-    [poseWeight,~,W]=fusePoseInformationWeights(J,false,cfg);
-    [gpsL,gpsG,gpsW]=fusePoseInformationWeights(J,true,cfg);
-    diagnostics.reason="directionalInformation";
-    diagnostics.normalizedWeight=W;diagnostics.weightEigenvalues=sort(eig(W));
-    diagnostics.gpsFusedLidarWeight=gpsL;diagnostics.gpsFusedGpsWeight=gpsG;
-    diagnostics.gpsFusedNormalizedWeight=gpsW;
-    diagnostics.headingInformation=informationMatrix(3,3);
-    % Eliminate normalized translation as a nuisance variable. The raw yaw
-    % diagonal can be positive even when a coupled translation/yaw direction
-    % is unobservable. Use the PSD matrix with roundoff negatives removed.
-    translationInverse=pinv(J(1:2,1:2));
-    marginal=J(3,3)-J(3,1:2)*translationInverse*J(1:2,3);
-    diagnostics.marginalizedHeadingInformation=max(0,marginal)/D(3,3)^2;
-    diagnostics.translationInformationEigenvalues=sort(eig(informationMatrix(1:2,1:2)),'descend');
+    diagnostics.normalizedInformation=J;diagnostics.normalizedWeight=poseWeight;
+    diagnostics.weightEigenvalues=sort(weights);
+    diagnostics.qualified=min(weights)>=cfg.lidar.minimumPoseWeight-1e-12;
+    diagnostics.reason="insufficientInformation";
+    if diagnostics.qualified,diagnostics.reason="uniformlyInformative";end
     translationWeight=poseWeight(1:2,1:2);headingWeight=poseWeight(3,3);
 end

@@ -1,4 +1,4 @@
-function designMncavReplayObserver(parameterFile,outputFile,dynamicsFactor)
+function designMncavReplayObserver(parameterFile,outputFile,dynamicsFactor,mode)
 % designMncavReplayObserver Synthesize gains for an explicitly nominal vehicle.
 % YALMIP and the configured SDP solver must already be on the MATLAB path.
 % The input file records sourced stock geometry and unmeasured dynamic priors.
@@ -6,6 +6,7 @@ function designMncavReplayObserver(parameterFile,outputFile,dynamicsFactor)
         parameterFile (1,1) string
         outputFile (1,1) string
         dynamicsFactor (1,1) double {mustBePositive} = 1
+        mode (1,1) string {mustBeMember(mode,["gnss","lidar"])} = "lidar"
     end
     parameters=jsondecode(fileread(parameterFile));
     lateralCfg=lateralObserverConfig();
@@ -13,10 +14,8 @@ function designMncavReplayObserver(parameterFile,outputFile,dynamicsFactor)
     for name=["yawInertia","frontCorneringStiffness","rearCorneringStiffness"]
         lateralCfg.vehicle.(name)=dynamicsFactor*lateralCfg.vehicle.(name);
     end
-    observerCfg=improvedObserverConfig();
+    observerCfg=improvedObserverConfig(mode);
     observerCfg.operating.maximumSpeed=16;
-    observerCfg.measurement.inputInterpolation="zoh";
-    observerCfg.measurement.timestampTolerance=0;
     % No missing-information override: D2D must supply its actual matrix.
     timer=tic;
     lateralDesign=designLateralObserverGains(lateralCfg);

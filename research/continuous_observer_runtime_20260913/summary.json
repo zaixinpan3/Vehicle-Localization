@@ -1,0 +1,82 @@
+{
+  "metrics": [
+    {
+      "positionRmse": 1.356752418758702E-10,
+      "velocityRmse": 3.654172631826775E-9,
+      "accelerationRmse": 2.7560279041907636E-8,
+      "headingRmse": 3.5875769374372229E-11,
+      "maximumPositionError": 0.14142135623730953,
+      "maximumVelocityError": 2.2368301299440678,
+      "maximumAccelerationError": 13.042396625530946,
+      "maximumHeadingError": 0.080075490760068813,
+      "finalErrorNorm": 2.7797368441793157E-8,
+      "integrationStepCount": 4000,
+      "mode": "gnss",
+      "noisy": false,
+      "runtimeSeconds": 0.732171,
+      "matrixCertificateVerified": true,
+      "coefficientBoundsSatisfied": true
+    },
+    {
+      "positionRmse": 0.0099453244122212816,
+      "velocityRmse": 0.011353674701009,
+      "accelerationRmse": 0.013056435875385018,
+      "headingRmse": 0.00081478327376592835,
+      "maximumPositionError": 0.14142135623730953,
+      "maximumVelocityError": 2.34710818150742,
+      "maximumAccelerationError": 13.692600715856164,
+      "maximumHeadingError": 0.084528894004120447,
+      "finalErrorNorm": 0.018696497671224412,
+      "integrationStepCount": 4000,
+      "mode": "gnss",
+      "noisy": true,
+      "runtimeSeconds": 0.725057,
+      "matrixCertificateVerified": true,
+      "coefficientBoundsSatisfied": true
+    },
+    {
+      "positionRmse": 4.63222435740137E-5,
+      "velocityRmse": 0.00012087108554750688,
+      "accelerationRmse": 6.4510709895778545E-5,
+      "headingRmse": 3.1098238685542127E-8,
+      "maximumPositionError": 0.14142135623730953,
+      "maximumVelocityError": 0.14537771688637738,
+      "maximumAccelerationError": 0.043530752966216245,
+      "maximumHeadingError": 0.034906585039886584,
+      "finalErrorNorm": 2.6512016711837206E-7,
+      "integrationStepCount": 4000,
+      "mode": "lidar",
+      "noisy": false,
+      "runtimeSeconds": 1.521016,
+      "matrixCertificateVerified": true,
+      "coefficientBoundsSatisfied": true
+    },
+    {
+      "positionRmse": 0.013304746640481813,
+      "velocityRmse": 0.011936949460182788,
+      "accelerationRmse": 0.0038333375569469959,
+      "headingRmse": 0.0010401967103299513,
+      "maximumPositionError": 0.14142135623730953,
+      "maximumVelocityError": 0.14947106494834977,
+      "maximumAccelerationError": 0.044863214986362226,
+      "maximumHeadingError": 0.034906585039886584,
+      "finalErrorNorm": 0.021533621668380507,
+      "integrationStepCount": 4000,
+      "mode": "lidar",
+      "noisy": true,
+      "runtimeSeconds": 1.497275,
+      "matrixCertificateVerified": true,
+      "coefficientBoundsSatisfied": true
+    }
+  ],
+  "maximumStateRefinementDifference": [
+    3.0855318300382351E-12,
+    3.5242919693700969E-12,
+    1.2891389344904525E-12,
+    3.3482105976645471E-12,
+    3.6113334545007092E-12,
+    1.3227231809853635E-12,
+    1.2906342661267445E-14
+  ],
+  "scope": "Continuous ODE/DDE simulation; finite experiments are not an unconditional ISS proof."
+}

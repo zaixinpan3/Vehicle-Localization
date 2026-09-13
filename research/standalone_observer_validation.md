@@ -1,3 +1,11 @@
+> Historical validation record. The current standalone driver was replaced on
+> 2026-09-13 by the continuous GNSS / fixed-delay LiDAR implementation. The
+> algorithms and commands discussed below are available at Git revision
+> `f14e9a5cab326798d6c247ce3f887ba4a0dff1ae`. See
+> [current runtime validation](continuous_observer_runtime_20260913/validation.md)
+> for the new equations and tests; the old results are not reruns of the current
+> driver.
+
 # Standalone seven-state observer validation
 
 Prepared and executed on 2026-09-13 in MATLAB R2026a Update 3.
