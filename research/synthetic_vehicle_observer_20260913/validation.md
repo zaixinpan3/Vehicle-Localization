@@ -131,3 +131,32 @@ this does not certify the whole LiDAR trajectory or all physical hypotheses.
 This is a nominal, steady-turn, continuous-signal functionality demonstration.
 It does not test parameter mismatch, changing curvature/speed, standstill,
 outages, outliers, poor LiDAR information, or an independent vehicle model.
+
+## Interpretation against Bessafa et al. (2026)
+
+Source checked on 2026-09-13: Hichem Bessafa, Cédric Delattre, Zehor
+Belkhatir, Ali Zemouche and Rajesh Rajamani, *Generalized multi-output
+high-gain observer with application to ego vehicle trajectory and orientation
+estimation*, Automatica 188, 112915,
+[DOI: 10.1016/j.automatica.2026.112915](https://doi.org/10.1016/j.automatica.2026.112915).
+The supplied local publisher PDF in `reference/` was text-extracted, and
+printed page 11 was visually inspected; publisher search metadata confirms
+the title, authors, journal and DOI.
+
+Section 5.2.2, printed page 8, explicitly identifies oscillation and peaking
+as common high-gain observer challenges and describes their reduction in
+the reported scenarios. Section 5.3.2, printed page 10, deliberately gives
+the HGO and EKF the same substantially displaced initial conditions. Its
+continuation on printed page 11, directly below Fig. 16, explicitly states
+that the HGO exhibits peaking, particularly with large state changes.
+
+Consequently, startup peaking alone is not evidence of an implementation
+defect or a failure to converge. Our observed brief transient followed by
+small sustained errors is consistent with that qualitative phenomenon.
+This is an interpretation, not a reproduction of the paper's numerical peak:
+our seven-state cascade, gains, initial errors and signals differ. In
+particular, the paper's discussion does not establish that our 134.166 m/s²
+acceleration-error peak should match its experiment. Preserve the peak as
+a transient-performance result without treating its existence as a failed
+functionality test. No observer code, gains or simulation outputs were
+changed during this source check, and no new simulation was run.
