@@ -1,0 +1,210 @@
+{
+  "ablations": [
+    {
+      "name": "straight_biased",
+      "positionRmseM": 0.00096441473679304132,
+      "yawRmseDeg": 2.5027031944567339E-5,
+      "velocityRmseMps": 0.0050076065613402559,
+      "accelerationRmseMps2": 0.034202046932658985,
+      "velocityErrorPeakMps": 10.995700270926502,
+      "accelerationErrorPeakMps2": 1.7259578243411959,
+      "finalAccelerationErrorMps2": 0.0010429195826015102
+    },
+    {
+      "name": "straight_exact_initial",
+      "positionRmseM": 3.6193000673284242E-14,
+      "yawRmseDeg": 9.5416640443906E-15,
+      "velocityRmseMps": 6.057570576759217E-13,
+      "accelerationRmseMps2": 6.3514162763111015E-14,
+      "velocityErrorPeakMps": 1.085354028873553E-12,
+      "accelerationErrorPeakMps2": 1.7410261800463376E-13,
+      "finalAccelerationErrorMps2": 4.6100066519755928E-14
+    },
+    {
+      "name": "maneuver_biased_no_noise",
+      "positionRmseM": 0.029349915149334892,
+      "yawRmseDeg": 0.000731924667754337,
+      "velocityRmseMps": 0.1421447524266585,
+      "accelerationRmseMps2": 0.4922516265007455,
+      "velocityErrorPeakMps": 11.286401341043677,
+      "accelerationErrorPeakMps2": 1.9279272517462218,
+      "finalAccelerationErrorMps2": 0.47337781629379444
+    },
+    {
+      "name": "maneuver_exact_initial_no_noise",
+      "positionRmseM": 0.029390685524630894,
+      "yawRmseDeg": 0.00073274123329798485,
+      "velocityRmseMps": 0.14240260412781455,
+      "accelerationRmseMps2": 0.4930875232851209,
+      "velocityErrorPeakMps": 0.39800184437762953,
+      "accelerationErrorPeakMps2": 1.2339944818305875,
+      "finalAccelerationErrorMps2": 0.47381125005482844
+    },
+    {
+      "name": "maneuver_noisy_biased",
+      "positionRmseM": 0.10117239247348679,
+      "yawRmseDeg": 0.31443565866377238,
+      "velocityRmseMps": 0.32455150348149242,
+      "accelerationRmseMps2": 0.49665995589733858,
+      "velocityErrorPeakMps": 11.323771535694645,
+      "accelerationErrorPeakMps2": 1.9398363300503041,
+      "finalAccelerationErrorMps2": 0.5258969488783789
+    },
+    {
+      "name": "maneuver_noisy_exact_initial",
+      "positionRmseM": 0.10121100257111386,
+      "yawRmseDeg": 0.31443555434330228,
+      "velocityRmseMps": 0.32471051046961064,
+      "accelerationRmseMps2": 0.49749730534789111,
+      "velocityErrorPeakMps": 0.931781390458721,
+      "accelerationErrorPeakMps2": 1.3044802195881648,
+      "finalAccelerationErrorMps2": 0.52631214717134467
+    },
+    {
+      "name": "maneuver_noisy_position_initial_corrected",
+      "positionRmseM": 0.10110051234313609,
+      "yawRmseDeg": 0.31443587871049089,
+      "velocityRmseMps": 0.32422764539818028,
+      "accelerationRmseMps2": 0.49368169310852872,
+      "velocityErrorPeakMps": 1.28062484748657,
+      "accelerationErrorPeakMps2": 1.3396985275278885,
+      "finalAccelerationErrorMps2": 0.52614374480102144
+    },
+    {
+      "name": "maneuver_pose_noise_only",
+      "positionRmseM": 0.10117310162193204,
+      "yawRmseDeg": 0.31541977355548412,
+      "velocityRmseMps": 0.32455165538160274,
+      "accelerationRmseMps2": 0.49663302493863654,
+      "velocityErrorPeakMps": 11.323757468961778,
+      "accelerationErrorPeakMps2": 1.9394164356383827,
+      "finalAccelerationErrorMps2": 0.52580126231045587
+    },
+    {
+      "name": "maneuver_input_noise_only",
+      "positionRmseM": 0.029352101775855365,
+      "yawRmseDeg": 0.0052172467373830115,
+      "velocityRmseMps": 0.14215540607619154,
+      "accelerationRmseMps2": 0.49229084215878477,
+      "velocityErrorPeakMps": 11.286414805791514,
+      "accelerationErrorPeakMps2": 1.9283427898218168,
+      "finalAccelerationErrorMps2": 0.47347380950279189
+    }
+  ],
+  "localGainScreen": [
+    {
+      "accelerationRowScale": 0.5,
+      "spectralRadius": 0.98994905827095769,
+      "dominantDecayRatePerSecond": -0.10101793469383774,
+      "dominantTimeConstantSeconds": 9.8992322801962978
+    },
+    {
+      "accelerationRowScale": 1,
+      "spectralRadius": 0.97738940840420585,
+      "dominantDecayRatePerSecond": -0.22870130705508102,
+      "dominantTimeConstantSeconds": 4.3725154564121373
+    },
+    {
+      "accelerationRowScale": 2,
+      "spectralRadius": 0.95157697064150937,
+      "dominantDecayRatePerSecond": -0.49634701517140756,
+      "dominantTimeConstantSeconds": 2.01471947938412
+    },
+    {
+      "accelerationRowScale": 5,
+      "spectralRadius": 0.87051896820256847,
+      "dominantDecayRatePerSecond": -1.386657300025977,
+      "dominantTimeConstantSeconds": 0.72115871742878823
+    },
+    {
+      "accelerationRowScale": 10,
+      "spectralRadius": 0.9061781906229911,
+      "dominantDecayRatePerSecond": -0.98519313885994586,
+      "dominantTimeConstantSeconds": 1.0150293993695374
+    }
+  ],
+  "physicalPoseGain": [
+    [
+      16.887168725302928,
+      -0.64657224435001948,
+      -8.4803394241696791E-5
+    ],
+    [
+      127.88945618149141,
+      -3.9660747544824515,
+      -0.00032048299494753
+    ],
+    [
+      31.022039158735339,
+      -1.1902323015726903,
+      -0.00010293103702204425
+    ],
+    [
+      -0.64654230227972675,
+      16.887101375263271,
+      -3.1662503583612645E-5
+    ],
+    [
+      -3.9660269074866048,
+      127.88920156712699,
+      -5.7815110201475306E-5
+    ],
+    [
+      -1.1902038572805582,
+      31.021937919589146,
+      -4.3133846255455572E-5
+    ],
+    [
+      0.00016108520185414822,
+      -1.9081463061827096E-7,
+      28.657887304926764
+    ]
+  ],
+  "physicalInvariantGain": [
+    [
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0.00057142857142857147,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0.002,
+      0.002,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0.00057142857142857147,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0.002,
+      -0.002,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      -0.00081632653061224493
+    ]
+  ],
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "gainScreenScope": "Local straight-motion zero-delay transported linearization with 30 ms on / 70 ms off; altered gains are not certified or deployed",
+  "baselineMaximumStateDifference": 0
+}
