@@ -1,5 +1,10 @@
 # Conditions for bounded localization without GNSS
 
+Theoretical scope update, 2026-09-13: the current design is the
+[continuous GNSS / fixed-delay continuous LiDAR ISS derivation](../improved_observer_derivation.md).
+This dated report preserves the earlier experimental model and results;
+its timing constructs and certificates are not part of the new theory.
+
 Date: 2026-09-07. Analysis baseline: `fc1fe755b29edc660cb988425287ed9291bfbcf4`.
 Implementation follow-up: [production pose observer](observer_pulse_implementation.md),
 including the subsequently revised acceleration gain and 50–110 ms certificate.

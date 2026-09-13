@@ -1,5 +1,10 @@
 # Pose-pulse observer implementation and recorded validation
 
+Theoretical scope update, 2026-09-13: the current design is the
+[continuous GNSS / fixed-delay continuous LiDAR ISS derivation](../improved_observer_derivation.md).
+This dated report preserves the earlier experimental model and results;
+its timing constructs and certificates are not part of the new theory.
+
 Current implementation: the 2026-09-08 [anisotropic information-gain correction](anisotropic_information_gain.md) supersedes this report's fixed-XY gain and admission policy. Results below remain the historical baseline.
 
 Date: 2026-09-07. Baseline: `0879a1a8dc340830ce1c598ccdc2d97074e4cdd4`.

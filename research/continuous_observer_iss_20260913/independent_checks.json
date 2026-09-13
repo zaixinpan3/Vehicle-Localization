@@ -1,0 +1,13 @@
+{
+  "numpyVersion": "2.5.3",
+  "gnssVerticesChecked": 4096,
+  "gnssWorstEigenvalue": -18.26756806855653,
+  "lidarRecoveredNominalMargin": 0.21346205650135402,
+  "lidarRecoveredUniformMargin": 0.11859001768100572,
+  "functionalDerivativeRelativeResidual": 1.4476962498385504e-09,
+  "quadratureOrder": 64,
+  "finiteDifferenceStep": 1e-05,
+  "seed": 20260913,
+  "passed": true,
+  "scope": "Independent numerical and algebra checks, not interval arithmetic or runtime validation."
+}

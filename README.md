@@ -253,27 +253,30 @@ loop. `runLateralVelocityObserver` supplies exactly this interface:
 * `diagnostics.sideSlipCommandValid`, which indicates whether the raw side-slip
   direction is valid.
 
-The global stage is in `localization/`. Its internal state is
-`[X,Vx,Ax,Y,Vy,Ay,psi]`, with causal output `[X,Y,psi]`. LiDAR poses
-use a full information-dependent anisotropic gain, retaining XY/yaw cross terms
-and partial-rank directions. GPS and LiDAR residuals are combined in information
-form within the same pose pulse. Both the invariant gain and the acceleration rows of the base gain are
-reduced by a factor of ten; only
-the nonlinear invariant prediction is extended outside the physical state
-box. The state and its linear prediction are not clipped.
+The global stage has seven continuous states
+`[X,Vx,Ax,Y,Vy,Ay,psi]` and planar pose output `[X,Y,psi]`.
+The current [continuous-time ISS derivation](improved_observer_derivation.md)
+separates two measurement modes:
 
-The runtime assumes a fixed LiDAR delay, default 150 ms. It integrates forward
-once and transports each delayed residual and gain through the nominal motion
-flow. A bounded buffer stores input-derived maps; past estimates are never
-recomputed. All state outputs, including `z` and `onlineZ`, are causal.
-Delivery and pulse boundaries are handled by event-split RK4.
+* Continuous GNSS position: a triangular MO-HGO has seven-state local ISS
+  during sustained motion, with an explicit invariant heading-error region.
+  Position-only GNSS cannot observe heading at standstill.
+* Continuous LiDAR pose with a known fixed delay: uniformly positive pose
+  information supports a delayed-residual MO-HGO, subject to a verified
+  delay-dependent LMI using constant Lyapunov--Krasovskii matrices.
 
-The stored aperiodic certificate verifies the preceding current-pose pulse
-model, not this transported feedback. The runtime preserves the reference
-gain checks and explicitly reports that the new stability certificate is
-unverified. See [localization/README.md](localization/README.md) for the
-measurement contract and [the fixed-delay study](research/fixed_delay_transport_observer.md)
-for the equations, tests, and recorded performance limitations.
+The theory contains no arrival events, correction pulses or timer metrics.
+It retains LiDAR delay and the full matrix information, including cross terms.
+The [reproducible certificate checks](research/continuous_observer_iss_20260913/validation.md)
+record a constructive GNSS block certificate and a conservative 150 ms LiDAR
+example with all four auxiliary channels. These are new theoretical designs.
+
+The existing `runImprovedVehicleObserver` still implements the earlier
+experimental delivery/pulse and input-transport algorithm. Its migration to
+the continuous equations is pending; its stored gains and earlier trajectory
+results do not establish the new theorems. See the implementation contract in
+[localization/README.md](localization/README.md) and the historical
+[fixed-delay experiment](research/fixed_delay_transport_observer.md).
 
 ## Configuration (`config/`)
 

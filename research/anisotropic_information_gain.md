@@ -1,5 +1,10 @@
 # Information-dependent anisotropic observer gains
 
+Theoretical scope update, 2026-09-13: the current design is the
+[continuous GNSS / fixed-delay continuous LiDAR ISS derivation](../improved_observer_derivation.md).
+This dated report preserves the earlier experimental model and results;
+its timing constructs and certificates are not part of the new theory.
+
 Date: 2026-09-08. Baseline: `2bec42742a96ef20b959d997d08d66eee23c7b7b`.
 
 The previous implementation used the information matrix mainly to admit a

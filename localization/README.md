@@ -1,5 +1,20 @@
 # Localization and vehicle observer
 
+The current theoretical specification is
+[Continuous-time ISS of the improved seven-state MO-HGO](../improved_observer_derivation.md).
+It proves separate conditional results for continuous GNSS position and
+uniformly informative continuous LiDAR pose with a fixed delay. The GNSS
+result requires motion and a local heading chart; the LiDAR result uses
+constant matrices in a Lyapunov--Krasovskii functional and an explicit delay
+LMI. There are no measurement-arrival events or correction pulses in that
+specification. The [certificate checks](../research/continuous_observer_iss_20260913/validation.md)
+include the exact scopes of the numerical examples.
+
+The MATLAB runtime described below remains the earlier experimental
+implementation. It has not been migrated to these equations, and its stored
+matrices do not certify them. The following delivery, pulse, transport and
+reference-certificate descriptions document that implementation only.
+
 The module contains 19 MATLAB files, excluding the independent
 `lateralObserver/` directory. `localizeLidarFrame` runs online perception,
 registration and pose-event export. `registerSemanticProbabilityCloud` and
