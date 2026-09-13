@@ -1,0 +1,588 @@
+{
+  "metrics": [
+    {
+      "name": "reference",
+      "noisy": false,
+      "theta": 20,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": 8.2076307190954427,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 22.178815429815192,
+      "peakAccelerationErrorMps2": 130.9589184711532,
+      "peakHeadingErrorDeg": 44.018728745645035,
+      "positionRmseM": 5.4380705162022255E-9,
+      "velocityRmseMps": 1.4682755174940751E-7,
+      "accelerationRmseMps2": 1.1147862664090937E-6,
+      "headingRmseDeg": 0.0014912695911612525,
+      "settlingTimeSec": 0.95000000000000007,
+      "passed": true
+    },
+    {
+      "name": "reference",
+      "noisy": true,
+      "theta": 20,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": 8.2076307190954427,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 22.724124243991383,
+      "peakAccelerationErrorMps2": 134.16553169350738,
+      "peakHeadingErrorDeg": 44.935081435402608,
+      "positionRmseM": 0.050742762364484072,
+      "velocityRmseMps": 0.055672774296610113,
+      "accelerationRmseMps2": 0.066678935020984,
+      "headingRmseDeg": 0.31366108826251571,
+      "settlingTimeSec": 0.89,
+      "passed": true
+    },
+    {
+      "name": "theta16",
+      "noisy": false,
+      "theta": 16,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": 4.2069720962020529,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 17.786823797601318,
+      "peakAccelerationErrorMps2": 83.565739239646874,
+      "peakHeadingErrorDeg": 41.383634055307695,
+      "positionRmseM": 3.4390523206823397E-9,
+      "velocityRmseMps": 7.453843512129642E-8,
+      "accelerationRmseMps2": 4.5887832379006569E-7,
+      "headingRmseDeg": 0.0014913013173879547,
+      "settlingTimeSec": 0.91,
+      "passed": true
+    },
+    {
+      "name": "theta16",
+      "noisy": true,
+      "theta": 16,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": 4.2069720962020529,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 18.228180075126865,
+      "peakAccelerationErrorMps2": 85.58678960831061,
+      "peakHeadingErrorDeg": 42.269211949940825,
+      "positionRmseM": 0.050745089717906686,
+      "velocityRmseMps": 0.055984076790506022,
+      "accelerationRmseMps2": 0.0664283656009612,
+      "headingRmseDeg": 0.315697077973549,
+      "settlingTimeSec": 0.86,
+      "passed": true
+    },
+    {
+      "name": "theta14",
+      "noisy": false,
+      "theta": 14,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": 2.2064120754978696,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 15.611154817489449,
+      "peakAccelerationErrorMps2": 64.154896023287165,
+      "peakHeadingErrorDeg": 39.639846245933171,
+      "positionRmseM": 2.6276665817735951E-9,
+      "velocityRmseMps": 5.0178476018262825E-8,
+      "accelerationRmseMps2": 2.7621224168579831E-7,
+      "headingRmseDeg": 0.0014913152441257895,
+      "settlingTimeSec": 0.87,
+      "passed": true
+    },
+    {
+      "name": "theta14",
+      "noisy": true,
+      "theta": 14,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": 2.2064120754978696,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 15.994762062636056,
+      "peakAccelerationErrorMps2": 65.711456815680165,
+      "peakHeadingErrorDeg": 40.50872097930214,
+      "positionRmseM": 0.050747849465431531,
+      "velocityRmseMps": 0.056244167387354577,
+      "accelerationRmseMps2": 0.066218520770661524,
+      "headingRmseDeg": 0.31739216586738384,
+      "settlingTimeSec": 0.83000000000000007,
+      "passed": true
+    },
+    {
+      "name": "theta12",
+      "noisy": false,
+      "theta": 12,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": 0.20554928773656478,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 13.346813756750997,
+      "peakAccelerationErrorMps2": 47.235991062838075,
+      "peakHeadingErrorDeg": 37.563079651473,
+      "positionRmseM": 1.9436155211970216E-9,
+      "velocityRmseMps": 3.2423339314588391E-8,
+      "accelerationRmseMps2": 1.6191332030400409E-7,
+      "headingRmseDeg": 0.0014913284930397402,
+      "settlingTimeSec": 0.94000000000000006,
+      "passed": true
+    },
+    {
+      "name": "theta12",
+      "noisy": true,
+      "theta": 12,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": 0.20554928773656478,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 13.672223483400037,
+      "peakAccelerationErrorMps2": 48.368114239603777,
+      "peakHeadingErrorDeg": 38.401099452149744,
+      "positionRmseM": 0.050753477310891679,
+      "velocityRmseMps": 0.056636702069000025,
+      "accelerationRmseMps2": 0.065899887848325636,
+      "headingRmseDeg": 0.31994078519511315,
+      "settlingTimeSec": 0.94000000000000006,
+      "passed": true
+    },
+    {
+      "name": "theta10_rejected",
+      "noisy": false,
+      "theta": 10,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": -1.7958814550039754,
+      "certificatePassed": false,
+      "peakVelocityErrorMps": null,
+      "peakAccelerationErrorMps2": null,
+      "peakHeadingErrorDeg": null,
+      "positionRmseM": null,
+      "velocityRmseMps": null,
+      "accelerationRmseMps2": null,
+      "headingRmseDeg": null,
+      "settlingTimeSec": null,
+      "passed": false
+    },
+    {
+      "name": "theta10_rejected",
+      "noisy": true,
+      "theta": 10,
+      "yawGain": 0.5,
+      "kPosition": 3,
+      "kVelocity": 3,
+      "kAcceleration": 1,
+      "certificateMargin": -1.7958814550039754,
+      "certificatePassed": false,
+      "peakVelocityErrorMps": null,
+      "peakAccelerationErrorMps2": null,
+      "peakHeadingErrorDeg": null,
+      "positionRmseM": null,
+      "velocityRmseMps": null,
+      "accelerationRmseMps2": null,
+      "headingRmseDeg": null,
+      "settlingTimeSec": null,
+      "passed": false
+    },
+    {
+      "name": "shaped8",
+      "noisy": false,
+      "theta": 8,
+      "yawGain": 0.5,
+      "kPosition": 6,
+      "kVelocity": 8,
+      "kAcceleration": 3,
+      "certificateMargin": 0.14878395121728794,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 12.119645221035189,
+      "peakAccelerationErrorMps2": 33.777805372156919,
+      "peakHeadingErrorDeg": 33.737905201676455,
+      "positionRmseM": 4.1281487093493835E-9,
+      "velocityRmseMps": 5.5444792557327454E-8,
+      "accelerationRmseMps2": 2.0093505856570818E-7,
+      "headingRmseDeg": 0.0014913283923402929,
+      "settlingTimeSec": 1.26,
+      "passed": true
+    },
+    {
+      "name": "shaped8",
+      "noisy": true,
+      "theta": 8,
+      "yawGain": 0.5,
+      "kPosition": 6,
+      "kVelocity": 8,
+      "kAcceleration": 3,
+      "certificateMargin": 0.14878395121728794,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 12.419338874358793,
+      "peakAccelerationErrorMps2": 34.598571889977173,
+      "peakHeadingErrorDeg": 34.515707971765593,
+      "positionRmseM": 0.050758952154340863,
+      "velocityRmseMps": 0.057285943281394157,
+      "accelerationRmseMps2": 0.06446107278182614,
+      "headingRmseDeg": 0.32407475471276792,
+      "settlingTimeSec": 1.24,
+      "passed": true
+    },
+    {
+      "name": "shaped8_yaw01",
+      "noisy": false,
+      "theta": 8,
+      "yawGain": 0.1,
+      "kPosition": 6,
+      "kVelocity": 8,
+      "kAcceleration": 3,
+      "certificateMargin": 0.14878395121728794,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 12.119645221035189,
+      "peakAccelerationErrorMps2": 33.777805372156919,
+      "peakHeadingErrorDeg": 15.997038143548592,
+      "positionRmseM": 4.1281487093493835E-9,
+      "velocityRmseMps": 5.5444792557327454E-8,
+      "accelerationRmseMps2": 2.0093505856570818E-7,
+      "headingRmseDeg": 0.0015857256862719842,
+      "settlingTimeSec": 3.5700000000000003,
+      "passed": true
+    },
+    {
+      "name": "shaped8_yaw01",
+      "noisy": true,
+      "theta": 8,
+      "yawGain": 0.1,
+      "kPosition": 6,
+      "kVelocity": 8,
+      "kAcceleration": 3,
+      "certificateMargin": 0.14878395121728794,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 12.419338874358793,
+      "peakAccelerationErrorMps2": 34.598571889977173,
+      "peakHeadingErrorDeg": 16.240662537577986,
+      "positionRmseM": 0.050758952154340863,
+      "velocityRmseMps": 0.057285943281394157,
+      "accelerationRmseMps2": 0.06446107278182614,
+      "headingRmseDeg": 0.18204098391339971,
+      "settlingTimeSec": 3.5100000000000002,
+      "passed": true
+    },
+    {
+      "name": "shaped8_yaw02",
+      "noisy": false,
+      "theta": 8,
+      "yawGain": 0.2,
+      "kPosition": 6,
+      "kVelocity": 8,
+      "kAcceleration": 3,
+      "certificateMargin": 0.14878395121728794,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 12.119645221035189,
+      "peakAccelerationErrorMps2": 33.777805372156919,
+      "peakHeadingErrorDeg": 21.237872400911275,
+      "positionRmseM": 4.1281487093493835E-9,
+      "velocityRmseMps": 5.5444792557327454E-8,
+      "accelerationRmseMps2": 2.0093505856570818E-7,
+      "headingRmseDeg": 0.001525327537227038,
+      "settlingTimeSec": 1.98,
+      "passed": true
+    },
+    {
+      "name": "shaped8_yaw02",
+      "noisy": true,
+      "theta": 8,
+      "yawGain": 0.2,
+      "kPosition": 6,
+      "kVelocity": 8,
+      "kAcceleration": 3,
+      "certificateMargin": 0.14878395121728794,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 12.419338874358793,
+      "peakAccelerationErrorMps2": 34.598571889977173,
+      "peakHeadingErrorDeg": 21.670912608191511,
+      "positionRmseM": 0.050758952154340863,
+      "velocityRmseMps": 0.057285943281394157,
+      "accelerationRmseMps2": 0.06446107278182614,
+      "headingRmseDeg": 0.26663448234921522,
+      "settlingTimeSec": 1.86,
+      "passed": true
+    },
+    {
+      "name": "shaped8b",
+      "noisy": false,
+      "theta": 8,
+      "yawGain": 0.2,
+      "kPosition": 8,
+      "kVelocity": 12,
+      "kAcceleration": 4,
+      "certificateMargin": 0.33809028946988207,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 13.639416818879623,
+      "peakAccelerationErrorMps2": 34.5107451119646,
+      "peakHeadingErrorDeg": 21.138943287905651,
+      "positionRmseM": 7.8753997660892835E-9,
+      "velocityRmseMps": 1.1408164795054819E-7,
+      "accelerationRmseMps2": 3.4447323283713615E-7,
+      "headingRmseDeg": 0.0015253201905731219,
+      "settlingTimeSec": 1.98,
+      "passed": true
+    },
+    {
+      "name": "shaped8b",
+      "noisy": true,
+      "theta": 8,
+      "yawGain": 0.2,
+      "kPosition": 8,
+      "kVelocity": 12,
+      "kAcceleration": 4,
+      "certificateMargin": 0.33809028946988207,
+      "certificatePassed": true,
+      "peakVelocityErrorMps": 13.979049159307452,
+      "peakAccelerationErrorMps2": 35.359237167804046,
+      "peakHeadingErrorDeg": 21.564462279471535,
+      "positionRmseM": 0.050755577307128853,
+      "velocityRmseMps": 0.057199213964215755,
+      "accelerationRmseMps2": 0.063113231764269973,
+      "headingRmseDeg": 0.26611545860549873,
+      "settlingTimeSec": 1.85,
+      "passed": true
+    }
+  ],
+  "scope": "Same 40 s synthetic inputs and initialization; fixed coefficients and original operating bounds.",
+  "recommendedCfg": {
+    "mode": "gnss",
+    "operating": {
+      "maximumSpeed": 16,
+      "maximumAcceleration": 5,
+      "maximumTrackAngleRate": 0.6
+    },
+    "observer": {
+      "theta": 8,
+      "scalingExponents": [
+        1,
+        2,
+        3,
+        1,
+        2,
+        3,
+        1
+      ],
+      "initialState": [],
+      "initialHeading": 0,
+      "yawGain": 0.1,
+      "gnssChainGain": [
+        6,
+        8,
+        3
+      ]
+    },
+    "measurement": {
+      "fixedLidarDelay": 0.15,
+      "maximumIntegrationStep": 0.005
+    },
+    "lidar": {
+      "poseScales": [
+        1,
+        1,
+        1
+      ],
+      "gainInformationScale": 5,
+      "minimumPoseWeight": 0.99852004840203923
+    },
+    "gnss": {
+      "minimumSpeed": 1,
+      "headingErrorLimit": 1.0471975511965976
+    },
+    "synthesis": {
+      "solver": "sedumi",
+      "rate": 0.05,
+      "tolerance": 1E-8,
+      "outputFolder": "",
+      "saveFileName": "continuousObserverDesign.mat"
+    },
+    "simulation": {
+      "sampleTime": 0.01,
+      "finalTime": 20,
+      "speed": 8,
+      "courseRate": 0.001,
+      "initialHeading": 0.2,
+      "positionNoiseAmplitude": 0.01,
+      "headingNoiseAmplitude": 0.0017453292519943296,
+      "initialError": [
+        0.1,
+        0,
+        0,
+        -0.1,
+        0,
+        0,
+        0.034906585039886591
+      ]
+    }
+  },
+  "recommendedDesign": {
+    "kind": "continuous-mo-hgo-v1",
+    "mode": "gnss",
+    "theta": 8,
+    "K": [
+      [
+        6,
+        0
+      ],
+      [
+        8,
+        0
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        0,
+        6
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "N": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0.002,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0.002,
+        0.002,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0.002,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0.002,
+        -0.002,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        -6.4
+      ]
+    ],
+    "P": [
+      [
+        1.1000000000000003,
+        -0.5,
+        -0.70000000000000018,
+        -0,
+        -0,
+        -0
+      ],
+      [
+        -0.5,
+        0.70000000000000007,
+        -0.5,
+        -0,
+        -0,
+        -0
+      ],
+      [
+        -0.70000000000000018,
+        -0.5,
+        2.5666666666666669,
+        -0,
+        -0,
+        -0
+      ],
+      [
+        -0,
+        -0,
+        -0,
+        1.1,
+        -0.5,
+        -0.70000000000000018
+      ],
+      [
+        -0,
+        -0,
+        -0,
+        -0.5,
+        0.7,
+        -0.49999999999999983
+      ],
+      [
+        -0,
+        -0,
+        -0,
+        -0.70000000000000018,
+        -0.49999999999999983,
+        2.5666666666666664
+      ]
+    ],
+    "verification": {
+      "certified": true,
+      "nominalMargin": 7.9999999999999973,
+      "uniformMargin": 0.14878395121728794,
+      "rate": 0.012887639772014816,
+      "constantMetric": true,
+      "details": {
+        "yawMetricWeight": 3.7549846564232089E-5,
+        "headingAdmissionRequired": true
+      },
+      "scope": "Conditional continuous-time ISS matrix certificate; numerical and physical assumptions remain separate."
+    },
+    "certified": true
+  },
+  "maximumStateRefinementDifference": [
+    4.5068708028339621E-6,
+    6.0928705597151911E-5,
+    0.00019200196735269515,
+    4.74346636919476E-6,
+    6.4428538106398037E-5,
+    0.0002183268345490319,
+    2.3156444317606883E-7
+  ],
+  "referenceReproductionMaximumDifference": 0,
+  "accelerationPeakReductionPercent": 74.212026402567076
+}

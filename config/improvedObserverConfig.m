@@ -1,10 +1,13 @@
-function cfg = improvedObserverConfig(mode)
+function cfg = improvedObserverConfig(mode,profile)
 % improvedObserverConfig Configure one continuous measurement mode.
 % MODE is "gnss" (position only) or "lidar" (continuous delayed full pose).
 % The LiDAR reference certificate has a deliberately narrow declared sector;
 % runtime diagnostics report coefficient excursions without clamping inputs.
+% PROFILE="lowPeaking" selects a constant GNSS gain preset validated on the
+% synthetic sedan; it reduces startup peaks at the cost of slower settling.
     arguments
         mode (1,1) string {mustBeMember(mode,["gnss","lidar"])} = "lidar"
+        profile (1,1) string {mustBeMember(profile,["reference","lowPeaking"])} = "reference"
     end
     root=fileparts(fileparts(mfilename('fullpath')));
     reference=jsondecode(fileread(fullfile(root,'config','continuousObserverCertificate.json')));
@@ -15,6 +18,13 @@ function cfg = improvedObserverConfig(mode)
     cfg.observer=struct('theta',selected.theta, ...
         'scalingExponents',[1;2;3;1;2;3;1], ...
         'initialState',[],'initialHeading',0,'yawGain',.5);
+    if profile=="lowPeaking"
+        assert(mode=="gnss",'VehicleLocalization:UnsupportedObserverProfile', ...
+            'The lowPeaking profile is defined only for GNSS.');
+        cfg.observer.theta=8;
+        cfg.observer.yawGain=.1;
+        cfg.observer.gnssChainGain=[6;8;3];
+    end
     cfg.measurement=struct('fixedLidarDelay',.15,'maximumIntegrationStep',.005);
     cfg.lidar=struct('poseScales',[1;1;1],'gainInformationScale',5, ...
         'minimumPoseWeight',reference.lidar.minimumInformationWeight);

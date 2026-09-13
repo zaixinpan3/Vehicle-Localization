@@ -3,6 +3,12 @@ function design = improvedObserverReferenceDesign(cfg)
     arguments
         cfg (1,1) struct = improvedObserverConfig()
     end
+    if cfg.mode=="gnss" && isfield(cfg.observer,'gnssChainGain')
+        % A changed chain needs its own metric, recomputed and verified with
+        % the same operating bounds. Never attach the reference P blindly.
+        design=designImprovedObserverGains(cfg);
+        return;
+    end
     root=fileparts(fileparts(mfilename('fullpath')));
     stored=jsondecode(fileread(fullfile(root,'config','continuousObserverCertificate.json')));
     source=stored.(cfg.mode);

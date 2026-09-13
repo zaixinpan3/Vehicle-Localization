@@ -12,6 +12,14 @@ function design = designImprovedObserverGains(cfg)
     source=stored.(cfg.mode);
     design=struct('kind',"continuous-mo-hgo-v1",'mode',cfg.mode,'theta',cfg.observer.theta);
     if cfg.mode=="gnss"
+        if isfield(cfg.observer,'gnssChainGain')
+            gain=cfg.observer.gnssChainGain;
+            assert(isnumeric(gain) && isreal(gain) && numel(gain)==3 ...
+                && all(isfinite(gain)) && all(gain>0), ...
+                'VehicleLocalization:InvalidConfiguration','gnssChainGain must contain three positive finite coefficients.');
+            gain=double(gain(:));
+            source.K=blkdiag(gain,gain);
+        end
         design.K=[source.K;zeros(1,2)];design.N=zeros(7,4);
         design.N(1:6,1:3)=source.N;design.N(7,4)=-cfg.observer.yawGain*design.theta^2;
         F=data.A(1:6,1:6)-source.K*data.Cg;identity=eye(6);

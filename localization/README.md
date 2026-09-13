@@ -120,6 +120,22 @@ All four extended auxiliary outputs remain continuously active in this mode.
 
 ## Design and certification
 
+For reduced GNSS startup peaking, select the optional constant-gain preset:
+
+```matlab
+cfg = improvedObserverConfig("gnss", "lowPeaking");
+design = improvedObserverReferenceDesign(cfg);
+```
+
+This uses `theta=8`, chain coefficients `[6;8;3]` and `yawGain=0.1`.
+The metric is recomputed and verified at the original operating bounds.
+The reference profile remains the default. In the same synthetic noisy
+sedan trial, the acceleration-error peak falls from 134.17 to 34.60 m/s²,
+while sampled settling increases from 0.89 to 3.51 s. Peaks remain substantial;
+this preset has a smaller certificate margin and is not an optimum or a
+general physical validation. Run `tuneSyntheticObserverPeaking` for the
+[parameter comparison](../research/observer_peaking_tuning_20260913/validation.md).
+
 `improvedObserverReferenceDesign(cfg)` loads
 [the constant-matrix artifact](../config/continuousObserverCertificate.json)
 and recomputes its numerical certificate. `verifyImprovedObserverDesign`
