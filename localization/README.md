@@ -163,7 +163,15 @@ observer runs once and supplies its interface as before.
 ```matlab
 results = runtests('tests/improvedObserverTest.m');
 report = validateStandaloneObserver;
+demo = demoSyntheticVehicleObserver;
 ```
+
+`demoSyntheticVehicleObserver` provides a self-contained sedan experiment
+using the actual lateral/global cascade, analytic steady-turn truth, incorrect
+initial states, and clean/noisy GNSS and delayed LiDAR signals. It displays
+all state traces and saves figures and metrics. See the
+[synthetic demonstration results](../research/synthetic_vehicle_observer_20260913/validation.md),
+including GNSS startup peaking and the LiDAR startup certificate excursion.
 
 The tests compare GNSS yaw with its nonlinear analytic solution and delayed
 yaw with the independent MATLAB `dde23` solver, as well as checking the delay

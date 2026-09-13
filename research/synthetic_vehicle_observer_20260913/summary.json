@@ -1,0 +1,124 @@
+{
+  "metrics": [
+    {
+      "mode": "gnss",
+      "noisy": false,
+      "positionRmseM": 5.4380705162022255E-9,
+      "velocityRmseMps": 1.4682755174940751E-7,
+      "accelerationRmseMps2": 1.1147862664090937E-6,
+      "headingRmseDeg": 0.0014912695911612525,
+      "lateralVelocityRmseMps": 0.00020319008506757265,
+      "initialPositionErrorM": 1.4142135623730951,
+      "finalPositionErrorM": 5.4369436645254665E-9,
+      "initialHeadingErrorDeg": 9.9999999999999982,
+      "finalHeadingErrorDeg": 0.000744300479929478,
+      "peakPositionErrorM": 1.4142135623730951,
+      "peakVelocityErrorMps": 22.178815429815192,
+      "peakAccelerationErrorMps2": 130.9589184711532,
+      "peakHeadingErrorDeg": 44.018728745645035,
+      "matrixCertificateVerified": true,
+      "anyRateOutsideCertificate": false,
+      "passed": true,
+      "settlingTimeSec": 0.95000000000000007
+    },
+    {
+      "mode": "gnss",
+      "noisy": true,
+      "positionRmseM": 0.050742762364484072,
+      "velocityRmseMps": 0.055672774296610113,
+      "accelerationRmseMps2": 0.066678935020984,
+      "headingRmseDeg": 0.31366108826251571,
+      "lateralVelocityRmseMps": 0.00079964042424469006,
+      "initialPositionErrorM": 1.4142135623730951,
+      "finalPositionErrorM": 0.049744138255246255,
+      "initialHeadingErrorDeg": 9.9999999999999982,
+      "finalHeadingErrorDeg": 0.13942820741640727,
+      "peakPositionErrorM": 1.4142135623730951,
+      "peakVelocityErrorMps": 22.724124243991383,
+      "peakAccelerationErrorMps2": 134.16553169350738,
+      "peakHeadingErrorDeg": 44.935081435402608,
+      "matrixCertificateVerified": true,
+      "anyRateOutsideCertificate": false,
+      "passed": true,
+      "settlingTimeSec": 0.89
+    },
+    {
+      "mode": "lidar",
+      "noisy": false,
+      "positionRmseM": 1.4372912814233729E-7,
+      "velocityRmseMps": 3.9284286499837738E-7,
+      "accelerationRmseMps2": 2.6345749639715477E-7,
+      "headingRmseDeg": 8.71680497899938E-7,
+      "lateralVelocityRmseMps": 0.00020319007801318574,
+      "initialPositionErrorM": 1.4142135623730951,
+      "finalPositionErrorM": 8.9594681992027283E-11,
+      "initialHeadingErrorDeg": 9.9999999999999982,
+      "finalHeadingErrorDeg": 4.3447865289354828E-7,
+      "peakPositionErrorM": 1.4142135623730951,
+      "peakVelocityErrorMps": 1.1030309087976422,
+      "peakAccelerationErrorMps2": 0.30032949712683904,
+      "peakHeadingErrorDeg": 9.9999999999999982,
+      "matrixCertificateVerified": true,
+      "anyRateOutsideCertificate": true,
+      "passed": true,
+      "settlingTimeSec": 2.02
+    },
+    {
+      "mode": "lidar",
+      "noisy": true,
+      "positionRmseM": 0.013568297442770032,
+      "velocityRmseMps": 0.011997313063395069,
+      "accelerationRmseMps2": 0.0038028987357064566,
+      "headingRmseDeg": 0.057245436061249613,
+      "lateralVelocityRmseMps": 0.000797181732270213,
+      "initialPositionErrorM": 1.4142135623730951,
+      "finalPositionErrorM": 0.013989811148450885,
+      "initialHeadingErrorDeg": 9.9999999999999982,
+      "finalHeadingErrorDeg": 0.052429208695281407,
+      "peakPositionErrorM": 1.4142135623730951,
+      "peakVelocityErrorMps": 1.1069545087493882,
+      "peakAccelerationErrorMps2": 0.30162756229743271,
+      "peakHeadingErrorDeg": 9.9999999999999982,
+      "matrixCertificateVerified": true,
+      "anyRateOutsideCertificate": true,
+      "passed": true,
+      "settlingTimeSec": 2.0100000000000002
+    }
+  ],
+  "vehicle": {
+    "mass": 1575,
+    "yawInertia": 2875,
+    "lf": 1.2,
+    "lr": 1.6,
+    "frontCorneringStiffness": 75000,
+    "rearCorneringStiffness": 56000
+  },
+  "scope": "Nominal synthetic cascade; continuous reconstructed sensors; no real-data or general robustness claim.",
+  "allPassed": true,
+  "refinement": [
+    {
+      "mode": "gnss",
+      "maximumAbsoluteStateDifference": [
+        4.9357825117335441E-6,
+        0.00015968650039788201,
+        0.0013293062071397799,
+        5.2174058018938929E-6,
+        0.00016969791067111828,
+        0.0014970070226496546,
+        2.4739728893274915E-6
+      ]
+    },
+    {
+      "mode": "lidar",
+      "maximumAbsoluteStateDifference": [
+        2.4314772417710628E-11,
+        2.8446578426155611E-11,
+        1.4529911995797562E-11,
+        3.6625369403964214E-11,
+        8.0551121328653608E-11,
+        6.8275676778917216E-11,
+        6.0867977325074207E-14
+      ]
+    }
+  ]
+}
