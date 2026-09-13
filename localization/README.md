@@ -209,3 +209,22 @@ Historical continuous and fixed-XY designs remain auditable, but are rejected
 by the current runtime. See `research/anisotropic_information_gain.md` for the
 full derivation and recorded comparison, and
 `research/observer_pulse_implementation.md` for the preceding implementation.
+
+## Standalone global-observer validation
+
+To exercise the seven-state observer independently, supply aligned lateral
+inputs directly:
+
+```matlab
+estimate = runImprovedVehicleObserver(sensorData,struct(),design,cfg, ...
+    LateralInputs=lateralInputs);
+report = validateStandaloneObserver('output/standalone_observer_20260913');
+```
+
+`lateralInputs` contains `time`, `lateralVelocity` (m/s), `sideSlipAngle` (rad),
+and `sideSlipAngleRate` (rad/s) on exactly the high-rate timestamps. Omitting
+this option retains the normal lateral cascade. The analytic-truth campaign
+covers nominal convergence, noisy delayed maneuvers, pose outage, weak
+information, numerical refinement and a no-pose negative control. See the
+[results and limitations](../research/standalone_observer_validation.md),
+including slow acceleration convergence and startup velocity peaking.

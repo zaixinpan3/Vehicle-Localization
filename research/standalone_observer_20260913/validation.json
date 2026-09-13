@@ -1,0 +1,37 @@
+{
+  "preparedAt": "2026-09-13T11:09:00.996652-05:00",
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "testCount": 60,
+  "passedCount": 60,
+  "excludedTests": [
+    "synthesisProducesAnExhaustivelyCertifiedDesign"
+  ],
+  "codeAnalyzerFindings": {
+    "localization/runImprovedVehicleObserver.m": 0,
+    "scripts/validateStandaloneObserver.m": 0,
+    "tests/improvedObserverTest.m": 0
+  },
+  "sourceSha256": {
+    "localization/runImprovedVehicleObserver.m": "aa12015cbd63515911f5403640b08ad1ca99e8482bc5dccc2fe2997a319c46b2",
+    "scripts/validateStandaloneObserver.m": "80fe4c5dd7cb2c3cf6a8cd6e7d2a24b0ea2941ac0cdf32775509d138f020a91b",
+    "tests/improvedObserverTest.m": "9b4da03a2d178fea79069a35574986f064fd7c5ce7b47275b9d60c73081cb8ed",
+    "config/poseObserverCertificate.json": "5736563eb78c8151658b164dfa34eefe60e1546af944ddae527203d78f65a62c"
+  },
+  "campaignCases": 12,
+  "additionalRuns": [
+    "same-input integration refinement at 5 ms",
+    "no absolute pose negative control"
+  ],
+  "screeningOutcome": "6/12 all-state screening criteria pass; all 12 finite; failures retained",
+  "earlyHarnessFailures": [
+    "plotting delimiter syntax error",
+    "fieldless struct accumulation error"
+  ],
+  "checks": [
+    "MATLAB MCP complete campaign",
+    "MATLAB MCP global observer test suite except synthesis",
+    "MATLAB MCP Code Analyzer",
+    "visual inspection of errors.png and states.png",
+    "git diff --check"
+  ]
+}

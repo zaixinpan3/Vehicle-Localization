@@ -25,6 +25,46 @@ classdef improvedObserverTest < matlab.unittest.TestCase
     end
 
     methods (Test)
+        function providedLateralInputsPreserveExactMovingTruth(testCase)
+            cfg=improvedObserverConfig();cfg.observer.initialState=[0;8;0;0;.2;0;0];
+            data=testCase.zeroMotionSensorData(.5);t=data.highRate.time;
+            data.highRate.longitudinalSpeed(:)=8;
+            lateral=struct('time',t,'lateralVelocity',.2*ones(size(t)), ...
+                'sideSlipAngle',atan2(.2,8)*ones(size(t)),'sideSlipAngleRate',zeros(size(t)));
+            data.lidar=struct('timestamp',0,'pose',[0,0,0],'information',100*eye(3));
+            e=runImprovedVehicleObserver(data,struct(),testCase.ObserverDesign,cfg,LateralInputs=lateral);
+            testCase.verifyEqual(e.position,[8*t,.2*t],AbsTol=1e-11);
+            testCase.verifyEqual(e.innovations.lidar,zeros(numel(t),3),AbsTol=1e-11);
+            testCase.verifyEqual(e.diagnostics.lateralInputSource,"provided");
+        end
+
+        function providedLateralInputsRejectShiftedClock(testCase)
+            data=testCase.zeroMotionSensorData(.2);t=data.highRate.time;
+            lateral=struct('time',t+.001,'lateralVelocity',zeros(size(t)), ...
+                'sideSlipAngle',zeros(size(t)),'sideSlipAngleRate',zeros(size(t)));
+            testCase.verifyError(@() runImprovedVehicleObserver(data,struct(), ...
+                testCase.ObserverDesign,improvedObserverConfig(),LateralInputs=lateral), ...
+                'VehicleLocalization:InvalidLateralInputs');
+        end
+
+        function providedLateralInputsRejectNonfiniteValues(testCase)
+            data=testCase.zeroMotionSensorData(.2);t=data.highRate.time;
+            lateral=struct('time',t,'lateralVelocity',zeros(size(t)), ...
+                'sideSlipAngle',zeros(size(t)),'sideSlipAngleRate',NaN(size(t)));
+            testCase.verifyError(@() runImprovedVehicleObserver(data,struct(), ...
+                testCase.ObserverDesign,improvedObserverConfig(),LateralInputs=lateral), ...
+                'VehicleLocalization:InvalidLateralInputs');
+        end
+
+        function defaultLateralStageMatchesSuppliedStageOutput(testCase)
+            data=testCase.zeroMotionSensorData(.2);cfg=improvedObserverConfig();
+            original=runImprovedVehicleObserver(data,testCase.LateralDesign,testCase.ObserverDesign,cfg);
+            supplied=runImprovedVehicleObserver(data,struct(),testCase.ObserverDesign,cfg, ...
+                LateralInputs=original.lateral);
+            testCase.verifyEqual(supplied.z,original.z,AbsTol=1e-12);
+            testCase.verifyEqual(original.diagnostics.lateralInputSource,"lateralObserver");
+        end
+
         function delayedYawTransportPreservesTheGyroAngleLift(testCase)
             cfg=improvedObserverConfig();yaw0=pi-.03;
             cfg.observer.initialState=[0;0;0;0;0;0;yaw0];

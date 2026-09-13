@@ -1,20 +1,31 @@
-function estimate = runImprovedVehicleObserver(sensorData,lateralDesign,observerDesign,cfg)
+function estimate = runImprovedVehicleObserver(sensorData,lateralDesign,observerDesign,cfg,options)
 % runImprovedVehicleObserver Fuse fixed-delay LiDAR without state replay.
 % A bounded buffer contains only affine nominal-flow maps derived from q/r.
 % Each delayed pose residual and its gain are transported to the current state.
 % Integration proceeds forward once; every returned state is causal and final.
+% LateralInputs optionally supplies time, lateralVelocity, sideSlipAngle and
+% sideSlipAngleRate on the high-rate clock, bypassing the lateral observer.
+% These inputs are in seconds, m/s, radians and rad/s. Pass struct() for the
+% unused lateralDesign when exercising the global observer independently.
     arguments
         sensorData (1,1) struct
         lateralDesign (1,1) struct
         observerDesign (1,1) struct
         cfg (1,1) struct = improvedObserverConfig()
+        options.LateralInputs (1,1) struct = struct()
     end
     validateObserverDesign(observerDesign,cfg);
     scaling=diag(cfg.observer.theta.^cfg.observer.scalingExponents(:));
     observerDesign.poseGain=scaling*observerDesign.K;
     observerDesign.invariantPhysicalGain=scaling*observerDesign.N/cfg.observer.theta^3;
     [highRate,gps,lidar]=normalizeSensorData(sensorData,cfg);
-    lateral=runLateralVelocityObserver(highRate,lateralDesign,lateralDesign.cfg);
+    if isempty(fieldnames(options.LateralInputs))
+        lateral=runLateralVelocityObserver(highRate,lateralDesign,lateralDesign.cfg);
+        lateralInputSource="lateralObserver";
+    else
+        lateral=validateLateralInputs(options.LateralInputs,highRate.time);
+        lateralInputSource="provided";
+    end
     state=buildInitialState(highRate,lateral,gps,lidar,cfg);
     count=numel(highRate.time);states=zeros(count,7);trace=cell(count,1);
     history=cell(0,1);active=struct('gpsIndex',0,'lidarIndex',0, ...
@@ -69,8 +80,23 @@ function estimate = runImprovedVehicleObserver(sensorData,lateralDesign,observer
     estimate.diagnostics.maximumInputHistorySegments=maximumHistorySegments;
     estimate.diagnostics.inputHistoryDuration=cfg.measurement.inputHistoryDuration;
     estimate.diagnostics.stateHistoryRecomputed=false;
+    estimate.diagnostics.lateralInputSource=lateralInputSource;
     estimate.diagnostics.certificateConditions=transportConditions( ...
         highRate,gps,lidar,intervals,sectorMinimum,cfg);
+end
+
+function lateral=validateLateralInputs(lateral,time)
+% validateLateralInputs Reject mismatched clocks rather than resampling inputs.
+    for name=["time","lateralVelocity","sideSlipAngle","sideSlipAngleRate"]
+        assert(isfield(lateral,name) && isnumeric(lateral.(name)) ...
+            && isreal(lateral.(name)) && isvector(lateral.(name)) ...
+            && numel(lateral.(name))==numel(time) && all(isfinite(lateral.(name))), ...
+            'VehicleLocalization:InvalidLateralInputs', ...
+            'LateralInputs.%s must be a finite real series on the high-rate clock.',name);
+        lateral.(name)=double(lateral.(name)(:));
+    end
+    assert(isequal(lateral.time,time),'VehicleLocalization:InvalidLateralInputs', ...
+        'LateralInputs.time must equal the high-rate timestamps exactly.');
 end
 
 function [state,flow]=forwardStep(state,left,right,index,high,lateral,active,fusion,design,cfg)
