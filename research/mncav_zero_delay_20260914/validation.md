@@ -1,5 +1,13 @@
 # Precomputed MnCAV LiDAR measurements with zero delay
 
+**Subsequent direct-input comparison, September 14, 2026:** the native-scan
+improvements below do not establish improvement over the actual continuous
+LiDAR input supplied to the observer. At the same 11,690 uniform timestamps,
+that input has INSPVA position RMSE .188465 m versus observer .195742 m;
+its peak is .967273 m versus observer 1.135061 m. See the
+[direct-input audit and gain controls](../mncav_input_comparison_20260914/validation.md).
+The earlier numeric tables remain valid for their stated sampling baselines.
+
 Date: September 14, 2026. The requested offline experiment now completes all
 1,170 real LiDAR matching calls before global estimation, then supplies each
 accepted pose at its capture timestamp with **zero processing delay**.

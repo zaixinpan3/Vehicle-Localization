@@ -1,0 +1,37 @@
+{
+  "harmonic": [
+    {
+      "name": "baseline",
+      "analyticPeakGain": 1.3546036488698485,
+      "peakFrequencyHz": 0.35871651194186571,
+      "measuredGain": 1.3546036488865434,
+      "relativeError": 1.2324585796363863E-11,
+      "k1": 6,
+      "k2": 12,
+      "k3": 12,
+      "durationSeconds": 45,
+      "fitStartSeconds": 30,
+      "noiseAmplitudeM": 0.01
+    },
+    {
+      "name": "position_gain_6",
+      "analyticPeakGain": 1.1213420589032772,
+      "peakFrequencyHz": 0.21361704361739361,
+      "measuredGain": 1.1213420547063651,
+      "relativeError": 3.7427582144644589E-9,
+      "k1": 12,
+      "k2": 12,
+      "k3": 12,
+      "durationSeconds": 45,
+      "fitStartSeconds": 30,
+      "noiseAmplitudeM": 0.01
+    }
+  ],
+  "zeroAuxiliaryControl": {
+    "pvaPositionRmseM": 0.19574404970792067,
+    "pvaPositionMaximumM": 1.1350831682721843,
+    "maximumPositionChangeM": 0.00011455444115720189,
+    "baselinePvaPositionRmseM": 0.1957419956443735
+  },
+  "scope": "Independent harmonic check of the q=0, N=0 zero-delay scalar response; all recorded errors retain original samples."
+}
