@@ -1,0 +1,73 @@
+{
+  "completed": true,
+  "precomputationFrames": 1170,
+  "acceptedFrames": 1098,
+  "rejectedFrames": 72,
+  "integrationSamples": 12859,
+  "uniformEvaluationSamples": 11690,
+  "startSeconds": 0,
+  "endSeconds": 116.89954311095237,
+  "fixedLidarDelaySeconds": 0,
+  "allFrameTimestampsPresent": true,
+  "maximumAcceptedPoseMismatch": 0,
+  "maximumAcceptedInformationMismatch": 0,
+  "delayHistoryNodes": 0,
+  "uniformObserverVsOdom": {
+    "positionRmseM": 0.25462481609941523,
+    "positionP95M": 0.48915344783780423,
+    "positionMaximumM": 1.730275644291976,
+    "headingRmseDeg": 0.53875008400154412
+  },
+  "uniformObserverVsPva": {
+    "positionRmseM": 0.1957419956443735,
+    "positionP95M": 0.34882777195017484,
+    "positionMaximumM": 1.1350612750323545,
+    "headingRmseDeg": 0.53875008400154412
+  },
+  "scanObserverVsOdom": {
+    "positionRmseM": 0.27852440125844241,
+    "positionP95M": 0.50767546685601816,
+    "positionMaximumM": 1.5820884704831215,
+    "headingRmseDeg": 0.54350633709852514
+  },
+  "scanMatchingVsOdom": {
+    "positionRmseM": 0.28829465884698063,
+    "positionP95M": 0.57209294231299967,
+    "positionMaximumM": 1.5846948641080847,
+    "headingRmseDeg": 0.62119540495646286
+  },
+  "scanObserverVsPva": {
+    "positionRmseM": 0.19574144207132144,
+    "positionP95M": 0.34810815725172939,
+    "positionMaximumM": 1.1336870830086305,
+    "headingRmseDeg": 0.54350633709852514
+  },
+  "scanMatchingVsPva": {
+    "positionRmseM": 0.20731697364552781,
+    "positionP95M": 0.44253145821748874,
+    "positionMaximumM": 0.96788595947206513,
+    "headingRmseDeg": 0.62119540495646286
+  },
+  "previousIntervalObserverVsOdom": {
+    "positionRmseM": 0.25436077109630156,
+    "positionP95M": 0.48456824592696546,
+    "positionMaximumM": 1.730275644291976,
+    "headingRmseDeg": 0.53548903709886653
+  },
+  "previousIntervalObserverVsPva": {
+    "positionRmseM": 0.19531166832094157,
+    "positionP95M": 0.34652514109452437,
+    "positionMaximumM": 1.1350612750323545,
+    "headingRmseDeg": 0.53548903709886653
+  },
+  "globalRunSeconds": 10.216603,
+  "theta": 2,
+  "informationScale": 0.001,
+  "lateralDesignCertified": true,
+  "globalMatrixCertified": true,
+  "globalUniformMargin": 0.12795811983128802,
+  "matchingReused": false,
+  "outsideCourseRateEnvelope": false,
+  "onlineSensorCausalityClaimed": false,
+  "physicalCascadeStabilityClaimed": false
+}

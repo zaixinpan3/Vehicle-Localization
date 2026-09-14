@@ -269,3 +269,26 @@ preserved. Recorded gaps require future scans for some reconstructed inputs;
 the 150 ms DDE setting is not demonstrated real-time latency. Same-drive map
 results show improved heading and worse position RMSE after global fusion.
 See the [complete experiment and limitations](../research/mncav_full_localization_20260914/validation.md).
+
+## Precomputed LiDAR with zero processing delay
+
+For the current offline experiment, run `runMncavZeroDelayExperiment`.
+It computes and saves all 1,170 raw-frame matching results before starting
+the global observer. A separate cache records frame IDs, capture times,
+acceptance, original poses and information. Rejected frames have no valid
+cached measurement pose; their prediction output is not relabeled as LiDAR.
+
+`reconstructFrameAlignedLidarSignals` merges the original LiDAR timestamps
+into the numerical input grid. With `fixedLidarDelay=0`, each accepted frame
+supplies its unchanged pose/information at exactly its own capture time.
+The existing continuous observer integrates between frames using the declared
+offline linear reconstruction of adjacent accepted poses. There is no
+instantaneous state reset or 150 ms source shift. All frame times, including
+the final fractional motion-grid interval, have explicit output rows.
+
+The entry retains the MnCAV feedback gains and independently verifies the
+existing certificate matrices at zero delay. It freshly designs and runs
+the lateral observer. Whole-sequence metrics use the original 100 Hz grid
+and native scan grid separately, avoiding extra weight for inserted knots.
+Both the mixed ODOM reference and the same-receiver INSPVA diagnostic
+reference are reported. See the [zero-delay experiment](../research/mncav_zero_delay_20260914/validation.md).

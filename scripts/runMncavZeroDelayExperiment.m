@@ -1,0 +1,154 @@
+function report=runMncavZeroDelayExperiment(outputFolder,options)
+% runMncavZeroDelayExperiment Precompute all scans and replay at capture time.
+% Phase 1 completes and saves all real LiDAR matching results. Phase 2 loads
+% that cache and runs the existing continuous global observer with d=0.
+% Accepted frame knots are exact; intervals use offline linear reconstruction.
+    arguments
+        outputFolder (1,1) string="output/mncav_zero_delay_20260914"
+        options.MapFile (1,1) string="output/mississippi_mapping_20260912/probability_cloud_map.mat"
+        options.MatchingFolder (1,1) string=""
+        options.InformationScale (1,1) double {mustBeFinite,mustBePositive}=.001
+        options.MaximumOfflineGap (1,1) double {mustBeFinite,mustBePositive}=1
+    end
+    root=setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
+    sensorFolder=fullfile(root,'output','mississippi_20240607_120931_20260907','sensors');
+    parameters=fullfile(fileparts(sensorFolder),'vehicle_parameters.json');
+    [raw,reference,inputMetadata]=prepareMncavObserverReplay(sensorFolder,parameters);
+    lateralCfg=lateralObserverConfig("mncav");
+    assert(isequal(lateralCfg.vehicle,inputMetadata.parameters.vehicle), ...
+        'VehicleLocalization:VehicleParameterMismatch','Use the same nominal MnCAV inputs and lateral model.');
+    lateralDesign=designLateralObserverGains(lateralCfg);
+    lateral=runLateralVelocityObserver(raw.highRate,lateralDesign,lateralCfg);
+    cfg=improvedObserverConfig("lidar","mncav");
+    cfg.measurement.fixedLidarDelay=0;cfg.lidar.gainInformationScale=options.InformationScale;
+    % Keep the same physical gains for a timing-only comparison. Reverify
+    % the existing matrices at d=0; do not require an unnecessary new SDP.
+    design=improvedObserverReferenceDesign(cfg);
+    if strlength(options.MatchingFolder)==0
+        matchingFolder=fullfile(outputFolder,'matching');
+        motion=struct('time',raw.highRate.time,'longitudinalSpeed',raw.highRate.longitudinalSpeed, ...
+            'lateralVelocity',lateral.lateralVelocity,'yawRate',raw.highRate.yawRate);
+        matching=replayMississippiLocalization(options.MapFile,sensorFolder,matchingFolder, ...
+            "recursive",[],MotionInputs=motion);
+        matchingReused=false;
+    else
+        matchingFolder=options.MatchingFolder;loaded=load(fullfile(matchingFolder,'report.mat'),'report');
+        matching=loaded.report;matchingReused=true;
+        assert(string(matching.metadata.sourceMap)==options.MapFile ...
+            && string(matching.metadata.mode)=="recursive" ...
+            && contains(string(matching.metadata.motionSource),'actual lateral-observer'), ...
+            'VehicleLocalization:MatchingProvenance','Precomputed matching must use the declared map and actual lateral aid.');
+    end
+    calls=matching.calls;assert(isequal(calls.frame,(1:1170).'), ...
+        'VehicleLocalization:IncompletePrecomputation','All 1170 frames must be processed before observer replay.');
+    accepted=calls.accepted==1;pose=[calls.x,calls.y,calls.psi];pose(~accepted,:)=NaN;
+    information=zeros(3,3,height(calls));
+    for k=1:height(calls)
+        c=calls(k,:);
+        information(:,:,k)=[c.informationXX,c.informationXY,c.informationXPsi; ...
+            c.informationXY,c.informationYY,c.informationYPsi; ...
+            c.informationXPsi,c.informationYPsi,c.informationPsiPsi];
+    end
+    cache=struct('frame',calls.frame,'time',calls.timeSeconds,'accepted',accepted, ...
+        'pose',pose,'information',information,'reason',string(calls.reason), ...
+        'delaySeconds',0,'sourceMatchingFolder',matchingFolder,'sourceMap',options.MapFile, ...
+        'preparedAtUtc',string(datetime('now','TimeZone','UTC')));
+    cacheFile=fullfile(outputFolder,'precomputed_lidar_measurements.mat');save(cacheFile,'cache','-v7.3');
+    writetable(calls,fullfile(outputFolder,'precomputed_calls.csv'));
+    % Explicit phase boundary: the global observer consumes the completed file.
+    loaded=load(cacheFile,'cache');cache=loaded.cache;accepted=cache.accepted;
+    [data,lateralInput,reconstruction]=reconstructFrameAlignedLidarSignals(raw.highRate,lateral, ...
+        cache.time,cache.time(accepted),cache.pose(accepted,:),cache.information(:,:,accepted),cfg, ...
+        MaximumOfflineGap=options.MaximumOfflineGap);
+    p0=[calls.referenceX(1),calls.referenceY(1),calls.referencePsi(1)]+matching.metadata.initialOffset;
+    rotation=[cos(p0(3)),-sin(p0(3));sin(p0(3)),cos(p0(3))];
+    velocity=rotation*[data.highRate.longitudinalSpeed(1);lateralInput.lateralVelocity(1)];
+    cfg.observer.initialState=[p0(1);velocity(1);0;p0(2);velocity(2);0;p0(3)];
+    timer=tic;estimate=runImprovedVehicleObserver(data,struct(),design,cfg,LateralInputs=lateralInput);
+    globalSeconds=toc(timer);time=estimate.time;indices=reconstruction.frameIndicesInIntegrationGrid;
+    sourceDifference=data.lidar.pose(indices(accepted),:)-cache.pose(accepted,:);
+    sourceDifference(:,3)=atan2(sin(sourceDifference(:,3)),cos(sourceDifference(:,3)));
+    maximumPoseMismatch=max(abs(sourceDifference),[],'all');
+    maximumInformationMismatch=max(abs(data.lidar.information(:,:,indices(accepted))-cache.information(:,:,accepted)),[],'all');
+    assert(maximumPoseMismatch<1e-10 && maximumInformationMismatch<1e-10, ...
+        'VehicleLocalization:FrameInjectionMismatch','Accepted frames must retain their original pose and information.');
+    assert(estimate.diagnostics.maximumHistoryNodes==0,'Zero-delay replay must not use delayed state history.');
+    pva=readtable(fullfile(root,'output','mncav_error_diagnosis_20260914','pva_reference.csv'));
+    referencePose=interp1(reference.time,[reference.x,reference.y,unwrap(reference.psi)],time,'linear','extrap');
+    pvaPose=[interp1(pva.time,[pva.x,pva.y],time,'linear'),referencePose(:,3)];
+    assert(all(isfinite(pvaPose),'all'),'The alternate reference must cover every frame.');
+    % Metrics on the original uniform grid avoid weighting extra frame knots twice.
+    [covered,uniformIndices]=ismember(raw.highRate.time,time);assert(all(covered));
+    scanReference=[calls.referenceX,calls.referenceY,calls.referencePsi];
+    scanPose=estimate.pose(indices,:);matchPose=[calls.x,calls.y,calls.psi];
+    pvaAtScans=pvaPose(indices,:);pvaAtScans(:,3)=scanReference(:,3);
+    common=raw.highRate.time>=.15 & raw.highRate.time<=116.89;
+    commonIndices=uniformIndices(common);
+    summary=struct('completed',true,'precomputationFrames',height(calls),'acceptedFrames',nnz(accepted), ...
+        'rejectedFrames',nnz(~accepted),'integrationSamples',numel(time),'uniformEvaluationSamples',numel(uniformIndices), ...
+        'startSeconds',time(1),'endSeconds',time(end),'fixedLidarDelaySeconds',0, ...
+        'allFrameTimestampsPresent',all(time(indices)==cache.time), ...
+        'maximumAcceptedPoseMismatch',maximumPoseMismatch,'maximumAcceptedInformationMismatch',maximumInformationMismatch, ...
+        'delayHistoryNodes',estimate.diagnostics.maximumHistoryNodes, ...
+        'uniformObserverVsOdom',metrics(estimate.pose(uniformIndices,:),referencePose(uniformIndices,:)), ...
+        'uniformObserverVsPva',metrics(estimate.pose(uniformIndices,:),pvaPose(uniformIndices,:)), ...
+        'scanObserverVsOdom',metrics(scanPose,scanReference),'scanMatchingVsOdom',metrics(matchPose,scanReference), ...
+        'scanObserverVsPva',metrics(scanPose,pvaAtScans),'scanMatchingVsPva',metrics(matchPose,pvaAtScans), ...
+        'previousIntervalObserverVsOdom',metrics(estimate.pose(commonIndices,:),referencePose(commonIndices,:)), ...
+        'previousIntervalObserverVsPva',metrics(estimate.pose(commonIndices,:),pvaPose(commonIndices,:)), ...
+        'globalRunSeconds',globalSeconds,'theta',cfg.observer.theta,'informationScale',cfg.lidar.gainInformationScale, ...
+        'lateralDesignCertified',lateralDesign.certified,'globalMatrixCertified',design.certified, ...
+        'globalUniformMargin',design.verification.uniformMargin,'matchingReused',matchingReused, ...
+        'outsideCourseRateEnvelope',estimate.diagnostics.anyStageOutsideTrackRateEnvelope, ...
+        'onlineSensorCausalityClaimed',false,'physicalCascadeStabilityClaimed',false);
+    metadata=struct('input',inputMetadata,'matching',matching.metadata,'reconstruction',reconstruction, ...
+        'execution',"All matching completed and saved before global integration; capture-time zero-delay injection.", ...
+        'rejectedFrames',"No accepted measurement: cached pose is NaN. Continuous input is interpolation of adjacent accepted frames.", ...
+        'evaluation',"Original 100 Hz grid and all 1170 native frame times scored separately. INSPVA is same-receiver diagnostic reference, not independent truth.", ...
+        'referenceEndExtrapolationSeconds',max(0,time(end)-reference.time(end)));
+    injectionTime=cache.time;injectionTime(~accepted)=NaN;
+    frameAudit=table(cache.frame,cache.time,accepted,injectionTime,cache.pose(:,1),cache.pose(:,2),cache.pose(:,3), ...
+        data.lidar.pose(indices,1),data.lidar.pose(indices,2),data.lidar.pose(indices,3), ...
+        scanPose(:,1),scanPose(:,2),scanPose(:,3),cache.reason, ...
+        VariableNames={'frame','captureTime','originalMeasurementAccepted','originalInjectionTime', ...
+        'originalMeasurementX','originalMeasurementY','originalMeasurementPsi','continuousInputX', ...
+        'continuousInputY','continuousInputPsi','observerX','observerY','observerPsi','matchingReason'});
+    writetable(frameAudit,fullfile(outputFolder,'frame_injection_audit.csv'));
+    writetable(array2table([time,estimate.pose,referencePose,pvaPose(:,1:2)],VariableNames= ...
+        {'time','x','y','psi','referenceX','referenceY','referencePsi','pvaX','pvaY'}),fullfile(outputFolder,'trajectory.csv'));
+    report=struct('summary',summary,'metadata',metadata);
+    save(fullfile(outputFolder,'experiment.mat'),'report','cfg','design','lateralCfg','lateralDesign','lateral', ...
+        'data','lateralInput','estimate','referencePose','pvaPose','uniformIndices','-v7.3');
+    gainData=buildImprovedObserverCertificateData(cfg);
+    gains=struct('lateralGains',lateralDesign.gains,'theta',cfg.observer.theta,'K',design.K,'N',design.N, ...
+        'physicalPoseGain',gainData.T*design.K,'physicalAuxiliaryGain',gainData.T*design.N/cfg.observer.theta^3, ...
+        'verification',design.verification);
+    writeJson(fullfile(outputFolder,'summary.json'),summary);writeJson(fullfile(outputFolder,'metadata.json'),metadata);
+    writeJson(fullfile(outputFolder,'gains.json'),gains);
+    figureHandle=figure('Name','Precomputed LiDAR: zero-delay observer','Color','w','Position',[100,100,1200,700]);
+    tiledlayout(figureHandle,2,1,'TileSpacing','compact');
+    nexttile;plot(time,vecnorm(estimate.pose(:,1:2)-referencePose(:,1:2),2,2));hold on;
+    plot(time,vecnorm(estimate.pose(:,1:2)-pvaPose(:,1:2),2,2));grid on;
+    xlabel('Receiver time (s)');ylabel('Position discrepancy (m)');
+    legend('Mixed ODOM reference','INSPVA reference',Location='northwest',FontSize=10);
+    title('Zero processing delay; all frame timestamps included');
+    nexttile;plot(cache.time,vecnorm(matchPose(:,1:2)-pvaAtScans(:,1:2),2,2));hold on;
+    plot(cache.time,vecnorm(scanPose(:,1:2)-pvaAtScans(:,1:2),2,2));grid on;
+    xlabel('Receiver time (s)');ylabel('Position discrepancy from INSPVA (m)');
+    legend('Matching / prediction on rejection','Global observer',Location='northwest',FontSize=10);
+    drawnow;
+    exportgraphics(figureHandle,fullfile(outputFolder,'zero_delay.png'),'Resolution',170);
+    exportgraphics(figureHandle,fullfile(outputFolder,'zero_delay.pdf'),'ContentType','vector');
+    disp(summary);
+end
+
+function value=metrics(pose,reference)
+    error=pose-reference;position=vecnorm(error(:,1:2),2,2);heading=atan2(sin(error(:,3)),cos(error(:,3)));
+    value=struct('positionRmseM',rms(position),'positionP95M',prctile(position,95), ...
+        'positionMaximumM',max(position),'headingRmseDeg',rad2deg(rms(heading)));
+end
+
+function writeJson(path,value)
+    fid=fopen(path,'w');assert(fid>=0);cleanup=onCleanup(@() fclose(fid));
+    fprintf(fid,'%s\n',jsonencode(value,PrettyPrint=true));
+end
