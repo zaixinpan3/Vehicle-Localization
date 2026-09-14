@@ -12,6 +12,11 @@ function design = improvedObserverReferenceDesign(cfg)
     root=fileparts(fileparts(mfilename('fullpath')));
     stored=jsondecode(fileread(fullfile(root,'config','continuousObserverCertificate.json')));
     source=stored.(cfg.mode);
+    if cfg.mode=="lidar" && isfield(cfg.observer,'lidarGainProfile')
+        assert(string(cfg.observer.lidarGainProfile)=="tracking", ...
+            'VehicleLocalization:UnsupportedObserverProfile','Unknown LiDAR gain profile.');
+        source=jsondecode(fileread(fullfile(root,'config','lidarTrackingCertificate.json')));
+    end
     design=struct('kind',"continuous-mo-hgo-v1",'mode',cfg.mode,'theta',cfg.observer.theta);
     if cfg.mode=="gnss"
         design.P=source.P6;design.K=[source.K;zeros(1,2)];

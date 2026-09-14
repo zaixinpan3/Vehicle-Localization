@@ -1,0 +1,1024 @@
+{
+  "selectedCandidate": 2,
+  "cfg": {
+    "mode": "lidar",
+    "operating": {
+      "maximumSpeed": 16,
+      "maximumAcceleration": 5,
+      "maximumTrackAngleRate": 0.002150319818947585
+    },
+    "observer": {
+      "theta": 1,
+      "scalingExponents": [
+        1,
+        2,
+        3,
+        1,
+        2,
+        3,
+        1
+      ],
+      "initialState": [],
+      "initialHeading": 0,
+      "yawGain": 0.5
+    },
+    "measurement": {
+      "fixedLidarDelay": 0.15,
+      "maximumIntegrationStep": 0.005
+    },
+    "lidar": {
+      "poseScales": [
+        1,
+        1,
+        1
+      ],
+      "gainInformationScale": 5,
+      "minimumPoseWeight": 0.99852004840203923
+    },
+    "gnss": {
+      "minimumSpeed": 1,
+      "headingErrorLimit": 1.0471975511965976
+    },
+    "synthesis": {
+      "solver": "sedumi",
+      "rate": 0.05,
+      "tolerance": 1E-8,
+      "outputFolder": "",
+      "saveFileName": "continuousObserverDesign.mat"
+    },
+    "simulation": {
+      "sampleTime": 0.01,
+      "finalTime": 20,
+      "speed": 8,
+      "courseRate": 0.001,
+      "initialHeading": 0.2,
+      "positionNoiseAmplitude": 0.01,
+      "headingNoiseAmplitude": 0.0017453292519943296,
+      "initialError": [
+        0.1,
+        0,
+        0,
+        -0.1,
+        0,
+        0,
+        0.034906585039886591
+      ]
+    }
+  },
+  "selectedDesign": {
+    "kind": "continuous-mo-hgo-v1",
+    "mode": "lidar",
+    "theta": 1,
+    "P": [
+      [
+        0.949165125355758,
+        -0.3712303356994095,
+        -0.61800481808831276,
+        2.9785968832050751E-13,
+        -5.0801440367953866E-13,
+        5.921137925143872E-13,
+        -2.95152517906219E-15
+      ],
+      [
+        -0.3712303356994095,
+        0.76236946492155033,
+        -0.37009308133875474,
+        -6.2847103471143526E-13,
+        2.751542069941515E-13,
+        -3.835643876770749E-13,
+        -4.2330531063083959E-15
+      ],
+      [
+        -0.61800481808831276,
+        -0.37009308133875474,
+        1.6645200220524972,
+        7.2745176999790122E-13,
+        -4.7886347713315514E-13,
+        5.0043466674859631E-13,
+        8.6870841613062779E-14
+      ],
+      [
+        2.9785968832050751E-13,
+        -6.2847103471143526E-13,
+        7.2745176999790122E-13,
+        0.94916512535409225,
+        -0.37123033569796426,
+        -0.61800481808910379,
+        -1.8320640112984304E-15
+      ],
+      [
+        -5.0801440367953866E-13,
+        2.751542069941515E-13,
+        -4.7886347713315514E-13,
+        -0.37123033569796426,
+        0.76236946492061419,
+        -0.3700930813380266,
+        6.0569353884268672E-15
+      ],
+      [
+        5.921137925143872E-13,
+        -3.835643876770749E-13,
+        5.0043466674859631E-13,
+        -0.61800481808910379,
+        -0.3700930813380266,
+        1.6645200220517906,
+        2.710569877989367E-14
+      ],
+      [
+        -2.95152517906219E-15,
+        -4.2330531063083959E-15,
+        8.6870841613062779E-14,
+        -1.8320640112984304E-15,
+        6.0569353884268672E-15,
+        2.710569877989367E-14,
+        0.24789077534825077
+      ]
+    ],
+    "Q": [
+      [
+        0.767411675255342,
+        -0.73407817663282937,
+        0.25380908676812153,
+        3.7229218036233137E-13,
+        -1.2437076826627726E-12,
+        1.0356294509169442E-12,
+        1.0552141322649758E-13
+      ],
+      [
+        -0.73407817663282937,
+        0.70549762525927839,
+        -0.275324938543943,
+        -1.24100659238735E-12,
+        2.1246668424686218E-12,
+        -1.965925186703782E-12,
+        -9.4690595223017489E-14
+      ],
+      [
+        0.25380908676812153,
+        -0.275324938543943,
+        0.40613871732392876,
+        1.1556648786212575E-12,
+        -2.1354761235782658E-12,
+        1.9618446562347813E-12,
+        -2.7089714915615797E-14
+      ],
+      [
+        3.7229218036233137E-13,
+        -1.24100659238735E-12,
+        1.1556648786212575E-12,
+        0.76741167525500087,
+        -0.73407817663058372,
+        0.25380908676617142,
+        3.2007660801613996E-14
+      ],
+      [
+        -1.2437076826627726E-12,
+        2.1246668424686218E-12,
+        -2.1354761235782658E-12,
+        -0.73407817663058372,
+        0.70549762525492488,
+        -0.27532493854072537,
+        5.7725624756823146E-14
+      ],
+      [
+        1.0356294509169442E-12,
+        -1.965925186703782E-12,
+        1.9618446562347813E-12,
+        0.25380908676617142,
+        -0.27532493854072537,
+        0.40613871732133167,
+        -4.3379562577159287E-14
+      ],
+      [
+        1.0552141322649758E-13,
+        -9.4690595223017489E-14,
+        -2.7089714915615797E-14,
+        3.2007660801613996E-14,
+        5.7725624756823146E-14,
+        -4.3379562577159287E-14,
+        1.0090068235483981E-5
+      ]
+    ],
+    "R": [
+      [
+        2.2429977869066531,
+        -0.1265474314088964,
+        -0.1529270300969304,
+        2.0062054084170743E-14,
+        -6.8975126190881576E-13,
+        7.1559298362189162E-13,
+        5.1799603467339104E-14
+      ],
+      [
+        -0.1265474314088964,
+        1.57576305946994,
+        -0.83434935131841415,
+        -6.8726680319079815E-13,
+        -7.59502198876418E-12,
+        -1.293734583361869E-12,
+        -3.5462093828417979E-13
+      ],
+      [
+        -0.1529270300969304,
+        -0.83434935131841415,
+        1.2579193270806577,
+        4.71029495664629E-13,
+        -1.5493892780141968E-12,
+        7.75634624336334E-12,
+        5.3791401249746865E-13
+      ],
+      [
+        2.0062054084170743E-14,
+        -6.8726680319079815E-13,
+        4.71029495664629E-13,
+        2.2429977869056321,
+        -0.12654743141140631,
+        -0.15292703010273404,
+        1.532138425674058E-13
+      ],
+      [
+        -6.8975126190881576E-13,
+        -7.59502198876418E-12,
+        -1.5493892780141968E-12,
+        -0.12654743141140631,
+        1.5757630594837368,
+        -0.83434935131682553,
+        2.0635295080048524E-13
+      ],
+      [
+        7.1559298362189162E-13,
+        -1.293734583361869E-12,
+        7.75634624336334E-12,
+        -0.15292703010273404,
+        -0.83434935131682553,
+        1.2579193270647857,
+        -4.2245662700202979E-13
+      ],
+      [
+        5.1799603467339104E-14,
+        -3.5462093828417979E-13,
+        5.3791401249746865E-13,
+        1.532138425674058E-13,
+        2.0635295080048524E-13,
+        -4.2245662700202979E-13,
+        0.451236701444517
+      ]
+    ],
+    "g": 999.99983195128607,
+    "rate": 0.05,
+    "K": [
+      [
+        3,
+        0,
+        0
+      ],
+      [
+        3,
+        0,
+        0
+      ],
+      [
+        1.5,
+        0,
+        0
+      ],
+      [
+        0,
+        3,
+        0
+      ],
+      [
+        0,
+        3,
+        0
+      ],
+      [
+        0,
+        1.5,
+        0
+      ],
+      [
+        0,
+        0,
+        1
+      ]
+    ],
+    "N": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        7.0402502630144734E-5,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        7.0402502630144734E-5,
+        7.0402502630144734E-5,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        7.0402502630144734E-5,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        7.0402502630144734E-5,
+        -7.0402502630144734E-5,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        -7.0402502630144734E-5
+      ]
+    ],
+    "verification": {
+      "certified": true,
+      "nominalMargin": 0.22531754126374279,
+      "uniformMargin": 0.14252771061664904,
+      "rate": 0.05,
+      "constantMetric": true,
+      "details": {
+        "delaySeconds": 0.15,
+        "headingAdmissionRequired": false
+      },
+      "scope": "Conditional continuous-time ISS matrix certificate; numerical and physical assumptions remain separate."
+    },
+    "certified": true
+  },
+  "screen": [
+    {
+      "candidate": 1,
+      "k1": 3,
+      "k2": 3,
+      "k3": 1,
+      "certificatePassed": true,
+      "margin": 0.11859001768101149,
+      "solverInfo": "stored reference"
+    },
+    {
+      "candidate": 2,
+      "k1": 3,
+      "k2": 3,
+      "k3": 1.5,
+      "certificatePassed": true,
+      "margin": 0.14252771061664904,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 3,
+      "k1": 3,
+      "k2": 4,
+      "k3": 2,
+      "certificatePassed": true,
+      "margin": 0.15132571793671185,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 4,
+      "k1": 3,
+      "k2": 5,
+      "k3": 3,
+      "certificatePassed": true,
+      "margin": 0.090858758888281613,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 5,
+      "k1": 3,
+      "k2": 6,
+      "k3": 4,
+      "certificatePassed": true,
+      "margin": 0.014495170915865413,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 6,
+      "k1": 4,
+      "k2": 4,
+      "k3": 2,
+      "certificatePassed": true,
+      "margin": 0.15762945374594095,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 7,
+      "k1": 4,
+      "k2": 5,
+      "k3": 3,
+      "certificatePassed": true,
+      "margin": 0.15656978440827113,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 8,
+      "k1": 4,
+      "k2": 6,
+      "k3": 4,
+      "certificatePassed": true,
+      "margin": 0.11284458529803022,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 9,
+      "k1": 4,
+      "k2": 8,
+      "k3": 6,
+      "certificatePassed": false,
+      "margin": null,
+      "solverInfo": "Infeasible problem (<a href=\"yalmip.github.io/debugginginfeasible\">learn to debug</a>) (SeDuMi)"
+    },
+    {
+      "candidate": 10,
+      "k1": 4,
+      "k2": 10,
+      "k3": 8,
+      "certificatePassed": false,
+      "margin": null,
+      "solverInfo": "Infeasible problem (<a href=\"yalmip.github.io/debugginginfeasible\">learn to debug</a>) (SeDuMi)"
+    },
+    {
+      "candidate": 11,
+      "k1": 5,
+      "k2": 5,
+      "k3": 3,
+      "certificatePassed": true,
+      "margin": 0.16189359037306816,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 12,
+      "k1": 5,
+      "k2": 6,
+      "k3": 4,
+      "certificatePassed": true,
+      "margin": 0.15450835173400773,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 13,
+      "k1": 5,
+      "k2": 8,
+      "k3": 6,
+      "certificatePassed": true,
+      "margin": 0.0743457693446237,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 14,
+      "k1": 5,
+      "k2": 10,
+      "k3": 8,
+      "certificatePassed": false,
+      "margin": null,
+      "solverInfo": "Infeasible problem (<a href=\"yalmip.github.io/debugginginfeasible\">learn to debug</a>) (SeDuMi)"
+    },
+    {
+      "candidate": 15,
+      "k1": 5,
+      "k2": 12,
+      "k3": 10,
+      "certificatePassed": false,
+      "margin": null,
+      "solverInfo": "Infeasible problem (<a href=\"yalmip.github.io/debugginginfeasible\">learn to debug</a>) (SeDuMi)"
+    },
+    {
+      "candidate": 16,
+      "k1": 6,
+      "k2": 6,
+      "k3": 4,
+      "certificatePassed": true,
+      "margin": 0.15259010654462657,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 17,
+      "k1": 6,
+      "k2": 8,
+      "k3": 6,
+      "certificatePassed": true,
+      "margin": 0.10300582410830511,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 18,
+      "k1": 6,
+      "k2": 10,
+      "k3": 8,
+      "certificatePassed": true,
+      "margin": 0.0065355595658373455,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 19,
+      "k1": 2.5,
+      "k2": 4,
+      "k3": 2,
+      "certificatePassed": true,
+      "margin": 0.11382846073096611,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    },
+    {
+      "candidate": 20,
+      "k1": 3.5,
+      "k2": 6,
+      "k3": 4,
+      "certificatePassed": true,
+      "margin": 0.071330730815715671,
+      "solverInfo": "Successfully solved (SeDuMi)"
+    }
+  ],
+  "metrics": [
+    {
+      "candidate": 1,
+      "noisy": false,
+      "positionRmseM": 0.083033635357122881,
+      "velocityRmseMps": 0.24976436072445338,
+      "accelerationRmseMps2": 0.25837722352903908,
+      "headingRmseDeg": 1.1056568552926139E-5,
+      "peakVelocityErrorMps": 1.1075818430969033,
+      "peakAccelerationErrorMps2": 0.39433932059145776,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 1,
+      "noisy": true,
+      "positionRmseM": 0.083774149493012567,
+      "velocityRmseMps": 0.25002416754644952,
+      "accelerationRmseMps2": 0.2584574469423272,
+      "headingRmseDeg": 0.057242523106093721,
+      "peakVelocityErrorMps": 1.1114404450475757,
+      "peakAccelerationErrorMps2": 0.39812789052114861,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 2,
+      "noisy": false,
+      "positionRmseM": 0.066113578288024458,
+      "velocityRmseMps": 0.19945072166589831,
+      "accelerationRmseMps2": 0.20785974474885183,
+      "headingRmseDeg": 8.93733902329643E-6,
+      "peakVelocityErrorMps": 1.1978658416990593,
+      "peakAccelerationErrorMps2": 0.53818182794846392,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 2,
+      "noisy": true,
+      "positionRmseM": 0.067376038064097948,
+      "velocityRmseMps": 0.19997898711635345,
+      "accelerationRmseMps2": 0.20808318573042731,
+      "headingRmseDeg": 0.057241906424258839,
+      "peakVelocityErrorMps": 1.2015925455244829,
+      "peakAccelerationErrorMps2": 0.53983264603509973,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 3,
+      "noisy": false,
+      "positionRmseM": 0.047342311618423012,
+      "velocityRmseMps": 0.14285593181189576,
+      "accelerationRmseMps2": 0.19378086712384873,
+      "headingRmseDeg": 6.3253762522444845E-6,
+      "peakVelocityErrorMps": 1.6680772928695777,
+      "peakAccelerationErrorMps2": 0.74591383117609744,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 3,
+      "noisy": true,
+      "positionRmseM": 0.049210219234682981,
+      "velocityRmseMps": 0.14395887925260376,
+      "accelerationRmseMps2": 0.19411687908141698,
+      "headingRmseDeg": 0.057239325823512086,
+      "peakVelocityErrorMps": 1.6732217067750852,
+      "peakAccelerationErrorMps2": 0.748228543120813,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 4,
+      "noisy": false,
+      "positionRmseM": 0.032364095346011007,
+      "velocityRmseMps": 0.09772054163375328,
+      "accelerationRmseMps2": 0.16393401598647334,
+      "headingRmseDeg": 4.2972986600414209E-6,
+      "peakVelocityErrorMps": 2.197853553919733,
+      "peakAccelerationErrorMps2": 1.1656954678698221,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 4,
+      "noisy": true,
+      "positionRmseM": 0.035030199056117504,
+      "velocityRmseMps": 0.099540249895663929,
+      "accelerationRmseMps2": 0.1644505483129351,
+      "headingRmseDeg": 0.057237873648272618,
+      "peakVelocityErrorMps": 2.2044974371617587,
+      "peakAccelerationErrorMps2": 1.1692500612887637,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 5,
+      "noisy": false,
+      "positionRmseM": 0.024463283033857919,
+      "velocityRmseMps": 0.073878480561091975,
+      "accelerationRmseMps2": 0.14782968742228081,
+      "headingRmseDeg": 3.2357413800560668E-6,
+      "peakVelocityErrorMps": 2.70449521295476,
+      "peakAccelerationErrorMps2": 1.5736642909528091,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 5,
+      "noisy": true,
+      "positionRmseM": 0.027624935333033406,
+      "velocityRmseMps": 0.076107956082103,
+      "accelerationRmseMps2": 0.14840676740188083,
+      "headingRmseDeg": 0.057237552012525894,
+      "peakVelocityErrorMps": 2.7127008006317488,
+      "peakAccelerationErrorMps2": 1.5785477381642323,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 6,
+      "noisy": false,
+      "positionRmseM": 0.049346204715897089,
+      "velocityRmseMps": 0.1977453267885157,
+      "accelerationRmseMps2": 0.20875184869540603,
+      "headingRmseDeg": 8.7728700534598728E-6,
+      "peakVelocityErrorMps": 1.3586998090408484,
+      "peakAccelerationErrorMps2": 0.633565076557133,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 6,
+      "noisy": true,
+      "positionRmseM": 0.050834673694320036,
+      "velocityRmseMps": 0.19821175291705559,
+      "accelerationRmseMps2": 0.20895113736427018,
+      "headingRmseDeg": 0.0572420584373954,
+      "peakVelocityErrorMps": 1.3644136023216782,
+      "peakAccelerationErrorMps2": 0.63600310663903425,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 7,
+      "noisy": false,
+      "positionRmseM": 0.0333816900802527,
+      "velocityRmseMps": 0.13383395571750406,
+      "accelerationRmseMps2": 0.17307425144606223,
+      "headingRmseDeg": 5.8814546691695922E-6,
+      "peakVelocityErrorMps": 1.8275129033972133,
+      "peakAccelerationErrorMps2": 1.0109975137415974,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 7,
+      "noisy": true,
+      "positionRmseM": 0.035741034186711547,
+      "velocityRmseMps": 0.13491629331468383,
+      "accelerationRmseMps2": 0.17347976012762698,
+      "headingRmseDeg": 0.057239411695337014,
+      "peakVelocityErrorMps": 1.8345567985839244,
+      "peakAccelerationErrorMps2": 1.0146831989492311,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 8,
+      "noisy": false,
+      "positionRmseM": 0.025064205716111357,
+      "velocityRmseMps": 0.10050199967140769,
+      "accelerationRmseMps2": 0.15411514543759611,
+      "headingRmseDeg": 4.38953102561961E-6,
+      "peakVelocityErrorMps": 2.2843182821427628,
+      "peakAccelerationErrorMps2": 1.3823566105923386,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 8,
+      "noisy": true,
+      "positionRmseM": 0.028076163560659367,
+      "velocityRmseMps": 0.10210527631103769,
+      "accelerationRmseMps2": 0.15465689418006898,
+      "headingRmseDeg": 0.057238185953480722,
+      "peakVelocityErrorMps": 2.2928654529664558,
+      "peakAccelerationErrorMps2": 1.3872004675178344,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 11,
+      "noisy": false,
+      "positionRmseM": 0.034448230822164951,
+      "velocityRmseMps": 0.17228584157728871,
+      "accelerationRmseMps2": 0.18349254531835926,
+      "headingRmseDeg": 7.5885099345404274E-6,
+      "peakVelocityErrorMps": 1.5975453248125298,
+      "peakAccelerationErrorMps2": 0.91197358742670331,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 11,
+      "noisy": true,
+      "positionRmseM": 0.0365249489967876,
+      "velocityRmseMps": 0.1728791517004411,
+      "accelerationRmseMps2": 0.18377772727491379,
+      "headingRmseDeg": 0.05724154889367946,
+      "peakVelocityErrorMps": 1.604743694743499,
+      "peakAccelerationErrorMps2": 0.91565446037261211,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 12,
+      "noisy": false,
+      "positionRmseM": 0.025689505868105547,
+      "velocityRmseMps": 0.1284931226249795,
+      "accelerationRmseMps2": 0.16117791549331811,
+      "headingRmseDeg": 5.6183842451839982E-6,
+      "peakVelocityErrorMps": 2.0150621964584841,
+      "peakAccelerationErrorMps2": 1.2570488882353053,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 12,
+      "noisy": true,
+      "positionRmseM": 0.0284807878889963,
+      "velocityRmseMps": 0.12956381934010644,
+      "accelerationRmseMps2": 0.16162780535174448,
+      "headingRmseDeg": 0.057239441964616215,
+      "peakVelocityErrorMps": 2.0236316593834998,
+      "peakAccelerationErrorMps2": 1.2619193988929187,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 13,
+      "noisy": false,
+      "positionRmseM": 0.016942594984551793,
+      "velocityRmseMps": 0.084747758027234416,
+      "accelerationRmseMps2": 0.1389574445180867,
+      "headingRmseDeg": 3.6727755327911965E-6,
+      "peakVelocityErrorMps": 2.8337078145224082,
+      "peakAccelerationErrorMps2": 1.9375735314010012,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 13,
+      "noisy": true,
+      "positionRmseM": 0.020740931062719639,
+      "velocityRmseMps": 0.086534634903845761,
+      "accelerationRmseMps2": 0.13957205691800217,
+      "headingRmseDeg": 0.057237954335872684,
+      "peakVelocityErrorMps": 2.8449608847060994,
+      "peakAccelerationErrorMps2": 1.9449463390007304,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 16,
+      "noisy": false,
+      "positionRmseM": 0.026340222303038625,
+      "velocityRmseMps": 0.15790782712502943,
+      "accelerationRmseMps2": 0.16904624197521642,
+      "headingRmseDeg": 6.921851315960589E-6,
+      "peakVelocityErrorMps": 1.8364989260856668,
+      "peakAccelerationErrorMps2": 1.1708360809164362,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 16,
+      "noisy": true,
+      "positionRmseM": 0.028913514397624292,
+      "velocityRmseMps": 0.15858457184553013,
+      "accelerationRmseMps2": 0.16939298296911867,
+      "headingRmseDeg": 0.057241147502608385,
+      "peakVelocityErrorMps": 1.8449764640093174,
+      "peakAccelerationErrorMps2": 1.1756326362768943,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 17,
+      "noisy": false,
+      "positionRmseM": 0.017236098040088556,
+      "velocityRmseMps": 0.10333170072662985,
+      "accelerationRmseMps2": 0.14339283832921931,
+      "headingRmseDeg": 4.4814840960191592E-6,
+      "peakVelocityErrorMps": 2.6034773232167541,
+      "peakAccelerationErrorMps2": 1.815822918741238,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 17,
+      "noisy": true,
+      "positionRmseM": 0.020922398861253619,
+      "velocityRmseMps": 0.1047315994361505,
+      "accelerationRmseMps2": 0.14396520797274032,
+      "headingRmseDeg": 0.057238542916136462,
+      "peakVelocityErrorMps": 2.614662341763442,
+      "peakAccelerationErrorMps2": 1.822954020068084,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 18,
+      "noisy": false,
+      "positionRmseM": 0.012780772883449795,
+      "velocityRmseMps": 0.076622170336329926,
+      "accelerationRmseMps2": 0.13106538805239612,
+      "headingRmseDeg": 3.3043363643006332E-6,
+      "peakVelocityErrorMps": 3.3586345304252752,
+      "peakAccelerationErrorMps2": 2.4545117815181792,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 18,
+      "noisy": true,
+      "positionRmseM": 0.017219876104160058,
+      "velocityRmseMps": 0.078497735291837054,
+      "accelerationRmseMps2": 0.13171250584519845,
+      "headingRmseDeg": 0.057237907545368394,
+      "peakVelocityErrorMps": 3.3724820766025108,
+      "peakAccelerationErrorMps2": 2.464154639460205,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 19,
+      "noisy": false,
+      "positionRmseM": 0.046378997824492077,
+      "velocityRmseMps": 0.11707778422256314,
+      "accelerationRmseMps2": 0.18714377111267533,
+      "headingRmseDeg": 5.1911705877935018E-6,
+      "peakVelocityErrorMps": 1.8940895621981249,
+      "peakAccelerationErrorMps2": 0.82711510836617141,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 19,
+      "noisy": true,
+      "positionRmseM": 0.048491949043805119,
+      "velocityRmseMps": 0.11870324879294837,
+      "accelerationRmseMps2": 0.1875589365155039,
+      "headingRmseDeg": 0.05723816435779476,
+      "peakVelocityErrorMps": 1.8990353927998127,
+      "peakAccelerationErrorMps2": 0.82938509258066118,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 20,
+      "noisy": false,
+      "positionRmseM": 0.024760758832038911,
+      "velocityRmseMps": 0.0870215650442603,
+      "accelerationRmseMps2": 0.15087704221093259,
+      "headingRmseDeg": 3.8034718347962188E-6,
+      "peakVelocityErrorMps": 2.4710059204540165,
+      "peakAccelerationErrorMps2": 1.4675853988809624,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    },
+    {
+      "candidate": 20,
+      "noisy": true,
+      "positionRmseM": 0.027862880407558313,
+      "velocityRmseMps": 0.088931421194621718,
+      "accelerationRmseMps2": 0.15144644674487731,
+      "headingRmseDeg": 0.05723778924720372,
+      "peakVelocityErrorMps": 2.4794579424833105,
+      "peakAccelerationErrorMps2": 1.4724194062402534,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false
+    }
+  ],
+  "selectionRule": "Minimize noisy acceleration RMSE with position <=1.05 baseline, velocity <=baseline, both startup derivative peaks <=1.5 baseline; same admitted coefficient box",
+  "scope": "Finite candidate comparison on variable-speed gentle turns; unchanged continuous delayed observer, exact lateral inputs, no upstream modules",
+  "validation": [
+    {
+      "candidate": 1,
+      "noisy": true,
+      "positionRmseM": 0.08425001643490522,
+      "velocityRmseMps": 0.25045664640920345,
+      "accelerationRmseMps2": 0.25854843963540103,
+      "headingRmseDeg": 0.054189944292633636,
+      "peakVelocityErrorMps": 1.10251514281201,
+      "peakAccelerationErrorMps2": 0.39413213916841244,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false,
+      "phase": 1
+    },
+    {
+      "candidate": 2,
+      "noisy": true,
+      "positionRmseM": 0.067758156843807732,
+      "velocityRmseMps": 0.20037740664624726,
+      "accelerationRmseMps2": 0.20816083805571117,
+      "headingRmseDeg": 0.05418863504915309,
+      "peakVelocityErrorMps": 1.1922528489195761,
+      "peakAccelerationErrorMps2": 0.53586348446652321,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false,
+      "phase": 1
+    },
+    {
+      "candidate": 1,
+      "noisy": true,
+      "positionRmseM": 0.084612847444676426,
+      "velocityRmseMps": 0.25052610230216982,
+      "accelerationRmseMps2": 0.25850923368665463,
+      "headingRmseDeg": 0.05386482054118831,
+      "peakVelocityErrorMps": 1.0982538416065697,
+      "peakAccelerationErrorMps2": 0.39012824853304,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false,
+      "phase": 2
+    },
+    {
+      "candidate": 2,
+      "noisy": true,
+      "positionRmseM": 0.068007071056784343,
+      "velocityRmseMps": 0.20039412134283077,
+      "accelerationRmseMps2": 0.20805382844291512,
+      "headingRmseDeg": 0.053862812457977624,
+      "peakVelocityErrorMps": 1.1881326309816824,
+      "peakAccelerationErrorMps2": 0.53402814895365225,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false,
+      "phase": 2
+    },
+    {
+      "candidate": 1,
+      "noisy": true,
+      "positionRmseM": 0.084544930884573127,
+      "velocityRmseMps": 0.25015344024344,
+      "accelerationRmseMps2": 0.2583743565518043,
+      "headingRmseDeg": 0.057193944396370579,
+      "peakVelocityErrorMps": 1.1026452717091904,
+      "peakAccelerationErrorMps2": 0.39047496511174556,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false,
+      "phase": 3
+    },
+    {
+      "candidate": 2,
+      "noisy": true,
+      "positionRmseM": 0.067910015003766727,
+      "velocityRmseMps": 0.19999019409487925,
+      "accelerationRmseMps2": 0.20785627709501109,
+      "headingRmseDeg": 0.05719206872920015,
+      "peakVelocityErrorMps": 1.1930620677282191,
+      "peakAccelerationErrorMps2": 0.53604332463161675,
+      "certificateVerified": true,
+      "outsideRateEnvelope": false,
+      "phase": 3
+    }
+  ],
+  "maximumStateRefinementDifference": [
+    2.6205704273252195E-11,
+    2.8397728613072104E-11,
+    1.6014550796583649E-11,
+    2.733924198139448E-11,
+    3.0132341066746449E-11,
+    1.6976448025118884E-11,
+    6.3532512584174583E-14
+  ],
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3"
+}

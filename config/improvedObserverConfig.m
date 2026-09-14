@@ -5,9 +5,11 @@ function cfg = improvedObserverConfig(mode,profile)
 % runtime diagnostics report coefficient excursions without clamping inputs.
 % PROFILE="lowPeaking" selects a constant GNSS gain preset validated on the
 % synthetic sedan; it reduces startup peaks at the cost of slower settling.
+% PROFILE="tracking" selects a LiDAR acceleration-gain preset with the same
+% delay and bounds, reducing settled errors with moderately larger peaks.
     arguments
         mode (1,1) string {mustBeMember(mode,["gnss","lidar"])} = "lidar"
-        profile (1,1) string {mustBeMember(profile,["reference","lowPeaking"])} = "reference"
+        profile (1,1) string {mustBeMember(profile,["reference","lowPeaking","tracking"])} = "reference"
     end
     root=fileparts(fileparts(mfilename('fullpath')));
     reference=jsondecode(fileread(fullfile(root,'config','continuousObserverCertificate.json')));
@@ -24,6 +26,11 @@ function cfg = improvedObserverConfig(mode,profile)
         cfg.observer.theta=8;
         cfg.observer.yawGain=.1;
         cfg.observer.gnssChainGain=[6;8;3];
+    end
+    if profile=="tracking"
+        assert(mode=="lidar",'VehicleLocalization:UnsupportedObserverProfile', ...
+            'The tracking profile is defined only for LiDAR.');
+        cfg.observer.lidarGainProfile="tracking";
     end
     cfg.measurement=struct('fixedLidarDelay',.15,'maximumIntegrationStep',.005);
     cfg.lidar=struct('poseScales',[1;1;1],'gainInformationScale',5, ...

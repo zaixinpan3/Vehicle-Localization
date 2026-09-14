@@ -206,3 +206,16 @@ Shared methods remain in `registrationSupport`: `projectSemanticProbabilityCloud
 `prepareSemanticRegistration`, `semanticGaussianOverlap`, and
 `registrationPoseMeasurement`. Perception and registration geometry were not
 changed by this observer refactor.
+
+## LiDAR tracking preset
+
+`improvedObserverConfig("lidar","tracking")` selects a verified constant-gain
+alternative for the current continuous delayed LiDAR observer. Each Cartesian
+chain changes from `[3;3;1]` to `[3;3;1.5]`; theta, N, yaw gain, delay and
+operating/information bounds are unchanged. Load it through
+`improvedObserverReferenceDesign(cfg)`; stored matrices are reverified.
+The default stays `reference`. The preset reduces settled position, velocity
+and acceleration error by about 20% on a synthetic variable-speed gentle turn,
+with a 36% larger acceleration-error peak. Its narrow course-rate certificate
+is unchanged. See the [experiment and tradeoffs](../research/lidar_tracking_tuning_20260914/validation.md)
+and `tuneContinuousLidarTracking` for reproduction.

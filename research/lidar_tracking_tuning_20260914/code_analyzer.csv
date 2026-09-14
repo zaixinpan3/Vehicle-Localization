@@ -1,0 +1,6 @@
+file,findings
+config/improvedObserverConfig.m,0
+localization/improvedObserverReferenceDesign.m,0
+localization/designImprovedObserverGains.m,0
+scripts/tuneContinuousLidarTracking.m,0
+tests/lidarTrackingPresetTest.m,0
