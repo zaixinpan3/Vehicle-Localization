@@ -1,0 +1,19 @@
+{
+  "previousMnCAVParameterExportMatchesExactly": true,
+  "calibrationScriptSyntaxPassed": true,
+  "recordedSequence": "raw_data_2024-06-07-12-09-31_0",
+  "steeringCsvSampleCount": 11693,
+  "rawSteeringReportSpeedRangeMps": [
+    0.0,
+    14.919445037841797
+  ],
+  "rawRoadWheelAngleAbsMaxRad": 0.19155527338569547,
+  "previousContinuousGnssReplayMaxSuppliedCourseRateRadps": 0.354975175657248,
+  "currentLidarCertificateCourseRateBoundRadps": 0.002150319818947585,
+  "sources": {
+    "previousParameters": "output/mississippi_20240607_120931_20260907/vehicle_parameters.json",
+    "steering": "output/mississippi_20240607_120931_20260907/sensors/steering.csv",
+    "previousAudit": "output/continuous_observer_runtime_20260913/recorded_conditions.json"
+  },
+  "interpretation": "Recorded MnCAV motion extends well beyond the current narrow LiDAR certificate. Stock geometry matching does not establish MnCAV deployment qualification. Saved GNSS audit is reused, not a new recorded observer replay."
+}

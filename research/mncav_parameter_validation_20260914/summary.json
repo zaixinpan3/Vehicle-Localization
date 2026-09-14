@@ -1,0 +1,264 @@
+{
+  "vehicleParameters": {
+    "identity": "UMN MnCAV: 2021 Chrysler Pacifica Hybrid",
+    "vehicle": {
+      "mass": 2273,
+      "lf": 1.3746049999999999,
+      "lr": 1.7143950000000001,
+      "yawInertia": 5874.6073304166666,
+      "frontCorneringStiffness": 108238.09523809524,
+      "rearCorneringStiffness": 80817.777777777781
+    },
+    "steeringRatio": 16.2,
+    "stock": {
+      "wheelbaseM": 3.089,
+      "lengthM": 5.189,
+      "widthWithoutMirrorsM": 2.022,
+      "frontStaticLoadFraction": 0.555,
+      "rearStaticLoadFraction": 0.445,
+      "curbMassKg": 2273
+    },
+    "loadedVehicleParametersIdentified": false,
+    "provenance": {
+      "identity": "UMN CTS vehicle introduction, 2021-08-24; verified 2026-09-14.",
+      "massGeometrySteering": "Manufacturer 2021 Pacifica Hybrid specifications pp. 2-4, at curb weight with standard equipment. Not the actual occupied/instrumented MnCAV.",
+      "lfLr": "Derived from stock wheelbase and static front/rear load fractions: lf=L*rearFraction, lr=L*frontFraction.",
+      "yawInertia": "Uniform rectangular planform prior m*(length^2+width^2)/12; not measured MnCAV inertia.",
+      "corneringStiffness": "Unidentified nominal prior retained from existing MnCAV calibration report: legacy 75000/56000 N/rad scaled by 2273/1575. Not manufacturer specifications or validated tire identification.",
+      "actualLoadedMass": "Unknown: no payload, occupancy or sensor-rack mass is invented.",
+      "sensorNoiseDelay": "Not vehicle specifications; must be sourced from sensor/registration characterization or explicitly declared synthetic assumptions.",
+      "sources": [
+        "https://www.cts.umn.edu/news-pubs/news/2021/august/mncav",
+        "https://www.stellantisfleet.com/content/dam/fca-fleet/na/fleet/en_us/chrysler/2021/Pacifica/specifications/2021_CH_PacificaHybrid_Specifications.pdf"
+      ]
+    },
+    "sensitivityFactors": [
+      0.7,
+      1,
+      1.3
+    ]
+  },
+  "plantFactors": [
+    [
+      1,
+      1,
+      1
+    ],
+    [
+      0.7,
+      1,
+      1
+    ],
+    [
+      1.3,
+      1,
+      1
+    ],
+    [
+      1,
+      0.7,
+      1
+    ],
+    [
+      1,
+      1.3,
+      1
+    ],
+    [
+      1,
+      1,
+      0.7
+    ],
+    [
+      1,
+      1,
+      1.3
+    ]
+  ],
+  "metrics": [
+    {
+      "plant": "nominal",
+      "profile": "reference",
+      "positionRmseM": 0.0837856447936973,
+      "velocityRmseMps": 0.25003310090406228,
+      "accelerationRmseMps2": 0.25845888483429785,
+      "headingRmseDeg": 0.057241810929208242,
+      "peakVelocityErrorMps": 1.1114863423132457,
+      "peakAccelerationErrorMps2": 0.39815414278522171,
+      "maximumTrueCourseRate": 0.0014988883619104975,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "nominal",
+      "profile": "tracking",
+      "positionRmseM": 0.06738717529514715,
+      "velocityRmseMps": 0.19998957806581166,
+      "accelerationRmseMps2": 0.2080849808036237,
+      "headingRmseDeg": 0.057240979116846252,
+      "peakVelocityErrorMps": 1.2016419523361774,
+      "peakAccelerationErrorMps2": 0.539955280937913,
+      "maximumTrueCourseRate": 0.0014988883619104975,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "inertia_07",
+      "profile": "reference",
+      "positionRmseM": 0.083785268042342376,
+      "velocityRmseMps": 0.25003267338433444,
+      "accelerationRmseMps2": 0.25845864005922392,
+      "headingRmseDeg": 0.057241799893234628,
+      "peakVelocityErrorMps": 1.1114737590747161,
+      "peakAccelerationErrorMps2": 0.39814999420949621,
+      "maximumTrueCourseRate": 0.0014995607217761914,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "inertia_07",
+      "profile": "tracking",
+      "positionRmseM": 0.067386795759994955,
+      "velocityRmseMps": 0.19998911195154112,
+      "accelerationRmseMps2": 0.20808473398876878,
+      "headingRmseDeg": 0.057240977653442854,
+      "peakVelocityErrorMps": 1.2016285281811527,
+      "peakAccelerationErrorMps2": 0.53992372071613148,
+      "maximumTrueCourseRate": 0.0014995607217761914,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "inertia_13",
+      "profile": "reference",
+      "positionRmseM": 0.083786021679122122,
+      "velocityRmseMps": 0.25003351925537171,
+      "accelerationRmseMps2": 0.258459123413562,
+      "headingRmseDeg": 0.05724182341152758,
+      "peakVelocityErrorMps": 1.111498300056206,
+      "peakAccelerationErrorMps2": 0.39815820126380252,
+      "maximumTrueCourseRate": 0.001498100580386655,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "inertia_13",
+      "profile": "tracking",
+      "positionRmseM": 0.067387558914938611,
+      "velocityRmseMps": 0.1999900369556874,
+      "accelerationRmseMps2": 0.20808522163163495,
+      "headingRmseDeg": 0.0572409821928011,
+      "peakVelocityErrorMps": 1.2016548059321297,
+      "peakAccelerationErrorMps2": 0.53998756694683359,
+      "maximumTrueCourseRate": 0.001498100580386655,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "front_07",
+      "profile": "reference",
+      "positionRmseM": 0.083788989776565861,
+      "velocityRmseMps": 0.250031189377029,
+      "accelerationRmseMps2": 0.25845546220403026,
+      "headingRmseDeg": 0.057242224401924391,
+      "peakVelocityErrorMps": 1.1115114984419394,
+      "peakAccelerationErrorMps2": 0.39813827463631296,
+      "maximumTrueCourseRate": 0.001315360326463414,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "front_07",
+      "profile": "tracking",
+      "positionRmseM": 0.067392440634213652,
+      "velocityRmseMps": 0.19999037957235843,
+      "accelerationRmseMps2": 0.2080829889915847,
+      "headingRmseDeg": 0.05724135019939413,
+      "peakVelocityErrorMps": 1.2016700492761463,
+      "peakAccelerationErrorMps2": 0.54003941836246627,
+      "maximumTrueCourseRate": 0.001315360326463414,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "front_13",
+      "profile": "reference",
+      "positionRmseM": 0.083783731690947133,
+      "velocityRmseMps": 0.2500349365081021,
+      "accelerationRmseMps2": 0.258461607799426,
+      "headingRmseDeg": 0.057241526031054812,
+      "peakVelocityErrorMps": 1.1114698969966332,
+      "peakAccelerationErrorMps2": 0.39816506624263015,
+      "maximumTrueCourseRate": 0.0016206830183745147,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "front_13",
+      "profile": "tracking",
+      "positionRmseM": 0.067383943831448856,
+      "velocityRmseMps": 0.19998951962556386,
+      "accelerationRmseMps2": 0.20808663652226408,
+      "headingRmseDeg": 0.057240717188864178,
+      "peakVelocityErrorMps": 1.2016235423684536,
+      "peakAccelerationErrorMps2": 0.53989926303858482,
+      "maximumTrueCourseRate": 0.0016206830183745147,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "rear_07",
+      "profile": "reference",
+      "positionRmseM": 0.083783549827447942,
+      "velocityRmseMps": 0.25003939550351506,
+      "accelerationRmseMps2": 0.25846620553322885,
+      "headingRmseDeg": 0.0572412789450037,
+      "peakVelocityErrorMps": 1.1114833208614212,
+      "peakAccelerationErrorMps2": 0.39819860081329983,
+      "maximumTrueCourseRate": 0.0017597203063567392,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "rear_07",
+      "profile": "tracking",
+      "positionRmseM": 0.067382339719988416,
+      "velocityRmseMps": 0.19999196302490943,
+      "accelerationRmseMps2": 0.20808990919328924,
+      "headingRmseDeg": 0.057240446111158971,
+      "peakVelocityErrorMps": 1.2016373245492218,
+      "peakAccelerationErrorMps2": 0.53992594170018793,
+      "maximumTrueCourseRate": 0.0017597203063567392,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "rear_13",
+      "profile": "reference",
+      "positionRmseM": 0.083787076704659555,
+      "velocityRmseMps": 0.25003123247623904,
+      "accelerationRmseMps2": 0.2584563918106299,
+      "headingRmseDeg": 0.057242050803455388,
+      "peakVelocityErrorMps": 1.1114896321278454,
+      "peakAccelerationErrorMps2": 0.39813781843101786,
+      "maximumTrueCourseRate": 0.0013878426339401643,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    },
+    {
+      "plant": "rear_13",
+      "profile": "tracking",
+      "positionRmseM": 0.067389779298266908,
+      "velocityRmseMps": 0.19998931390004424,
+      "accelerationRmseMps2": 0.20808336918313192,
+      "headingRmseDeg": 0.057241208394447192,
+      "peakVelocityErrorMps": 1.2016462200442455,
+      "peakAccelerationErrorMps2": 0.53997628949187393,
+      "maximumTrueCourseRate": 0.0013878426339401643,
+      "outsideRateEnvelope": false,
+      "matrixCertificatePassed": true
+    }
+  ],
+  "scope": "MnCAV stock-based nominal bicycle plants; global observer with exact lateral inputs, not calibrated full-cascade validation",
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3"
+}

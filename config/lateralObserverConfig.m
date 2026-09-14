@@ -1,4 +1,4 @@
-function cfg = lateralObserverConfig()
+function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
 % The vehicle group defines the 2-DOF lateral bicycle model; the scheduling
 % group defines the speed range covered by the polytope and the design grid
@@ -16,11 +16,16 @@ function cfg = lateralObserverConfig()
 % conclusions.
 %
 % Input:
-%   none
+%   profile: "reference" retains archived regression parameters; "mncav"
+%       uses source-qualified Pacifica Hybrid geometry and nominal dynamics.
+%       Re-synthesize lateral gains after changing the vehicle profile.
 %
 % Output:
 %   cfg: struct with vehicle, scheduling, synthesis, observer, and
 %       simulation groups
+    arguments
+        profile (1,1) string {mustBeMember(profile,["reference","mncav"])} = "reference"
+    end
     cfg = struct();
 
     % 2-DOF lateral bicycle model parameters
@@ -31,6 +36,11 @@ function cfg = lateralObserverConfig()
     cfg.vehicle.lr = 1.60;
     cfg.vehicle.frontCorneringStiffness = 75000.0;
     cfg.vehicle.rearCorneringStiffness = 56000.0;
+    if profile=="mncav"
+        parameters=mncavVehicleConfig();
+        cfg.vehicle=parameters.vehicle;
+        cfg.vehicleParameterProvenance=parameters;
+    end
 
     % Scheduling parameter rho = [Vx; 1/Vx] and the design grid over it.
     % The LMI is affine in the longitudinal acceleration through Pdot, so

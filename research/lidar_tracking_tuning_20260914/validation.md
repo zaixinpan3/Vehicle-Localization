@@ -132,3 +132,14 @@ initial history, physical disturbance bounds and yaw representation still
 need to hold. The matrix certificate is conditional; `observer.certified`
 is not set to true by this result. No real-data, dropout, sharp-turn,
 parameter-mismatched vehicle, or complete cascade accuracy claim is made.
+
+## Target-vehicle qualification
+
+The target is UMN MnCAV, based on the 2021 Pacifica Hybrid. This original
+mass-free kinematic sweep is a generic independent-observer experiment.
+The [subsequent MnCAV parameter check](../mncav_parameter_validation_20260914/validation.md)
+uses source-qualified stock geometry and explicitly unidentified dynamic priors
+to generate bicycle motion. Its gentle-turn comparisons preserve the gain
+improvement, but recorded MnCAV course rates exceed the present certificate.
+The profile must not be described as validated for the full MnCAV operating
+range or its actual lateral/sensor uncertainty.

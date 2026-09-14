@@ -324,7 +324,7 @@ selfScore = scoreSemanticProbabilityCloudAlignment( ...
 [scores, queryInfo] = queryTemporalStabilityGmmMap(probabilityCloudMap, queryXY, "pole");
 % queryInfo.valid identifies coverage; invalid scores are NaN.
 
-design = designLateralObserverGains(lateralObserverConfig());   % LPV H2 synthesis
+design = designLateralObserverGains(lateralObserverConfig("mncav")); % nominal MnCAV LPV H2 synthesis
 estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
 
 lateral = load("tests/reference/lateralObserverDesign.mat");

@@ -49,9 +49,13 @@ def main():
         correction[name] = {'sign': sign, 'offset': offset,
                             'diagnostic_unconstrained_slope': float(fit[0]),
                             'validation_rmse': float(np.sqrt(np.mean(residual[validate]**2)))}
-    mass, wheelbase, front_fraction = 2273., 3.089, .555
+    vehicle_parameters = json.loads((Path(__file__).resolve().parents[1] /
+                                    'config/mncavVehicleParameters.json').read_text())
+    mass = vehicle_parameters['stock']['curbMassKg']
+    wheelbase = vehicle_parameters['stock']['wheelbaseM']
+    front_fraction = vehicle_parameters['stock']['frontStaticLoadFraction']
     lf, lr = wheelbase*(1-front_fraction), wheelbase*front_fraction
-    delta = np.interp(ins.stamp_sec, steering.stamp_sec, steering.steering_wheel_angle_rad)/16.2
+    delta = np.interp(ins.stamp_sec, steering.stamp_sec, steering.steering_wheel_angle_rad)/vehicle_parameters['steeringRatio']
     design = np.c_[delta-(vy+lf*yaw_rate)/np.maximum(vx, 1),
                    -(vy-lr*yaw_rate)/np.maximum(vx, 1)]
     selected = (vx > 6) & (np.abs(yaw_rate) > .02) & (t > .52) & (t < t[-1]-.52)
@@ -65,11 +69,8 @@ def main():
         'evaluation_sequence': 'raw_data_2024-06-07-12-09-31_0',
         'training_interval_seconds': [1, 40], 'validation_start_seconds': 40,
         'duration_seconds': float(t[-1]), 'input_correction': correction,
-        'vehicle': {'mass': mass, 'lf': lf, 'lr': lr,
-                    'yawInertia': mass*(5.189**2+2.022**2)/12,
-                    'frontCorneringStiffness': 75000*mass/1575,
-                    'rearCorneringStiffness': 56000*mass/1575},
-        'steeringRatio': 16.2,
+        'vehicle': vehicle_parameters['vehicle'],
+        'steeringRatio': vehicle_parameters['steeringRatio'],
         'provenance': {
             'identity': 'UMN identifies MnCAV as a 2021 Chrysler Pacifica Hybrid.',
             'stock_specifications': '2273 kg EPA curb mass, 3.089 m wheelbase, 55.5/44.5 axle load split, 16.2 steering ratio; actual loaded MnCAV mass is unknown.',

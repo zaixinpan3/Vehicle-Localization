@@ -1,0 +1,39 @@
+{
+  "identity": "UMN MnCAV: 2021 Chrysler Pacifica Hybrid",
+  "vehicle": {
+    "mass": 2273.0,
+    "lf": 1.3746049999999999,
+    "lr": 1.7143950000000001,
+    "yawInertia": 5874.607330416667,
+    "frontCorneringStiffness": 108238.09523809524,
+    "rearCorneringStiffness": 80817.77777777778
+  },
+  "steeringRatio": 16.2,
+  "stock": {
+    "wheelbaseM": 3.089,
+    "lengthM": 5.189,
+    "widthWithoutMirrorsM": 2.022,
+    "frontStaticLoadFraction": 0.555,
+    "rearStaticLoadFraction": 0.445,
+    "curbMassKg": 2273
+  },
+  "loadedVehicleParametersIdentified": false,
+  "provenance": {
+    "identity": "UMN CTS vehicle introduction, 2021-08-24; verified 2026-09-14.",
+    "massGeometrySteering": "Manufacturer 2021 Pacifica Hybrid specifications pp. 2-4, at curb weight with standard equipment. Not the actual occupied/instrumented MnCAV.",
+    "lfLr": "Derived from stock wheelbase and static front/rear load fractions: lf=L*rearFraction, lr=L*frontFraction.",
+    "yawInertia": "Uniform rectangular planform prior m*(length^2+width^2)/12; not measured MnCAV inertia.",
+    "corneringStiffness": "Unidentified nominal prior retained from existing MnCAV calibration report: legacy 75000/56000 N/rad scaled by 2273/1575. Not manufacturer specifications or validated tire identification.",
+    "actualLoadedMass": "Unknown: no payload, occupancy or sensor-rack mass is invented.",
+    "sensorNoiseDelay": "Not vehicle specifications; must be sourced from sensor/registration characterization or explicitly declared synthetic assumptions.",
+    "sources": [
+      "https://www.cts.umn.edu/news-pubs/news/2021/august/mncav",
+      "https://www.stellantisfleet.com/content/dam/fca-fleet/na/fleet/en_us/chrysler/2021/Pacifica/specifications/2021_CH_PacificaHybrid_Specifications.pdf"
+    ]
+  },
+  "sensitivityFactors": [
+    0.7,
+    1,
+    1.3
+  ]
+}
