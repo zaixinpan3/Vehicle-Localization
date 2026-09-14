@@ -1,0 +1,105 @@
+{
+  "commonScanCount": 1167,
+  "observerAtScanPositionRmseM": 0.35886984750888179,
+  "matchingAtSameScanPositionRmseM": 0.28833816067103007,
+  "observerAtScanHeadingRmseDeg": 0.55465286878087683,
+  "matchingAtSameScanHeadingRmseDeg": 0.62195587440919375,
+  "maximumPositionErrorTimeSeconds": 109.38,
+  "maximumAbsoluteEstimatedVelocityComponent": 15.49033679880335,
+  "maximumAbsoluteEstimatedAccelerationComponent": 2.9857266085361513,
+  "dynamicModelSamples": 10787,
+  "stationarySamples": 70,
+  "maximumLateralVelocityMps": 0.47646636250557289,
+  "lateralGainAt8MpsZeroAcceleration": [
+    [
+      -0.58898204394723475,
+      -0.0068482739994005833
+    ],
+    [
+      0.084741932670318973,
+      0.0018955473181337156
+    ]
+  ],
+  "physicalPoseGain": [
+    [
+      6,
+      0,
+      0
+    ],
+    [
+      12,
+      0,
+      0
+    ],
+    [
+      12,
+      0,
+      0
+    ],
+    [
+      0,
+      6,
+      0
+    ],
+    [
+      0,
+      12,
+      0
+    ],
+    [
+      0,
+      12,
+      0
+    ],
+    [
+      0,
+      0,
+      2
+    ]
+  ],
+  "physicalAuxiliaryGain": [
+    [
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      3.5201251315072367E-5,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      7.0402502630144734E-5,
+      7.0402502630144734E-5,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      3.5201251315072367E-5,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      7.0402502630144734E-5,
+      -7.0402502630144734E-5,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      -1.7600625657536184E-5
+    ]
+  ],
+  "firstReconstructedWeightPassesHistoricalScale": false
+}

@@ -1,0 +1,128 @@
+{
+  "fixedLidarDelaySeconds": 0.15,
+  "clock": "INSPVA receiver time bridged from ROS headers; no pose used to fit the clock",
+  "inputInterpolation": "offline linear reconstruction of recorded input samples",
+  "reference": "NovAtel odom body-origin XY and quaternion yaw; also mapping reference",
+  "gpsInput": "all covered recorded odom positions; no GNSS heading measurement",
+  "lidarInput": "accepted full/directional geometric samples; the continuous adapter rejects insufficient information",
+  "parameters": {
+    "software": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.5"
+    },
+    "calibration_sequence": "raw_data_2024-06-07-12-11-24_0",
+    "evaluation_sequence": "raw_data_2024-06-07-12-09-31_0",
+    "training_interval_seconds": [
+      1,
+      40
+    ],
+    "validation_start_seconds": 40,
+    "duration_seconds": 77.9199999999837,
+    "input_correction": {
+      "longitudinalAcceleration": {
+        "sign": 1,
+        "offset": 0.027522640649579853,
+        "diagnostic_unconstrained_slope": 0.862274566881592,
+        "validation_rmse": 0.23300290097687543
+      },
+      "lateralAcceleration": {
+        "sign": -1,
+        "offset": -0.15468705901689392,
+        "diagnostic_unconstrained_slope": -1.0279696365432991,
+        "validation_rmse": 0.13466583336166868
+      },
+      "yawRate": {
+        "sign": 1,
+        "offset": -0.012282345053570586,
+        "diagnostic_unconstrained_slope": 1.0019574026031479,
+        "validation_rmse": 0.0017621005548777205
+      }
+    },
+    "vehicle": {
+      "mass": 2273,
+      "lf": 1.3746049999999999,
+      "lr": 1.7143950000000001,
+      "yawInertia": 5874.6073304166666,
+      "frontCorneringStiffness": 108238.09523809524,
+      "rearCorneringStiffness": 80817.777777777781
+    },
+    "steeringRatio": 16.2,
+    "provenance": {
+      "identity": "UMN identifies MnCAV as a 2021 Chrysler Pacifica Hybrid.",
+      "stock_specifications": "2273 kg EPA curb mass, 3.089 m wheelbase, 55.5/44.5 axle load split, 16.2 steering ratio; actual loaded MnCAV mass is unknown.",
+      "lf_lr": "Derived static unladen CG distances from published axle load fractions.",
+      "yawInertia": "Explicit uniform rectangular planform approximation, not a measured MnCAV inertia.",
+      "cornering_stiffness": "Unidentified nominal prior: existing generic model stiffnesses scaled by the stock mass ratio. Not a manufacturer specification.",
+      "sensitivity": "Repeat the experiment at 0.7 and 1.3 times nominal inertia and both axle stiffnesses; nominal mass and geometry remain fixed.",
+      "input_offsets": "Fixed signs plus median offsets from the independent calibration drive; no online truth injection. Residual road-bank and sensor-to-CG lever-arm errors remain.",
+      "sources": [
+        "https://www.cts.umn.edu/news-pubs/news/2021/august/mncav",
+        "https://www.stellantisfleet.com/content/dam/fca-fleet/na/fleet/en_us/chrysler/2021/Pacifica/specifications/2021_CH_PacificaHybrid_Specifications.pdf"
+      ]
+    },
+    "rejected_direct_identification": {
+      "front_stiffness_N_per_rad": 115941.24466210035,
+      "rear_stiffness_N_per_rad": -58552.398651281204,
+      "yaw_inertia_kg_m2": -13632.955453067512,
+      "design_condition_number": 17.698291406892231,
+      "used_in_observer": false,
+      "reason": "Nonphysical solution and unknown INS-to-CG reference point. This drive does not establish calibrated MnCAV bicycle parameters."
+    }
+  },
+  "sampleTimeSeconds": 0.01,
+  "samples": 11690,
+  "maximumReferenceEdgeExtrapolationSeconds": 0.028679951032131612,
+  "matching": {
+    "mode": "recursive",
+    "frameCount": 1170,
+    "sourceMap": "output/mississippi_mapping_20260912/probability_cloud_map.mat",
+    "initialOffset": [
+      0.5,
+      -0.4,
+      0.034906585039886591
+    ],
+    "mapCropRadiusM": 100,
+    "mapComponents": 1331,
+    "mapPreparationSeconds": 19.492634,
+    "features": [
+      "curb",
+      "pole",
+      "trafficSign"
+    ],
+    "heightMode": "xy",
+    "poseState": "X,Y,psi",
+    "motionSource": "recorded speed and corrected gyro with actual lateral-observer velocity; causal zero-order hold",
+    "motionEndHoldSeconds": 0.0095431109523644864,
+    "clockSource": "INSPVA receiver GPS seconds interpolated on ROS stamp; edge extrapolation only",
+    "rosDurationSeconds": 107.15884017944336,
+    "receiverDurationSeconds": 116.89954311095237,
+    "reference": "nearest matched NovAtel odom base_link GNSS/INS pose, also used for mapping",
+    "knownTilt": "recorded GNSS/INS roll/pitch through quaternion yaw/tilt decomposition",
+    "maximumReferenceTimeOffsetSeconds": 0.0329816341400146,
+    "maximumMatTimestampDifferenceSeconds": 5.0067901611328125E-6,
+    "timingScope": "map crop, fresh coarse perception, D2D and pose event; excludes disk read and offline preparation",
+    "diskLoading": "blocks loaded before processing; diskLoadMs is block time divided by block frame count",
+    "frameBlockSize": 50,
+    "mapOverlap": "same sequence used for mapping and query; includes query observations",
+    "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+    "computationalThreads": 8
+  },
+  "reconstruction": {
+    "representation": "offline piecewise-linear reconstruction",
+    "maximumOriginalPoseGapSeconds": 0.88285707961082949,
+    "declaredMaximumGapSeconds": 1,
+    "fixedDelaySeconds": 0.15,
+    "trimmedInputSamples": 15,
+    "physicalContinuityVerified": false,
+    "onlineCausalityClaimed": false,
+    "headingUnwrapAssumption": "Adjacent recorded yaw changes are less than pi; cycle slips are not verified.",
+    "maximumLookaheadBeyondCurrentTimeSeconds": 0.73223990359294078,
+    "samplesRequiringFutureCaptureEvenWithZeroProcessing": 479,
+    "strictDefaultOutcome": "VehicleLocalization:ReconstructionGap: The recorded pose gap 0.882857 s exceeds the declared reconstruction limit 0.12 s."
+  },
+  "lateralInput": "Actual nominal MnCAV hybrid lateral observer, run from sequence start; cropped outputs passed without reset.",
+  "initialization": "One biased reference initialization; motion-only propagation to global start; constant estimated history.",
+  "information": "Original matcher information retained; lambda=0.001 is an explicitly selected gain-shaping parameter, not covariance calibration.",
+  "experiment": "Offline feed-forward cascade: lateral -> recursive map matching -> continuous global observer. Global estimates do not feed back into matching."
+}

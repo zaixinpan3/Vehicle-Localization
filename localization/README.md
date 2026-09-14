@@ -253,3 +253,19 @@ show improved position/velocity/acceleration tracking with larger initial
 peaks and slightly worse heading noise response. Use
 `validateMncavObserverParameters(folder,SteeringScale=220,Profiles=["tracking","mncav"])`
 to reproduce. See the [proof, results and limitations](../research/mncav_lidar_envelope_20260914/validation.md).
+
+## Full recorded MnCAV cascade
+
+`runMncavFullLocalizationExperiment` freshly synthesizes MnCAV lateral and
+global gains, runs the actual lateral observer, uses its velocity with
+corrected gyro/speed for recursive raw-scan map matching, and executes the
+global observer. `auditMncavFullLocalizationExperiment` compares both outputs
+at identical scan timestamps and exports actual gains and error traces.
+
+The current full experiment is explicitly offline: accepted pose gaps up to
+one second are linearly reconstructed, and information gain-shaping lambda
+is set to .001 with fresh verification. Original matching information is
+preserved. Recorded gaps require future scans for some reconstructed inputs;
+the 150 ms DDE setting is not demonstrated real-time latency. Same-drive map
+results show improved heading and worse position RMSE after global fusion.
+See the [complete experiment and limitations](../research/mncav_full_localization_20260914/validation.md).

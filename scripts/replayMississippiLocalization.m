@@ -6,6 +6,10 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
 % Recorded GNSS/INS supplies known tilt and the evaluation reference. No
 % ground-truth position/yaw enters recursive predictions after initialization.
 % A receiver-time bridge corrects the recorded ROS/GPS clock-rate mismatch.
+% MotionInputs can supply time relative to the first selected scan, recorded
+% speed/corrected gyro, and actual lateral-observer velocity. Its final value
+% may be held for at most 20 ms to cover a fractional final grid interval;
+% metadata reports the actual extension.
     arguments
         mapFile (1,1) string
         sensorFolder (1,1) string
@@ -13,6 +17,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         mode (1,1) string {mustBeMember(mode,["recursive","referenceSeed"])} = "recursive"
         frameIndices (1,:) double {mustBeInteger,mustBePositive} = []
         options.FrameBlockSize (1,1) double {mustBeInteger,mustBePositive} = 50
+        options.MotionInputs (1,1) struct = struct()
     end
     root=fileparts(fileparts(mfilename('fullpath')));
     if ~isfolder(outputFolder), mkdir(outputFolder); end
@@ -41,6 +46,21 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     motionTime=interp1(ins.stamp_sec-rosOrigin,receiverTime,twist.stamp_sec-rosOrigin,'linear','extrap');
     motion=integrateRecordedPlanarMotion(motionTime, ...
         [twist.linear_x_mps,twist.linear_y_mps,twist.angular_z_radps],scanTime);
+    motionSource="recorded /vehicle/twist with causal zero-order hold";
+    motionEndHoldSeconds=0;
+    if ~isempty(fieldnames(options.MotionInputs))
+        supplied=options.MotionInputs;
+        suppliedTime=supplied.time+scanTime(1);
+        suppliedValues=[supplied.longitudinalSpeed,supplied.lateralVelocity,supplied.yawRate];
+        motionEndHoldSeconds=max(0,scanTime(end)-suppliedTime(end));
+        assert(motionEndHoldSeconds<=.02,'VehicleLocalization:MotionCoverage', ...
+            'Supplied motion ends more than 20 ms before the final scan.');
+        if motionEndHoldSeconds>0
+            suppliedTime(end+1)=scanTime(end);suppliedValues(end+1,:)=suppliedValues(end,:);
+        end
+        motion=integrateRecordedPlanarMotion(suppliedTime,suppliedValues,scanTime);
+        motionSource="recorded speed and corrected gyro with actual lateral-observer velocity; causal zero-order hold";
+    end
     timer=tic; loaded=load(mapFile);
     if isfield(loaded,'probabilityCloud')
         fullCloud=loaded.probabilityCloud;
@@ -121,7 +141,8 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     report.metadata=struct('mode',mode,'frameCount',n,'sourceMap',mapFile, ...
         'initialOffset',offset,'mapCropRadiusM',radius,'mapComponents',cloud.components.numComponents, ...
         'mapPreparationSeconds',mapPreparationSeconds,'features',pcfg.featureNames, ...
-        'heightMode',"xy",'poseState',"X,Y,psi",'motionSource',"recorded /vehicle/twist with causal zero-order hold", ...
+        'heightMode',"xy",'poseState',"X,Y,psi",'motionSource',motionSource, ...
+        'motionEndHoldSeconds',motionEndHoldSeconds, ...
         'clockSource',"INSPVA receiver GPS seconds interpolated on ROS stamp; edge extrapolation only", ...
         'rosDurationSeconds',poses.lidar_stamp_sec(end)-poses.lidar_stamp_sec(1), ...
         'receiverDurationSeconds',scanTime(end)-scanTime(1), ...
