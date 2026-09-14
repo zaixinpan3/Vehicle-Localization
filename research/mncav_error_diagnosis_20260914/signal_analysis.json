@@ -1,0 +1,34 @@
+{
+  "peaks": [
+    {
+      "theta": 2,
+      "delaySeconds": 0.15,
+      "peakGain": 3.349316206959388,
+      "frequencyHz": 1.0953687947399562
+    },
+    {
+      "theta": 2,
+      "delaySeconds": 0.075,
+      "peakGain": 1.4851973516654846,
+      "frequencyHz": 0.4916147384561539
+    },
+    {
+      "theta": 2,
+      "delaySeconds": 0,
+      "peakGain": 1.354603650746732,
+      "frequencyHz": 0.3586802056683806
+    },
+    {
+      "theta": 1.5,
+      "delaySeconds": 0.15,
+      "peakGain": 1.8252209459562945,
+      "frequencyHz": 0.7547178059817166
+    }
+  ],
+  "commonScanCount": 1167,
+  "commonScanPvaMatcherRmseM": 0.20745587831013168,
+  "commonScanPvaObserverRmseM": 0.29933768814554945,
+  "samplesReconstructedAcrossGapOver02Seconds": 762,
+  "theirMixedOdomSquaredErrorShare": 0.18303601217756776,
+  "note": "Gap-conditioned association is descriptive, not causal attribution. Transfer is a frozen scalar approximation validated separately."
+}

@@ -1,0 +1,18 @@
+{
+  "matlabVersion": "R2026a Update 3 (26.1.0.3276743)",
+  "baselineMaximumStateDifference": 0.0,
+  "downstreamRuns": 11,
+  "selectedMatchingSolves": 16,
+  "originalBagChecks": 6,
+  "matlabFactoryAnalyzerFindings": 0,
+  "pythonAstChecks": [
+    "scripts/analyzeMncavReference.py",
+    "scripts/plotMncavErrorDiagnosis.py"
+  ],
+  "productionCodeChanged": false,
+  "priorUnitSuiteRerun": false,
+  "figuresVisuallyInspected": [
+    "reference_source_diagnosis.png",
+    "delay_gain_diagnosis.png"
+  ]
+}

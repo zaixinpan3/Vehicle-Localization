@@ -1,0 +1,99 @@
+{
+  "metrics": [
+    {
+      "scenario": "baseline",
+      "positionRmseM": 0.33891219219594942,
+      "after5SecondsRmseM": 0.34327020802925085,
+      "positionP95M": 0.60582367119824188,
+      "maximumPositionM": 2.1703761884010455,
+      "headingRmseDeg": 0.55153508356704828,
+      "seconds": 11.498918,
+      "certificateMargin": 0.08609926305487596,
+      "maximumStateDifferenceFromStored": 0
+    },
+    {
+      "scenario": "reference_pose",
+      "positionRmseM": 0.14199736363074969,
+      "after5SecondsRmseM": 0.14063446844218963,
+      "positionP95M": 0.1147768020389979,
+      "maximumPositionM": 1.4903549897670652,
+      "headingRmseDeg": 0.086284868663656936,
+      "seconds": 11.563737,
+      "certificateMargin": 0.08609926305487596,
+      "maximumStateDifferenceFromStored": 3.8602360545122512
+    },
+    {
+      "scenario": "zero_auxiliary",
+      "positionRmseM": 0.33891258675064545,
+      "after5SecondsRmseM": 0.34327064989266248,
+      "positionP95M": 0.60585035886707772,
+      "maximumPositionM": 2.1703670153678449,
+      "headingRmseDeg": 0.55144862794617278,
+      "seconds": 11.639901,
+      "certificateMargin": 0.11450247283229598,
+      "maximumStateDifferenceFromStored": 0.0011904478510711414
+    },
+    {
+      "scenario": "zero_lateral",
+      "positionRmseM": 0.33888681050768549,
+      "after5SecondsRmseM": 0.34324407853258626,
+      "positionP95M": 0.60566486712548184,
+      "maximumPositionM": 2.1703917427243811,
+      "headingRmseDeg": 0.55151294815257779,
+      "seconds": 11.472433,
+      "certificateMargin": 0.08609926305487596,
+      "maximumStateDifferenceFromStored": 0.14556129863366862
+    },
+    {
+      "scenario": "delay_zero",
+      "positionRmseM": 0.25478557557090786,
+      "after5SecondsRmseM": 0.25872622489980468,
+      "positionP95M": 0.48971354968888142,
+      "maximumPositionM": 1.7302635818598531,
+      "headingRmseDeg": 0.53876377393048824,
+      "seconds": 8.696537,
+      "certificateMargin": 0.12795811983128802,
+      "maximumStateDifferenceFromStored": 1.7593190855378547
+    },
+    {
+      "scenario": "delay_075ms",
+      "positionRmseM": 0.27044711986930253,
+      "after5SecondsRmseM": 0.27461491944563021,
+      "positionP95M": 0.53278215393285977,
+      "maximumPositionM": 1.8178682569461431,
+      "headingRmseDeg": 0.54423049824486958,
+      "seconds": 11.122778,
+      "certificateMargin": 0.11161713192670929,
+      "maximumStateDifferenceFromStored": 1.468596528581797
+    },
+    {
+      "scenario": "theta_15",
+      "positionRmseM": 0.2936308286074506,
+      "after5SecondsRmseM": 0.29728324880279716,
+      "positionP95M": 0.55214249213381073,
+      "maximumPositionM": 1.9079499651025049,
+      "headingRmseDeg": 0.539942109005447,
+      "seconds": 11.318383,
+      "certificateMargin": 0.034086975335904393,
+      "maximumStateDifferenceFromStored": 1.8267725436662672
+    },
+    {
+      "scenario": "reference_pose_delay_zero",
+      "positionRmseM": 0.08641246899601128,
+      "after5SecondsRmseM": 0.08585686906140913,
+      "positionP95M": 0.088257075905799537,
+      "maximumPositionM": 1.3000386731659279,
+      "headingRmseDeg": 0.096430143486154,
+      "seconds": 8.862669,
+      "certificateMargin": 0.12795811983128802,
+      "maximumStateDifferenceFromStored": 2.9135028453987486
+    }
+  ],
+  "decomposition": {
+    "baselineMse": 0.11486147401906414,
+    "referencePoseResidualMse": 0.020163251278083362,
+    "measurementInducedMse": 0.13295168223428883,
+    "crossTerm": -0.038253459493307919
+  },
+  "scope": "Controlled offline downstream ablations on frozen real matching; reference substitutions are diagnostic only."
+}

@@ -1,5 +1,15 @@
 # Complete MnCAV recorded localization experiment
 
+**Subsequent reference audit, September 14, 2026:** the recorded ODOM
+position switches between INSPVA and BESTPOS. The numerical scores below
+remain reproducible, but their reference is not a consistent ground-truth
+position source. In particular, the large accepted-match discrepancies
+around 109 s do not establish equally large physical matching errors.
+See the [controlled error diagnosis](../mncav_error_diagnosis_20260914/diagnosis.md)
+for original-bag checks, alternate-reference scoring, and delay/gain
+ablation results. This note qualifies interpretation without replacing the
+original experiment or its recorded metrics.
+
 Date: 2026-09-14. Sequence: `raw_data_2024-06-07-12-09-31_0`, all 1,170
 front LiDAR scans. The experiment now executes the actual lateral observer,
 fresh map matching, and the continuous global observer. It is a completed

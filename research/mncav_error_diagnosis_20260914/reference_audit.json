@@ -1,0 +1,145 @@
+{
+  "projection": "EPSG:4326 to EPSG:32615, no fitted alignment or reference smoothing",
+  "rawOdomSamples": 5845,
+  "rawPvaSamples": 5847,
+  "nativeOdomMaxStepM": 1.7297347515102486,
+  "maximumImpliedOdomSpeedMps": 86.56662924323248,
+  "worstStepTime": 107.66142043616856,
+  "worstStepDurationSeconds": 0.019975071772933006,
+  "contemporaneousReportedSpeedMps": 12.161535203032438,
+  "nativeOdomStepsOver04M": 30,
+  "nativePvaMaxStepM": 0.5022555331560492,
+  "odomPointsMatchingPvaWithin1mm": 5710,
+  "odomPointsMatchingBestposWithin1mm": 135,
+  "bestposMatchingIntervals": [
+    [
+      87.68138019333128,
+      88.5613441010355
+    ],
+    [
+      107.68139550794149,
+      108.56133389828028
+    ],
+    [
+      108.68137919902802,
+      109.56132712383987
+    ]
+  ],
+  "mappingFramesUsingBestposPosition": [
+    878,
+    879,
+    880,
+    881,
+    882,
+    883,
+    884,
+    885,
+    886,
+    887,
+    1078,
+    1079,
+    1080,
+    1081,
+    1082,
+    1083,
+    1084,
+    1085,
+    1086,
+    1087,
+    1088,
+    1089,
+    1090,
+    1091,
+    1092,
+    1093,
+    1094,
+    1095,
+    1096,
+    1097
+  ],
+  "pointsOver01MFromNearbyPva": 135,
+  "thosePointsMatchingBestposWithin1mm": 135,
+  "maximumOldVsPvaReferenceDifferenceM": 1.4310295529349284,
+  "observerRmseAgainstPva": 0.29822912187925577,
+  "matcherRmseAgainstPva": 0.20731697358751486,
+  "top1PercentMseShare": 0.2145254230148933,
+  "top5PercentMseShare": 0.4848983135312623,
+  "partitions": [
+    {
+      "start": 0,
+      "end": 5,
+      "samples": 485,
+      "rmse": 0.21510186251139454,
+      "mseShare": 0.01673396305211958
+    },
+    {
+      "start": 5,
+      "end": 20,
+      "samples": 1500,
+      "rmse": 0.37212010234710297,
+      "mseShare": 0.1548910229407392
+    },
+    {
+      "start": 20,
+      "end": 80,
+      "samples": 6000,
+      "rmse": 0.25145265748688106,
+      "mseShare": 0.28289966651806014
+    },
+    {
+      "start": 80,
+      "end": 90,
+      "samples": 1000,
+      "rmse": 0.5947308280348115,
+      "mseShare": 0.2637604208959867
+    },
+    {
+      "start": 90,
+      "end": 105,
+      "samples": 1500,
+      "rmse": 0.2159537488969741,
+      "mseShare": 0.05216527243785987
+    },
+    {
+      "start": 105,
+      "end": 115,
+      "samples": 1000,
+      "rmse": 0.546116287756037,
+      "mseShare": 0.2224021515286892
+    },
+    {
+      "start": 115,
+      "end": 117,
+      "samples": 190,
+      "rmse": 0.22460323056259365,
+      "mseShare": 0.007147502626545205
+    }
+  ],
+  "interpretation": "Observed raw position source substitutions; published driver mechanism is consistent, deployed version/config not recovered. Alternate PVA is not independent truth.",
+  "originalBagChecks": [
+    {
+      "index": 4385,
+      "maximumExportDifference": 0.0
+    },
+    {
+      "index": 4386,
+      "maximumExportDifference": 0.0
+    },
+    {
+      "index": 5385,
+      "maximumExportDifference": 0.0
+    },
+    {
+      "index": 5386,
+      "maximumExportDifference": 0.0
+    },
+    {
+      "index": 5435,
+      "maximumExportDifference": 0.0
+    },
+    {
+      "index": 5436,
+      "maximumExportDifference": 0.0
+    }
+  ]
+}
