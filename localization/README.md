@@ -140,8 +140,8 @@ general physical validation. Run `tuneSyntheticObserverPeaking` for the
 and recomputes its numerical certificate. `verifyImprovedObserverDesign`
 checks actual matrices and gains; it ignores saved `certified` flags.
 `designImprovedObserverGains` constructs the GNSS chain gains or synthesizes
-constant LiDAR `P,Q,R` for fixed gains using a norm enclosure of the whole
-uncertainty family. The older continuous-design names are aliases to these
+constant LiDAR `P,Q,R` for fixed gains using either a norm enclosure or
+a four-vertex course-rate enclosure with residual norm bounds. The older continuous-design names are aliases to these
 same entries. There is one runtime and one current certificate implementation.
 
 | Reference mode | Scaling | Course-rate bound | Additional requirement |
@@ -234,3 +234,22 @@ See [MnCAV parameter provenance and limits](../research/mncav_parameter_validati
 The current `tracking` profile remains provisional: recorded MnCAV course rates
 extend far outside its narrow LiDAR certificate. Stock parameter matching
 alone does not establish deployment suitability.
+
+
+## MnCAV LiDAR operating-range preset
+
+Select `improvedObserverConfig("lidar","mncav")` for the new data-informed
+course-rate design. It uses theta=2 and a common four-vertex delay certificate
+covering |yawRate+sideSlipAngleRate| <= 0.4 rad/s at 150 ms delay. This covers
+the existing recorded audit maximum of 0.354975 rad/s, with unchanged stated
+information and true-state bounds. The 0.4 bound is a design envelope, not a
+physical vehicle limit or a guarantee for every future drive.
+
+The verifier retains q and q^2 explicitly instead of replacing both by one
+unstructured disturbance bound. It recomputes all four matrix inequalities;
+no runtime turn-rate clamping is introduced. The reference/tracking profiles
+remain historical alternatives. Fourteen wider-turn nominal MnCAV simulations
+show improved position/velocity/acceleration tracking with larger initial
+peaks and slightly worse heading noise response. Use
+`validateMncavObserverParameters(folder,SteeringScale=220,Profiles=["tracking","mncav"])`
+to reproduce. See the [proof, results and limitations](../research/mncav_lidar_envelope_20260914/validation.md).

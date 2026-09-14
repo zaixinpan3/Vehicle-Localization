@@ -7,9 +7,11 @@ function cfg = improvedObserverConfig(mode,profile)
 % synthetic sedan; it reduces startup peaks at the cost of slower settling.
 % PROFILE="tracking" selects a LiDAR acceleration-gain preset with the same
 % delay and bounds, reducing settled errors with moderately larger peaks.
+% PROFILE="mncav" covers |r+betaDot|<=0.4 rad/s at 150 ms delay using
+% a structured constant-matrix certificate; sensor assumptions remain explicit.
     arguments
         mode (1,1) string {mustBeMember(mode,["gnss","lidar"])} = "lidar"
-        profile (1,1) string {mustBeMember(profile,["reference","lowPeaking","tracking"])} = "reference"
+        profile (1,1) string {mustBeMember(profile,["reference","lowPeaking","tracking","mncav"])} = "reference"
     end
     root=fileparts(fileparts(mfilename('fullpath')));
     reference=jsondecode(fileread(fullfile(root,'config','continuousObserverCertificate.json')));
@@ -38,6 +40,14 @@ function cfg = improvedObserverConfig(mode,profile)
     cfg.gnss=struct('minimumSpeed',1,'headingErrorLimit',pi/3);
     cfg.synthesis=struct('solver',"sedumi",'rate',.05,'tolerance',1e-8, ...
         'outputFolder',"",'saveFileName',"continuousObserverDesign.mat");
+    if profile=="mncav"
+        assert(mode=="lidar",'VehicleLocalization:UnsupportedObserverProfile', ...
+            'The mncav global profile is defined only for LiDAR.');
+        cfg.observer.theta=2;
+        cfg.observer.lidarGainProfile="mncav";
+        cfg.operating.maximumTrackAngleRate=.4;
+        cfg.synthesis.certificateMethod="course-rate-polytope";
+    end
     cfg.simulation=struct('sampleTime',.01,'finalTime',20, ...
         'speed',8,'courseRate',.001,'initialHeading',.2, ...
         'positionNoiseAmplitude',.01,'headingNoiseAmplitude',deg2rad(.1), ...

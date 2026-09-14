@@ -690,3 +690,20 @@ this revision are documented in
 [the validation record](research/continuous_observer_iss_20260913/validation.md).
 They distinguish a verified conservative parameter neighborhood from certification
 of the full operating and information sectors used by the older runtime.
+
+
+### Structured MnCAV numerical enclosure (2026-09-14)
+
+The new `mncav` LiDAR profile verifies the same Schur-form constant-functional
+condition over the rectangle enclosing `(q,q^2)` in
+`[-0.4,0.4] x [0,0.16]`, instead of absorbing the turn terms into an
+unstructured norm ball around zero. Affinity of the Schur block in the drift
+makes four common-matrix vertex checks sufficient for the whole rectangle.
+The auxiliary Jacobian and information variations retain the previous
+analytic norm perturbation bound. This gives a verified positive uniform
+margin at theta=2 and delay 0.15 s without imposing a turn-rate clamp.
+The exact convex weights, residual bound, stored matrices, numerical checks
+and wider-turn MnCAV experiments are in the
+[structured certificate validation](research/mncav_lidar_envelope_20260914/validation.md).
+This is a less conservative numerical realization of Theorem L; all its
+continuous-measurement and physical/disturbance hypotheses remain applicable.

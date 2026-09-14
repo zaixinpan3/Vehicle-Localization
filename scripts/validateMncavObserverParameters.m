@@ -1,24 +1,26 @@
-function report=validateMncavObserverParameters(outputFolder)
+function report=validateMncavObserverParameters(outputFolder,options)
 % validateMncavObserverParameters Check LiDAR gains on source-qualified MnCAV plants.
 % Global observer only: exact lateral interface isolates gain behavior. The
 % physical nominal plant varies independently in inertia and axle stiffness;
 % this is not a calibrated vehicle or a lateral-estimator robustness test.
     arguments
         outputFolder (1,1) string="output/mncav_parameter_validation_20260914"
+        options.SteeringScale (1,1) double {mustBeFinite,mustBePositive}=1
+        options.Profiles (1,:) string=["reference","tracking"]
     end
     setupVehicleLocalization;
     if ~isfolder(outputFolder),mkdir(outputFolder);end
     parameters=mncavVehicleConfig();baseCfg=lateralObserverConfig("mncav");
     changes=[1,1,1;.7,1,1;1.3,1,1;1,.7,1;1,1.3,1;1,1,.7;1,1,1.3];
     names=["nominal","inertia_07","inertia_13","front_07","front_13","rear_07","rear_13"];
-    scenarios=cell(size(changes,1),1);runs=cell(size(changes,1),2);rows={};
+    scenarios=cell(size(changes,1),1);runs=cell(size(changes,1),numel(options.Profiles));rows={};
     for k=1:size(changes,1)
         vehicle=baseCfg.vehicle;vehicle.yawInertia=vehicle.yawInertia*changes(k,1);
         vehicle.frontCorneringStiffness=vehicle.frontCorneringStiffness*changes(k,2);
         vehicle.rearCorneringStiffness=vehicle.rearCorneringStiffness*changes(k,3);
-        s=makeScenario(vehicle,parameters.steeringRatio);scenarios{k}=s;
-        for j=1:2
-            profiles=["reference","tracking"];cfg=improvedObserverConfig("lidar",profiles(j));
+        s=makeScenario(vehicle,parameters.steeringRatio,options.SteeringScale);scenarios{k}=s;
+        for j=1:numel(options.Profiles)
+            profiles=options.Profiles;cfg=improvedObserverConfig("lidar",profiles(j));
             cfg.observer.initialState=s.initialState;design=improvedObserverReferenceDesign(cfg);
             e=runImprovedVehicleObserver(s.data,struct(),design,cfg, ...
                 LateralInputs=s.lateral,InitialHistory=s.history);runs{k,j}=e;
@@ -37,7 +39,7 @@ function report=validateMncavObserverParameters(outputFolder)
         fprintf('MnCAV nominal sensitivity %s complete.\n',names(k));
     end
     metrics=struct2table(vertcat(rows{:}));writetable(metrics,fullfile(outputFolder,'metrics.csv'));
-    report=struct('vehicleParameters',parameters,'plantFactors',changes, ...
+    report=struct('vehicleParameters',parameters,'plantFactors',changes,'experimentOptions',options, ...
         'metrics',table2struct(metrics),'scope',"MnCAV stock-based nominal bicycle plants; global observer with exact lateral inputs, not calibrated full-cascade validation", ...
         'matlabVersion',version);
     save(fullfile(outputFolder,'traces.mat'),'report','scenarios','runs','-v7.3');
@@ -46,13 +48,13 @@ function report=validateMncavObserverParameters(outputFolder)
     disp(metrics);
 end
 
-function s=makeScenario(vehicle,steeringRatio)
+function s=makeScenario(vehicle,steeringRatio,steeringScale)
     t=(0:.01:40).';model=lateralBicycleModel(vehicle);start=-.15;
-    [vx,~,steering]=inputs(start,steeringRatio);
+    [vx,~,steering]=inputs(start,steeringRatio,steeringScale);
     A=evaluateLateralModel(model,[vx;1/vx]);body0=-A\(model.B*steering);
-    sol=ode45(@(time,x) plant(time,x,model,steeringRatio),[start,40], ...
+    sol=ode45(@(time,x) plant(time,x,model,steeringRatio,steeringScale),[start,40], ...
         [body0;.2;0;0],odeset('RelTol',1e-10,'AbsTol',1e-12));
-    [z,high,lateral,q]=sampleTruth(t,sol,model,steeringRatio);
+    [z,high,lateral,q]=sampleTruth(t,sol,model,steeringRatio,steeringScale);
     % Identical bounded synthetic sensor errors for all profiles and plants.
     high.longitudinalSpeed=high.longitudinalSpeed+.02*sin(1.1*t);
     high.longitudinalAcceleration=high.longitudinalAcceleration+.02*sin(1.7*t);
@@ -60,20 +62,20 @@ function s=makeScenario(vehicle,steeringRatio)
     high.yawRate=high.yawRate+.0002*sin(.6*t);
     error=[1;.3;.1;-1;-.2;-.1;deg2rad(10)];
     data=struct('highRate',high,'lidar',struct('delay',.15,'headingConvention',"unwrapped", ...
-        'evaluate',@(time) pose(time,sol,model,steeringRatio)));
+        'evaluate',@(time) pose(time,sol,model,steeringRatio,steeringScale)));
     s=struct('time',t,'truth',z,'vehicle',vehicle,'steeringRatio',steeringRatio, ...
         'trueCourseRate',q,'data',data,'lateral',lateral,'initialState',z(1,:).'+error, ...
-        'history',@(time) history(time,sol,model,steeringRatio,error));
+        'history',@(time) history(time,sol,model,steeringRatio,steeringScale,error));
 end
 
-function dx=plant(t,x,model,ratio)
-    [vx,~,delta]=inputs(t,ratio);A=evaluateLateralModel(model,[vx;1/vx]);
+function dx=plant(t,x,model,ratio,steeringScale)
+    [vx,~,delta]=inputs(t,ratio,steeringScale);A=evaluateLateralModel(model,[vx;1/vx]);
     body=A*x(1:2)+model.B*delta;psi=x(3);
     dx=[body;x(2);vx*cos(psi)-x(1)*sin(psi);vx*sin(psi)+x(1)*cos(psi)];
 end
 
-function [z,high,lateral,q]=sampleTruth(t,sol,model,ratio)
-    t=t(:);x=deval(sol,t).';[vx,vxdot,delta]=inputs(t,ratio);vy=x(:,1);r=x(:,2);psi=x(:,3);
+function [z,high,lateral,q]=sampleTruth(t,sol,model,ratio,steeringScale)
+    t=t(:);x=deval(sol,t).';[vx,vxdot,delta]=inputs(t,ratio,steeringScale);vy=x(:,1);r=x(:,2);psi=x(:,3);
     bodyDerivative=zeros(numel(t),2);
     for k=1:numel(t)
         A=evaluateLateralModel(model,[vx(k);1/vx(k)]);
@@ -89,18 +91,18 @@ function [z,high,lateral,q]=sampleTruth(t,sol,model,ratio)
     lateral=struct('time',t,'lateralVelocity',vy,'sideSlipAngle',beta,'sideSlipAngleRate',betaDot);
 end
 
-function [vx,vxdot,delta]=inputs(t,ratio)
+function [vx,vxdot,delta]=inputs(t,ratio,steeringScale)
     vx=8+1.2*sin(.35*t);vxdot=.42*cos(.35*t);
     % Steering-wheel radians converted to road-wheel radians using stock ratio.
-    delta=(.006+.002*sin(.4*t))/ratio;
+    delta=steeringScale*(.006+.002*sin(.4*t))/ratio;
 end
 
-function y=pose(t,sol,model,ratio)
-    z=sampleTruth(t-.15,sol,model,ratio).';
+function y=pose(t,sol,model,ratio,steeringScale)
+    z=sampleTruth(t-.15,sol,model,ratio,steeringScale).';
     y=struct('pose',z([1,4,7])+[.01*sin(1.3*t);.01*cos(.9*t);deg2rad(.1)*sin(.7*t)], ...
         'information',1e6*eye(3));
 end
 
-function z=history(t,sol,model,ratio,error)
-    z=sampleTruth(t,sol,model,ratio).'+error;
+function z=history(t,sol,model,ratio,steeringScale,error)
+    z=sampleTruth(t,sol,model,ratio,steeringScale).'+error;
 end

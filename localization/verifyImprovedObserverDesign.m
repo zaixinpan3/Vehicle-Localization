@@ -43,13 +43,17 @@ function verification = verifyImprovedObserverDesign(design,cfg)
         delay=cfg.measurement.fixedLidarDelay;
         assert(isreal(delay) && isscalar(delay) && isfinite(delay) && delay>=0, ...
             'VehicleLocalization:InvalidConfiguration','The LiDAR delay must be finite and nonnegative.');
-        A0=theta*data.A;Ad=-theta*design.K*data.C;
-        block=continuousObserverDelayLmi(A0,Ad,P,Q,R,design.g,delay,design.rate);
-        nominal=-max(eig((block+block.')/2));
-        uncertainty=data.modelPerturbation+norm(design.N,2)*data.outputBound4+ ...
-            theta*norm(design.K,2)*norm(data.C,2)*(1-cfg.lidar.minimumPoseWeight);
+        [vertices,uncertainty]=continuousLidarCertificateVertices(design,cfg);
+        Ad=-theta*design.K*data.C;vertexMargins=zeros(size(vertices,3),1);
+        for vertex=1:size(vertices,3)
+            block=continuousObserverDelayLmi(vertices(:,:,vertex),Ad,P,Q,R,design.g,delay,design.rate);
+            vertexMargins(vertex)=-max(eig((block+block.')/2));
+        end
+        nominal=min(vertexMargins);
         margin=nominal-2*(norm(P,2)+delay*norm(R,2))*uncertainty;
-        rate=design.rate;extra=struct('delaySeconds',delay,'headingAdmissionRequired',false);
+        rate=design.rate;extra=struct('delaySeconds',delay,'headingAdmissionRequired',false, ...
+            'vertexMargins',vertexMargins,'remainingPerturbationBound',uncertainty);
+
     end
     verification=struct('certified',margin>cfg.synthesis.tolerance, ...
         'nominalMargin',nominal,'uniformMargin',margin,'rate',rate, ...

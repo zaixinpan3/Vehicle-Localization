@@ -11,11 +11,16 @@ function design = designImprovedObserverGains(cfg)
     stored=jsondecode(fileread(fullfile(root,'config','continuousObserverCertificate.json')));
     source=stored.(cfg.mode);
     if cfg.mode=="lidar" && isfield(cfg.observer,'lidarGainProfile')
-        assert(string(cfg.observer.lidarGainProfile)=="tracking", ...
+        assert(any(string(cfg.observer.lidarGainProfile)==["tracking","mncav"]), ...
             'VehicleLocalization:UnsupportedObserverProfile','Unknown LiDAR gain profile.');
-        source=jsondecode(fileread(fullfile(root,'config','lidarTrackingCertificate.json')));
+        filename="lidarTrackingCertificate.json";
+        if string(cfg.observer.lidarGainProfile)=="mncav",filename="mncavLidarCertificate.json";end
+        source=jsondecode(fileread(fullfile(root,'config',filename)));
     end
     design=struct('kind',"continuous-mo-hgo-v1",'mode',cfg.mode,'theta',cfg.observer.theta);
+    if isfield(cfg.synthesis,'certificateMethod')
+        design.certificateMethod=cfg.synthesis.certificateMethod;
+    end
     if cfg.mode=="gnss"
         if isfield(cfg.observer,'gnssChainGain')
             gain=cfg.observer.gnssChainGain;
@@ -34,17 +39,19 @@ function design = designImprovedObserverGains(cfg)
         assert(exist('sdpvar','file')==2,'VehicleLocalization:MissingSolver','YALMIP must be on the path.');
         design.K=source.K;design.N=source.N;design.rate=cfg.synthesis.rate;
         delay=cfg.measurement.fixedLidarDelay;theta=cfg.observer.theta;
-        A0=theta*data.A;Ad=-theta*design.K*data.C;
-        uncertainty=data.modelPerturbation+norm(design.N,2)*data.outputBound4+ ...
-            theta*norm(design.K,2)*norm(data.C,2)*(1-cfg.lidar.minimumPoseWeight);
+        [vertices,uncertainty]=continuousLidarCertificateVertices(design,cfg);
+        Ad=-theta*design.K*data.C;
         yalmip('clear');
         P=sdpvar(7,7,'symmetric');Q=sdpvar(7,7,'symmetric');R=sdpvar(7,7,'symmetric');
         g=sdpvar(1);margin=sdpvar(1);pBound=sdpvar(1);rBound=sdpvar(1);
-        block=continuousObserverDelayLmi(A0,Ad,P,Q,R,g,delay,design.rate);
         constraints=[P>=1e-5*eye(7),Q>=1e-5*eye(7),R>=1e-5*eye(7), ...
             P<=pBound*eye(7),R<=rBound*eye(7),trace(P)==7, ...
-            trace(Q)+trace(R)<=1000,g>=1e-5,g<=1000,margin>=1e-6, ...
-            block<=-(margin+2*uncertainty*(pBound+delay*rBound))*eye(28)];
+            trace(Q)+trace(R)<=1000,g>=1e-5,g<=1000,margin>=1e-6];
+        for vertex=1:size(vertices,3)
+            block=continuousObserverDelayLmi(vertices(:,:,vertex),Ad,P,Q,R,g,delay,design.rate);
+            constraints=[constraints, ...
+                block<=-(margin+2*uncertainty*(pBound+delay*rBound))*eye(28)]; %#ok<AGROW>
+        end
         result=optimize(constraints,-margin,sdpsettings('solver',char(cfg.synthesis.solver),'verbose',0));
         assert(result.problem==0,'VehicleLocalization:InfeasibleCertificate', ...
             'Constant-matrix LiDAR synthesis failed: %s',result.info);

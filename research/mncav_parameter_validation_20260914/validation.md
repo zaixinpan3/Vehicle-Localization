@@ -148,3 +148,13 @@ full-vehicle certificate is substituted for the current narrow example.
   CSV/JSON summaries and this report are versioned in this directory.
 - No data calibration rerun, identified inertia/stiffness, real LiDAR tuning,
   complete cascade validation or parameter optimum is claimed.
+
+
+## Subsequent operating-envelope update (2026-09-14)
+
+The later `mncav` LiDAR profile replaces the zero-rate norm-ball enclosure
+with a structured four-vertex condition, re-synthesizes its matrices, and
+covers |q|<=0.4 rad/s at theta=2 and 150 ms delay. It addresses the rate gap
+identified above; the historical tracking profile and this gentle-turn
+experiment retain their original bounds. See the
+[new proof and wider-turn results](../mncav_lidar_envelope_20260914/validation.md).

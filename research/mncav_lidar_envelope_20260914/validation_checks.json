@@ -1,0 +1,51 @@
+{
+  "refinementMaximumStateDifference": 5.000655001197174E-9,
+  "maximumTrueVelocityComponent": 9.2022994259256077,
+  "maximumTrueAccelerationComponent": 3.553275458141147,
+  "testsPassed": 57,
+  "analyzerFindings": 0,
+  "exploratoryStructuredSynthesis": [
+    {
+      "bandwidth": 1,
+      "profile": "tracking",
+      "problem": 1,
+      "info": "Infeasible problem (<a href=\"yalmip.github.io/debugginginfeasible\">learn to debug</a>) (SeDuMi)",
+      "margin": -3.50232839550146E-13
+    },
+    {
+      "bandwidth": 1.5,
+      "profile": "tracking",
+      "problem": 0,
+      "info": "Successfully solved (SeDuMi)",
+      "margin": 0.0340869753103766
+    },
+    {
+      "bandwidth": 2,
+      "profile": "tracking",
+      "problem": 0,
+      "info": "Successfully solved (SeDuMi)",
+      "margin": 0.08609926291607585
+    },
+    {
+      "bandwidth": 2.5,
+      "profile": "tracking",
+      "problem": 1,
+      "info": "Infeasible problem (<a href=\"yalmip.github.io/debugginginfeasible\">learn to debug</a>) (SeDuMi)",
+      "margin": -1.7801988180389522E-12
+    },
+    {
+      "bandwidth": 3,
+      "profile": "tracking",
+      "problem": 1,
+      "info": "Infeasible problem (<a href=\"yalmip.github.io/debugginginfeasible\">learn to debug</a>) (SeDuMi)",
+      "margin": -3.6090957495871078E-11
+    },
+    {
+      "bandwidth": 4,
+      "profile": "tracking",
+      "problem": 1,
+      "info": "Infeasible problem (<a href=\"yalmip.github.io/debugginginfeasible\">learn to debug</a>) (SeDuMi)",
+      "margin": -3.8169073906792E-11
+    }
+  ]
+}
