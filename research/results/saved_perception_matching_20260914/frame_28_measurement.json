@@ -1,0 +1,47 @@
+{
+  "timestamp": 1.71777657409055E+9,
+  "arrivalTime": 1.71777657409055E+9,
+  "pose": [
+    484200.37930074934,
+    4.97749995369199E+6,
+    -2.1259055708726442
+  ],
+  "information": [
+    [
+      13.020218777990843,
+      -2.463498135024166,
+      27.511724212714253
+    ],
+    [
+      -2.463498135024166,
+      14.098184397570463,
+      -24.27957931091985
+    ],
+    [
+      27.511724212714253,
+      -24.27957931091985,
+      2028.3003639462027
+    ]
+  ],
+  "measurementType": "fullPose",
+  "observableRank": 3,
+  "observableProjector": [
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      1
+    ]
+  ],
+  "observableProjectorCoordinates": "additive map X,Y,psi; oblique projector",
+  "arrivalTimeIsPlaceholder": true
+}
