@@ -1,7 +1,6 @@
 function report = validateStandaloneObserver(outputFolder)
 % validateStandaloneObserver Exercise the actual continuous runner in two modes.
-% Uses analytic truth and continuous measurement functions. Old outage, pulse,
-% asynchronous and directional-pose campaigns are preserved in Git history.
+% Uses analytic truth and continuous measurement functions.
     arguments
         outputFolder (1,1) string = "output/continuous_observer_runtime_20260913"
     end

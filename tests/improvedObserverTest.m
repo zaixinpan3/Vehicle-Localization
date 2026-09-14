@@ -81,9 +81,9 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             f=fixture("gnss",.2);f.data.lidar=struct('evaluate',@lidarStraight);
             testCase.verifyError(@() runFixture(f),'VehicleLocalization:MixedMeasurementModes');
         end
-        function rejectOldPulseConfiguration(testCase)
-            f=fixture("lidar",.2);f.cfg.measurement.lidarMaximumAge=.03;
-            testCase.verifyError(@() runFixture(f),'VehicleLocalization:LegacyConfiguration');
+        function rejectUnsupportedMeasurementConfiguration(testCase)
+            f=fixture("lidar",.2);f.cfg.measurement.unsupportedOption=1;
+            testCase.verifyError(@() runFixture(f),'VehicleLocalization:InvalidConfiguration');
         end
         function rejectMissingContinuousMeasurement(testCase)
             f=fixture("gnss",.2);f.data=rmfield(f.data,'gnss');

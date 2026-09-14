@@ -7,10 +7,9 @@ GNSS, or uniformly informative LiDAR pose with a known fixed delay. The mode is
 fixed for a run. The independent lateral observer supplies `vy`, `beta`, and
 `betaDot`; its output can also be supplied explicitly for isolated testing.
 
-The runtime has no measurement-arrival queue, correction pulses, metric
-resets, timer-dependent matrices, source fusion, input-flow transport, or
-state replay. The vehicle and observer remain continuous systems; the
-integration grid is a numerical approximation of their equations.
+The vehicle and observer are continuous systems with constant matrices within
+each measurement mode. The integration grid is a numerical approximation of
+their equations.
 
 ## Continuous input contract
 
@@ -196,11 +195,8 @@ normalization, bounded memory, and immutable prefix outputs. The standalone
 validation exercises all seven states under analytic motion and continuous
 bounded noise. See [the runtime validation](../research/continuous_observer_runtime_20260913/validation.md).
 
-Historical pulse/timer synthesis, transport and outage-diagnostic executables
-were removed; their source remains in commit `f14e9a5cab326798d6c247ce3f887ba4a0dff1ae`
-and earlier commits. Dated research reports and original experimental results
-remain historical evidence. The recorded-data entry now offers only separate
-`gnss` and `lidar` reconstructions and retains contract failures as failures.
+The recorded-data entry offers separate `gnss` and `lidar` reconstructions
+and retains contract failures as failures.
 
 ## Registration helpers
 

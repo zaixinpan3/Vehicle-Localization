@@ -9,10 +9,9 @@ are continuous-time differential equations. The LiDAR observer is a retarded
 functional differential equation because its correction uses a past estimate.
 Numerical integration does not change this modeling choice.
 
-There are no measurement-arrival events, pose-correction switches, pulse
-widths, timers, metric resets, or timer-dependent matrices in these proofs.
-The matrices used below are constant within each mode. The modes have separate
-gains and certificates; no claim about switching between them is made.
+The matrices used below are constant within each continuous measurement mode.
+The modes have separate gains and certificates; no claim about switching
+between them is made.
 
 The GNSS interface in this repository measures position only. Consequently,
 its seven-state result requires motion and a local heading chart. An optional
@@ -28,8 +27,7 @@ certificates, an explicit LiDAR initial history, and immutable state outputs.
 See [the runtime contract](localization/README.md) and
 [implementation validation](research/continuous_observer_runtime_20260913/validation.md).
 Numerical success does not verify all physical, initial-error or disturbance
-hypotheses. Earlier event/pulse and transport algorithms remain historical
-implementations in Git; their results do not certify the present equations.
+hypotheses.
 
 ## 1. State, continuous plant, and disturbance interface
 

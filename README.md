@@ -265,8 +265,8 @@ separates two measurement modes:
   information supports a delayed-residual MO-HGO, subject to a verified
   delay-dependent LMI using constant Lyapunov--Krasovskii matrices.
 
-The theory contains no arrival events, correction pulses or timer metrics.
-It retains LiDAR delay and the full matrix information, including cross terms.
+The continuous theory retains LiDAR delay and the full matrix information,
+including cross terms.
 The [reproducible certificate checks](research/continuous_observer_iss_20260913/validation.md)
 record a constructive GNSS block certificate and a conservative 150 ms LiDAR
 example with all four auxiliary channels. These are new theoretical designs.
@@ -279,8 +279,7 @@ history, and the innovation compares measurements with that past estimate.
 See [the runtime contract](localization/README.md) and
 [implementation validation](research/continuous_observer_runtime_20260913/validation.md).
 Recorded data require an explicitly declared continuous reconstruction; they do
-not establish physical sensor continuity. Earlier transport and pulse results
-remain historical evidence at their recorded Git versions.
+not establish physical sensor continuity.
 
 ## Configuration (`config/`)
 

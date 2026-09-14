@@ -1,8 +1,7 @@
 function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,outputFolder,mode,fixedLidarDelay,options)
 % runMncavObserverReplay Evaluate a declared continuous reconstruction of data.
 % Only separate gnss/lidar modes are supported. This offline adapter rejects
-% missing measurements and inadequate LiDAR information; it does not simulate
-% measurement arrival, fusion, outages or correction pulses.
+% missing measurements and inadequate LiDAR information.
     arguments
         replayFolder (1,1) string
         designFile (1,1) string

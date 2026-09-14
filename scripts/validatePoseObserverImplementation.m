@@ -1,8 +1,8 @@
 function summaries = validatePoseObserverImplementation(sequenceFolder,outputFolder,options)
 % validatePoseObserverImplementation Evaluate the two continuous data modes.
 % Recorded signals are explicit offline reconstructions. A failed coverage or
-% information contract is retained as a failed result, never filled by a pulse
-% or another source. This function does not certify physical sensor continuity.
+% information contract is retained as a failed result. This function does not
+% certify physical sensor continuity.
     arguments
         sequenceFolder (1,1) string
         outputFolder (1,1) string
