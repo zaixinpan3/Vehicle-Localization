@@ -1,0 +1,233 @@
+[
+  {
+    "frame": 28,
+    "class": "curb",
+    "components": 10,
+    "reason": "acceptedDirectional",
+    "rank": 2,
+    "dx": -0.00052945490460842848,
+    "dy": 0.033887951634824276,
+    "yawdeg": -0.056184081625344579,
+    "distance": 0.03389208740252219
+  },
+  {
+    "frame": 28,
+    "class": "pole",
+    "components": 1,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  },
+  {
+    "frame": 28,
+    "class": "trafficSign",
+    "components": 15,
+    "reason": "accepted",
+    "rank": 3,
+    "dx": -0.0348991368082352,
+    "dy": 0.068441133946180344,
+    "yawdeg": 0.021281327925849268,
+    "distance": 0.076825377095064859
+  },
+  {
+    "frame": 214,
+    "class": "curb",
+    "components": 28,
+    "reason": "accepted",
+    "rank": 3,
+    "dx": -0.14669197722105309,
+    "dy": 0.18435242027044296,
+    "yawdeg": 0.63217670888410382,
+    "distance": 0.23559361417617411
+  },
+  {
+    "frame": 214,
+    "class": "pole",
+    "components": 2,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  },
+  {
+    "frame": 214,
+    "class": "trafficSign",
+    "components": 5,
+    "reason": "accepted",
+    "rank": 3,
+    "dx": 0.0024764903355389833,
+    "dy": 0.024007742293179035,
+    "yawdeg": 0.17646643726865957,
+    "distance": 0.024135134024855037
+  },
+  {
+    "frame": 458,
+    "class": "curb",
+    "components": 35,
+    "reason": "acceptedDirectional",
+    "rank": 2,
+    "dx": -0.10105995880439878,
+    "dy": -0.022747931070625782,
+    "yawdeg": 0.5905049737948892,
+    "distance": 0.10358853045362078
+  },
+  {
+    "frame": 458,
+    "class": "pole",
+    "components": 2,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  },
+  {
+    "frame": 458,
+    "class": "trafficSign",
+    "components": 1,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  },
+  {
+    "frame": 600,
+    "class": "curb",
+    "components": 8,
+    "reason": "acceptedDirectional",
+    "rank": 2,
+    "dx": -0.30261808400973678,
+    "dy": -0.10667093191295862,
+    "yawdeg": 1.944671948150541,
+    "distance": 0.32086818552935903
+  },
+  {
+    "frame": 600,
+    "class": "pole",
+    "components": 2,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  },
+  {
+    "frame": 600,
+    "class": "trafficSign",
+    "components": 2,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  },
+  {
+    "frame": 855,
+    "class": "curb",
+    "components": 37,
+    "reason": "accepted",
+    "rank": 3,
+    "dx": -0.36031161673599854,
+    "dy": 0.35393790528178215,
+    "yawdeg": -0.71300210619205961,
+    "distance": 0.5050707890485896
+  },
+  {
+    "frame": 855,
+    "class": "pole",
+    "components": 1,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  },
+  {
+    "frame": 855,
+    "class": "trafficSign",
+    "components": 7,
+    "reason": "accepted",
+    "rank": 3,
+    "dx": 0.12658834626199678,
+    "dy": 0.12711935956031084,
+    "yawdeg": 0.0615640920383655,
+    "distance": 0.17939883217114538
+  },
+  {
+    "frame": 943,
+    "class": "curb",
+    "components": 9,
+    "reason": "acceptedDirectional",
+    "rank": 2,
+    "dx": 0.0056521830847486854,
+    "dy": -0.062564539723098278,
+    "yawdeg": 0.067448210785357718,
+    "distance": 0.062819334638204036
+  },
+  {
+    "frame": 943,
+    "class": "pole",
+    "components": 2,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  },
+  {
+    "frame": 943,
+    "class": "trafficSign",
+    "components": 2,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  },
+  {
+    "frame": 1137,
+    "class": "curb",
+    "components": 32,
+    "reason": "acceptedDirectional",
+    "rank": 2,
+    "dx": 0.015701269381679595,
+    "dy": -0.1277643758803606,
+    "yawdeg": 0.56389846637522389,
+    "distance": 0.12872554371333661
+  },
+  {
+    "frame": 1137,
+    "class": "pole",
+    "components": 6,
+    "reason": "accepted",
+    "rank": 3,
+    "dx": 0.097816234396304935,
+    "dy": 0.022212953306734562,
+    "yawdeg": 0.33320286498493518,
+    "distance": 0.10030668475271245
+  },
+  {
+    "frame": 1137,
+    "class": "trafficSign",
+    "components": 2,
+    "reason": "insufficientComponents",
+    "rank": 0,
+    "dx": 0,
+    "dy": 0,
+    "yawdeg": 0,
+    "distance": 0
+  }
+]
