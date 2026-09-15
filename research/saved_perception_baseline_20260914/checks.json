@@ -1,0 +1,23 @@
+{
+  "executedRegistrationCalls": 4680,
+  "framesPerMode": 1170,
+  "observerRuns": 0,
+  "perceptionRuns": 0,
+  "mapBuilds": 0,
+  "randomSeed": null,
+  "matlabTestsPassed": 46,
+  "matlabTestsFailedAfterFix": 0,
+  "initialNewRegressionFailedBeforeFix": true,
+  "factoryAnalyzerFiles": 3,
+  "factoryAnalyzerFindings": 0,
+  "historicalSourceCloudsExactlyEqual": 7,
+  "historicalFullResultStructsExactlyEqual": 21,
+  "firstAttemptCheckpointCallsExactlyReproducedExceptTiming": 800,
+  "independentPythonRmseMedianToleranceM": 1e-12,
+  "allRejectedMeasurementsNaN": true,
+  "allFourModesCompleteFrameOrder": true,
+  "figuresVisuallyInspected": true,
+  "initialAttempt": "Aborted after the 200-frame checkpoint with MATLAB:sizeDimensionsMustMatch; a minimal one-correspondence fixture reproduces the same weighted-matrix error. Fixed repelem orientation; full rerun completed.",
+  "plottingNote": "Temporary replot script first failed because MATLAB run changed the working directory to /tmp. Executed the same plotting code in repository context; no registration rerun was required.",
+  "stagedDiffNote": "Initial check flagged CRLF line endings in the new CSV export. Normalized to LF; final staged check passes."
+}

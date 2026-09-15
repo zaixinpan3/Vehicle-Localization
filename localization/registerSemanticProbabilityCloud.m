@@ -238,7 +238,8 @@ function system=linearize(f,m,pose,cfg,scale,groups)
     end
     robust=1./(1+qvalue/cfg.robustStandardizedDistance^2);
     stacked=reshape(permute(jacobian,[1 3 2]),[],3);
-    rowWeights=repelem(weights.*robust,2);
+    % Preserve a column even when exactly one correspondence remains.
+    rowWeights=repelem(weights.*robust,2,1);
     h=stacked.'*(stacked.*rowWeights);
     gradient=stacked.'*(residual(:).*rowWeights);
     pairs=struct('source',source,'target',target,'semanticName',names, ...

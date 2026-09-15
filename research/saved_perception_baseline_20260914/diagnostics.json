@@ -1,0 +1,26 @@
+{
+  "counts": {
+    "lidar_only_recursive": {
+      "full": 162,
+      "directional": 220,
+      "rejected": 788
+    },
+    "per_frame_negative": {
+      "full": 1088,
+      "directional": 0,
+      "rejected": 82
+    },
+    "per_frame_positive": {
+      "full": 1074,
+      "directional": 0,
+      "rejected": 96
+    },
+    "per_frame_zero": {
+      "full": 1092,
+      "directional": 1,
+      "rejected": 77
+    }
+  },
+  "recursiveLastFullFrame": 216,
+  "recursiveFinalPvaErrorM": 840.913563524001
+}

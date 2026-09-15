@@ -9,6 +9,22 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function oneCorrespondenceRejectsWithoutDimensionError(testCase)
+            c=struct('mean',[0 0;10 0;0 10], ...
+                'covariance',repmat(.05*eye(2),1,1,3), ...
+                'semanticName',repmat("pole",3,1),'mixtureWeight',ones(3,1)/3, ...
+                'numComponents',3,'repeatability',ones(3,1));
+            moving=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());
+            fixed=moving;fixed.components.mean=[0 0;100 0;0 100];
+            initial=[.1 .2 .01];
+            result=registerSemanticProbabilityCloud(fixed,moving,initial);
+            testCase.verifyEqual(result.reason,"insufficientOverlap");
+            testCase.verifyFalse(result.accepted || result.directionalAccepted);
+            testCase.verifyEqual(height(result.correspondences),1);
+            testCase.verifyEqual(result.poseXYTheta,initial,'AbsTol',1e-14);
+            testCase.verifyTrue(all(isfinite(result.information),'all'));
+            testCase.verifyEmpty(registrationSupport.registrationPoseMeasurement(result,0));
+        end
         function repeatedTargetsPreserveFirstTieAcrossBlocks(testCase,repeatedComponents)
             cloud=repeatedCloud(repeatedComponents);
             cfg=geometricRegistrationTest.configuration();

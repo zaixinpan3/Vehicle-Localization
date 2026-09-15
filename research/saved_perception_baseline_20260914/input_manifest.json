@@ -1,0 +1,18 @@
+[
+  {
+    "path": "output/mississippi_perception_video_20260912/feature_observations.mat",
+    "sha256": "df99b125366cc2d6573d28b3b5cd97f3d0bae43d866fd0f8ce565e916e4a903b"
+  },
+  {
+    "path": "output/mississippi_mapping_20260912/probability_cloud.mat",
+    "sha256": "c2cce2e22094642168a9d923cd28ac6d6a9abdb2377fc12e89ed419a7b90d57a"
+  },
+  {
+    "path": "output/mncav_zero_delay_20260914/precomputed_calls.csv",
+    "sha256": "c553a7e51b711aa5036d9abe1fc037de0a99d30acc2dc79f2d1cb4285b027f5f"
+  },
+  {
+    "path": "output/mncav_error_diagnosis_20260914/pva_reference.csv",
+    "sha256": "fbebca4d3c75044519dc27d9cfbb86c6a638b4720a52f744ad989c61225f9070"
+  }
+]
