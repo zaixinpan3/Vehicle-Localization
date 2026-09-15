@@ -1,0 +1,7 @@
+source,population,samples,medianM,rmseM,maximumM
+geometric_20260905_frame900_start1,one accepted frame,1,0.040961964568074,0.040961964568074,0.040961964568074
+geometric_20260905_identity,18 accepted trials from 7 query frames / 3 starts,18,0.0764092342803583,0.103628651669762,0.165888433345241
+saved_fine_20260914_original,20 accepted trials from 7 query frames / 3 starts,20,0.0953352984120998,0.12058659430121,0.242195223950665
+saved_fine_20260914_additional,103 full accepted trials from 38 query frames / 3 starts,103,0.0760927338700006,0.139213367421891,0.730683745280759
+recursive_20260907,all 1170 frames including prediction on rejection,1170,0.104544444004461,0.281377579351297,1.56316309366855
+recursive_20260914_lateral_aided,all 1170 frames including prediction on rejection,1170,0.110258661021094,0.288294658846981,1.58469486410808

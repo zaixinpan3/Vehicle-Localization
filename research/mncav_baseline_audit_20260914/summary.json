@@ -1,0 +1,17 @@
+{
+  "sameTimeReference": true,
+  "reference": "INSPVA diagnostic, not independent truth",
+  "samples": 11690,
+  "rawMedianCm": 10.394522362143983,
+  "observerMedianCm": 10.511943386416641,
+  "rawRmseCm": 18.846470284125786,
+  "observerRmseCm": 17.693428120546834,
+  "rawFractionAtMost5cm": 0.17656116338751068,
+  "observerFractionAtMost5cm": 0.12600513259195895,
+  "pairedPositionImprovementFraction": 0.45457656116338752,
+  "medianImproved": false,
+  "fractionWithin5cmImproved": false,
+  "allFrameFewCentimeterLidarRmseLocated": false,
+  "scope": "Reviewed identified local result tables and the current conversation's user-facing history. Centimeter claims include synthetic observer RMSE, reference-injection RMSE and a virtual noise scale; which one the user recalled remains unconfirmed.",
+  "tailDiagnostic": "Largest ceil(5%*N) errors only characterize squared-error concentration. Full metrics retain all samples; lower95% is not an accepted benchmark."
+}

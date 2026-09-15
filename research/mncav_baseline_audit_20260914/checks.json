@@ -1,0 +1,13 @@
+{
+  "command": "baselineAudit=auditLidarAccuracyBaselines; issues=checkcode('scripts/auditLidarAccuracyBaselines.m','-config=factory'); disp(issues); assert(isempty(issues));",
+  "matlab": "R2026a Update 3",
+  "executed": true,
+  "exactIntegrationClockEquality": true,
+  "uniqueIncreasingEvaluationSamples": true,
+  "allEvaluatedErrorsFinite": true,
+  "matchingSavedRmseToleranceM": 1e-12,
+  "factoryAnalyzerFindings": 0,
+  "cdfVisuallyInspected": true,
+  "newMatchingOrObserverRuns": false,
+  "notes": "Two executions of the saved-output analysis completed; final execution includes clock/sample assertions. No independent unit tests added for a read-only analysis script. No raw conversation logs exported."
+}

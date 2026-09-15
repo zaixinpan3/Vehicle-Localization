@@ -1,0 +1,30 @@
+[
+  {
+    "path": "research/results/geometric_registration_20260905/registration.csv",
+    "sha256": "b8c39b54279f26c192c018286b103f629afd111ce00431ffcae4ecfdc06954b9"
+  },
+  {
+    "path": "research/results/saved_perception_matching_20260914/cases.csv",
+    "sha256": "e7e9f740557e527eacbeb1ab5a9d94f792be886fa5c26b623fdcde585a714b43"
+  },
+  {
+    "path": "research/matching_bias_20260914/additional_baseline.csv",
+    "sha256": "74c68f2cba3603b282371e58de329ba52d1dde89eacc55c2faefec364845a7f3"
+  },
+  {
+    "path": "research/results/mississippi_full_sequence_20260907/d2d_calls.csv",
+    "sha256": "1cf762765972c4c3d2873e33a930e046000c446763fa950902d8e11dfc14b659"
+  },
+  {
+    "path": "output/mncav_zero_delay_20260914/precomputed_calls.csv",
+    "sha256": "c553a7e51b711aa5036d9abe1fc037de0a99d30acc2dc79f2d1cb4285b027f5f"
+  },
+  {
+    "path": "output/mncav_zero_delay_20260914/experiment.mat",
+    "sha256": "2b66a5dc1238b3359da7b8e9bde59d0f2017308af4826b9d19ecbb048c58b1bb"
+  },
+  {
+    "path": "output/mncav_motion_aided_20260914/experiment.mat",
+    "sha256": "2e65036541f7881cfd7b44c0e9c1c96fc9f07cfc6c04ea08c6adc51256cb56e9"
+  }
+]

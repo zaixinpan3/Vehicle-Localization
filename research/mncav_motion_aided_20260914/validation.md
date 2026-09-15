@@ -20,6 +20,14 @@ maximum and heading improve, but full-run P95 increases by 5.18 mm. Therefore
 the strict all-reference/all-metric flag in the machine-readable output is
 false. No metric is omitted to turn that flag into a pass.
 
+The subsequent [distribution audit](../mncav_baseline_audit_20260914/validation.md)
+qualifies this four-metric result: full-run median position discrepancy
+increases from 10.3945 to 10.5119 cm, and the fraction within 5 cm falls from
+17.6561% to 12.6005%. Position error improves at 45.4577% of paired times.
+The RMSE benefit therefore does not establish improvement at most times or
+centimeter-level accuracy. These distribution measures were not gain-selection
+objectives; the audit does not retune the gains using the evaluation data.
+
 The new runtime uses the same seven states, course-rate-dependent prediction,
 real motion inputs and actual lateral observer. It replaces weak quadratic
 auxiliary correction with direct signed velocity and acceleration correction.
