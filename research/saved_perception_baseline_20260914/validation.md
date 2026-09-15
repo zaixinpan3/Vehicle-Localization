@@ -149,3 +149,39 @@ source clouds, exact configuration objects, references, plots and before/after
 test results. Small metrics, frame errors, checks and input hashes are
 versioned beside this report. Original datasets and generated MAT/PDF/PNG
 files remain local and are exported separately to the archive.
+
+
+## September 15 follow-up: why median and RMSE differ
+
+This analysis uses the unchanged accepted full-pose rows in
+`frame_results.csv`; no matching is rerun. For each row, let e be its planar
+position discrepancy. Median sorts e and takes its middle value; RMSE is
+sqrt(sum(e^2)/N), so a small number of large discrepancies can dominate.
+A 1 m discrepancy contributes as much squared error as 400 discrepancies
+of 5 cm each; this compares squared-error sums, not equal-size datasets.
+
+For the zero-offset mode, N=1092, INSPVA median=7.6768 cm and RMSE=22.7011 cm.
+Exactly 22 accepted frames (2.0147%) have discrepancy at least 1 m and
+contribute 61.0531% of the total squared error. The largest ceil(0.05*N)=55
+frames contribute 74.6095%. These subsets overlap; their contributions
+must not be added. The low median describes the center, while RMSE exposes
+the much larger errors. Neither is an arithmetic mistake.
+
+The previously identified mapping-source intervals contain frames
+878--887 and 1078--1097. Of those 30 frames, 24 are accepted in this mode.
+Those 24 account for 61.6921% of INSPVA squared error but only 1.2965% of
+squared discrepancy from recorded mapping poses. This is strong reference
+sensitivity, not a decomposition of physical error or proof of which
+reference is correct. At frame 1086, discrepancies are about 130.34 cm
+from INSPVA and 2.81 cm from its mapping pose. Rebuilding with a consistent
+pose source has not been executed by this follow-up.
+
+There are still genuine discrepancies relative to the existing map-pose
+reference: median 7.2024 cm, RMSE 13.8464 cm, with 49 accepted frames at
+least 30 cm away. Thus reference switching does not explain every large
+matching discrepancy. Positive-offset results and both reference definitions
+are retained in `error_concentration_20260915.csv`. Its groups are defined
+by e>=1 m, the largest ceil(0.05*N) e values, and the fixed frame intervals
+above. The squared-error share is sum(e_subset^2)/sum(e_all^2). Counts and
+full metrics retain the same acceptance set; no rejected frame is converted
+into a measurement and no large error is removed from the reported RMSE.
