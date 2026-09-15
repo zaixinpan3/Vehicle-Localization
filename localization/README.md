@@ -1,5 +1,39 @@
 # Continuous localization observer
 
+For the current MnCAV experiment with precomputed, zero-delay LiDAR, use
+`runMncavMotionAidedExperiment`. Its seven-state motion-aided observer directly
+corrects velocity and acceleration with body-frame motion measurements.
+LiDAR position residuals correct position without feeding the derivative
+states. The nominal physical gains `[kp,kv,ka,kpsi]=[4,4,12,4]` were selected
+on the first 60 s, subject to a new common quadratic certificate and four
+accuracy constraints. The same frozen gains improve position RMSE, peak,
+P95 and heading RMSE against INSPVA over the full and reserved intervals.
+The all-reference/all-metric gate remains false because mixed-ODOM full-run
+P95 rises by 5.18 mm; this exception is retained in the report.
+
+```matlab
+cfg = motionAidedObserverConfig;
+design = designMotionAidedObserverGains(cfg);
+estimate = runMotionAidedVehicleObserver(data, lateralInputs, cfg);
+% Recorded comparison using all existing precomputed frames:
+report = runMncavMotionAidedExperiment;
+```
+
+This path accepts aligned piecewise-linear LiDAR pose with `delay=0` and
+`headingConvention="unwrapped"`. Motion inputs and lateral outputs use the
+same grid as the prior zero-delay experiment. Initialize from the first
+measurement and measured motion, or supply `cfg.initialState` on that yaw
+lift. The runner never receives evaluation references. Geometric weights
+come from the full information matrix; its XY block and yaw diagonal are
+applied in separate cascade stages, without XY-yaw feedback cross terms.
+Qualified knot weights are linearly reconstructed between knots.
+
+See the [derivation and gain design](../research/mncav_motion_aided_20260914/design.md)
+and [recorded/synthetic validation](../research/mncav_motion_aided_20260914/validation.md).
+This design has its own conditional ISS certificate. The old delayed-HGO
+certificate is not reused for it. Positive-delay and GNSS behavior below
+continue to use `runImprovedVehicleObserver`.
+
 The global observer integrates the seven states
 `[X,Vx,Ax,Y,Vy,Ay,psi]`. It implements the two continuous measurement contracts
 in [the ISS derivation](../improved_observer_derivation.md): position-only

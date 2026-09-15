@@ -1,0 +1,158 @@
+{
+  "selectionEndSeconds": 60,
+  "candidateCount": 144,
+  "feasibleCount": 9,
+  "winnerRow": 134,
+  "gains": [
+    4,
+    4,
+    12,
+    4
+  ],
+  "rawDesignMetrics": [
+    0.16608386557527424,
+    0.86536513252026148,
+    0.31309232611285776,
+    0.51525772251052426
+  ],
+  "selectedDesignMetrics": [
+    0.162911882730412,
+    0.86391160178143067,
+    0.28143897786091088,
+    0.48192418117314267
+  ],
+  "metricOrder": "position RMSE, maximum, P95 (m), heading RMSE (deg)",
+  "selection": "Minimum position RMSE among candidates no worse on all four design metrics; no reserved-segment objective",
+  "inputFile": "output/mncav_zero_delay_20260914/experiment.mat",
+  "cfg": {
+    "kind": "motion-aided-seven-state-v1",
+    "gains": [
+      4,
+      4,
+      12,
+      4
+    ],
+    "maximumTrackAngleRate": 0.4,
+    "maximumIntegrationStep": 0.005,
+    "initialState": [],
+    "lidar": {
+      "poseScales": [
+        1,
+        1,
+        1
+      ],
+      "gainInformationScale": 0.001,
+      "minimumPoseWeight": 0.25
+    }
+  },
+  "design": {
+    "kind": "motion-aided-seven-state-v1",
+    "gains": [
+      4,
+      4,
+      12,
+      4
+    ],
+    "certificateVerified": true,
+    "translationP": [
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    ],
+    "comparisonMatrices": [
+      [
+        [
+          2,
+          2
+        ],
+        [
+          -1,
+          -1
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          -1,
+          -1
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          -1,
+          -1.1600000000000001
+        ]
+      ],
+      [
+        [
+          0,
+          0
+        ],
+        [
+          -1,
+          -1.1600000000000001
+        ],
+        [
+          24,
+          24
+        ]
+      ]
+    ],
+    "translationDissipationMargin": 1.8361498799361595,
+    "translationDecayRate": 0.91807493996807976,
+    "headingDecayRate": 1,
+    "maximumTrackAngleRate": 0.4,
+    "minimumPoseWeight": 0.25,
+    "scope": "Conditional ISS for a zero-delay lifted-heading cascade with bounded sensor/model disturbances; no RMSE dominance theorem."
+  }
+}

@@ -1,0 +1,171 @@
+{
+  "gains": [
+    4,
+    4,
+    12,
+    4
+  ],
+  "gainUnits": "1/s",
+  "uniformSamples": 11690,
+  "processedFrames": 1170,
+  "acceptedFrames": 1098,
+  "fixedLidarDelaySeconds": 0,
+  "maximumCsvFrameTimeRoundTripSeconds": 4.9737991503207013E-13,
+  "comparisonGateAllMetrics": [
+    [
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  ],
+  "gateRows": [
+    "INSPVA",
+    "mixed_ODOM"
+  ],
+  "gateColumns": [
+    "uniform_all",
+    "uniform_design",
+    "uniform_reserved",
+    "native_all",
+    "native_accepted"
+  ],
+  "allComparisonGatesPassed": false,
+  "lateralGainSynthesisCertified": true,
+  "maximumLateralReplayDifference": 0,
+  "exactReproductionDifference": 0,
+  "halfStepMaximumStateDifference": 1.22366412114161E-7,
+  "runtimeSeconds": 0.647304,
+  "design": {
+    "kind": "motion-aided-seven-state-v1",
+    "gains": [
+      4,
+      4,
+      12,
+      4
+    ],
+    "certificateVerified": true,
+    "translationP": [
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    ],
+    "comparisonMatrices": [
+      [
+        [
+          2,
+          2
+        ],
+        [
+          -1,
+          -1
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          -1,
+          -1
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          -1,
+          -1.1600000000000001
+        ]
+      ],
+      [
+        [
+          0,
+          0
+        ],
+        [
+          -1,
+          -1.1600000000000001
+        ],
+        [
+          24,
+          24
+        ]
+      ]
+    ],
+    "translationDissipationMargin": 1.8361498799361595,
+    "translationDecayRate": 0.91807493996807976,
+    "headingDecayRate": 1,
+    "maximumTrackAngleRate": 0.4,
+    "minimumPoseWeight": 0.25,
+    "scope": "Conditional ISS for a zero-delay lifted-heading cascade with bounded sensor/model disturbances; no RMSE dominance theorem."
+  },
+  "runtimeDiagnostics": {
+    "integrationStepCount": 24548,
+    "maximumTrackAngleRate": 0.35497531229519724,
+    "rateEnvelopeSatisfied": true,
+    "delaySeconds": 0,
+    "measurementRepresentation": "piecewiseLinear",
+    "weightReconstruction": "Linear interpolation of qualified knot weights",
+    "referenceUsed": false,
+    "stateResets": 0,
+    "unconditionalStabilityClaimed": false
+  },
+  "mapMatchingReused": true,
+  "heldOutDrive": false,
+  "limitations": "One previously inspected drive; >60 s excluded from this gain selection, not a never-seen independent drive. Map/query share the drive; references share the receiver. No universal dominance claim."
+}

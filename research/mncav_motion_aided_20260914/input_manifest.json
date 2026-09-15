@@ -1,0 +1,22 @@
+[
+  {
+    "path": "output/mncav_zero_delay_20260914/experiment.mat",
+    "sha256": "2b66a5dc1238b3359da7b8e9bde59d0f2017308af4826b9d19ecbb048c58b1bb"
+  },
+  {
+    "path": "output/mncav_zero_delay_20260914/precomputed_calls.csv",
+    "sha256": "c553a7e51b711aa5036d9abe1fc037de0a99d30acc2dc79f2d1cb4285b027f5f"
+  },
+  {
+    "path": "output/mncav_zero_delay_20260914/precomputed_lidar_measurements.mat",
+    "sha256": "6d958f150f387c4f8d5ff84ec5022d9b1adc1d0fa0c5b23fde36be07e6320a71"
+  },
+  {
+    "path": "output/mississippi_mapping_20260912/probability_cloud_map.mat",
+    "sha256": "74abe950f618abef4e0991181743b0ba74b1d689a15185db2f0c63c52b8ab104"
+  },
+  {
+    "path": "config/mncavVehicleParameters.json",
+    "sha256": "ce9a25f5ef33c74bab4c20e16c97c0868862428d5a6e96ddfb8db32b4ad750a4"
+  }
+]

@@ -306,6 +306,14 @@ are explicit:
 
 ## Quick start
 
+For the current MnCAV localization experiment with precomputed LiDAR and
+zero measurement delay, run `runMncavMotionAidedExperiment` after setup.
+The [motion-aided seven-state observer](research/mncav_motion_aided_20260914/validation.md)
+retains the turning model and uses direct velocity/acceleration correction.
+Its recorded comparison includes the actual continuous LiDAR input, every
+native matching frame, both diagnostic references and a reserved interval.
+Use `designMncavMotionAidedGains` to reproduce the training-only gain search.
+
 ```matlab
 setupVehicleLocalization();                       % add modules to the path
 buildPerceptionKernels();                         % optional; requires a C++ compiler

@@ -1,0 +1,39 @@
+{
+  "seeds": [
+    2.0260915E+7,
+    2.0260916E+7,
+    2.0260917E+7,
+    2.0260918E+7,
+    2.0260919E+7,
+    2.026092E+7,
+    2.0260921E+7,
+    2.0260922E+7,
+    2.0260923E+7,
+    2.0260924E+7
+  ],
+  "plantStiffnessFactors": [
+    0.7,
+    1,
+    1.3
+  ],
+  "runs": 30,
+  "gains": [
+    4,
+    4,
+    12,
+    4
+  ],
+  "positionRmseWins": 30,
+  "allMetricWins": 30,
+  "meanRawRmseM": 0.17393555594732663,
+  "meanObserverRmseM": 0.13998356678307886,
+  "allCourseRatesInEnvelope": true,
+  "harmonicFrequencyHz": 0.3587165,
+  "harmonicMeasuredGain": 0.87117710925189873,
+  "harmonicExpectedGain": 0.87121399035961267,
+  "harmonicRelativeError": 4.2333006726296951E-5,
+  "cleanLidarBiasedMotionRmseM": 0.24880996466078689,
+  "cleanLidarBaselineRmseM": 0,
+  "universalDominanceClaimed": false,
+  "noiseAssumptions": "100 Hz independent Gaussian speed .05 m/s, acceleration .08 m/s^2, gyro .002 rad/s, steering .05 deg; 10 Hz LiDAR XY .1 m, yaw .3 deg, plus X .15*sin(.7*t) m and Y .1*sin(.4*t) m."
+}

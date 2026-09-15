@@ -1,0 +1,22 @@
+{
+  "tests": {
+    "passed": 82,
+    "total": 82,
+    "failed": 0,
+    "incomplete": 0,
+    "suites": [
+      "motionAidedObserverTest",
+      "improvedObserverTest",
+      "lateralObserverTest",
+      "frameAlignedLidarReplayTest"
+    ]
+  },
+  "factoryAnalyzerFindings": 0,
+  "matlabFilesAnalyzed": 7,
+  "repeatedRecordedStateDifference": 0,
+  "halfStepMaximumStateDifference": 1.22366412114161e-07,
+  "figureInspected": true,
+  "allReferenceAllMetricGatePassed": false,
+  "knownException": "Mixed ODOM full uniform P95 increases from 0.4856530624 to 0.4908294511 m",
+  "initialFailures": "Two test source-interpolation bounds corrected; frame CSV exact-equality replaced with saved indices and 1e-9 s round-trip check; two suite calls used nonexistent filenames and did not execute."
+}
