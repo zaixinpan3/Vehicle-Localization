@@ -1,0 +1,27 @@
+{
+  "sourceObservationFile": "output/mississippi_perception_video_20260912/feature_observations.mat",
+  "poseFile": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_inspva_pose_1_1170.csv",
+  "frames": 1170,
+  "poseSource": "INSPVA",
+  "poseCrs": "EPSG:32615",
+  "heightDatum": "ellipsoidal",
+  "reprojection": {
+    "maximumOriginalRoundTripM": 0,
+    "maximumLocalPointDifferenceM": 4.6588866098318249E-10,
+    "frames": 1170,
+    "sourcePointCounts": [
+      133836,
+      194300,
+      70950
+    ],
+    "method": "Full inverse old SE(3), followed by new SE(3); feature selection and LiDAR calibration unchanged"
+  },
+  "buildSeconds": 192.606966,
+  "publishedComponents": 1320,
+  "totalPublishedMass": 1367.5716366944043,
+  "maximumIntensityReconstructionError": 9.63504387385683E-10,
+  "maximumScoreReconstructionError": 6.6121072013509474E-9,
+  "schemaAndMassChecksPassed": true,
+  "perceptionRerun": false,
+  "referenceLimitation": "Same-drive INSPVA map and query observations; consistency experiment, not independent ground truth"
+}

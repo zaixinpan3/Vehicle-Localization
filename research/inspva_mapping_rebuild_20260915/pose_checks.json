@@ -1,0 +1,12 @@
+{
+  "python_unit_tests": {
+    "passed": 4,
+    "failed": 0
+  },
+  "slerp_wrap_and_opposite_sign": "passed",
+  "grid_north_sign_error_rad": 1.77392989186842e-10,
+  "maximum_prior_clock_difference_s": 3.511683901624707e-05,
+  "maximum_prior_pva_planar_difference_m": 0.00029203695981311535,
+  "maximum_prior_ros_stamp_difference_s": 5.0067901611328125e-06,
+  "comparison_note": "The previous CSV-backed reference is numerically close, not bitwise identical. An initial 1e-8 s / 1e-7 m equality assertion failed; measured differences are retained. No pose alignment or offset was fitted."
+}

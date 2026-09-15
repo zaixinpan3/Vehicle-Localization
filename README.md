@@ -404,8 +404,23 @@ raw/downTownPointClouds.mat
 raw/Missisipi/gnss/<bag>_front_lidar_points.csv   from extractGnssFromBag.py
 raw/Missisipi/gnss/<bag>_odom.csv
 raw/Missisipi/gnss/<bag>_inspva.csv
-raw/Missisipi/gnss/<bag>_front_lidar_pose_match_1_1170.csv   from matchFramePoses
+raw/Missisipi/gnss/<bag>_front_lidar_inspva_pose_1_1170.csv  from prepareInspvaMappingPoses.py
 ```
+
+New Mississippi maps use INSPVA-only poses interpolated at LiDAR timestamps.
+`buildMississippiFeatureMap` prepares the pose table with cached `uv`, NumPy
+and pyproj dependencies when absent. Explicit `pose_*` XYZ/quaternion fields
+carry EPSG:32615 positions, ellipsoidal height and grid-north orientation;
+they take precedence over any historical ODOM fields. Original ODOM pose
+tables remain readable to reproduce stored experiments.
+
+Saved perception already contains globally transformed points. Use
+`reprojectSavedFeatureObservations` to undo each old SE(3) transform before
+applying the new pose. `rebuildInspvaSavedFeatureMap` performs that conversion
+and rebuilds the field without rerunning feature extraction. A pose-table
+replacement alone does not update a cached map. The existing LiDAR calibration
+is retained; INSPVA remains a quality-labeled navigation reference, not an
+independently validated ground-truth trajectory.
 
 ## Verification
 

@@ -3,7 +3,7 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
 % frames and register every semantic feature observation into the global
 % map frame. For each frame the full-frame feature masks are converted to
 % finite [x y z] points in the vehicle frame and transformed with the matched
-% high-precision GNSS/INS pose, giving one global point cloud per feature
+% selected GNSS/INS pose, giving one global point cloud per feature
 % class and frame, the raw material of the offline map.
 %
 % Input:

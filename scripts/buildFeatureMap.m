@@ -21,7 +21,7 @@ function [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg)
     matPath = fullfile(dataRoot, cfg.pointCloudMatPath);
     poseMatchCsvPath = fullfile(dataRoot, cfg.poseMatchCsvPath);
     assert(isfile(matPath), "Point-cloud MAT file not found: %s", matPath);
-    assert(isfile(poseMatchCsvPath), "Pose match CSV not found: %s. Build it with matchFramePoses.", poseMatchCsvPath);
+    assert(isfile(poseMatchCsvPath), "Pose match CSV not found: %s. New Mississippi maps use prepareInspvaMappingPoses.py.", poseMatchCsvPath);
 
     frameIndices = double(cfg.frameIndices(:).');
     if isempty(frameIndices)

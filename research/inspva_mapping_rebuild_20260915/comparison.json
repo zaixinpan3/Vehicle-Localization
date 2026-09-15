@@ -1,0 +1,225 @@
+{
+  "comparison": {
+    "per_frame_zero": {
+      "old_full": {
+        "samples": 1092,
+        "rmse_m": 0.22701065062108747,
+        "median_m": 0.0767680238771195,
+        "maximum_m": 1.35993422089385,
+        "errors_at_least_1m": 22
+      },
+      "new_full": {
+        "samples": 1084,
+        "rmse_m": 0.1486343898516907,
+        "median_m": 0.07886668537554735,
+        "maximum_m": 0.575064925868327,
+        "errors_at_least_1m": 0
+      },
+      "common_full_old": {
+        "samples": 1066,
+        "rmse_m": 0.22482225863331212,
+        "median_m": 0.0765155386114551,
+        "maximum_m": 1.35993422089385,
+        "errors_at_least_1m": 22
+      },
+      "common_full_new": {
+        "samples": 1066,
+        "rmse_m": 0.14687116499536423,
+        "median_m": 0.07829007896941245,
+        "maximum_m": 0.575064925868327,
+        "errors_at_least_1m": 0
+      },
+      "new_directional": 4,
+      "new_rejected": 82,
+      "old_all_outputs": {
+        "samples": 1170,
+        "rmse_m": 0.23504600917020377,
+        "median_m": 0.0733911892398567,
+        "maximum_m": 1.35993422089385,
+        "errors_at_least_1m": 27
+      },
+      "new_all_outputs": {
+        "samples": 1170,
+        "rmse_m": 0.14362677974254187,
+        "median_m": 0.0752223866518193,
+        "maximum_m": 0.575064925868327,
+        "errors_at_least_1m": 0
+      }
+    },
+    "per_frame_positive": {
+      "old_full": {
+        "samples": 1074,
+        "rmse_m": 0.23529674146280022,
+        "median_m": 0.0971287573479377,
+        "maximum_m": 1.3599344578779,
+        "errors_at_least_1m": 18
+      },
+      "new_full": {
+        "samples": 1066,
+        "rmse_m": 0.17710186436818706,
+        "median_m": 0.104577173489888,
+        "maximum_m": 0.855137323745458,
+        "errors_at_least_1m": 0
+      },
+      "common_full_old": {
+        "samples": 1039,
+        "rmse_m": 0.2321158213779164,
+        "median_m": 0.0941021476294304,
+        "maximum_m": 1.3599344578779,
+        "errors_at_least_1m": 18
+      },
+      "common_full_new": {
+        "samples": 1039,
+        "rmse_m": 0.17471754319901422,
+        "median_m": 0.103946696497166,
+        "maximum_m": 0.855137323745458,
+        "errors_at_least_1m": 0
+      },
+      "new_directional": 2,
+      "new_rejected": 102,
+      "old_all_outputs": {
+        "samples": 1170,
+        "rmse_m": 0.31426558079480077,
+        "median_m": 0.10893351847829,
+        "maximum_m": 1.77036429615914,
+        "errors_at_least_1m": 24
+      },
+      "new_all_outputs": {
+        "samples": 1170,
+        "rmse_m": 0.2541114234708572,
+        "median_m": 0.11360316131541051,
+        "maximum_m": 0.855137323745458,
+        "errors_at_least_1m": 0
+      }
+    },
+    "per_frame_negative": {
+      "old_full": {
+        "samples": 1088,
+        "rmse_m": 0.2598593736110081,
+        "median_m": 0.1008425496773375,
+        "maximum_m": 1.35993421055817,
+        "errors_at_least_1m": 18
+      },
+      "new_full": {
+        "samples": 1069,
+        "rmse_m": 0.20737717845699755,
+        "median_m": 0.103202047229529,
+        "maximum_m": 1.35176983660823,
+        "errors_at_least_1m": 1
+      },
+      "common_full_old": {
+        "samples": 1049,
+        "rmse_m": 0.25594400851552723,
+        "median_m": 0.0983710303139399,
+        "maximum_m": 1.35993421055817,
+        "errors_at_least_1m": 18
+      },
+      "common_full_new": {
+        "samples": 1049,
+        "rmse_m": 0.2000463933540413,
+        "median_m": 0.101800678340672,
+        "maximum_m": 0.925487721877829,
+        "errors_at_least_1m": 0
+      },
+      "new_directional": 3,
+      "new_rejected": 98,
+      "old_all_outputs": {
+        "samples": 1170,
+        "rmse_m": 0.3062019201866031,
+        "median_m": 0.111546787543243,
+        "maximum_m": 1.35993421055817,
+        "errors_at_least_1m": 22
+      },
+      "new_all_outputs": {
+        "samples": 1170,
+        "rmse_m": 0.27217637993065197,
+        "median_m": 0.1141546718139175,
+        "maximum_m": 1.35176983660823,
+        "errors_at_least_1m": 1
+      }
+    },
+    "lidar_only_recursive": {
+      "old_full": {
+        "samples": 162,
+        "rmse_m": 1.1463927695637999,
+        "median_m": 0.07650771333029874,
+        "maximum_m": 14.4554564672912,
+        "errors_at_least_1m": 1
+      },
+      "new_full": {
+        "samples": 157,
+        "rmse_m": 1.1859472665969961,
+        "median_m": 0.0789682710756404,
+        "maximum_m": 14.6958283929701,
+        "errors_at_least_1m": 1
+      },
+      "common_full_old": {
+        "samples": 154,
+        "rmse_m": 1.1751943044387358,
+        "median_m": 0.07608658481104205,
+        "maximum_m": 14.4554564672912,
+        "errors_at_least_1m": 1
+      },
+      "common_full_new": {
+        "samples": 154,
+        "rmse_m": 1.1955399874191084,
+        "median_m": 0.07817917363748611,
+        "maximum_m": 14.6958283929701,
+        "errors_at_least_1m": 1
+      },
+      "new_directional": 215,
+      "new_rejected": 798,
+      "old_all_outputs": {
+        "samples": 1170,
+        "rmse_m": 301.81534033641105,
+        "median_m": 97.1689744985451,
+        "maximum_m": 840.913563524001,
+        "errors_at_least_1m": 1002
+      },
+      "new_all_outputs": {
+        "samples": 1170,
+        "rmse_m": 302.39945061516926,
+        "median_m": 97.89692822089435,
+        "maximum_m": 841.589831339318,
+        "errors_at_least_1m": 997
+      }
+    }
+  },
+  "frame_1086": {
+    "old": {
+      "full": true,
+      "pva_error_m": 1.30336022069354,
+      "mapping_error_m": 0.0281150886506966
+    },
+    "new": {
+      "full": true,
+      "pva_error_m": 0.0355936076531765,
+      "mapping_error_m": 0.0355936076531765
+    }
+  },
+  "recursive_first_crossings": {
+    "0.5": {
+      "frame": 88,
+      "time_s": 8.65815908723114,
+      "error_m": 0.556876204287312
+    },
+    "1": {
+      "frame": 100,
+      "time_s": 9.89908954309377,
+      "error_m": 1.12896835531987
+    },
+    "5": {
+      "frame": 188,
+      "time_s": 18.7057935380732,
+      "error_m": 5.16588148439651
+    },
+    "10": {
+      "frame": 201,
+      "time_s": 20.0061821368191,
+      "error_m": 10.1037309275975
+    }
+  },
+  "recursive_final_error_m": 841.589831339318,
+  "validation": "All 4680 ordered calls present; all full/all-output RMSE and median values independently reproduced within 1e-9 m; rejected measurement coordinates remain NaN. Common-accepted comparisons are supplemental, not replacements for full populations.",
+  "scope": "All frames retained; no gain or matcher tuning. Same perception points and map hyperparameters; new INSPVA source, time interpolation, grid-north orientation and ellipsoidal height. Both map and queries use this drive; no independent ground truth."
+}

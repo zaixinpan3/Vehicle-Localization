@@ -8,6 +8,7 @@ function report=runSavedPerceptionMatchingBaseline(outputFolder,options)
         outputFolder (1,1) string="output/saved_perception_baseline_20260914"
         options.ObservationFile (1,1) string="output/mississippi_perception_video_20260912/feature_observations.mat"
         options.MapFile (1,1) string="output/mississippi_mapping_20260912/probability_cloud.mat"
+        options.MapRebuilt (1,1) logical=false
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     loaded=load(options.ObservationFile,'featureData');data=loaded.featureData;
@@ -17,12 +18,20 @@ function report=runSavedPerceptionMatchingBaseline(outputFolder,options)
     reference=zeros(n,3);for k=1:n,reference(k,:)=poseRowToPlanarPose(data.framePoseTable(k,:));end
     % The prior exact frame clock and PVA reference are evaluation metadata.
     % No prior matching pose, motion measurement or observer state is used.
-    previous=readtable('output/mncav_zero_delay_20260914/precomputed_calls.csv');
-    assert(isequal(previous.frame,data.frameIndices(:)));
-    assert(max(abs(previous.rosStamp-data.framePoseTable.lidar_stamp_sec))<1e-6);
-    time=previous.timeSeconds;
-    pva=readtable('output/mncav_error_diagnosis_20260914/pva_reference.csv');
-    pvaReference=[interp1(pva.time,[pva.x,pva.y],time,'linear'),reference(:,3)];
+    if ismember('pose_source',data.framePoseTable.Properties.VariableNames)
+        assert(all(data.framePoseTable.pose_source=="INSPVA"),'Expected native INSPVA mapping poses.');
+        time=data.framePoseTable.receiver_time_sec;
+        pvaReference=reference;
+        referenceUse="INSPVA poses at LiDAR timestamps invert saved global features and provide evaluation/diagnostic seeds; no pose reset in recursive mode";
+    else
+        previous=readtable('output/mncav_zero_delay_20260914/precomputed_calls.csv');
+        assert(isequal(previous.frame,data.frameIndices(:)));
+        assert(max(abs(previous.rosStamp-data.framePoseTable.lidar_stamp_sec))<1e-6);
+        time=previous.timeSeconds;
+        pva=readtable('output/mncav_error_diagnosis_20260914/pva_reference.csv');
+        pvaReference=[interp1(pva.time,[pva.x,pva.y],time,'linear'),reference(:,3)];
+        referenceUse="Recorded pose reverses stored global features; PVA and prior cache supply evaluation/clock only";
+    end
     assert(all(isfinite(pvaReference),'all') && all(diff(time)>0));
     offsets=[.5,-.4,deg2rad(2);-.5,.4,-deg2rad(2);0,0,0];
     names=["per_frame_positive","per_frame_negative","per_frame_zero","lidar_only_recursive"];
@@ -110,10 +119,10 @@ function report=runSavedPerceptionMatchingBaseline(outputFolder,options)
         'seededModes',"Every frame is initialized relative to its recorded mapping pose; diagnostic only", ...
         'recursivePrediction',"One initial pose plus positive offset; map-frame constant velocity/yaw rate from latest two full accepted matches; rejected frames propagate; no reference reset", ...
         'directionalHandling',"Directional event corrects its observable directions; only full events update predictor velocity", ...
-        'referenceUse',"Recorded pose reverses the stored global feature transform and provides evaluation. PVA and prior cache supply evaluation/clock only.", ...
+        'referenceUse',referenceUse, ...
         'rejectedHandling',"Measurement fields remain NaN; all_outputs retains seed/prediction, and rejected solver candidate is separate", ...
-        'mapOverlap',"Query frames contributed to the unchanged map; in-sample consistency, not independent ground-truth accuracy", ...
-        'observerUsed',false,'motionSensorsUsed',false,'perceptionRerun',false,'mapRebuilt',false, ...
+        'mapOverlap',"Query frames contributed to this map; in-sample consistency, not independent ground-truth accuracy", ...
+        'observerUsed',false,'motionSensorsUsed',false,'perceptionRerun',false,'mapRebuilt',options.MapRebuilt, ...
         'timingScope',"Matching on precomputed fine perception; excludes original perception, mapping and sensor latency", ...
         'matlabVersion',version);
     report=struct('metadata',metadata,'metrics',metrics);

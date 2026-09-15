@@ -4,6 +4,8 @@ function poseMatchTable = matchFramePoses(lidarCsvPath, odomCsvPath, inspvaCsvPa
 % the frame pose table that registers local observations into the global
 % odom/UTM-like frame. The odometry provides metric position and a full
 % orientation quaternion; INSPVA provides the heading fallback and attitude.
+% This legacy pairing reproduces existing ODOM-based records. New Mississippi
+% maps use prepareInspvaMappingPoses.py and explicit pose_* fields instead.
 %
 % Input:
 %   lidarCsvPath: CSV with frame_index and stamp_sec per LiDAR frame

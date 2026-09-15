@@ -1,0 +1,28 @@
+{
+  "source": "INSPVA only; no ODOM or BESTPOS position/orientation input",
+  "frames": 1170,
+  "native_samples": 5847,
+  "epsg": 32615,
+  "height_datum": "INSPVA ellipsoidal height; no mixed MSL height",
+  "clock": "Linear ROS-header to receiver-time bridge; no pose fit, delay or extrapolation",
+  "position_interpolation": "Linear projected XYZ at bridged receiver time",
+  "orientation": "SLERP of Rz(90-azimuth+grid_convergence) Ry(-pitch) Rx(roll)",
+  "grid_convergence_deg_range": [
+    -0.14156526544787504,
+    -0.13695896563325904
+  ],
+  "reference_point": "Recorded INS output point; existing LiDAR calibration retained, no new lever arm inferred",
+  "frames_with_non_good_bracket": 41,
+  "quality_handling": "All frames retained; bracketing INS statuses recorded, no ground-truth claim",
+  "inputs": [
+    {
+      "path": "/home/zai/Downloads/ResearchProjects/vehicleLocalization/data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_points.csv",
+      "sha256": "b056f457aca22a4f03dd074ef5b84ec2432b851f0f0630286ac3217eb6a1b3d7"
+    },
+    {
+      "path": "/home/zai/Downloads/ResearchProjects/vehicleLocalization/data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+      "sha256": "2c3abb303f16b7ba5f75f34e96daad3f83aeac3aed22fb8fad7fa4ce133dccdb"
+    }
+  ],
+  "output_sha256": "0b85599f701cfeeb55b285afc0bb161faaeba7d85b8ab6c18ee307a6054d1512"
+}

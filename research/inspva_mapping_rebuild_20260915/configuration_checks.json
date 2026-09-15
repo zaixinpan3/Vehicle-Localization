@@ -1,0 +1,9 @@
+{
+  "temporalMapParametersEqual": true,
+  "batchFrameCountEqual": true,
+  "batchStrideEqual": true,
+  "featureNamesEqual": true,
+  "frameCalibrationEqual": true,
+  "registrationParametersEqual": true,
+  "movingCloudParametersEqual": true
+}
