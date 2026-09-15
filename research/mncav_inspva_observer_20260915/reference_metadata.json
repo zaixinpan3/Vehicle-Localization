@@ -1,0 +1,16 @@
+{
+  "samples": 5847,
+  "role": "Evaluation only; never an observer measurement or reset",
+  "coordinates": "EPSG:32615, ellipsoidal height, unwrapped grid yaw",
+  "inputs": [
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+      "sha256": "2c3abb303f16b7ba5f75f34e96daad3f83aeac3aed22fb8fad7fa4ce133dccdb"
+    },
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_points.csv",
+      "sha256": "b056f457aca22a4f03dd074ef5b84ec2432b851f0f0630286ac3217eb6a1b3d7"
+    }
+  ],
+  "sha256": "d07baa8fac07b72e46c20c0546f308b197ba0cd3c740124dfc01988a7ab1775e"
+}

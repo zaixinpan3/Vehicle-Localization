@@ -1,0 +1,146 @@
+[
+  {
+    "path": "output/mncav_inspva_observer_20260915/experiment.mat",
+    "role": "Output",
+    "bytes": 15036260,
+    "sha256": "e0da6da81c4f7ae45a50567f20ec70d2389e54d39dc63553f70762018b8aede9"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_experiment.mat",
+    "role": "Output",
+    "bytes": 10022739,
+    "sha256": "c65f7af87c63a95e52d20766769870ef7050fe41720b2932d5652bb48ed57ba6"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_ablation.mat",
+    "role": "Output",
+    "bytes": 2994076,
+    "sha256": "b9c31f803c2eca636dfc722f670ce4eb901a71b30502e0b49ee944210a891c56"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/diagnostics.mat",
+    "role": "Output",
+    "bytes": 1773326,
+    "sha256": "3f536805094309624927598f480473b4c2743b04f69f1873f0e44ff0e2adae0a"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/native_reference.csv",
+    "role": "Output",
+    "bytes": 567599,
+    "sha256": "d07baa8fac07b72e46c20c0546f308b197ba0cd3c740124dfc01988a7ab1775e"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/reference_metadata.json",
+    "role": "Output",
+    "bytes": 630,
+    "sha256": "ccba49f9d2dda879f0cd8428852c7abd243be54d67e53887f44fc4c2642dec94"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/metrics.csv",
+    "role": "Output",
+    "bytes": 6916,
+    "sha256": "0f1060d436b685c88993cd1e907ee4102cf75c28baeb59c132e4bfc89ca199d3"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_metrics.csv",
+    "role": "Output",
+    "bytes": 13783,
+    "sha256": "62f84a783d060a62b1bffc9fc33eed1a13e9c3c1959c2da63546425a4e852b10"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/frame_errors.csv",
+    "role": "Output",
+    "bytes": 332074,
+    "sha256": "f9ae5d77faad9e0350b5afd52403529c9a0525727c8b3cc29f65cf93d433f8f8"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_frame_errors.csv",
+    "role": "Output",
+    "bytes": 271575,
+    "sha256": "630e53ba1f070e36935b7b798bd497b63d89dda7a75e159d650894112f38d818"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_uniform_errors.csv",
+    "role": "Output",
+    "bytes": 931766,
+    "sha256": "c2a844a261a9d689f2c0e947d76dea91807bbbe87e5a9bc1e12d046d5e35992b"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/gains.json",
+    "role": "Output",
+    "bytes": 4803,
+    "sha256": "82b12302ab39dd4b73941ac5002f93d19d29180ae92c9ce33c507230ce17777c"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/summary.json",
+    "role": "Output",
+    "bytes": 80711,
+    "sha256": "e2b2bd632d4e90fcc631422527ff3c49efb981c163596523d78ba834c3701835"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_summary.json",
+    "role": "Output",
+    "bytes": 38900,
+    "sha256": "c0db4847cb51b86b284cdff21935726666de54648212016b1c85e88558813a32"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/diagnostics.json",
+    "role": "Output",
+    "bytes": 5979,
+    "sha256": "2854ed79e10fab316bb393ddbd9656eae959a97052d2ddf28511c26c098d395f"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/tests.csv",
+    "role": "Output",
+    "bytes": 2761,
+    "sha256": "20438416ea2826c819a87389d79ad8be18cdc8287a48665767ab7957338423f4"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/gap_tests.csv",
+    "role": "Output",
+    "bytes": 478,
+    "sha256": "3d6493a55a26d733735953cba084f51b1ba7287f719d1c004b61709ed8ca89f0"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/code_checks.json",
+    "role": "Output",
+    "bytes": 321,
+    "sha256": "2c2c275f838c719f4c6f4f6a7cba7417435753334406a7aee0174353d1f25e76"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_comparison.png",
+    "role": "Output",
+    "bytes": 187883,
+    "sha256": "7d180ac2f27b9420872da289eecd89f28f56c5c901ca05e036f919222ceccb66"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_comparison.pdf",
+    "role": "Output",
+    "bytes": 324898,
+    "sha256": "1279fbfa1fac03175ce107cfe38c12ad25779c80f0ab15d14c66b2c6e0457cf0"
+  },
+  {
+    "path": "output/mncav_zero_delay_20260914/experiment.mat",
+    "role": "Frozen input",
+    "bytes": 11092300,
+    "sha256": "2b66a5dc1238b3359da7b8e9bde59d0f2017308af4826b9d19ecbb048c58b1bb"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/experiment.mat",
+    "role": "Frozen input",
+    "bytes": 348390498,
+    "sha256": "7d8f2007c4376fc6064e75249b6202b96feb1380c7c8606714879d1f35c0e08e"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/calls.csv",
+    "role": "Frozen input",
+    "bytes": 2154661,
+    "sha256": "096f2a4d8d392caf3bdddece9117fc30ac0359124c79613be4604cb9f45961c0"
+  },
+  {
+    "path": "output/mississippi_mapping_inspva_20260915/probability_cloud.mat",
+    "role": "Frozen input",
+    "bytes": 269784,
+    "sha256": "ad2a55e0b8a0a222432a3a4bd3a8b70f0a92ecd686b19c81b5237ef2657baffd"
+  }
+]

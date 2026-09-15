@@ -1,0 +1,10 @@
+{
+  "checkedMetricRows": 48,
+  "checkedStatisticsPerRow": 5,
+  "matchedFrameModeRows": 3510,
+  "uniformZeroModeRows": 11690,
+  "allFrameModesAndAcceptancePreserved": true,
+  "maximumOriginalMatchingErrorCsvDifferenceM": 4.679552800812559e-09,
+  "statisticToleranceM": 1e-09,
+  "gainsSelected": false
+}

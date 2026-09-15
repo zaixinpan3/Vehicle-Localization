@@ -1,0 +1,16 @@
+{
+  "files": [
+    "scripts/runInspvaMapObserverComparison.m",
+    "scripts/analyzeInspvaObserverReplay.m",
+    "scripts/runInspvaMotionGapComparison.m",
+    "localization/reconstructMotionAidedLidarGaps.m",
+    "tests/motionAidedGapReconstructionTest.m"
+  ],
+  "findings": [
+    [],
+    [],
+    [],
+    [],
+    []
+  ]
+}
