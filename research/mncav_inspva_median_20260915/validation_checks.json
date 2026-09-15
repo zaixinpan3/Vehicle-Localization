@@ -1,0 +1,250 @@
+{
+  "maximumLidarComponentVsOracleDifferenceM": 5.6400505144877019E-9,
+  "maximumMotionComponentVsOracleDifferenceM": 7.1763657446408658E-6,
+  "actualRepeatStateDifference": 0,
+  "codeAnalyzer": [],
+  "controls": [
+    {
+      "name": "actual",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "reference_position_input",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "reference_heading_input",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "reference_heading_and_rate",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.36259370897338944,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "reference_body_velocity",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "reference_longitudinal_velocity",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "reference_lateral_velocity",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "reference_body_acceleration",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "reference_velocity_acceleration",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "reference_all_motion",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.38547009962468431,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "zero_acceleration",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "kinematic_acceleration",
+      "gains": [
+        4,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "kp_2",
+      "gains": [
+        2,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "kp_8",
+      "gains": [
+        8,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "kp_12",
+      "gains": [
+        12,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "kp_16",
+      "gains": [
+        16,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "kp_24",
+      "gains": [
+        24,
+        4,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "kv_1",
+      "gains": [
+        4,
+        1,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "kv_12",
+      "gains": [
+        4,
+        12,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "kv_24",
+      "gains": [
+        4,
+        24,
+        12,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "ka_6",
+      "gains": [
+        4,
+        4,
+        6,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    },
+    {
+      "name": "ka_24",
+      "gains": [
+        4,
+        4,
+        24,
+        4
+      ],
+      "maximumCourseRate": 0.35497531229519724,
+      "rateEnvelopeSatisfied": true
+    }
+  ]
+}

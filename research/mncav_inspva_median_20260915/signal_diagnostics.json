@@ -1,0 +1,445 @@
+{
+  "uniformSignalStatistics": {
+    "all_uniform": {
+      "samples": 11690,
+      "measuredVx": {
+        "measuredMean": 10.933611214347485,
+        "referenceMean": 10.903785593434405,
+        "difference": {
+          "mean": 0.02982562091308032,
+          "median": 0.03114301200290015,
+          "rmse": 0.05818636678317967,
+          "q25": 0.006309814118275359,
+          "q75": 0.060463865628138436
+        }
+      },
+      "estimatedVy": {
+        "measuredMean": 0.03149973631907096,
+        "referenceMean": 0.2099033478074094,
+        "difference": {
+          "mean": -0.17840361148833844,
+          "median": -0.2344973337546155,
+          "rmse": 0.2695550586653346,
+          "q25": -0.3011179814374034,
+          "q75": -0.14518787000438424
+        }
+      },
+      "measuredAx": {
+        "measuredMean": 0.17074539287030893,
+        "referenceMean": 0.08699646614401053,
+        "difference": {
+          "mean": 0.08374892672629841,
+          "median": 0.0814177490374499,
+          "rmse": 0.2795685190778498,
+          "q25": -0.07994183957816867,
+          "q75": 0.25349392376284074
+        }
+      },
+      "measuredAy": {
+        "measuredMean": 0.1137127708823906,
+        "referenceMean": 0.1214133424729041,
+        "difference": {
+          "mean": -0.007700571590513515,
+          "median": -0.00859515394439149,
+          "rmse": 0.1967385451731378,
+          "q25": -0.12326377271670405,
+          "q75": 0.11848046244200772
+        }
+      },
+      "observerForwardVelocityError": {
+        "mean": 0.05283789973495448,
+        "median": 0.06292027991490685,
+        "rmse": 0.10642092941470681,
+        "q25": 0.023082871129879202,
+        "q75": 0.11680153442320475
+      },
+      "observerLeftVelocityError": {
+        "mean": -0.1551046151979488,
+        "median": -0.1817420341376706,
+        "rmse": 0.23487132626230584,
+        "q25": -0.27987524427429344,
+        "q75": -0.07705316677620704
+      },
+      "observerHeadingErrorRad": {
+        "mean": 0.0016230744604424213,
+        "median": 0.00160127701050518,
+        "rmse": 0.0060699317393011175,
+        "q25": -0.0003145164945405065,
+        "q75": 0.004316984265759524
+      }
+    },
+    "moving": {
+      "samples": 10787,
+      "measuredVx": {
+        "measuredMean": 11.692426386971007,
+        "referenceMean": 11.655952107237795,
+        "difference": {
+          "mean": 0.03647427973321343,
+          "median": 0.034726394035601515,
+          "rmse": 0.05648509824323842,
+          "q25": 0.011627181046151236,
+          "q75": 0.06282956341380164
+        }
+      },
+      "estimatedVy": {
+        "measuredMean": 0.027772885872109212,
+        "referenceMean": 0.2289319455935816,
+        "difference": {
+          "mean": -0.2011590597214724,
+          "median": -0.2456717741117028,
+          "rmse": 0.2742919630192404,
+          "q25": -0.3040701308977629,
+          "q75": -0.1713405979210606
+        }
+      },
+      "measuredAx": {
+        "measuredMean": 0.1698710729397734,
+        "referenceMean": 0.04717262417256427,
+        "difference": {
+          "mean": 0.12269844876720913,
+          "median": 0.09989301395365899,
+          "rmse": 0.26660361477736466,
+          "q25": -0.029557724701138814,
+          "q75": 0.27433641903258676
+        }
+      },
+      "measuredAy": {
+        "measuredMean": 0.10504285112611296,
+        "referenceMean": 0.11499412616025587,
+        "difference": {
+          "mean": -0.009951275034142927,
+          "median": -0.014772214457829697,
+          "rmse": 0.19675360054249544,
+          "q25": -0.12588308306175744,
+          "q75": 0.11844349674145699
+        }
+      },
+      "observerForwardVelocityError": {
+        "mean": 0.06904158942969867,
+        "median": 0.0673825611528885,
+        "rmse": 0.10090948350027222,
+        "q25": 0.0326861801423709,
+        "q75": 0.1224184261770655
+      },
+      "observerLeftVelocityError": {
+        "mean": -0.17476899343942112,
+        "median": -0.19838904326357557,
+        "rmse": 0.23915384133309076,
+        "q25": -0.287960404525537,
+        "q75": -0.107183107413649
+      },
+      "observerHeadingErrorRad": {
+        "mean": 0.0019470045891827905,
+        "median": 0.00195932067421922,
+        "rmse": 0.006128786618005979,
+        "q25": -2.229870610409575e-05,
+        "q75": 0.004631365908046025
+      }
+    },
+    "straight_moving": {
+      "samples": 6303,
+      "measuredVx": {
+        "measuredMean": 12.383061741673634,
+        "referenceMean": 12.342254301021715,
+        "difference": {
+          "mean": 0.040807440651921184,
+          "median": 0.034262675843200086,
+          "rmse": 0.0589925807084971,
+          "q25": 0.015011749808552466,
+          "q75": 0.06459229493614949
+        }
+      },
+      "estimatedVy": {
+        "measuredMean": 0.006798409593702215,
+        "referenceMean": 0.2698521504919285,
+        "difference": {
+          "mean": -0.2630537408982263,
+          "median": -0.2783587745700867,
+          "rmse": 0.2734303612350659,
+          "q25": -0.30714940809171043,
+          "q75": -0.19675677480005693
+        }
+      },
+      "measuredAx": {
+        "measuredMean": 0.1771633417594413,
+        "referenceMean": -0.0021430825910104473,
+        "difference": {
+          "mean": 0.17930642435045174,
+          "median": 0.14374697250055804,
+          "rmse": 0.2926266718368042,
+          "q25": 0.031127327498561994,
+          "q75": 0.3513227917857725
+        }
+      },
+      "measuredAy": {
+        "measuredMean": -0.015142715337762855,
+        "referenceMean": -0.01349320136463941,
+        "difference": {
+          "mean": -0.0016495139731234397,
+          "median": -0.013188351555289995,
+          "rmse": 0.17933156730296002,
+          "q25": -0.12083181005438519,
+          "q75": 0.11912217291280039
+        }
+      },
+      "observerForwardVelocityError": {
+        "mean": 0.08549215011727207,
+        "median": 0.0739146149567442,
+        "rmse": 0.11237978992819,
+        "q25": 0.04577474308781446,
+        "q75": 0.151159624472225
+      },
+      "observerLeftVelocityError": {
+        "mean": -0.22976157994992874,
+        "median": -0.22875741336073524,
+        "rmse": 0.2542671790247603,
+        "q25": -0.3163051931931258,
+        "q75": -0.145153667029023
+      },
+      "observerHeadingErrorRad": {
+        "mean": 0.002796493517896324,
+        "median": 0.00237290049489608,
+        "rmse": 0.0050128618422534575,
+        "q25": 0.0003385013484042685,
+        "q75": 0.004791093594700769
+      }
+    },
+    "straight_moving_INS_good": {
+      "samples": 5903,
+      "measuredVx": {
+        "measuredMean": 12.243704594481686,
+        "referenceMean": 12.207607770605254,
+        "difference": {
+          "mean": 0.03609682387643348,
+          "median": 0.03204639548590116,
+          "rmse": 0.05300937796265252,
+          "q25": 0.013699798676350738,
+          "q75": 0.0576372118979851
+        }
+      },
+      "estimatedVy": {
+        "measuredMean": 0.005898072000023536,
+        "referenceMean": 0.26224381736789787,
+        "difference": {
+          "mean": -0.2563457453678744,
+          "median": -0.2685840874024333,
+          "rmse": 0.2662990909131145,
+          "q25": -0.3020927038343053,
+          "q75": -0.19239577839313576
+        }
+      },
+      "measuredAx": {
+        "measuredMean": 0.18432814727103214,
+        "referenceMean": 3.184144516388081e-05,
+        "difference": {
+          "mean": 0.18429630582586826,
+          "median": 0.14606701614198858,
+          "rmse": 0.2986703210641655,
+          "q25": 0.034565599666728015,
+          "q75": 0.3654644060997879
+        }
+      },
+      "measuredAy": {
+        "measuredMean": 0.001641254159353765,
+        "referenceMean": -0.0007742130412917869,
+        "difference": {
+          "mean": 0.002415467200645547,
+          "median": -0.007391405482670005,
+          "rmse": 0.17816359555474046,
+          "q25": -0.11917901425361845,
+          "q75": 0.12403528321271762
+        }
+      },
+      "observerForwardVelocityError": {
+        "mean": 0.08254230287741687,
+        "median": 0.0700923193001403,
+        "rmse": 0.11050067158709516,
+        "q25": 0.043151036113989946,
+        "q75": 0.1496033177244005
+      },
+      "observerLeftVelocityError": {
+        "mean": -0.2216599502439843,
+        "median": -0.22105291761776,
+        "rmse": 0.24626086695329782,
+        "q25": -0.301612232181173,
+        "q75": -0.1399825548139385
+      },
+      "observerHeadingErrorRad": {
+        "mean": 0.002841316313261471,
+        "median": 0.0024534301364204964,
+        "rmse": 0.005118306097480587,
+        "q25": 0.00033125665808490627,
+        "q75": 0.0049194405754448
+      }
+    }
+  },
+  "lateralTimeShiftDiagnostics": [
+    {
+      "shiftSeconds": -0.5,
+      "samples": 6253,
+      "mean": -0.26254479777355755,
+      "median": -0.2764674694443072,
+      "rmse": 0.2731563041048519,
+      "q25": -0.30766121020247095,
+      "q75": -0.192673062897229
+    },
+    {
+      "shiftSeconds": -0.2,
+      "samples": 6253,
+      "mean": -0.26258170046818535,
+      "median": -0.2760583900442885,
+      "rmse": 0.27321970115445593,
+      "q25": -0.3081999539259442,
+      "q75": -0.19501691958197145
+    },
+    {
+      "shiftSeconds": -0.1,
+      "samples": 6253,
+      "mean": -0.2626359181401699,
+      "median": -0.2773205782835223,
+      "rmse": 0.2731354154960007,
+      "q25": -0.30730477554191105,
+      "q75": -0.1954931372437149
+    },
+    {
+      "shiftSeconds": 0,
+      "samples": 6253,
+      "mean": -0.2626759108410531,
+      "median": -0.2773541013669821,
+      "rmse": 0.27311496302269117,
+      "q25": -0.30673443068070216,
+      "q75": -0.19599098405853924
+    },
+    {
+      "shiftSeconds": 0.1,
+      "samples": 6253,
+      "mean": -0.26272037340549176,
+      "median": -0.2769125943348895,
+      "rmse": 0.27313923025994236,
+      "q25": -0.30719161032075815,
+      "q75": -0.1965425916028559
+    },
+    {
+      "shiftSeconds": 0.2,
+      "samples": 6253,
+      "mean": -0.2626531430018138,
+      "median": -0.27617516862306357,
+      "rmse": 0.2730878383678556,
+      "q25": -0.3067324711017127,
+      "q75": -0.19778592321848082
+    },
+    {
+      "shiftSeconds": 0.5,
+      "samples": 6253,
+      "mean": -0.2622737537106342,
+      "median": -0.2763595573860374,
+      "rmse": 0.2726390993094762,
+      "q25": -0.3057295839740732,
+      "q75": -0.20074651779524239
+    }
+  ],
+  "twoDriveCourseHeadingDiagnostics": [
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+      "selection": "INS forward speed >5 m/s and absolute INS yaw rate <.03 rad/s",
+      "durationSeconds": 116.92000000004191,
+      "samples": 3128,
+      "courseMinusHeadingDeg": {
+        "mean": 1.2474083799104188,
+        "median": 1.2855711865692978,
+        "rmse": 1.285289708784664,
+        "q25": 1.0222693737423167,
+        "q75": 1.4874548972210375
+      },
+      "lateralVelocityMps": {
+        "mean": 0.26972756721283697,
+        "median": 0.2833180710312281,
+        "rmse": 0.2801515712184558,
+        "q25": 0.2071974412272668,
+        "q75": 0.30950729108553987
+      },
+      "interpretation": "Planar course versus reported INS attitude; not an identified vehicle sideslip or extrinsic calibration"
+    },
+    {
+      "path": "output/mississippi_20240607_120931_20260907/calibration_sensors/inspva.csv",
+      "selection": "INS forward speed >5 m/s and absolute INS yaw rate <.03 rad/s",
+      "durationSeconds": 77.9199999999837,
+      "samples": 1192,
+      "courseMinusHeadingDeg": {
+        "mean": 0.0076126075951838,
+        "median": 0.004072548457801504,
+        "rmse": 0.221261918145736,
+        "q25": -0.16062688933826808,
+        "q75": 0.17481581142533711
+      },
+      "lateralVelocityMps": {
+        "mean": 0.0018812984560461076,
+        "median": 0.0007232999669601892,
+        "rmse": 0.04598247707362746,
+        "q25": -0.03319484817268492,
+        "q75": 0.035662581890231304
+      },
+      "interpretation": "Planar course versus reported INS attitude; not an identified vehicle sideslip or extrinsic calibration"
+    }
+  ],
+  "exploratoryGeometryRegressions": [
+    {
+      "model": "insVy-estimatedVy = delta*vx + ell_x*r",
+      "trainingSamples": 5098,
+      "laterSamples": 5689,
+      "deltaRad": 0.02213646132390695,
+      "deltaDeg": 1.268325807214447,
+      "ellXM": -1.803031780237292,
+      "interceptMps": 0,
+      "laterResidualBeforeMps": {
+        "mean": 0.14960566842115997,
+        "median": 0.19981543824461934,
+        "rmse": 0.24218488870676852,
+        "q25": 0.11654113426451732,
+        "q75": 0.289250360711038
+      },
+      "laterResidualAfterMps": {
+        "mean": -0.04834626761692261,
+        "median": -0.05562338003205778,
+        "rmse": 0.08578426688369542,
+        "q25": -0.10902829927451357,
+        "q75": 0.024749054094208522
+      },
+      "physicalParametersIdentified": false,
+      "correctionApplied": false
+    },
+    {
+      "model": "insVy-estimatedVy = delta*vx + ell_x*r + c",
+      "trainingSamples": 5098,
+      "laterSamples": 5689,
+      "deltaRad": 0.04220356900050241,
+      "deltaDeg": 2.418086384117942,
+      "ellXM": -1.5422714631597723,
+      "interceptMps": -0.2573558731713328,
+      "laterResidualBeforeMps": {
+        "mean": 0.14960566842115997,
+        "median": 0.19981543824461934,
+        "rmse": 0.24218488870676852,
+        "q25": 0.11654113426451732,
+        "q75": 0.289250360711038
+      },
+      "laterResidualAfterMps": {
+        "mean": -0.018696835061475632,
+        "median": -0.020102109341184587,
+        "rmse": 0.07393272737303806,
+        "q25": -0.07497951889255688,
+        "q75": 0.04417539800897552
+      },
+      "physicalParametersIdentified": false,
+      "correctionApplied": false
+    }
+  ],
+  "checks": {
+    "primaryRmseAndMedianReproduced": true,
+    "binsVerified": 4,
+    "squaredErrorSumsReconcile": true,
+    "referenceUsedInDiagnosticRegression": true,
+    "diagnosticRegressionAppliedToObserver": false,
+    "productionParametersChanged": false
+  }
+}

@@ -1,0 +1,92 @@
+[
+  {
+    "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+    "bytes": 1376462,
+    "sha256": "2c3abb303f16b7ba5f75f34e96daad3f83aeac3aed22fb8fad7fa4ce133dccdb"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/calibration_sensors/inspva.csv",
+    "bytes": 898521,
+    "sha256": "125b353460904965fea08a64a1f0dea0506843b56551ec77b6723da4e1bcfa24"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/components.csv",
+    "bytes": 1241,
+    "sha256": "94996ee4687dd8e881d3460e04e0534d609bf30f8cc95f037d00e9ee87365466"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/controls.csv",
+    "bytes": 8231,
+    "sha256": "d13beed7c59f6c3f8b8ac76ec66e366b4b8a686760592b6f3a8411840467b2c4"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/experiment.mat",
+    "bytes": 46786668,
+    "sha256": "ec14c436bc464e46d62b8c5b09a6d64f3747e36c7986268ddd89f8f115fa1fe6"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/groups.csv",
+    "bytes": 2156,
+    "sha256": "d6acd3d4a678eabe4007bdc513ff8f4ad14d06453bb250cc56828f9c0e2ca2c4"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/median_diagnosis.pdf",
+    "bytes": 109207,
+    "sha256": "21564340714c1528c21971eb555344189d15dcfebd915b5d6c65794717b53f8b"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/median_diagnosis.png",
+    "bytes": 265698,
+    "sha256": "71a8b1501d8a8f411363494dffb18433a5611699a69873271ca82d7c25f150e7"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/motion_audit.csv",
+    "bytes": 3233282,
+    "sha256": "309002ce89408c25147322fe2d3941d0970b7356bd09e38ac05c21c5d687c14f"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/paired_frames.csv",
+    "bytes": 187243,
+    "sha256": "8cbe631802c256484735f2aa24ec82937f2b2107d9433eb298373abda0084c5b"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/raw_error_bins.csv",
+    "bytes": 526,
+    "sha256": "89d0a9e75a2a67e6959f2a8b97b30c6d67c8634739114dfa161ad5b210f8f49c"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/signal_diagnostics.json",
+    "bytes": 13997,
+    "sha256": "469396b60946dddbc3392cec7a8e02192e8d23d5dc61b31fcd15dfa7e605d687"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/summary.json",
+    "bytes": 36599,
+    "sha256": "877d99a25485f729de28d655292f83459d7515dcbffeb4160ec5b35ff0a0c12b"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/validation_checks.json",
+    "bytes": 4616,
+    "sha256": "da2e2add53c2a8401605d7a3564b96e7ac89fd76cb19861fb300954940923522"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/experiment.mat",
+    "bytes": 15036260,
+    "sha256": "e0da6da81c4f7ae45a50567f20ec70d2389e54d39dc63553f70762018b8aede9"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/frame_errors.csv",
+    "bytes": 332074,
+    "sha256": "f9ae5d77faad9e0350b5afd52403529c9a0525727c8b3cc29f65cf93d433f8f8"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_experiment.mat",
+    "bytes": 10022739,
+    "sha256": "c65f7af87c63a95e52d20766769870ef7050fe41720b2932d5652bb48ed57ba6"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/native_reference.csv",
+    "bytes": 567599,
+    "sha256": "d07baa8fac07b72e46c20c0546f308b197ba0cd3c740124dfc01988a7ab1775e"
+  }
+]
