@@ -1,0 +1,390 @@
+{
+  "bag": "data/raw/Missisipi/raw_data_2024-06-07-12-09-31_0.bag",
+  "bag_bytes": 6354610019,
+  "csv_quality": {
+    "inspva": {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+      "rows": 5847,
+      "sha256": "2c3abb303f16b7ba5f75f34e96daad3f83aeac3aed22fb8fad7fa4ce133dccdb",
+      "ins_status": {
+        "3": 5647,
+        "6": 200
+      }
+    },
+    "inspvax": {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspvax.csv",
+      "rows": 117,
+      "sha256": "56dacefbe4fe514848485307a9ea69e677be37f608eb6a20051c49897d112c3d",
+      "ins_status": {
+        "3": 113,
+        "6": 4
+      },
+      "position_type": {
+        "54": 5,
+        "55": 68,
+        "56": 44
+      },
+      "latitude_stdev_m": {
+        "min": 0.012889844365417957,
+        "median": 0.17065462470054626,
+        "max": 0.5510189533233643
+      },
+      "longitude_stdev_m": {
+        "min": 0.012660534121096134,
+        "median": 0.15677247941493988,
+        "max": 0.3674335181713104
+      },
+      "height_stdev_m": {
+        "min": 0.014095078222453594,
+        "median": 0.29280945658683777,
+        "max": 0.9001455307006836
+      }
+    },
+    "bestpos": {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_bestpos.csv",
+      "rows": 1170,
+      "sha256": "e1088cc019109008d7d08c7e0581f09b8e5775b02b1424f4cbc37b32743a082b",
+      "position_type": {
+        "54": 50,
+        "55": 683,
+        "56": 437
+      },
+      "solution_status": {
+        "0": 1170
+      },
+      "latitude_stdev_m": {
+        "min": 0.012889844365417957,
+        "median": 0.1706550568342209,
+        "max": 0.5510189533233643
+      },
+      "longitude_stdev_m": {
+        "min": 0.012660534121096134,
+        "median": 0.15677247941493988,
+        "max": 0.3674335181713104
+      },
+      "height_stdev_m": {
+        "min": 0.014095078222453594,
+        "median": 0.29280945658683777,
+        "max": 0.9001455307006836
+      }
+    }
+  },
+  "connections": [
+    {
+      "topic": "/novatel/oem7/bestpos",
+      "type": "novatel_oem7_msgs/msg/BESTPOS",
+      "messages": 1170
+    },
+    {
+      "topic": "/novatel/oem7/bestvel",
+      "type": "novatel_oem7_msgs/msg/BESTVEL",
+      "messages": 1170
+    },
+    {
+      "topic": "/vehicle/can_bus_dbw/can_rx",
+      "type": "can_msgs/msg/Frame",
+      "messages": 107421
+    },
+    {
+      "topic": "/vehicle/lidar/left_side_ouster/lidar_packets",
+      "type": "ouster_ros/msg/PacketMsg",
+      "messages": 74841
+    },
+    {
+      "topic": "/novatel/oem7/corrimu",
+      "type": "novatel_oem7_msgs/msg/CORRIMU",
+      "messages": 11695
+    },
+    {
+      "topic": "/vehicle/lidar/front_ouster/lidar_packets",
+      "type": "ouster_ros/msg/PacketMsg",
+      "messages": 74843
+    },
+    {
+      "topic": "/vehicle/lidar/right_side_ouster/lidar_packets",
+      "type": "ouster_ros/msg/PacketMsg",
+      "messages": 74842
+    },
+    {
+      "topic": "/vehicle/radar/lrr_rear/can_rx",
+      "type": "can_msgs/msg/Frame",
+      "messages": 281540
+    },
+    {
+      "topic": "/novatel/oem7/oem7raw",
+      "type": "novatel_oem7_msgs/msg/Oem7RawMsg",
+      "messages": 17586
+    },
+    {
+      "topic": "/vehicle/acc_state",
+      "type": "ds_av_msgs/msg/AccState",
+      "messages": 10720
+    },
+    {
+      "topic": "/vehicle/ulc_cmd",
+      "type": "dataspeed_ulc_msgs/msg/UlcCmd",
+      "messages": 10707
+    },
+    {
+      "topic": "/vehicle/lidar/right_side_ouster/imu_packets",
+      "type": "ouster_ros/msg/PacketMsg",
+      "messages": 11693
+    },
+    {
+      "topic": "/vehicle/radar/lrr_front/can_rx",
+      "type": "can_msgs/msg/Frame",
+      "messages": 326975
+    },
+    {
+      "topic": "/vehicle/lidar/front_ouster/imu_packets",
+      "type": "ouster_ros/msg/PacketMsg",
+      "messages": 11693
+    },
+    {
+      "topic": "/vehicle/ulc_report",
+      "type": "dataspeed_ulc_msgs/msg/UlcReport",
+      "messages": 5838
+    },
+    {
+      "topic": "/vehicle/lidar_target",
+      "type": "ds_av_msgs/msg/DataspeedObject",
+      "messages": 9941
+    },
+    {
+      "topic": "/vehicle/radar_target",
+      "type": "ds_av_msgs/msg/DataspeedObject",
+      "messages": 9941
+    },
+    {
+      "topic": "/vehicle/wheel_position_report",
+      "type": "dbw_fca_msgs/msg/WheelPositionReport",
+      "messages": 5847
+    },
+    {
+      "topic": "/vehicle/lidar/left_side_ouster/imu_packets",
+      "type": "ouster_ros/msg/PacketMsg",
+      "messages": 11693
+    },
+    {
+      "topic": "/vehicle/steering_report",
+      "type": "dbw_fca_msgs/msg/SteeringReport",
+      "messages": 11693
+    },
+    {
+      "topic": "/vehicle/twist",
+      "type": "geometry_msgs/msg/TwistStamped",
+      "messages": 11693
+    },
+    {
+      "topic": "/vehicle/steering_curvature",
+      "type": "std_msgs/msg/Float64",
+      "messages": 11693
+    },
+    {
+      "topic": "/vehicle/imu/data_raw",
+      "type": "sensor_msgs/msg/Imu",
+      "messages": 5847
+    },
+    {
+      "topic": "/vehicle/traj_lat_cmd",
+      "type": "ds_av_msgs/msg/LatCmd",
+      "messages": 10719
+    },
+    {
+      "topic": "/vehicle/offset_angle_error",
+      "type": "ds_av_msgs/msg/LatCmd",
+      "messages": 10719
+    },
+    {
+      "topic": "/vehicle/pre_offset_angle_error",
+      "type": "ds_av_msgs/msg/LatCmd",
+      "messages": 10719
+    },
+    {
+      "topic": "/vehicle/pre_pre_offset_angle_error",
+      "type": "ds_av_msgs/msg/LatCmd",
+      "messages": 10719
+    },
+    {
+      "topic": "/novatel/oem7/inspva",
+      "type": "novatel_oem7_msgs/msg/INSPVA",
+      "messages": 5847
+    },
+    {
+      "topic": "/novatel/oem7/odom",
+      "type": "nav_msgs/msg/Odometry",
+      "messages": 5845
+    },
+    {
+      "topic": "/vehicle/lidar/right_side_ouster/points",
+      "type": "sensor_msgs/msg/PointCloud2",
+      "messages": 1170
+    },
+    {
+      "topic": "/vehicle/camera/cam_f/camera_info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "messages": 3505
+    },
+    {
+      "topic": "/vehicle/camera/cam_f/image_raw/compressed",
+      "type": "sensor_msgs/msg/CompressedImage",
+      "messages": 3505
+    },
+    {
+      "topic": "/vehicle/camera/interior_camera/camera_info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "messages": 3606
+    },
+    {
+      "topic": "/vehicle/camera/interior_camera/image_raw/compressed",
+      "type": "sensor_msgs/msg/CompressedImage",
+      "messages": 3606
+    },
+    {
+      "topic": "/vehicle/camera/cam_fr/camera_info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "messages": 3621
+    },
+    {
+      "topic": "/vehicle/camera/cam_fr/image_raw/compressed",
+      "type": "sensor_msgs/msg/CompressedImage",
+      "messages": 3621
+    },
+    {
+      "topic": "/vehicle/mobileye/lanes",
+      "type": "mobileye_msgs/msg/Lanes",
+      "messages": 1147
+    },
+    {
+      "topic": "/vehicle/mobileye/ego_lane_center",
+      "type": "nav_msgs/msg/Path",
+      "messages": 1147
+    },
+    {
+      "topic": "/vehicle/camera/cam_fl/camera_info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "messages": 3535
+    },
+    {
+      "topic": "/vehicle/camera/cam_fl/image_raw/compressed",
+      "type": "sensor_msgs/msg/CompressedImage",
+      "messages": 3535
+    },
+    {
+      "topic": "/vehicle/radar/lrr_front/filtered_radar_objects",
+      "type": "ds_av_msgs/msg/DataspeedObjectArray",
+      "messages": 2144
+    },
+    {
+      "topic": "/vehicle/lidar/front_ouster/points",
+      "type": "sensor_msgs/msg/PointCloud2",
+      "messages": 1170
+    },
+    {
+      "topic": "/vehicle/camera/ir_cam/image_raw/compressed",
+      "type": "sensor_msgs/msg/CompressedImage",
+      "messages": 1608
+    },
+    {
+      "topic": "/vehicle/camera/ir_cam/camera_info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "messages": 3216
+    },
+    {
+      "topic": "/vehicle/wheel_speed_report",
+      "type": "dbw_fca_msgs/msg/WheelSpeedReport",
+      "messages": 5845
+    },
+    {
+      "topic": "/vehicle/radar/lrr_rear/filtered_radar_objects",
+      "type": "ds_av_msgs/msg/DataspeedObjectArray",
+      "messages": 2143
+    },
+    {
+      "topic": "/vehicle/lidar/left_side_ouster/points",
+      "type": "sensor_msgs/msg/PointCloud2",
+      "messages": 1169
+    },
+    {
+      "topic": "/vehicle/highway_driving_state",
+      "type": "ds_av_msgs/msg/HighwayDrivingState",
+      "messages": 1072
+    },
+    {
+      "topic": "/novatel/oem7/driver/bond",
+      "type": "bond/msg/Status",
+      "messages": 214
+    },
+    {
+      "topic": "/novatel/oem7/driver/bond",
+      "type": "bond/msg/Status",
+      "messages": 107
+    },
+    {
+      "topic": "/novatel/oem7/driver/bond",
+      "type": "bond/msg/Status",
+      "messages": 107
+    },
+    {
+      "topic": "/novatel/oem7/time",
+      "type": "novatel_oem7_msgs/msg/TIME",
+      "messages": 117
+    },
+    {
+      "topic": "/novatel/oem7/inspvax",
+      "type": "novatel_oem7_msgs/msg/INSPVAX",
+      "messages": 117
+    },
+    {
+      "topic": "/novatel/oem7/insstdev",
+      "type": "novatel_oem7_msgs/msg/INSSTDEV",
+      "messages": 117
+    },
+    {
+      "topic": "/novatel/oem7/bestutm",
+      "type": "novatel_oem7_msgs/msg/BESTUTM",
+      "messages": 117
+    },
+    {
+      "topic": "/novatel/oem7/heading2",
+      "type": "novatel_oem7_msgs/msg/HEADING2",
+      "messages": 110
+    },
+    {
+      "topic": "/novatel/oem7/rxstatus",
+      "type": "novatel_oem7_msgs/msg/RXSTATUS",
+      "messages": 18
+    },
+    {
+      "topic": "/novatel/oem7/insconfig",
+      "type": "novatel_oem7_msgs/msg/INSCONFIG",
+      "messages": 1
+    }
+  ],
+  "raw_message_ids": {
+    "41": 12,
+    "42": 1169,
+    "43": 117,
+    "93": 18,
+    "99": 1169,
+    "101": 117,
+    "1309": 14,
+    "1310": 4,
+    "1335": 110,
+    "1462": 14618,
+    "1465": 117,
+    "1696": 5,
+    "1825": 115,
+    "1945": 1
+  },
+  "raw_header_forms": {
+    "aa4412": 2968,
+    "aa4413": 14618
+  },
+  "bestgnsspos": {
+    "named_topic_connections": 0,
+    "binary_message_id": 1429,
+    "raw_messages": 0,
+    "scope": "Topic inventory and OEM7 header IDs only; no payload/CRC validation or PPK reconstruction."
+  }
+}
