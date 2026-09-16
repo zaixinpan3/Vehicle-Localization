@@ -1,0 +1,16 @@
+function cfg=fullObserverConfig()
+% fullObserverConfig Simultaneous sampled GNSS/LiDAR and motion observer.
+% Positive processing delays require a separate transport/history design.
+% This runtime consumes zero-delay measurements on one acquisition clock.
+    cfg=motionAidedObserverConfig();
+    cfg.kind="full-sampled-motion-observer-v1";
+    cfg.gnss=struct('positionGain',1,'headingGain',.5, ...
+        'gainInformationScale',16,'minimumPositionWeight',.25, ...
+        'maximumAge',.2,'courseWindow',2,'maximumCourseGap',.25, ...
+        'minimumCourseDisplacement',2,'minimumSpeed',1, ...
+        'headingErrorLimit',pi/3);
+    cfg.lidar.maximumAge=.2;
+    cfg.bias=struct('enabled',true,'window',2,'maximumGap',.25, ...
+        'timeConstant',4,'maximumMagnitude',.8,'minimumSpeed',5);
+    cfg.initialHeading=0;
+end

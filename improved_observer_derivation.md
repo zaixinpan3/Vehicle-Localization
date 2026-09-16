@@ -2,7 +2,16 @@
 
 Revision date: 2026-09-13.
 
-This is the current theoretical specification. It treats two separate,
+Runtime clarification, 2026-09-16: the GNSS-only and LiDAR-only systems below
+are independent analysis cases, not a requirement to exclude one sensor from
+the complete localization module. The current simultaneous, sampled,
+zero-delay motion-aided runtime has a
+[separate equation-level conditional analysis](research/full_observer_20260916/design.md).
+This document and its original certificates do not certify that different
+implementation merely because its sensors have the same names.
+
+This is the theoretical specification for the continuous MO-HGO analysis
+runner. It treats two separate,
 continuously measured systems: GNSS position, and uniformly informative LiDAR
 pose with a known constant delay. The seven-state vehicle model and observer
 are continuous-time differential equations. The LiDAR observer is a retarded

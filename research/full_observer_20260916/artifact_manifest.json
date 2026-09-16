@@ -1,0 +1,67 @@
+[
+  {
+    "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+    "bytes": 1376462,
+    "sha256": "2c3abb303f16b7ba5f75f34e96daad3f83aeac3aed22fb8fad7fa4ce133dccdb"
+  },
+  {
+    "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_odom.csv",
+    "bytes": 2668746,
+    "sha256": "3886cdaf80bef9a9bec0211481e0d2d4553f17523029ccaa9321d7d5021c673a"
+  },
+  {
+    "path": "output/full_observer_20260916/code_analyzer.csv",
+    "bytes": 21,
+    "sha256": "07850c15aa72fb606e7bb913dceea229a3d19ab2462f875fd51b6e9e4d91a3a6"
+  },
+  {
+    "path": "output/full_observer_20260916/comparison.png",
+    "bytes": 187906,
+    "sha256": "5ed2e7952834b50fb4612de8912f8416ae025290afd2766b06afee27b79ec637"
+  },
+  {
+    "path": "output/full_observer_20260916/experiment.mat",
+    "bytes": 40072593,
+    "sha256": "4f5c4a06c589a21fa1d3f088896fd2b8e10ce0fdcc91369de2171598e91df6fa"
+  },
+  {
+    "path": "output/full_observer_20260916/metrics.csv",
+    "bytes": 3155,
+    "sha256": "69a32ab9fca6f91494058e11765936a2e24002a88c2fda8bfa811ddd2514f153"
+  },
+  {
+    "path": "output/full_observer_20260916/summary.json",
+    "bytes": 18269,
+    "sha256": "68da7575c03ef2e3c101d93a54032c9cb22ff1fd2989610d3d9f6bf3648b2183"
+  },
+  {
+    "path": "output/full_observer_20260916/tests.csv",
+    "bytes": 8234,
+    "sha256": "35be89c01c0e86298c676323390d3d2d7ff4331640f8db01554a99f5091344f7"
+  },
+  {
+    "path": "output/full_observer_20260916/unit_tests.csv",
+    "bytes": 1745,
+    "sha256": "ab66c059a2a176e45fca1a84970ae753089e1294178d0741d1ebbc8302e28b71"
+  },
+  {
+    "path": "output/full_observer_20260916/validation.json",
+    "bytes": 716,
+    "sha256": "75b56947621714fb6e9940f32183ecec2f7607b203d9575fd81d272e1477565b"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/native_reference.csv",
+    "bytes": 567599,
+    "sha256": "d07baa8fac07b72e46c20c0546f308b197ba0cd3c740124dfc01988a7ab1775e"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/vehicle_parameters.json",
+    "bytes": 3544,
+    "sha256": "114780d6952f63fd6b698bce137776dcc2534cd05207a58a340ef4f08b702b5e"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/calls.csv",
+    "bytes": 2154661,
+    "sha256": "096f2a4d8d392caf3bdddece9117fc30ac0359124c79613be4604cb9f45961c0"
+  }
+]

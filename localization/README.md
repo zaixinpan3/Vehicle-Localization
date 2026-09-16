@@ -1,6 +1,49 @@
 # Continuous localization observer
 
-For the current MnCAV experiment with precomputed, zero-delay LiDAR, use
+## Full runtime: GNSS and LiDAR together
+
+Use `runFullLocalizationObserver` for the complete zero-processing-delay
+localization module. GNSS XY and LiDAR pose have independent sampled streams,
+validity flags and finite maximum ages. Both position innovations are added
+to the same seven-state observer whenever available. Invalid or expired data
+withdraw only their own channel. When both are absent the state continues
+prediction with motion inputs, without an absolute-position ISS claim.
+
+```matlab
+cfg = fullObserverConfig;
+design = designFullObserverGains(cfg);
+estimate = runFullLocalizationObserver(data, lateralDesign, cfg);
+report = runMncavFullObserverExperiment;  % recorded dual-source/outage ablations
+validation = validateFullLocalizationObserver;
+```
+
+Each source declares `delay=0`, strictly increasing `time`, `valid`, and
+`information` (2-by-2-by-N for GNSS, 3-by-3-by-N for LiDAR). GNSS supplies
+`position` (N-by-2); LiDAR supplies `pose` (N-by-3). Invalid packets may have
+NaN payloads. A valid packet requires finite full-rank information. The current
+map replay marks directional-only registrations unavailable rather than
+inventing a full pose. Missing source fields are allowed. An initial state is
+required if neither source supplies a valid position at the start.
+
+The runtime uses only current and past measurement packets. Between packets,
+anchors propagate with held body motion/gyro; they expire after 0.2 s by
+default. GNSS-only heading correction is reconstructed from past GNSS
+displacement and integrated body motion over 2 s, subject to speed, distance
+and gap admission. It is not a supplied GNSS heading measurement. With
+qualified LiDAR yaw, LiDAR supplies heading feedback. GNSS-only standstill
+and startup without a displacement window do not provide heading correction.
+The slow LiDAR lateral-velocity correction is recomputed inside the causal
+runtime and therefore respects LiDAR outages.
+
+The legacy independent GNSS and LiDAR ISS analyses below remain separate
+analysis cases. They are not a runtime requirement to choose only one sensor,
+and their gains/proofs are not silently transferred to this newer motion-aided
+structure. See the [full observer equations and conditional common certificate](../research/full_observer_20260916/design.md)
+and [executed comparison](../research/full_observer_20260916/validation.md).
+
+## Historical LiDAR-only motion-aided baseline
+
+For the historical MnCAV experiment with precomputed, zero-delay LiDAR, use
 `runMncavMotionAidedExperiment`. Its seven-state motion-aided observer directly
 corrects velocity and acceleration with body-frame motion measurements.
 LiDAR position residuals correct position without feeding the derivative

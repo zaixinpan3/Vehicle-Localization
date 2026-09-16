@@ -255,8 +255,8 @@ loop. `runLateralVelocityObserver` supplies exactly this interface:
 
 The global stage has seven continuous states
 `[X,Vx,Ax,Y,Vy,Ay,psi]` and planar pose output `[X,Y,psi]`.
-The current [continuous-time ISS derivation](improved_observer_derivation.md)
-separates two measurement modes:
+The [continuous-time ISS derivation](improved_observer_derivation.md)
+analyzes two independent measurement cases:
 
 * Continuous GNSS position: a triangular MO-HGO has seven-state local ISS
   during sustained motion, with an explicit invariant heading-error region.
@@ -271,7 +271,7 @@ The [reproducible certificate checks](research/continuous_observer_iss_20260913/
 record a constructive GNSS block certificate and a conservative 150 ms LiDAR
 example with all four auxiliary channels. These are new theoretical designs.
 
-The MATLAB `runImprovedVehicleObserver` now integrates these same continuous
+The analysis runner `runImprovedVehicleObserver` integrates these continuous
 ODE/DDE equations. Select `improvedObserverConfig("gnss")` or
 `improvedObserverConfig("lidar")`; each mode uses independently verified,
 constant certificate matrices. Delayed LiDAR requires an explicit estimate
@@ -280,6 +280,13 @@ See [the runtime contract](localization/README.md) and
 [implementation validation](research/continuous_observer_runtime_20260913/validation.md).
 Recorded data require an explicitly declared continuous reconstruction; they do
 not establish physical sensor continuity.
+
+The complete runtime is `runFullLocalizationObserver`: independent GNSS and
+LiDAR streams simultaneously correct one seven-state motion-aided observer.
+Missing/invalid/expired channels are withdrawn independently. Separate ISS
+analyses do not imply mutually exclusive sensor operation. Its current
+zero-delay, sampled implementation has a
+[separate conditional common certificate and outage analysis](research/full_observer_20260916/design.md).
 
 ## Configuration (`config/`)
 
@@ -303,11 +310,17 @@ are explicit:
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |
 | `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` |
 | `improvedObserverConfig` | `designImprovedObserverGains`, `runImprovedVehicleObserver` |
+| `fullObserverConfig` | `designFullObserverGains`, `runFullLocalizationObserver` |
 
 ## Quick start
 
-For the current MnCAV localization experiment with precomputed LiDAR and
-zero measurement delay, run `runMncavMotionAidedExperiment` after setup.
+For the complete MnCAV localization experiment with GNSS/INS XY, precomputed
+LiDAR and zero processing delay, run `runMncavFullObserverExperiment` after
+setup. Use `validateFullLocalizationObserver` for the associated checks.
+The [full-runtime report](research/full_observer_20260916/validation.md)
+compares simultaneous sources, each source alone, and separate/common outages.
+
+The historical LiDAR-only offline experiment is `runMncavMotionAidedExperiment`.
 The [motion-aided seven-state observer](research/mncav_motion_aided_20260914/validation.md)
 retains the turning model and uses direct velocity/acceleration correction.
 Its recorded comparison includes the actual continuous LiDAR input, every

@@ -1,0 +1,46 @@
+function validation=validateFullLocalizationObserver(outputFolder)
+% validateFullLocalizationObserver Check recorded replay and regression scope.
+    arguments
+        outputFolder (1,1) string="output/full_observer_20260916"
+    end
+    setupVehicleLocalization();
+    files=["tests/fullLocalizationObserverTest.m","tests/motionAidedObserverTest.m", ...
+        "tests/improvedObserverTest.m","tests/lateralObserverTest.m", ...
+        "tests/lidarVelocityConsistencyTest.m","tests/mncavVehicleConfigTest.m"];
+    results=runtests(cellstr(files));writetable(table(results),fullfile(outputFolder,'tests.csv'));
+    assert(all([results.Passed]),'VehicleLocalization:RegressionFailure','Observer regression failed.');
+    stored=load(fullfile(outputFolder,'experiment.mat'));
+    data=stored.data;cfg=stored.cfg;lateral=stored.lateral;r=stored.runs{1}.estimate;
+    repeat=runFullLocalizationObserver(data,stored.lateralDesign,cfg,LateralInputs=lateral);
+    repeatDifference=max(abs(repeat.z-r.z),[],'all');assert(repeatDifference==0);
+    cfg.maximumIntegrationStep=cfg.maximumIntegrationStep/2;
+    refined=runFullLocalizationObserver(data,stored.lateralDesign,cfg,LateralInputs=lateral);
+    stepPosition=max(vecnorm(refined.position-r.position,2,2));
+    stepHeading=max(abs(refined.headingUnwrapped-r.headingUnwrapped));
+    assert(stepPosition<1e-4 && stepHeading<1e-5);
+    data.gnss.position(data.gnss.time>60,:)=100;
+    data.lidar.pose(data.lidar.time>60 & data.lidar.valid,:)=100;
+    changed=runFullLocalizationObserver(data,stored.lateralDesign,stored.cfg,LateralInputs=lateral);
+    prefixDifference=max(abs(changed.z(r.time<=60,:)-r.z(r.time<=60,:)),[],'all');assert(prefixDifference==0);
+    rows=cell(0,4);sourceFiles=["config/fullObserverConfig.m","localization/designFullObserverGains.m", ...
+        "localization/runFullLocalizationObserver.m","scripts/runMncavFullObserverExperiment.m", ...
+        "scripts/validateFullLocalizationObserver.m","tests/fullLocalizationObserverTest.m"];
+    for file=sourceFiles
+        messages=checkcode(char(file),'-config=factory','-id');
+        for j=1:numel(messages),rows(end+1,:)={file,messages(j).line,string(messages(j).id),string(messages(j).message)};end %#ok<AGROW>
+    end
+    analyzer=cell2table(rows,VariableNames={'file','line','id','message'});
+    writetable(analyzer,fullfile(outputFolder,'code_analyzer.csv'));
+    d=r.diagnostics;modeCounts=arrayfun(@(v) nnz(d.mode==v),0:3);
+    validation=struct('tests',numel(results),'allTestsPassed',all([results.Passed]), ...
+        'repeatMaximumStateDifference',repeatDifference,'halfStepMaximumPositionDifferenceM',stepPosition, ...
+        'halfStepMaximumHeadingDifferenceRad',stepHeading,'futureMutationPrefixDifference',prefixDifference, ...
+        'analyzerFindings',height(analyzer),'modeCountsNoneGnssLidarBoth',modeCounts, ...
+        'positiveTranslationMarginSamples',nnz(d.translationDissipationMargin>0), ...
+        'headingUnavailableSamples',nnz(d.headingMode==0),'gnssCourseUpdates',d.gnssCourseUpdates, ...
+        'lidarBiasUpdates',d.lidarBiasUpdates,'packetCounts',d.packetCounts, ...
+        'maximumTrackRate',d.maximumTrackAngleRate,'rateEnvelopeSatisfied',d.rateEnvelopeSatisfied, ...
+        'allTheoremHypothesesVerified',false);
+    fid=fopen(fullfile(outputFolder,'validation.json'),'w');assert(fid>=0);cleanup=onCleanup(@()fclose(fid));
+    fprintf(fid,'%s\n',jsonencode(validation,PrettyPrint=true));disp(validation);
+end

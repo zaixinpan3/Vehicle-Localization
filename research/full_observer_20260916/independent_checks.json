@@ -1,0 +1,19 @@
+{
+  "metricRowsChecked": 21,
+  "maximumMetricDifference": 4.440892098500626e-15,
+  "availabilitySamplesChecked": 81830,
+  "invalidChannelCorrectionExactlyZero": true,
+  "nativeLidarPacketsUnchanged": true,
+  "sourceCounts": {
+    "gnss": 5844,
+    "lidar": 1169,
+    "lidar_full": 1083
+  },
+  "independentTranslationMargins": [
+    0.36798805743111485,
+    1.8361498799361595,
+    2.3219370364825984
+  ],
+  "legacyOfflinePositionRmseM": 0.10140230243483349,
+  "scope": "Independent aggregation and matrix verification, not independent ground truth or a new field experiment."
+}
