@@ -1,0 +1,522 @@
+{
+  "confirmedVehicle": "UMN MnCAV, user confirmation",
+  "steeringCalibration": {
+    "trainingDrive": "12-11-24",
+    "trainingIntervalSeconds": [
+      1,
+      40
+    ],
+    "wheelbaseM": 3.089,
+    "steeringRatio": 16.2,
+    "fittedWheelOffsetRad": 0.026249567903901882,
+    "fittedWheelOffsetDeg": 1.5039894549356447,
+    "selectedWheelOffsetRad": 0.026179938779914945,
+    "selection": "Round recorded curvature equivalence to 1.5 deg; not an independently measured road-wheel zero."
+  },
+  "drives": {
+    "12-09-31": {
+      "samples": 5847,
+      "receiverDurationSeconds": 116.92000000004191,
+      "rosDurationSeconds": 107.17713284492493,
+      "tfTopicPresent": false,
+      "axisFrameLabels": {
+        "imu": [
+          "base_footprint"
+        ],
+        "twist": [
+          "base_footprint"
+        ]
+      },
+      "steeringCalibrationFaultCount": 0,
+      "steeringCurvaturePairTimeDifferenceSeconds": {
+        "n": 11693,
+        "mean": 0.00010132940496746309,
+        "median": 8.440017700195312e-05,
+        "rmse": 0.00022525936565283964,
+        "p95Abs": 0.00017070770263671875
+      },
+      "qualityFiltering": "INS good flag available",
+      "heading2": {
+        "samples": 110,
+        "reportedHeadingStdDegrees": {
+          "n": 90,
+          "mean": 108.13664404551189,
+          "median": 88.17335891723633,
+          "rmse": 130.08239081050027,
+          "p95Abs": 275.66574249267575
+        },
+        "validWithStdBelowOneDegree": 0,
+        "note": "Base-to-rover vector is not a verified vehicle heading; length=-1 alone is not an invalidity test."
+      },
+      "curvatureConsistency": {
+        "before": {
+          "n": 11693,
+          "mean": 0.0005235435028909225,
+          "median": 0.0005231662506481397,
+          "rmse": 0.000523552366050839,
+          "p95Abs": 0.0005251520389800861
+        },
+        "after": {
+          "n": 11693,
+          "mean": -4.56933975811268e-07,
+          "median": -6.50429266977259e-08,
+          "rmse": 2.891701196469721e-06,
+          "p95Abs": 3.89600304256249e-06
+        },
+        "laterAfter40": {
+          "n": 7693,
+          "mean": -3.8186666260916543e-07,
+          "median": -7.317330714279053e-08,
+          "rmse": 1.34728289696405e-06,
+          "p95Abs": 3.7900754804531803e-06
+        }
+      },
+      "signalConsistency": {
+        "measuredVx": {
+          "movingResidual": {
+            "n": 5369,
+            "mean": 0.03682625543383255,
+            "median": 0.03495989647487363,
+            "rmse": 0.05675306374638875,
+            "p95Abs": 0.11138022528002557
+          },
+          "straightResidual": {
+            "n": 3125,
+            "mean": 0.04096859767425689,
+            "median": 0.03437948537129465,
+            "rmse": 0.05921059328686977,
+            "p95Abs": 0.12507717490093986
+          }
+        },
+        "longitudinalAcceleration": {
+          "movingResidual": {
+            "n": 5369,
+            "mean": 0.12272854025883437,
+            "median": 0.09464183976547866,
+            "rmse": 0.2654060565678117,
+            "p95Abs": 0.5428564188280581
+          },
+          "straightResidual": {
+            "n": 3125,
+            "mean": 0.18012038727647822,
+            "median": 0.14889412655239834,
+            "rmse": 0.29248738692657367,
+            "p95Abs": 0.5739220351938213
+          }
+        },
+        "lateralAcceleration": {
+          "movingResidual": {
+            "n": 5369,
+            "mean": -0.009479972569516753,
+            "median": -0.01549752375160146,
+            "rmse": 0.18501852953719652,
+            "p95Abs": 0.35422531661153744
+          },
+          "straightResidual": {
+            "n": 3125,
+            "mean": -0.0005033010763232096,
+            "median": -0.01765945357948144,
+            "rmse": 0.1649277352329823,
+            "p95Abs": 0.3227249167711631
+          }
+        },
+        "yawRate": {
+          "movingResidual": {
+            "n": 5369,
+            "mean": 7.47639053379799e-05,
+            "median": 1.7155514106054204e-05,
+            "rmse": 0.0019793672224088094,
+            "p95Abs": 0.003983574812205666
+          },
+          "straightResidual": {
+            "n": 3125,
+            "mean": -0.00015253849436017378,
+            "median": -0.0001943979983491384,
+            "rmse": 0.0017993845238907717,
+            "p95Abs": 0.003576056652326986
+          }
+        }
+      },
+      "bodyVelocityProjection": {
+        "planarStraight": {
+          "n": 3125,
+          "mean": 0.2693308186466152,
+          "median": 0.28249032229762805,
+          "rmse": 0.2797981398385801,
+          "p95Abs": 0.39016344867935426
+        },
+        "full3dStraight": {
+          "n": 3125,
+          "mean": 0.27742367196260237,
+          "median": 0.28449190996984297,
+          "rmse": 0.2880411912167328,
+          "p95Abs": 0.40921385873392724
+        },
+        "interpretation": "Full rotation uses existing roll/pitch convention; no unknown mounting or CG translation added.",
+        "planarAbsYawRateBelow005": {
+          "n": 1238,
+          "mean": 0.2728159897439699,
+          "median": 0.29403010215944436,
+          "rmse": 0.27946717359577533,
+          "p95Abs": 0.3647506369966515
+        }
+      },
+      "ulcVersusTwistSpeed": {
+        "n": 5386,
+        "mean": -0.010155382843157305,
+        "median": -0.010000228881835938,
+        "rmse": 0.01279360327895649,
+        "p95Abs": 0.02076758121826372
+      },
+      "offsetCommandTopics": {
+        "offset_angle_error": {
+          "samples": 10719,
+          "enabledSamples": 0,
+          "commandMin": 0.0,
+          "commandMax": 0.0,
+          "usedForCalibration": false
+        },
+        "pre_offset_angle_error": {
+          "samples": 10719,
+          "enabledSamples": 0,
+          "commandMin": 0.0,
+          "commandMax": 0.0,
+          "usedForCalibration": false
+        },
+        "pre_pre_offset_angle_error": {
+          "samples": 10719,
+          "enabledSamples": 0,
+          "commandMin": 0.0,
+          "commandMax": 0.0,
+          "usedForCalibration": false
+        }
+      },
+      "yawTiming": {
+        "diagnosticBestShiftSeconds": -0.01999999999999985,
+        "bestRmseRadps": 0.0018739912689674028,
+        "zeroShiftRmseRadps": 0.0019823179322680084,
+        "applied": false,
+        "note": "Timing/model/derivative effects confounded; no clock correction selected."
+      },
+      "boundedPhysicalParameterDiagnostic": {
+        "multipliersCfCrIz": [
+          0.30000000000000004,
+          0.30000000000000004,
+          0.30000000000000004
+        ],
+        "conditionNumber": 62.69152734247573,
+        "anyBoundReached": true,
+        "training": {
+          "forceAccelerationResidual": {
+            "n": 932,
+            "mean": -0.4098225659188322,
+            "median": -0.41462577935094547,
+            "rmse": 0.7261615097259126,
+            "p95Abs": 1.2727635127297638
+          },
+          "yawMomentScaledResidual": {
+            "n": 932,
+            "mean": -0.0033978131497877403,
+            "median": -0.020866400463306997,
+            "rmse": 0.03501104736623711,
+            "p95Abs": 0.09061729644650929
+          }
+        },
+        "later": {
+          "forceAccelerationResidual": {
+            "n": 3821,
+            "mean": -0.4322056790240056,
+            "median": -0.5116268320547077,
+            "rmse": 0.4953115331469161,
+            "p95Abs": 0.7327475536749073
+          },
+          "yawMomentScaledResidual": {
+            "n": 3821,
+            "mean": 0.006466612215523296,
+            "median": 0.0001946267085651352,
+            "rmse": 0.025151400662713843,
+            "p95Abs": 0.07481457133871915
+          }
+        },
+        "deployed": false,
+        "interpretation": "Mapping assumed, not measured; coefficients at bounds are not accepted physical parameters."
+      },
+      "descriptiveKinematicFit": {
+        "model": "referenceVy = delta*measuredVx + pointX*yawRate",
+        "deltaDeg": 1.214535296757817,
+        "pointXM": -1.0286997245088507,
+        "residual": {
+          "n": 5369,
+          "mean": -0.0027043879754121477,
+          "median": -0.004449223611949382,
+          "rmse": 0.06408113800221313,
+          "p95Abs": 0.11642103138264476
+        },
+        "physicalExtrinsicsIdentified": false
+      }
+    },
+    "12-11-24": {
+      "samples": 3897,
+      "receiverDurationSeconds": 77.9199999999837,
+      "rosDurationSeconds": 71.43284487724304,
+      "tfTopicPresent": false,
+      "axisFrameLabels": {
+        "imu": [
+          "base_footprint"
+        ],
+        "twist": [
+          "base_footprint"
+        ]
+      },
+      "steeringCalibrationFaultCount": 0,
+      "steeringCurvaturePairTimeDifferenceSeconds": {
+        "n": 7792,
+        "mean": 0.00010109067085587268,
+        "median": 8.58306884765625e-05,
+        "rmse": 0.00019175524287052897,
+        "p95Abs": 0.0001709461212158203
+      },
+      "qualityFiltering": "INS status not included in this older export",
+      "heading2": {
+        "samples": 75,
+        "reportedHeadingStdDegrees": {
+          "n": 57,
+          "mean": 165.38525517781576,
+          "median": 127.16194915771484,
+          "rmse": 195.44953410818923,
+          "p95Abs": 360.0
+        },
+        "validWithStdBelowOneDegree": 0,
+        "note": "Base-to-rover vector is not a verified vehicle heading; length=-1 alone is not an invalidity test."
+      },
+      "curvatureConsistency": {
+        "before": {
+          "n": 7792,
+          "mean": 0.0005251461979215272,
+          "median": 0.0005231500004661083,
+          "rmse": 0.0005251729748391847,
+          "p95Abs": 0.0005413068009345899
+        },
+        "after": {
+          "n": 7792,
+          "mean": 6.001315860069661e-07,
+          "median": -1.626071784502619e-08,
+          "rmse": 2.5482767407668182e-06,
+          "p95Abs": 5.913772927731986e-06
+        },
+        "laterAfter40": {
+          "n": 3793,
+          "mean": -2.712365664265299e-07,
+          "median": -5.455950316170938e-07,
+          "rmse": 1.07158925213639e-06,
+          "p95Abs": 1.3254979721120941e-06
+        }
+      },
+      "signalConsistency": {
+        "measuredVx": {
+          "movingResidual": {
+            "n": 3385,
+            "mean": -0.025908503587224303,
+            "median": -0.021857541695105454,
+            "rmse": 0.04803980093203507,
+            "p95Abs": 0.10090091319299108
+          },
+          "straightResidual": {
+            "n": 1242,
+            "mean": -0.022748247329490205,
+            "median": -0.008305776609226712,
+            "rmse": 0.05965035413923943,
+            "p95Abs": 0.1114765339131923
+          }
+        },
+        "longitudinalAcceleration": {
+          "movingResidual": {
+            "n": 3385,
+            "mean": -0.06769095119696124,
+            "median": 0.0033675284916706016,
+            "rmse": 0.22307024062060038,
+            "p95Abs": 0.46687942823451967
+          },
+          "straightResidual": {
+            "n": 1242,
+            "mean": -0.03508820566070682,
+            "median": 0.02447549162634719,
+            "rmse": 0.2258347874013263,
+            "p95Abs": 0.4924764576486706
+          }
+        },
+        "lateralAcceleration": {
+          "movingResidual": {
+            "n": 3385,
+            "mean": -0.03977274920262691,
+            "median": -0.046858737511013326,
+            "rmse": 0.1367104575868786,
+            "p95Abs": 0.26359616345509307
+          },
+          "straightResidual": {
+            "n": 1242,
+            "mean": -0.06073593185617148,
+            "median": -0.06627297301465118,
+            "rmse": 0.13224594327568026,
+            "p95Abs": 0.23715509786455308
+          }
+        },
+        "yawRate": {
+          "movingResidual": {
+            "n": 3385,
+            "mean": 8.933467182467232e-05,
+            "median": 9.817245666384616e-05,
+            "rmse": 0.0018550637354036747,
+            "p95Abs": 0.0037966096551462656
+          },
+          "straightResidual": {
+            "n": 1242,
+            "mean": 0.00014155877423103333,
+            "median": 1.4836562699309733e-05,
+            "rmse": 0.0017350461424189812,
+            "p95Abs": 0.0035123189635500192
+          }
+        }
+      },
+      "bodyVelocityProjection": {
+        "planarStraight": {
+          "n": 1242,
+          "mean": 0.002004479685891951,
+          "median": 0.0005999291988909583,
+          "rmse": 0.048132195343140685,
+          "p95Abs": 0.08961419765850345
+        },
+        "full3dStraight": {
+          "n": 1242,
+          "mean": 0.03392123577599485,
+          "median": 0.03283807424122767,
+          "rmse": 0.05031971784327926,
+          "p95Abs": 0.09500936836581815
+        },
+        "interpretation": "Full rotation uses existing roll/pitch convention; no unknown mounting or CG translation added.",
+        "planarAbsYawRateBelow005": {
+          "n": 451,
+          "mean": 0.0013868407242398487,
+          "median": 0.005639346882857499,
+          "rmse": 0.024621363865756196,
+          "p95Abs": 0.04255788270099914
+        }
+      },
+      "ulcVersusTwistSpeed": {
+        "n": 3404,
+        "mean": -0.011158762564471035,
+        "median": -0.011111259460449219,
+        "rmse": 0.013772202333875756,
+        "p95Abs": 0.02410008035052313
+      },
+      "offsetCommandTopics": {
+        "offset_angle_error": {
+          "samples": 7144,
+          "enabledSamples": 0,
+          "commandMin": 0.0,
+          "commandMax": 0.0,
+          "usedForCalibration": false
+        },
+        "pre_offset_angle_error": {
+          "samples": 7144,
+          "enabledSamples": 0,
+          "commandMin": 0.0,
+          "commandMax": 0.0,
+          "usedForCalibration": false
+        },
+        "pre_pre_offset_angle_error": {
+          "samples": 7144,
+          "enabledSamples": 0,
+          "commandMin": 0.0,
+          "commandMax": 0.0,
+          "usedForCalibration": false
+        }
+      },
+      "yawTiming": {
+        "diagnosticBestShiftSeconds": -0.01999999999999985,
+        "bestRmseRadps": 0.0016419546525891114,
+        "zeroShiftRmseRadps": 0.0018595991919276899,
+        "applied": false,
+        "note": "Timing/model/derivative effects confounded; no clock correction selected."
+      },
+      "boundedPhysicalParameterDiagnostic": {
+        "multipliersCfCrIz": [
+          0.30000000000000004,
+          0.30000000000000004,
+          0.30000000000000004
+        ],
+        "conditionNumber": 55.13666700607512,
+        "anyBoundReached": true,
+        "training": {
+          "forceAccelerationResidual": {
+            "n": 1005,
+            "mean": -0.04768246460117947,
+            "median": -0.072974079061773,
+            "rmse": 0.4059261264250446,
+            "p95Abs": 0.8589569228353743
+          },
+          "yawMomentScaledResidual": {
+            "n": 1005,
+            "mean": 0.0011675635588586399,
+            "median": 0.012196903961229482,
+            "rmse": 0.030870426105226435,
+            "p95Abs": 0.05585250677335663
+          }
+        },
+        "later": {
+          "forceAccelerationResidual": {
+            "n": 1871,
+            "mean": -0.11327861133170504,
+            "median": -0.19888944177442092,
+            "rmse": 0.2665495429874767,
+            "p95Abs": 0.41138030932068625
+          },
+          "yawMomentScaledResidual": {
+            "n": 1871,
+            "mean": 0.0104852356331595,
+            "median": 0.019537223957215872,
+            "rmse": 0.02238931559039443,
+            "p95Abs": 0.03689508080826785
+          }
+        },
+        "deployed": false,
+        "interpretation": "Mapping assumed, not measured; coefficients at bounds are not accepted physical parameters."
+      },
+      "descriptiveKinematicFit": {
+        "model": "referenceVy = delta*measuredVx + pointX*yawRate",
+        "deltaDeg": 0.02186629620155623,
+        "pointXM": -1.3642690146721574,
+        "residual": {
+          "n": 3385,
+          "mean": -0.000479260190114402,
+          "median": 0.007915302741866876,
+          "rmse": 0.03517935842238435,
+          "p95Abs": 0.061923312723250155
+        },
+        "physicalExtrinsicsIdentified": false
+      }
+    }
+  },
+  "receiverConfiguration": {
+    "imu_type": 41,
+    "mapping": 6,
+    "profile": 0,
+    "number_of_translations": 0,
+    "translations": [],
+    "number_of_rotations": 0,
+    "rotations": [],
+    "scope": "One snapshot near evaluation-drive end; no TF and no measured CG extrinsics. Empty lists do not establish physical coincidence or configuration at every instant."
+  },
+  "kinematicFitTransfer": {
+    "calibrationDrive": "12-11-24",
+    "evaluationDrive": "12-09-31",
+    "residual": {
+      "n": 5369,
+      "mean": 0.24633619323946307,
+      "median": 0.2501298137204052,
+      "rmse": 0.25910552097194506,
+      "p95Abs": 0.3801292282411578
+    },
+    "physicalInterpretation": "Descriptive fit conflates sideslip, mounting, reference point and attitude error. Failure to transfer does not identify a physical extrinsic."
+  }
+}

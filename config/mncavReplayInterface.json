@@ -1,0 +1,9 @@
+{
+  "steeringWheelOffsetRad": 0.026179938779914945,
+  "steeringWheelOffsetDeg": 1.5,
+  "scope": "Recorded Mississippi MnCAV steering-curvature equivalence, not a measured road-wheel or INS mounting calibration.",
+  "calibrationDrive": "raw_data_2024-06-07-12-11-24_0",
+  "calibrationReceiverIntervalSeconds": [1, 40],
+  "method": "Fit steering_curvature = tan((steering_wheel_angle_rad - offset)/16.2)/3.089 using bag-time-paired topics. Fit 1.503989 degrees; round to 1.5 degrees. Validated on later calibration samples and the separate 12:09:31 drive.",
+  "auditScript": "scripts/auditMncavReplayInterfaces.py"
+}

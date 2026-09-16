@@ -1,0 +1,29 @@
+[
+  {
+    "modeIndex": 1,
+    "acceptedWindows": 813,
+    "candidateWindows": 1084,
+    "maximumAppliedBiasMps": 0.33971806248143216,
+    "maximumTrackAngleRateRadps": 0.35496513348937636,
+    "rateEnvelopeSatisfied": true,
+    "firstAcceptedUpdateTime": 14.499983731654163
+  },
+  {
+    "modeIndex": 2,
+    "acceptedWindows": 788,
+    "candidateWindows": 1066,
+    "maximumAppliedBiasMps": 0.28249027971033391,
+    "maximumTrackAngleRateRadps": 0.35496513348937636,
+    "rateEnvelopeSatisfied": true,
+    "firstAcceptedUpdateTime": 15.702098691844148
+  },
+  {
+    "modeIndex": 3,
+    "acceptedWindows": 767,
+    "candidateWindows": 1069,
+    "maximumAppliedBiasMps": 0.35295135967972047,
+    "maximumTrackAngleRateRadps": 0.35496513348937636,
+    "rateEnvelopeSatisfied": true,
+    "firstAcceptedUpdateTime": 19.005643266601734
+  }
+]

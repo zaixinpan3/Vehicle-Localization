@@ -34,7 +34,14 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     assert(max([motionTime(1),imuTime(1),steeringTime(1)])<=0,'Inputs do not cover replay start.');
     high=struct('time',time);
     high.longitudinalSpeed=interp1(motionTime,twist.linear_x_mps,time,'linear');
-    high.steeringAngle=interp1(steeringTime,steering.steering_wheel_angle_rad,time,'linear')/parameters.steeringRatio;
+    % Historical parameter files retain their original zero-offset convention.
+    wheelOffset=0;
+    if isfield(parameters,'steeringWheelOffsetRad')
+        wheelOffset=parameters.steeringWheelOffsetRad;
+    end
+    validateattributes(wheelOffset,{'numeric'},{'real','finite','scalar'});
+    high.steeringAngle=(interp1(steeringTime,steering.steering_wheel_angle_rad,time,'linear') ...
+        -wheelOffset)/parameters.steeringRatio;
     rawFields=["acceleration_x_mps2","acceleration_y_mps2","angular_z_radps"];
     names=["longitudinalAcceleration","lateralAcceleration","yawRate"];
     for k=1:3

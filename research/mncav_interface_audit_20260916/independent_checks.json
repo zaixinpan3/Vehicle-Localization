@@ -1,0 +1,7 @@
+{
+  "independentNativeMetricRows": 27,
+  "maximumPositionMetricDifference": 5.551115123125783e-16,
+  "maximumLateralMetricDifference": 6.106226635438361e-16,
+  "bothPrimaryMetricsImproveInAllThreeMatchingModes": true,
+  "scope": "Independent aggregation of exported errors, not independent ground truth or a statistical significance test."
+}

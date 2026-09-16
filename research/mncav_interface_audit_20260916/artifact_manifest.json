@@ -1,0 +1,277 @@
+[
+  {
+    "path": "config/mncavReplayInterface.json",
+    "bytes": 615,
+    "sha256": "1fe7191dcf2f595c05e8bbe53dda759a1d4303d9e6d9d2f2a9effe7c5f0485a6"
+  },
+  {
+    "path": "config/mncavVehicleParameters.json",
+    "bytes": 1842,
+    "sha256": "ce9a25f5ef33c74bab4c20e16c97c0868862428d5a6e96ddfb8db32b4ad750a4"
+  },
+  {
+    "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+    "bytes": 1376462,
+    "sha256": "2c3abb303f16b7ba5f75f34e96daad3f83aeac3aed22fb8fad7fa4ce133dccdb"
+  },
+  {
+    "path": "data/raw/Missisipi/raw_data_2024-06-07-12-09-31_0.bag",
+    "bytes": 6354610019,
+    "sha256": "09f3167c3be2ac9359dc9fd1632259372246d3e183fcc44f3a204c021bf4c299"
+  },
+  {
+    "path": "data/raw/Missisipi/raw_data_2024-06-07-12-11-24_0.bag",
+    "bytes": 4344846963,
+    "sha256": "ecb307da026a7f2132959fca4c18492c6ef5750d333a365d532e62673f68aee6"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/calibration_sensors/corrimu.csv",
+    "bytes": 1518942,
+    "sha256": "8f6707f858b6eedeca8e6174a5a985ca30c2351dadd4e49c9148261b899842ea"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/calibration_sensors/imu.csv",
+    "bytes": 345764,
+    "sha256": "1751d1708ed3ee6ba51f25f13c3d8dfbb08a0fd5d99b776c670399913c3fafb9"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/calibration_sensors/inspva.csv",
+    "bytes": 898521,
+    "sha256": "125b353460904965fea08a64a1f0dea0506843b56551ec77b6723da4e1bcfa24"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/calibration_sensors/steering.csv",
+    "bytes": 746418,
+    "sha256": "be421681c55ff46219a1635dbb573d274749fdde852be955e86ae5e54ae93cb0"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/calibration_sensors/twist.csv",
+    "bytes": 844884,
+    "sha256": "22382cf17cb4fb04eac7e7d1494cd3000db350534a4fb6309dddd881e5226b47"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/sensors/corrimu.csv",
+    "bytes": 2282070,
+    "sha256": "6f40989b22ac65bff7cec791464df248d14d8942c0ee23a2d3567f82480bfbe7"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/sensors/imu.csv",
+    "bytes": 518357,
+    "sha256": "52efb34d5815f46e1d1e02c7cdc94ae420666d6c49be49336761771d2d821701"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/sensors/steering.csv",
+    "bytes": 1120044,
+    "sha256": "339ee2ec9c54c737b81bb86c682fcd931cd41527ce7baeb0b1c99bf6f04bd8a9"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/sensors/twist.csv",
+    "bytes": 1266537,
+    "sha256": "13882065ed3bb4354f0c2bd158ca824b3943d6280dd8678d513554134d2f8544"
+  },
+  {
+    "path": "output/mississippi_20240607_120931_20260907/vehicle_parameters.json",
+    "bytes": 2813,
+    "sha256": "17cb26c4f39c5637605ead0b764e33c3597de4c3b24dda418edab7bd34948ac2"
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/motion_audit.csv",
+    "bytes": 3233282,
+    "sha256": "309002ce89408c25147322fe2d3941d0970b7356bd09e38ac05c21c5d687c14f"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/experiment.mat",
+    "bytes": 15036260,
+    "sha256": "e0da6da81c4f7ae45a50567f20ec70d2389e54d39dc63553f70762018b8aede9"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/motion_gap_experiment.mat",
+    "bytes": 10022739,
+    "sha256": "c65f7af87c63a95e52d20766769870ef7050fe41720b2932d5652bb48ed57ba6"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/aligned_interfaces.csv",
+    "bytes": 2091525,
+    "sha256": "01f7d4709a94ed777264d3f78b7cf21b4b6e3eefc518a25525aca05b13f360ed"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/heading2.csv",
+    "bytes": 42868,
+    "sha256": "f36e9b8e1be2fa4b035f205443ec9bff62cd15379316574c412053267362aea3"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/insconfig.json",
+    "bytes": 1526,
+    "sha256": "2531f3e99bd4a84772433e9f9f58cb92f9203454cd33843dfc056f756704ef9f"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/insstdev.csv",
+    "bytes": 64728,
+    "sha256": "56f502252badc060b87dd9cf3c4daf3ae19a11ef126514d1f3c74dec4664f4c4"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/manifest.json",
+    "bytes": 7847,
+    "sha256": "fcad1a4136ddb9836fdfe15d9d4520a0c153da5389cb225145c7a883a9f09460"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/offset_angle_error.csv",
+    "bytes": 468864,
+    "sha256": "4be5ff0e0a6adfa9e4ea6bcd836eb1d86c7e6de4eb631047241d31decb4fb14d"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/pre_offset_angle_error.csv",
+    "bytes": 468980,
+    "sha256": "149bcb67fd248161f83bbb349972c61b38c1acb365594cb6f99bab956e4518a1"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/pre_pre_offset_angle_error.csv",
+    "bytes": 468930,
+    "sha256": "90a18c34abadc9b4eaf39e2da1f31ef38ce5ac880884fb1ec85178d2daa04b47"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/steering_curvature.csv",
+    "bytes": 487062,
+    "sha256": "3d704433c77566cf5821bc302e9d242c8691a4433fc71aa6e2ad9e51d1aa95c6"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/ulc_report.csv",
+    "bytes": 989123,
+    "sha256": "07ac501a4d2741decca474a5ac14de78424799fa201a398fde96f1ac1b4b52c8"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-09-31/wheel_speed_report.csv",
+    "bytes": 803154,
+    "sha256": "a59c94186db8672ec182cd9a3ed6e52b159dc553491f8a05ca14aa05271e1bef"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/aligned_interfaces.csv",
+    "bytes": 1396898,
+    "sha256": "c278dd390415b7ca509d3278536883c2f08de91ce978f76360855778d9e2656d"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/heading2.csv",
+    "bytes": 29332,
+    "sha256": "ca1c228ed624481974837412c24e972cb4b140d45c7cd8629bd7a78d250d1af9"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/insstdev.csv",
+    "bytes": 43818,
+    "sha256": "aed87fcb087644ba9b453c5cdf764933162811649c471156a20edb53a12e0ad6"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/manifest.json",
+    "bytes": 7691,
+    "sha256": "5c25558d0de6084603217e66ff40480b56a0d4a60af6756e287e909583a38fc3"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/offset_angle_error.csv",
+    "bytes": 312525,
+    "sha256": "4921e172f17bb7518dcf54bb1ca3460f5d2e2cabccbc2857ae44f40128f74645"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/pre_offset_angle_error.csv",
+    "bytes": 312542,
+    "sha256": "c2deafa8a254d830cf67a96ecbef8bb7893fce7f0caabad6c25bdf8267f9947b"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/pre_pre_offset_angle_error.csv",
+    "bytes": 312551,
+    "sha256": "475bba22e192ff8deff8486fb47f0a36136543b44e2d6fc0249914bba5d871db"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/steering_curvature.csv",
+    "bytes": 322240,
+    "sha256": "f7c181c9ce9068acdff25bd300114320b362c2e4176eee79ba0c2200c41e9749"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/ulc_report.csv",
+    "bytes": 656670,
+    "sha256": "f63d36626cbe520446df04bd7b3e5bad52b379c722cbd1363650c50cc5f35366"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/12-11-24/wheel_speed_report.csv",
+    "bytes": 539892,
+    "sha256": "37bc3a94e41b3a263a14836228d64ccdc8e6af54635e054fcc69d2d7beef482d"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/code_analyzer.csv",
+    "bytes": 21,
+    "sha256": "07850c15aa72fb606e7bb913dceea229a3d19ab2462f875fd51b6e9e4d91a3a6"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/correction_comparison.pdf",
+    "bytes": 416695,
+    "sha256": "03fd2d48373d1f67e31295c20935aaf8195aa9169d0b81dcb8f370bd5124ee21"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/correction_comparison.png",
+    "bytes": 229768,
+    "sha256": "3524226974f35895d6126b1433f79776600ffc6472131dcbe3c898343ee4ab1a"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/correction_diagnostics.json",
+    "bytes": 834,
+    "sha256": "248140df81aebccfa3c9b12abefa693a3dfd2e45b1e2dbb2773e9b1d58567e60"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/correction_experiment.mat",
+    "bytes": 48386883,
+    "sha256": "5dff363098388ffecdce20cc8932ce3fee44234c499878f04579d88f589d0fad"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/correction_frame_errors.csv",
+    "bytes": 1120178,
+    "sha256": "6a25b086e8f1295fbd9b521344050e69b0f1a0460629f33857720ea1bbb20dc6"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/correction_metrics.csv",
+    "bytes": 11650,
+    "sha256": "266b77e8b84e77af8ab0d43c01c8c4cce3ee46b9313ea3fa6543ef06facff57b"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/correction_summary.json",
+    "bytes": 47620,
+    "sha256": "e7e7715cfd061021c56382933ba2aa9c9443329172c1ff86a0e550fc7920f21e"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/interface_audit.json",
+    "bytes": 16962,
+    "sha256": "3eb28c77cce268923bc4b844bddffa8c5fb2218353ad93728d68aef8560ee354"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/interface_audit_stdout.json",
+    "bytes": 16962,
+    "sha256": "3eb28c77cce268923bc4b844bddffa8c5fb2218353ad93728d68aef8560ee354"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/lateral_comparison.csv",
+    "bytes": 1165802,
+    "sha256": "e0588122069de1cefc269a240f266c9ea36588d9b63bb65516f27e22a2fa7bcb"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/lateral_metrics.csv",
+    "bytes": 5381,
+    "sha256": "e80e0099aab96a7aa12d3795f909edf6a88a3bc952c991a789884fbaef1c25a2"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/tests.csv",
+    "bytes": 3168,
+    "sha256": "60843b26536d93b4a79eee9cde719688da4143cddd0295ac1e25f57b3e670bb3"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/tests.mat",
+    "bytes": 4070,
+    "sha256": "3abac1a1e625bfe53f9dd0c6a5c27bbb86d2bb48b9b9969fe753aff2539a9028"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/vehicle_parameters.json",
+    "bytes": 3544,
+    "sha256": "114780d6952f63fd6b698bce137776dcc2534cd05207a58a340ef4f08b702b5e"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/calls.csv",
+    "bytes": 2154661,
+    "sha256": "096f2a4d8d392caf3bdddece9117fc30ac0359124c79613be4604cb9f45961c0"
+  }
+]
