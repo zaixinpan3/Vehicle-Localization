@@ -74,6 +74,12 @@ not a demonstrated unaided cold-start test. No random values are used.
 
 ## Results
 
+For a direct raw map-matching comparison, see the subsequent
+[identical-timestamp audit](../full_observer_comparison_20260916/README.md):
+raw matching has 14.8629 cm position RMSE versus this complete observer's
+9.7613 cm on the same 1,083 accepted frames. The "LiDAR only" row below is
+an observer with GNSS removed, not the raw matching measurement baseline.
+
 Every row includes all 11,690 samples, with no outage/error trimming.
 "Only" below still includes the measured motion and lateral observer.
 

@@ -1,0 +1,10 @@
+{
+  "pairedMetricRows": 16,
+  "sameFrameSamples": 1083,
+  "maximumMetricDifference": 3.552713678800501e-15,
+  "uniformStatesBitwiseUnchanged": true,
+  "exactNativeObserverOutputsVerified": true,
+  "fullObserverRmseReductionVersusRawLidar": 0.34324166307702986,
+  "diagnosticHeadingControlRmseM": 0.1406841090024755,
+  "scope": "Paired error audit; no estimator/gain change or independent ground-truth claim."
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "path": "output/full_observer_20260916/experiment.mat",
+    "bytes": 40072593,
+    "sha256": "4f5c4a06c589a21fa1d3f088896fd2b8e10ce0fdcc91369de2171598e91df6fa"
+  },
+  {
+    "path": "output/full_observer_comparison_20260916/audit.mat",
+    "bytes": 12062770,
+    "sha256": "827c7f6ed8151b1e051e7fc1d36dcc98118007a283111a82e3ffd29d0576b112"
+  },
+  {
+    "path": "output/full_observer_comparison_20260916/error_segments.csv",
+    "bytes": 684,
+    "sha256": "08ce22328cd265e1edfdfcb21c3f1039bec132f895d2ca1aae06e669d655a467"
+  },
+  {
+    "path": "output/full_observer_comparison_20260916/frame_errors.csv",
+    "bytes": 373126,
+    "sha256": "bce1d20b677743c81c284db3419f7f8c154c558bbfc3976512cd66a566ef2ab7"
+  },
+  {
+    "path": "output/full_observer_comparison_20260916/paired_metrics.csv",
+    "bytes": 3047,
+    "sha256": "19088ee811ba8402bbbc765b02ace92dab17692e95969f330aa6b76880c3593c"
+  },
+  {
+    "path": "output/full_observer_comparison_20260916/summary.json",
+    "bytes": 10371,
+    "sha256": "f5635aee86879ae6ca5715ef0c2c58750b26669ef35eb6603d0e5aa219846222"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/correction_experiment.mat",
+    "bytes": 48386883,
+    "sha256": "5dff363098388ffecdce20cc8932ce3fee44234c499878f04579d88f589d0fad"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/calls.csv",
+    "bytes": 2154661,
+    "sha256": "096f2a4d8d392caf3bdddece9117fc30ac0359124c79613be4604cb9f45961c0"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/experiment.mat",
+    "bytes": 348390498,
+    "sha256": "7d8f2007c4376fc6064e75249b6202b96feb1380c7c8606714879d1f35c0e08e"
+  },
+  {
+    "path": "scripts/auditFullObserverLidarComparison.m",
+    "bytes": 7006,
+    "sha256": "dc01150fc2279d706cbf2d6f6495f8a9d5a67d7f50d990600e49f464e82e46e8"
+  }
+]
