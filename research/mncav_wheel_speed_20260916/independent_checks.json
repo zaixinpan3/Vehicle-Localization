@@ -1,0 +1,20 @@
+{
+  "maximumMetricDifference": 5.551115123125783e-17,
+  "originalSourcePacketsUnchanged": true,
+  "nativeOutputPreservesUniformStates": true,
+  "sameAcceptedFrameCount": 1083,
+  "matlabTestsPassed": 51,
+  "codeAnalyzerFindings": 0,
+  "twistCanSpeedAudit": {
+    "sensors": {
+      "samples": 11693,
+      "maximumTwistCanSpeedDifferenceMps": 0.0
+    },
+    "calibration_sensors": {
+      "samples": 7792,
+      "maximumTwistCanSpeedDifferenceMps": 0.0
+    }
+  },
+  "evaluationWheelBiasSquaredFraction": 0.5316802678122643,
+  "claim": "Working wheel-derived candidate; no improvement over existing input on evaluation drive; not promoted to default."
+}

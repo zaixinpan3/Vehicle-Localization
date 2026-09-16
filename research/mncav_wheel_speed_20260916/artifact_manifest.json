@@ -1,0 +1,127 @@
+[
+  {
+    "path": "config/mncavWheelSpeedCalibration.json",
+    "bytes": 1114,
+    "sha256": "59ffb40acdc2c00ffc299d99b40b0e7d1dbe71af39bd946aba06807504bd7bd8"
+  },
+  {
+    "path": "config/wheelSpeedObserverConfig.m",
+    "bytes": 880,
+    "sha256": "a4a24959823b2b54bc79ee4a62e0fd902d0a247521b4782dc1920f9db89289e0"
+  },
+  {
+    "path": "localization/estimateWheelLongitudinalSpeed.m",
+    "bytes": 5784,
+    "sha256": "b2d472e3302b69a6fc80f2117819d27243e75ee3014d4426555337e6e595ef47"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/12-09-31/motion.csv",
+    "bytes": 1232177,
+    "sha256": "17166d513f19cc877e19bca750f50a6980d25e3045a23650e68b2023cf0a513e"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/12-09-31/reference.csv",
+    "bytes": 216158,
+    "sha256": "cf104d579d7e29bbcaeb4d0490d5f22a40771dfbd20337aa89ad5208ad95be6f"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/12-09-31/wheels.csv",
+    "bytes": 519729,
+    "sha256": "ade85fd2c390c3552016ff84c984473c05c08706ddf7eb110fd2cb63bec4dd4d"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/12-11-24/motion.csv",
+    "bytes": 819047,
+    "sha256": "ca6bcdb95a836b85aa3ce0da8d31af1762b449082757700e4fd6095ddba0c4f2"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/12-11-24/reference.csv",
+    "bytes": 141942,
+    "sha256": "0c24689b6b113a088e1094c77d3ecf65d17d407a680ab27f60ed5701f1d39f3a"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/12-11-24/wheels.csv",
+    "bytes": 351400,
+    "sha256": "c39db88eae7f9ba60ca85ae31e8c2df4be45bfa0dc674f8ec3a8e6236fcf015e"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/calibration_candidates.csv",
+    "bytes": 1168,
+    "sha256": "9693f63debf86ff98c6e574867b6931dc5d92b4122a1fe91ea7ff9a53ed467d8"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/code_analyzer.csv",
+    "bytes": 18,
+    "sha256": "05116616bff806795a739272533ef8fc7e47e1b4a01db73ce05d490fdf80c6a9"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/comparison.png",
+    "bytes": 365551,
+    "sha256": "4420cead5a9b9583517658a7c90ae7eb4fcd6aa78a3f138d218e7242a28a2424"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/experiment.mat",
+    "bytes": 53113784,
+    "sha256": "7eb87fb2e046e31793e35c8aec27bfaf72040ab29bd50009ed1750518e7efd3f"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/frame_errors.csv",
+    "bytes": 48602,
+    "sha256": "bdba62d090b51ad37ccfb52682f563082709a7fc7f92baa7c4774057220b4882"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/initial_tests.csv",
+    "bytes": 4200,
+    "sha256": "918fcf587d4aac08700b4fe042e4d0739f54805dfe36f9fba55e1938f291f608"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/input_audit.json",
+    "bytes": 2761,
+    "sha256": "e2d4a2b786acfcc9beea451cf03c6447fb924c8f8fefbdef34b3d95dbb5d0871"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/localization_metrics.csv",
+    "bytes": 309,
+    "sha256": "f96d4d29ac3237799665b56ff7f830af461fbde69755a5d3a59bcf638fffe1a7"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/summary.json",
+    "bytes": 2714,
+    "sha256": "0c3bbf850e6af70748aac41e57a771a2ffac67bd29788e9210f766ac8cad5d61"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/tests.csv",
+    "bytes": 4200,
+    "sha256": "49277512ce996cad6ed391b7d573d18c98f94df49f0c84540cf944d38a4df0ca"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/velocity_comparison.csv",
+    "bytes": 905818,
+    "sha256": "e652e203364d22304c8ed873a9ca27ea1ddccd5cf539fbdd1e100a2ccf22435a"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/velocity_metrics.csv",
+    "bytes": 235,
+    "sha256": "0d7f7a2b0a62ab0ca07d8af1c701239f26f1a6aac7e026f5a23d8a9438603e3c"
+  },
+  {
+    "path": "output/mncav_wheel_speed_20260916/velocity_segments.csv",
+    "bytes": 950,
+    "sha256": "82814d3f0558f3f95d51eb36fa3d5e2258d1a4038e346d39bca298729eea71c9"
+  },
+  {
+    "path": "scripts/calibrateMncavWheelSpeed.py",
+    "bytes": 7106,
+    "sha256": "48b66135ee5198cafbb259172782736228bc78789cf81f26a3d5edc13cb257d7"
+  },
+  {
+    "path": "scripts/runMncavWheelSpeedExperiment.m",
+    "bytes": 6720,
+    "sha256": "37fcfed0e5a6a0e130e99b15d8f51b000e4b9bccf27a20922ba78249fa5c07ee"
+  },
+  {
+    "path": "tests/wheelLongitudinalSpeedTest.m",
+    "bytes": 5296,
+    "sha256": "23ef0f8ff8caf0f049174c88c0ef9f648b29aabd6a958921408e7e659701a9ed"
+  }
+]

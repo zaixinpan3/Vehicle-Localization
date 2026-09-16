@@ -1,0 +1,35 @@
+{
+  "wheelOrder": [
+    "front_left",
+    "front_right",
+    "rear_left",
+    "rear_right"
+  ],
+  "effectiveRadiusM": [
+    0.36174432400250023,
+    0.3617198934751102,
+    0.36211512344418256,
+    0.36192890803865896
+  ],
+  "lagCompensationSeconds": [
+    0.023250289618932964,
+    0.018715283671012252,
+    0.05058443146515101,
+    0.05330321747599248
+  ],
+  "fitSequence": "raw_data_2024-06-07-12-11-24_0",
+  "fitReceiverIntervalSeconds": [
+    1,
+    40
+  ],
+  "fitSamples": 3899,
+  "fitWheelRmseMps": [
+    0.06777966341849316,
+    0.06554491889806854,
+    0.06977001200693654,
+    0.06824925957751063
+  ],
+  "method": "Bounded robust radius and acceleration-coefficient fit; independent calibration drive only",
+  "limitations": "Equivalent planar conversion, not measured tire radius or physical latency. GNSS/INS velocity used offline for calibration; none at runtime. Common slip, installation geometry and transfer error remain.",
+  "geometrySource": "https://www.stellantisfleet.com/content/dam/fca-fleet/na/fleet/en_us/chrysler/2021/Pacifica/specifications/2021_CH_PacificaHybrid_Specifications.pdf"
+}
