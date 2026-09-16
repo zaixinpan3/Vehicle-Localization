@@ -1,0 +1,152 @@
+[
+  {
+    "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_inspva_pose_1_1170.csv",
+    "bytes": 310523,
+    "sha256": "0b85599f701cfeeb55b285afc0bb161faaeba7d85b8ab6c18ee307a6054d1512"
+  },
+  {
+    "path": "data/raw/MissisipiPointClouds.mat",
+    "bytes": 1273317517,
+    "sha256": "75c4842872acb3a5cfaf25fa52c37572a0653c544ff6d275adad21b189218f1d"
+  },
+  {
+    "path": "output/localization_video_20260916/cloud_crosscheck.json",
+    "bytes": 113,
+    "sha256": "b4a188fde3504b34fd685dfe7a4aadfcf10b39e77966d64709da1024362e7c87"
+  },
+  {
+    "path": "output/localization_video_20260916/cloud_metadata.json",
+    "bytes": 1212,
+    "sha256": "9091f078bbae4cead549ca7e7939170137bca8e098224053d07389eb69b25bf4"
+  },
+  {
+    "path": "output/localization_video_20260916/data_metadata.json",
+    "bytes": 1018,
+    "sha256": "4b376d4be6827ba228f8b36eb022fd643c68b9fd6c725220aeb7e5c3637f49da"
+  },
+  {
+    "path": "output/localization_video_20260916/decode.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "output/localization_video_20260916/decoded_050s.png",
+    "bytes": 1111258,
+    "sha256": "c0019b15ee528fdd1eb75bf2a7afa2ecdce6cbf9513f1c29fc4d42b4e8664629"
+  },
+  {
+    "path": "output/localization_video_20260916/display_clouds.npz",
+    "bytes": 114972330,
+    "sha256": "b2badf0117f900adc2408fe802cf43274a22f82d48fa356c66cb5457011ca018"
+  },
+  {
+    "path": "output/localization_video_20260916/encoded_sample_check.json",
+    "bytes": 171,
+    "sha256": "a5cae51aaeae13ac2ee46052b5323443037c12a90094ddd9dec4d56aca1e67f5"
+  },
+  {
+    "path": "output/localization_video_20260916/ffprobe.json",
+    "bytes": 2241,
+    "sha256": "ba91f609cec9ca49dbec1edee17e4328e75040341a592949c6b1a38f07749548"
+  },
+  {
+    "path": "output/localization_video_20260916/frames.csv",
+    "bytes": 38710,
+    "sha256": "3aeb23731dbec20c8b4d628e80b38ed7ce5e416c2dd344ba034315eda65608a2"
+  },
+  {
+    "path": "output/localization_video_20260916/imagery_metadata.json",
+    "bytes": 2287,
+    "sha256": "ecee7de583778f3e37d361b2baf03d9d0493a38d292ce11754e2a1e9a9ac0a8d"
+  },
+  {
+    "path": "output/localization_video_20260916/mncav_localization.mp4",
+    "bytes": 54691628,
+    "sha256": "8cdd60663b6e9af2cfe06f733e1cf49782f93ffb4ff8e361e86d265c3bfed366"
+  },
+  {
+    "path": "output/localization_video_20260916/orthoimagery.jpg",
+    "bytes": 1192471,
+    "sha256": "852e436f8bd02947b73b391d6bff44ef0190aab9e21a34a138b8b042b25ada86"
+  },
+  {
+    "path": "output/localization_video_20260916/preview_000.00s.png",
+    "bytes": 958177,
+    "sha256": "e0cb9af8c7717e0b6641474d56eb3e44234bcf2c2d8bd22d2991c4ef0da63158"
+  },
+  {
+    "path": "output/localization_video_20260916/preview_020.00s.png",
+    "bytes": 938228,
+    "sha256": "c95112edcd1dabde2dad9d101abee4dd6ae8ddaaf45dae5e24edc1ba0fec68d4"
+  },
+  {
+    "path": "output/localization_video_20260916/preview_050.00s.png",
+    "bytes": 903647,
+    "sha256": "cd925ea5783b73bc8fe4f032264ca5f929b74466e16476a4eb827d8d63f77efe"
+  },
+  {
+    "path": "output/localization_video_20260916/preview_082.00s.png",
+    "bytes": 943192,
+    "sha256": "b09e32ad7b0828eb7ef804f9a0acf8e78b21a966561af225ac8d18980fbb1ac4"
+  },
+  {
+    "path": "output/localization_video_20260916/preview_100.00s.png",
+    "bytes": 994187,
+    "sha256": "fd9c81851ae644e77dfc060a0e7a38452250fc77a1b8afd4372eb74df9199c1e"
+  },
+  {
+    "path": "output/localization_video_20260916/preview_116.90s.png",
+    "bytes": 983239,
+    "sha256": "f88dc474057c99359f6ac645acd5a9118c9b17a07c2738f7c6e3c37dc6fc0a9e"
+  },
+  {
+    "path": "output/localization_video_20260916/raw_display_counts.csv",
+    "bytes": 14072,
+    "sha256": "200f0b7816a26bbaf971ece7ff6e574893984be2bf7cef8942954a1d10362679"
+  },
+  {
+    "path": "output/localization_video_20260916/storyboard.jpg",
+    "bytes": 1026717,
+    "sha256": "ff54162b5476d081d682bf282141b3efbb0c3420fc503369b85e0270539af96b"
+  },
+  {
+    "path": "output/localization_video_20260916/trajectory.csv",
+    "bytes": 2133737,
+    "sha256": "2c874685629218ef12390d9bdda79096004590f920e84f970d21e3dcb58913ad"
+  },
+  {
+    "path": "output/localization_video_20260916/video_frame_clock.csv",
+    "bytes": 139663,
+    "sha256": "1e4461fdd85ec5699b7d0411ef85193908ffbad35bb29885179519d2f8fd3cd1"
+  },
+  {
+    "path": "output/localization_video_20260916/video_inputs.mat",
+    "bytes": 108810092,
+    "sha256": "f9f133db30ea67a4333bca812208cb27576543bf51851ab938ffc266a31d260c"
+  },
+  {
+    "path": "output/localization_video_20260916/video_validation.json",
+    "bytes": 726,
+    "sha256": "8ca8959501d6bdc361cb61f43029f2e9bb5bbba3eb6815e5794f41b86861389a"
+  },
+  {
+    "path": "output/mississippi_mapping_inspva_20260915/feature_observations.mat",
+    "bytes": 11080646,
+    "sha256": "3a4a0d06a8c0f43a9af766714af37899835b3a3c08f3cf08a4bdd437bd575533"
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/experiment.mat",
+    "bytes": 15036260,
+    "sha256": "e0da6da81c4f7ae45a50567f20ec70d2389e54d39dc63553f70762018b8aede9"
+  },
+  {
+    "path": "output/mncav_interface_audit_20260916/correction_experiment.mat",
+    "bytes": 48386883,
+    "sha256": "5dff363098388ffecdce20cc8932ce3fee44234c499878f04579d88f589d0fad"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/calls.csv",
+    "bytes": 2154661,
+    "sha256": "096f2a4d8d392caf3bdddece9117fc30ac0359124c79613be4604cb9f45961c0"
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "sourceTrajectorySamples": 12859,
+  "maximumOriginalPoseExportDifferenceMOrRad": 4.6566128730773926e-09,
+  "allOriginalStatesPreserved": true,
+  "uniformPositionRmseM": 0.10140230241783839,
+  "uniformHeadingRmseDeg": 0.3477814705944588,
+  "all1170PerceptionFramesShown": true,
+  "futurePerceptionFrameUsed": false,
+  "maximumPerceptionAgeSeconds": 0.1479332770339994,
+  "encodedFrames": 3508,
+  "completeDecodePassed": true,
+  "visualInspection": "Six preview frames and the encoded sample were inspected; original metric map scale is retained."
+}

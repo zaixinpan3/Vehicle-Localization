@@ -1,0 +1,34 @@
+{
+  "experiment": "steering_and_lidar_bias / per_frame_zero",
+  "sourceExperiment": "output/mncav_interface_audit_20260916/correction_experiment.mat",
+  "perceptionSource": "output/mississippi_mapping_inspva_20260915/feature_observations.mat",
+  "rawPointSource": "data/raw/MissisipiPointClouds.mat",
+  "coordinates": "EPSG:32615; grid yaw; recorded INS output point",
+  "time": "INSPVA receiver seconds relative to first LiDAR frame",
+  "frames": 1170,
+  "durationSeconds": 116.899543614589,
+  "maximumSemanticRoundTripM": 0.0,
+  "semanticCounts": [
+    133836,
+    194300,
+    70950
+  ],
+  "rawDisplayPointLimit": 10000,
+  "rawDisplayBoundsM": [
+    -15,
+    55,
+    -32,
+    32,
+    -4,
+    10
+  ],
+  "semanticSelectionChanged": false,
+  "uniformSamples": 11690,
+  "uniformPositionRmseM": 0.10140230241783839,
+  "uniformHeadingRmseDeg": 0.3477814705944588,
+  "estimatorRerun": false,
+  "visualizationReferenceOnly": true,
+  "limitations": "Offline replay; same-drive map and reference-seeded matching; imagery is context, not accuracy reference",
+  "cloudExportMethod": "Direct HDF5 coordinate-only read, full inverse saved SE(3); deterministic raw-context thinning",
+  "elapsedSeconds": 14.254667010973208
+}

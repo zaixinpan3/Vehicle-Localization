@@ -1,0 +1,21 @@
+{
+  "video": "output/localization_video_20260916/mncav_localization.mp4",
+  "sizeBytes": 54691628,
+  "sha256": "8cdd60663b6e9af2cfe06f733e1cf49782f93ffb4ff8e361e86d265c3bfed366",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "encodedFrames": 3508,
+  "durationSeconds": 116.933333,
+  "sourceDurationSeconds": 116.899543614589,
+  "sourcePerceptionFrames": 1170,
+  "maximumSourceFrameGapSeconds": 0.16285474632459973,
+  "maximumPerceptionAgeSeconds": 0.1479332770339994,
+  "minimumPerceptionAgeSeconds": 0.0,
+  "allPerceptionFramesShown": true,
+  "futurePerceptionFrameUsed": false,
+  "fullDecodePassed": true,
+  "playbackSpeed": 1,
+  "estimatorRerun": false,
+  "imageryRole": "Context only; USGS/USDA aerial orthoimagery"
+}
