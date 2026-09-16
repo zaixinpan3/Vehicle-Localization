@@ -1,0 +1,36 @@
+{
+  "rows": 11690,
+  "successfulReplayVariants": 27,
+  "failedSynthesis": {
+    "variant": "tires_13_resynth",
+    "stage": "synthesis",
+    "message": "No tau candidate produced a certified lateral observer design. Widen cfg.synthesis.tauCandidates or relax the operating range."
+  },
+  "populations": {
+    "all": 11690,
+    "moving": 10787,
+    "straight": 6303,
+    "turning": 4484,
+    "moving_first60": 5098,
+    "moving_later": 5689
+  },
+  "independentMetricChecksPassed": true,
+  "outputInversionChecksPassed": true,
+  "errorEquationResidual": 9.947598300641403e-14,
+  "straightPlantMismatchMean": [
+    -1.68939419646603,
+    0.02628990339664599
+  ],
+  "straightInnovationContributionMean": [
+    -0.9682909861576726,
+    0.1428644332280223
+  ],
+  "straightTotalForcingMean": [
+    -2.657685182623708,
+    0.16915433662466808
+  ],
+  "straightKinematicResidualMeanMps2": -8.162511803013306e-05,
+  "straightAlgebraicVelocityRmseMps": 0.26101838348228446,
+  "straightMasterDynamicMeanDifferenceMps": 0.00023874410375328796,
+  "statement": "Descriptive fixed-drive diagnostics; no parameter fit, deployment or independent validation."
+}

@@ -1,0 +1,92 @@
+[
+  {
+    "path": "scripts/analyzeMncavLateralDiagnosis.m",
+    "sha256": "ce9b9d81e59d335db550c248242d19646f7092529c0ef7308fca09573206d932",
+    "bytes": 12758
+  },
+  {
+    "path": "research/mncav_lateral_diagnosis_20260916/verify_and_plot.py",
+    "sha256": "ec5194134d3da7f901bb7dac312627d04d222f721fd3bbcb905007c7e346d781",
+    "bytes": 7613
+  },
+  {
+    "path": "output/mncav_inspva_observer_20260915/experiment.mat",
+    "sha256": "e0da6da81c4f7ae45a50567f20ec70d2389e54d39dc63553f70762018b8aede9",
+    "bytes": 15036260
+  },
+  {
+    "path": "output/mncav_inspva_median_20260915/motion_audit.csv",
+    "sha256": "309002ce89408c25147322fe2d3941d0970b7356bd09e38ac05c21c5d687c14f",
+    "bytes": 3233282
+  },
+  {
+    "path": "config/mncavVehicleParameters.json",
+    "sha256": "ce9a25f5ef33c74bab4c20e16c97c0868862428d5a6e96ddfb8db32b4ad750a4",
+    "bytes": 1842
+  },
+  {
+    "path": "config/lateralObserverConfig.m",
+    "sha256": "6ca3142a3bb36c17fcfdba6fdced4142ca00c3f500debf891a4a7615d435c1a2",
+    "bytes": 7741
+  },
+  {
+    "path": "localization/lateralObserver/runLateralVelocityObserver.m",
+    "sha256": "e68545bfbc19b55c1806eb259c76d6bb4ccbd96e6e1f0b986ad27802fae4f51f",
+    "bytes": 28848
+  },
+  {
+    "path": "localization/lateralObserver/designLateralObserverGains.m",
+    "sha256": "c3be830318e56a1c9a617d9bde81ecc52a292501da28c3940e576740406fdd73",
+    "bytes": 14951
+  },
+  {
+    "path": "localization/lateralObserver/lateralBicycleModel.m",
+    "sha256": "7975e40bc34f4a33f83180948762e19fd41d1aa24a3d67019b3c37a0ec395203",
+    "bytes": 2623
+  },
+  {
+    "path": "output/mncav_lateral_diagnosis_20260916/experiment.mat",
+    "sha256": "1676f21279c52e43fa22e6c48c838b6f1b55b95a2542dcc8cff821ca00e8397b",
+    "bytes": 80528907
+  },
+  {
+    "path": "output/mncav_lateral_diagnosis_20260916/controls.csv",
+    "sha256": "7b939bea7d0b537893febe8c802a02d6ccee35d20fa41db210cdc70e574c7d3c",
+    "bytes": 34685
+  },
+  {
+    "path": "output/mncav_lateral_diagnosis_20260916/signals.csv",
+    "sha256": "fac7dca26216ce3377dd7779ac695d6434ed72d71125f57808f864e8d8eaff7e",
+    "bytes": 5669978
+  },
+  {
+    "path": "output/mncav_lateral_diagnosis_20260916/initial_state_control.csv",
+    "sha256": "1a53f6fe6301b30cde4c63448e21aa10724d73152b8b3848614f386da60c3c89",
+    "bytes": 416
+  },
+  {
+    "path": "output/mncav_lateral_diagnosis_20260916/summary.json",
+    "sha256": "1f89ba0798aa08e3f8bd367b7cbbb08044a055e7f08cb2d25435fd5c91811452",
+    "bytes": 86909
+  },
+  {
+    "path": "output/mncav_lateral_diagnosis_20260916/lateral_diagnosis.png",
+    "sha256": "682b41a9993bc1bfaab0dc7f7bece4290379a4bf623ab8f962c73c253a1b0032",
+    "bytes": 406994
+  },
+  {
+    "path": "output/mncav_lateral_diagnosis_20260916/lateral_diagnosis.pdf",
+    "sha256": "4bcb344f1b38079cc6a41fe530470679c670d8f856944b232fe1e003d99898d2",
+    "bytes": 212262
+  },
+  {
+    "path": "output/mncav_lateral_diagnosis_20260916/independent_checks.json",
+    "sha256": "ea65d9087bee650278342b4b4e0e37a3657a1a111fb6a1b23a73c562a14f278d",
+    "bytes": 1142
+  },
+  {
+    "path": "output/mncav_lateral_diagnosis_20260916/tests.mat",
+    "sha256": "5b9b4f19ab4d821be634e50bfc558959514b8be22a9edd7d3e4ec145a9d99ea5",
+    "bytes": 2181
+  }
+]
