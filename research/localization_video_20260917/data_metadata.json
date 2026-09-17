@@ -1,0 +1,43 @@
+{
+  "experiment": "Aligned BESTPOS + LiDAR / both channels / synchronous",
+  "sourceExperiment": "output/mncav_bestpos_alignment_20260917/experiment.mat",
+  "perceptionSource": "output/mississippi_mapping_inspva_20260915/feature_observations.mat",
+  "rawPointSource": "data/raw/MissisipiPointClouds.mat",
+  "coordinates": "EPSG:32615; grid yaw; recorded INS output point",
+  "time": "INSPVA receiver seconds relative to first LiDAR frame",
+  "frames": 1169,
+  "firstPerceptionFrame": 1,
+  "lastPerceptionFrame": 1169,
+  "durationSeconds": 116.7986895341,
+  "excludedPerceptionFramesOutsideObserverCoverage": 1,
+  "maximumPerceptionClockRoundTripSeconds": 4.9737991503207013E-13,
+  "semanticCounts": [
+    133735,
+    193847,
+    70945
+  ],
+  "rawDisplayPointLimit": 10000,
+  "rawDisplayBoundsM": [
+    -15,
+    55,
+    -32,
+    32,
+    -4,
+    10
+  ],
+  "semanticSelectionChanged": false,
+  "localizationSamples": 1169,
+  "localizationRateHz": 9.99636277030507,
+  "positionRmseM": 0.0784742734612255,
+  "positionMedianM": 0.046150889813943524,
+  "positionP95M": 0.1719131897654462,
+  "positionMaximumM": 0.26870477356681344,
+  "headingRmseDeg": 0.54017237736755,
+  "acceptedLidarSamples": 1083,
+  "acceptedFusionPositionRmseM": 0.068230770668020246,
+  "acceptedLidarPositionRmseM": 0.14862904911818434,
+  "displaySampling": "Hold latest actual synchronized state and perception; no display-state interpolation",
+  "estimatorRerun": false,
+  "visualizationReferenceOnly": true,
+  "limitations": "Offline replay; same-drive map and reference-seeded matching; imagery is context, not accuracy reference"
+}

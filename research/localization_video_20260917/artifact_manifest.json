@@ -1,0 +1,117 @@
+[
+  {
+    "path": "output/localization_video_20260917/cloud_crosscheck.json",
+    "bytes": 255,
+    "sha256": "d8af7998fa98fb53fc9cb7a6a00cd60bb3eecf34db0ba37c8ec212700af03005"
+  },
+  {
+    "path": "output/localization_video_20260917/cloud_metadata.json",
+    "bytes": 2028,
+    "sha256": "c2f2436d5001ad29b61c829847aa5007c17c186c3cca2fa616c1fa30ba4c1f20"
+  },
+  {
+    "path": "output/localization_video_20260917/data_metadata.json",
+    "bytes": 1603,
+    "sha256": "1b019163d9fb3a196e0cc33ecd08c5bfe082cca1e05047ba7effc1f94896cdbc"
+  },
+  {
+    "path": "output/localization_video_20260917/decode.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "output/localization_video_20260917/decoded_050s.png",
+    "bytes": 1115191,
+    "sha256": "75dcc43d9cd014cb8be1951e600e15438768757d7d1468eae1ff042b4b3a5a9b"
+  },
+  {
+    "path": "output/localization_video_20260917/display_clouds.npz",
+    "bytes": 114972330,
+    "sha256": "b2badf0117f900adc2408fe802cf43274a22f82d48fa356c66cb5457011ca018"
+  },
+  {
+    "path": "output/localization_video_20260917/ffprobe.json",
+    "bytes": 2241,
+    "sha256": "f4210985ca163f79d7247e786343da3e613a15373aaf0ef5eba3ccad3f211210"
+  },
+  {
+    "path": "output/localization_video_20260917/frames.csv",
+    "bytes": 38676,
+    "sha256": "e55ac06c69d626ffd41aa91401d6e1241ea574124830e6b395624f23ca766fe6"
+  },
+  {
+    "path": "output/localization_video_20260917/imagery_metadata.json",
+    "bytes": 2287,
+    "sha256": "ecee7de583778f3e37d361b2baf03d9d0493a38d292ce11754e2a1e9a9ac0a8d"
+  },
+  {
+    "path": "output/localization_video_20260917/mncav_localization.mp4",
+    "bytes": 49738332,
+    "sha256": "3eb49781c8be620667ba7f2b365f9bae71f1af0b8e75eb403f431e5d7fdc8c8c"
+  },
+  {
+    "path": "output/localization_video_20260917/orthoimagery.jpg",
+    "bytes": 1192471,
+    "sha256": "852e436f8bd02947b73b391d6bff44ef0190aab9e21a34a138b8b042b25ada86"
+  },
+  {
+    "path": "output/localization_video_20260917/preview_000.00s.png",
+    "bytes": 961929,
+    "sha256": "27d138a78faeaa93c4a28b6bb978e6f2d556e7dd18a3cd5a0192779366fa6ff4"
+  },
+  {
+    "path": "output/localization_video_20260917/preview_020.00s.png",
+    "bytes": 941172,
+    "sha256": "24d60cb97204e350a4ea1b3d2614415596cd421830f9f0c4b5d085e42c553d58"
+  },
+  {
+    "path": "output/localization_video_20260917/preview_050.00s.png",
+    "bytes": 904061,
+    "sha256": "c6d7050f39a383e066a13385669979289ce37b86b7e0ef3a0b06872da564814d"
+  },
+  {
+    "path": "output/localization_video_20260917/preview_082.00s.png",
+    "bytes": 945201,
+    "sha256": "df3432f99e2a822e7c873d8ca553a64db28b983ff7eb7aba278d8aab024df315"
+  },
+  {
+    "path": "output/localization_video_20260917/preview_100.00s.png",
+    "bytes": 997165,
+    "sha256": "55818642eaf1074225367fc87f55912d178cb5ab27bf7f64b76b50015b8aefca"
+  },
+  {
+    "path": "output/localization_video_20260917/preview_116.80s.png",
+    "bytes": 985653,
+    "sha256": "594af50ebbe186e9a4e75ff7d40a00860bc0e602859afe5492b8f7a72fd2eccf"
+  },
+  {
+    "path": "output/localization_video_20260917/raw_display_counts.csv",
+    "bytes": 14060,
+    "sha256": "95f29323146901a4a41908359d18c1f49c45ece53fbbcc299866c09f071d1cac"
+  },
+  {
+    "path": "output/localization_video_20260917/storyboard.jpg",
+    "bytes": 1026353,
+    "sha256": "0ef6870bad15a8a31208f27b45d26ea2a69f2a5087c824ef641b6db3d5d57a5b"
+  },
+  {
+    "path": "output/localization_video_20260917/trajectory.csv",
+    "bytes": 206179,
+    "sha256": "d4f49802ea36b09e71fcf317e4d3a95cbc95fa60fab0caf5d5c66e4218e8676b"
+  },
+  {
+    "path": "output/localization_video_20260917/video_frame_clock.csv",
+    "bytes": 206357,
+    "sha256": "122be3ea83b439857bdf8bee838283211f505fbea6c7ed395049f957b5952f4b"
+  },
+  {
+    "path": "output/localization_video_20260917/video_validation.json",
+    "bytes": 868,
+    "sha256": "b554458cec727a53db98cd2e04851c1688a495fbd87f924c6bff6c677d6eb413"
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/experiment.mat",
+    "bytes": 4261178,
+    "sha256": "0b0376df7dda73b5e842c319f1ad9d6d0aabeb60d23db0979e9c3f6e5b91aaa1"
+  }
+]

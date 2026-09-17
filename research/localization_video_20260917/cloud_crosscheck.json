@@ -1,0 +1,7 @@
+{
+  "coveredCloudsCompared": 1169,
+  "pointArraysBitIdentical": true,
+  "grayCountsBitIdentical": true,
+  "maximumFreshSemanticRoundTripM": 0.0,
+  "method": "Compare reused cache against fresh coordinate-only HDF5 export; no perception inference rerun"
+}

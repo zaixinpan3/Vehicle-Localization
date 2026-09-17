@@ -1,0 +1,35 @@
+{
+  "sourceExperiment": "output/mncav_bestpos_alignment_20260917/experiment.mat",
+  "sourceTrajectorySamples": 1169,
+  "maximumOriginalPoseExportDifferenceMOrRad": 4.6566128730773926e-09,
+  "allOriginalStatesPreserved": true,
+  "metrics": {
+    "positionRmseM": 0.0784742734612255,
+    "positionMedianM": 0.04615088981394352,
+    "headingRmseDeg": 0.5401723773675501,
+    "acceptedFusionPositionRmseM": 0.06823077066802022,
+    "acceptedLidarPositionRmseM": 0.14862904911818434
+  },
+  "all1169CoveredPerceptionFramesShown": true,
+  "excludedOutsideObserverCoverage": 1,
+  "localizationSampleHoldingVerified": true,
+  "futureStateOrPerceptionUsed": false,
+  "maximumPerceptionAgeSeconds": 0.1479332770339994,
+  "encodedFrames": 3505,
+  "semanticCounts": [
+    133735,
+    193847,
+    70945
+  ],
+  "perceptionAndImageryCacheHashesUnchanged": true,
+  "completeDecodePassed": true,
+  "encoded50SecondPreviewPsnrDb": 38.95426124681519,
+  "freshCloudExportCrosscheck": {
+    "coveredCloudsCompared": 1169,
+    "pointArraysBitIdentical": true,
+    "grayCountsBitIdentical": true,
+    "maximumFreshSemanticRoundTripM": 0.0,
+    "method": "Compare reused cache against fresh coordinate-only HDF5 export; no perception inference rerun"
+  },
+  "visualInspection": "Six-frame storyboard, full-size 50-second preview and decoded 50-second frame inspected."
+}

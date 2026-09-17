@@ -97,15 +97,16 @@ class Renderer:
         self.out = out
         self.tr = np.genfromtxt(out/'trajectory.csv', delimiter=',', names=True)
         self.fr = np.genfromtxt(out/'frames.csv', delimiter=',', names=True)
-        self.meta = json.loads((out/'cloud_metadata.json').read_text())
+        self.meta = json.loads((out/'data_metadata.json').read_text())
         self.cloud_file = np.load(out/'display_clouds.npz')
-        self.clouds = [self.cloud_file[f'frame_{k:04d}'] for k in range(1,1171)]
+        self.clouds = [self.cloud_file[f'frame_{int(k):04d}'] for k in self.fr['frame']]
         self.frame_time = self.fr['time']
         self.t = self.tr['time']
         self.duration = float(self.frame_time[-1])
         self.truth = np.column_stack([self.tr[n] for n in ['truthX', 'truthY', 'truthYaw']])
         self.estimate = np.column_stack([self.tr[n] for n in ['estimateX', 'estimateY', 'estimateYaw']])
-        assert len(self.fr) == len(self.clouds) == 1170
+        assert len(self.fr) == len(self.clouds) == self.meta['frames']
+        assert np.array_equal(self.t,self.frame_time), 'State and perception clocks must match.'
         assert np.all(np.diff(self.t) > 0) and np.all(np.diff(self.frame_time) > 0)
         self.base, self.imagery = fetch_imagery(out, self.tr)
         ex = self.imagery['extent']
@@ -117,12 +118,9 @@ class Renderer:
         self.preview_times = [0., 20., 50., 82., 100., self.duration]
 
     def sample(self, t):
-        truth = np.array([np.interp(t, self.t, self.truth[:, k]) for k in range(3)])
-        estimate = np.array([np.interp(t, self.t, self.estimate[:, k]) for k in range(3)])
-        speed = np.interp(t, self.t, self.tr['speedMps'])
-        # Show the latest acquired perception frame, never a future frame.
-        frame = int(np.searchsorted(self.frame_time, t, side='right')-1)
-        return truth, estimate, speed, max(0, frame)
+        # Animation repeats real 10 Hz outputs; it does not synthesize states.
+        index = max(0,int(np.searchsorted(self.t,t,side='right')-1))
+        return self.truth[index],self.estimate[index],self.tr['speedMps'][index],index
 
     def map_crop(self, extent, size):
         xmin, ymin, xmax, ymax = self.extent
@@ -137,11 +135,11 @@ class Renderer:
     def make_static(self):
         im = Image.new('RGB', (W, H), BG);d = ImageDraw.Draw(im)
         text(d, (24, 20), 'MnCAV  /  VEHICLE LOCALIZATION', 30, WHITE, True)
-        text(d, (25, 58), 'Mississippi River drive  ·  07 JUN 2024  ·  Ground truth: INSPVA', 17, MUTED)
+        text(d, (25, 58), 'Mississippi River drive  ·  Ground truth: INSPVA  ·  Aligned BESTPOS + LiDAR', 17, MUTED)
         for box, title in [(LIDAR, 'CURRENT LiDAR PERCEPTION'), (DETAIL, 'POSITION OFFSET'),
-                           (METRICS, 'FULL-REPLAY ACCURACY'), (TIMELINE, 'POSITION ERROR OVER TIME')]:
+                           (METRICS, 'LOCALIZATION ACCURACY'), (TIMELINE, 'POSITION ERROR OVER TIME')]:
             panel(d, box, title)
-        labels = ['POSITION ERROR', 'HEADING ERROR', 'VEHICLE SPEED', 'LiDAR FRAME', 'POSE MEASUREMENT']
+        labels = ['POSITION ERROR', 'HEADING ERROR', 'VEHICLE SPEED', 'LiDAR FRAME', 'LiDAR MATCH']
         for k, label in enumerate(labels):
             x = 24+k*378
             d.rounded_rectangle((x, 92, x+360, 156), radius=10, fill=PANEL)
@@ -173,16 +171,16 @@ class Renderer:
         text(d,(cx+97,cy),'E',14,MUTED,anchor='lm');text(d,(cx+12,cy-81),'N',14,MUTED,anchor='lm')
         text(d,(x+18,y+h-21),'20 cm / grid  ·  last 5 s shown',13,MUTED)
         x,y,w,h=METRICS
-        text(d,(x+18,y+48),'Position RMSE',17,MUTED)
-        text(d,(x+w-18,y+46),f"{100*self.meta['uniformPositionRmseM']:.2f} cm",27,EST,True,'rt')
-        text(d,(x+18,y+88),'Heading RMSE',17,MUTED)
-        text(d,(x+w-18,y+88),f"{self.meta['uniformHeadingRmseDeg']:.3f}°",22,WHITE,True,'rt')
-        text(d,(x+18,y+130),'11,690 outputs  ·  100 Hz',16,WHITE)
-        text(d,(x+18,y+160),'LiDAR + motion + lateral observer',15,MUTED)
-        text(d,(x+18,y+187),'Same-drive map / seeded matching',14,MUTED)
-        text(d,(x+18,y+213),'Offline replay  ·  zero LiDAR delay',14,MUTED)
+        text(d,(x+18,y+48),'Full-run RMSE',17,MUTED)
+        text(d,(x+w-18,y+46),f"{100*self.meta['positionRmseM']:.2f} cm",27,EST,True,'rt')
+        text(d,(x+18,y+88),'Median error',17,MUTED)
+        text(d,(x+w-18,y+88),f"{100*self.meta['positionMedianM']:.2f} cm",22,WHITE,True,'rt')
+        text(d,(x+18,y+129),f"Matched-frame RMSE ({self.meta['acceptedLidarSamples']:,} frames)",14,MUTED)
+        text(d,(x+18,y+152),f"Fusion {100*self.meta['acceptedFusionPositionRmseM']:.2f} cm  /  LiDAR {100*self.meta['acceptedLidarPositionRmseM']:.2f} cm",16,WHITE)
+        text(d,(x+18,y+188),f"{self.meta['localizationSamples']:,} estimates  ·  {self.meta['localizationRateHz']:.0f} Hz",16,WHITE)
+        text(d,(x+18,y+216),'Wheel / IMU / lateral observer aiding',14,MUTED)
         text(d,(24,1051),'Imagery: USGS / USDA, The National Map  ·  Aerial orthophoto, geographic context only',14,MUTED)
-        text(d,(1896,1051),'Original trajectories  ·  no visual error amplification',14,MUTED,anchor='rt')
+        text(d,(1896,1051),'Reference-assisted map / matching  ·  true map scale',14,MUTED,anchor='rt')
         return im
 
     def make_overview(self):
@@ -215,7 +213,7 @@ class Renderer:
         _,_,w,h=MAP;span=185.;height=span*h/w
         center=truth[:2];extent=np.r_[center-[span/2,height/2],center+[span/2,height/2]]
         im=self.map_crop(extent,(w,h));d=ImageDraw.Draw(im)
-        ix=np.flatnonzero(self.t<=t)[::3]
+        ix=np.flatnonzero(self.t<=t)
         for xy,color,width in [(self.truth[ix,:2],TRUTH,5),(self.estimate[ix,:2],EST,2)]:
             p=self.xy_pixels(xy,extent,(w,h))
             # PIL clips line segments to the panel; no coordinate exaggeration.
@@ -295,12 +293,12 @@ class Renderer:
         error=100*np.linalg.norm(delta);yaw=np.arctan2(np.sin(estimate[2]-truth[2]),np.cos(estimate[2]-truth[2]))
         im=self.static.copy();im.paste(self.map_panel(t,truth,estimate),MAP[:2])
         im.paste(self.cloud_panel(index),(LIDAR[0],LIDAR[1]+40));d=ImageDraw.Draw(im)
-        text(d,(1896,20),f'{int(t//60):02d}:{t%60:04.1f}  /  01:56.9',30,WHITE,True,'rt')
+        text(d,(1896,20),f'{int(t//60):02d}:{t%60:04.1f}  /  {int(self.duration//60):02d}:{self.duration%60:04.1f}',30,WHITE,True,'rt')
         age=t-self.frame_time[index]
-        text(d,(1896,60),f'LiDAR age {age*1000:.0f} ms  ·  receiver clock',15,MUTED,False,'rt')
+        text(d,(1896,60),f'Frame age {age*1000:.0f} ms  ·  10 Hz states held for display',15,MUTED,False,'rt')
         status=int(self.fr['measurementStatus'][index])
         values=[f'{error:.1f} cm',f'{abs(np.rad2deg(yaw)):.3f}°',f'{speed*3.6:.1f} km/h',
-                f'{index+1:04d} / 1170',{1:'Full pose',2:'Directional only',0:'No full-pose update'}[status]]
+                f"{int(self.fr['frame'][index]):04d} / {int(self.fr['frame'][-1]):04d}",{1:'Full pose',2:'Directional only',0:'No full pose'}[status]]
         for k,value in enumerate(values):
             text(d,(40+k*378,121),value,24,EST if k==0 else WHITE,True)
         # Fixed +/-40 cm metric offset inset. No magnification of map traces.
@@ -312,7 +310,7 @@ class Renderer:
         d.line((cx,cy,ex,ey),fill=EST,width=2)
         d.ellipse((cx-5,cy-5,cx+5,cy+5),fill=TRUTH)
         d.ellipse((ex-5,ey-5,ex+5,ey+5),fill=EST,outline=WHITE,width=1)
-        # Timeline uses the original dense output samples, revealed to now.
+        # Timeline uses original localization errors, revealed only after acquisition.
         x,y,w,h=TIMELINE;mask=self.t<=t
         values=np.column_stack((x+66+self.t[mask]/120*(w-84),y+122-self.tr['positionErrorM'][mask]*180))
         if len(values)>1:d.line([tuple(v) for v in values],fill=EST,width=2)
@@ -322,13 +320,14 @@ class Renderer:
 
 
 def validate_video(out, fps):
-    frame_time=np.genfromtxt(out/'frames.csv',delimiter=',',names=True)['time']
+    source=np.genfromtxt(out/'frames.csv',delimiter=',',names=True)
+    frame_time=source['time'];frame_ids=source['frame'].astype(int)
     frames=int(np.ceil(frame_time[-1]*fps))+1
     timestamps=np.minimum(np.arange(frames)/fps,frame_time[-1])
     used=np.searchsorted(frame_time,timestamps,side='right')
     ages=timestamps-frame_time[used-1]
     maximum_source_gap=float(np.max(np.diff(frame_time)))
-    assert set(used)==set(range(1,1171)), 'Every perception frame must appear.'
+    assert set(used)==set(range(1,len(source)+1)), 'Every covered perception frame must appear.'
     assert min(ages)>=-1e-10 and max(ages)<maximum_source_gap+1e-10, 'Perception clock mismatch.'
     video=out/'mncav_localization.mp4'
     probe_command=['ffprobe','-v','error','-count_frames','-show_streams','-show_format','-of','json',str(video)]
@@ -339,9 +338,9 @@ def validate_video(out, fps):
     assert abs(float(probe['format']['duration'])-frame_time[-1])<2/fps
     with (out/'decode.log').open('w') as log:
         subprocess.run(['ffmpeg','-v','error','-i',str(video),'-f','null','-'],check=True,stderr=log)
-    with video.open('rb') as source:digest=hashlib.file_digest(source,'sha256').hexdigest()
-    table=np.column_stack((np.arange(frames),timestamps,used,ages))
-    np.savetxt(out/'video_frame_clock.csv',table,delimiter=',',header='videoFrame,replayTime,perceptionFrame,perceptionAgeSeconds',comments='',fmt=['%d','%.12f','%d','%.12f'])
+    with video.open('rb') as stream_bytes:digest=hashlib.file_digest(stream_bytes,'sha256').hexdigest()
+    table=np.column_stack((np.arange(frames),timestamps,frame_ids[used-1],ages,used,ages))
+    np.savetxt(out/'video_frame_clock.csv',table,delimiter=',',header='videoFrame,replayTime,perceptionFrame,perceptionAgeSeconds,localizationSample,localizationAgeSeconds',comments='',fmt=['%d','%.12f','%d','%.12f','%d','%.12f'])
     report={'video':str(video.relative_to(ROOT)) if video.is_relative_to(ROOT) else str(video),
             'sizeBytes':video.stat().st_size,'sha256':digest,
             'width':W,'height':H,'fps':fps,'encodedFrames':frames,'durationSeconds':float(probe['format']['duration']),
@@ -349,13 +348,14 @@ def validate_video(out, fps):
             'maximumSourceFrameGapSeconds':maximum_source_gap,
             'maximumPerceptionAgeSeconds':float(max(ages)),'minimumPerceptionAgeSeconds':float(min(ages)),
             'allPerceptionFramesShown':True,'futurePerceptionFrameUsed':False,'fullDecodePassed':True,
+            'localizationSamples':len(source),'displayStateInterpolation':False,'displayPolicy':'Hold latest actual synchronized state and perception',
             'playbackSpeed':1,'estimatorRerun':False,'imageryRole':'Context only; USGS/USDA aerial orthoimagery'}
     (out/'video_validation.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))
 
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output',type=Path,default=ROOT/'output/localization_video_20260916')
+    parser.add_argument('--output',type=Path,default=ROOT/'output/localization_video_20260917')
     parser.add_argument('--preview-only',action='store_true')
     parser.add_argument('--validate-only',action='store_true')
     parser.add_argument('--fps',type=int,default=30)
@@ -388,7 +388,7 @@ def main():
         finally:
             process.stdin.close()
         assert process.wait()==0,'Video encoding failed; see encoding.log.'
-    assert set(used)==set(range(1,1171))
+    assert set(used)==set(range(1,len(renderer.fr)+1))
     validate_video(out,args.fps)
 
 

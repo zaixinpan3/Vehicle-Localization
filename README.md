@@ -337,6 +337,13 @@ gains: full-frame RMSE 7.8474 cm, same accepted-frame fusion/raw-LiDAR RMSE
 independent absolute accuracy. Earlier reports retain their historical inputs
 and measurements.
 
+The [updated localization video](research/localization_video_20260917/README.md)
+displays this result on aerial imagery with current perception and the paired
+LiDAR comparison. Run `exportLocalizationVideoData`, then the cloud preparation
+and rendering commands in that record. The 1080p/30 fps video repeats actual
+10 Hz outputs and is saved as
+`output/localization_video_20260917/mncav_localization.mp4`.
+
 The historical LiDAR-only offline experiment is `runMncavMotionAidedExperiment`.
 The [motion-aided seven-state observer](research/mncav_motion_aided_20260914/validation.md)
 retains the turning model and uses direct velocity/acceleration correction.

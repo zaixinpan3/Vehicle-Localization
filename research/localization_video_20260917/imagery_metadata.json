@@ -1,0 +1,29 @@
+{
+  "href": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPPlus_ImageServer/_ags_bd3bac8f_89eb_4a97_97ec_4b070144743f.jpg",
+  "width": 2711,
+  "height": 3903,
+  "extent": {
+    "xmin": 484028.7362176672,
+    "ymin": 4976455.983458881,
+    "xmax": 484869.15248701547,
+    "ymax": 4977665.9224848,
+    "spatialReference": {
+      "wkid": 32615,
+      "latestWkid": 32615
+    }
+  },
+  "scale": 0,
+  "requestedUrl": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage?bbox=484028.7533115188%2C4976455.98345888%2C484869.1353931638%2C4977665.922484799&bboxSR=32615&imageSR=32615&size=2711%2C3903&format=jpg&bandIds=0%2C1%2C2&interpolation=RSP_BilinearInterpolation&f=json",
+  "serviceUrl": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer",
+  "retrievedAt": "2026-09-16T15:55:42.774518+00:00",
+  "copyrightText": "USGS, USDA, The National Map: Orthoimagery. March 12, 2025.",
+  "description": "The USGS NAIP Plus service from The National Map consists of National Agriculture Imagery Program (NAIP) and high resolution orthoimagery (HRO) that combine the visual attributes of an aerial photograph with the spatial accuracy and reliability of a map. Digital orthoimage resolution may vary from 6 inches to 1 meter. In the former resolution, every pixel in an orthoimage covers a six inch square of the earth\u2019s surface, while in the latter resolution, each pixel represents a one meter square. Many states contribute orthoimagery to The National Map, and the USGS also relies on a partnership with the U.S. Department of Agriculture's Farm Service Agency. The National Map download client allows free downloads of public domain, 1-meter resolution orthoimagery in JPEG 2000 (jp2) format for the conterminous United States, with many urban areas and other locations at 1-foot (or better) resolution also in JPEG 2000 (jp2) format. For additional information on orthoimagery, go to https://nationalmap.gov/ortho.html . crdate-20250311",
+  "role": "Geographic context only; no image-based accuracy claim",
+  "imageryType": "Aerial orthoimagery, not a live satellite image",
+  "requestedBbox": [
+    484028.7533115188,
+    4976455.98345888,
+    484869.1353931638,
+    4977665.922484799
+  ]
+}
