@@ -1,12 +1,13 @@
 function validation=validateFullLocalizationObserver(outputFolder)
 % validateFullLocalizationObserver Check recorded replay and regression scope.
     arguments
-        outputFolder (1,1) string="output/full_observer_20260916"
+        outputFolder (1,1) string="output/mncav_wheel_only_20260916/full_observer"
     end
     setupVehicleLocalization();
     files=["tests/fullLocalizationObserverTest.m","tests/motionAidedObserverTest.m", ...
         "tests/improvedObserverTest.m","tests/lateralObserverTest.m", ...
-        "tests/lidarVelocityConsistencyTest.m","tests/mncavVehicleConfigTest.m"];
+        "tests/lidarVelocityConsistencyTest.m","tests/mncavVehicleConfigTest.m", ...
+        "tests/wheelLongitudinalSpeedTest.m","tests/wheelMotionInputTest.m"];
     results=runtests(cellstr(files));writetable(table(results),fullfile(outputFolder,'tests.csv'));
     assert(all([results.Passed]),'VehicleLocalization:RegressionFailure','Observer regression failed.');
     stored=load(fullfile(outputFolder,'experiment.mat'));
@@ -24,7 +25,9 @@ function validation=validateFullLocalizationObserver(outputFolder)
     prefixDifference=max(abs(changed.z(r.time<=60,:)-r.z(r.time<=60,:)),[],'all');assert(prefixDifference==0);
     rows=cell(0,4);sourceFiles=["config/fullObserverConfig.m","localization/designFullObserverGains.m", ...
         "localization/runFullLocalizationObserver.m","scripts/runMncavFullObserverExperiment.m", ...
-        "scripts/validateFullLocalizationObserver.m","tests/fullLocalizationObserverTest.m"];
+        "scripts/validateFullLocalizationObserver.m","tests/fullLocalizationObserverTest.m", ...
+        "scripts/prepareWheelMotionInputs.m","scripts/prepareMncavObserverReplay.m", ...
+        "scripts/replayMississippiLocalization.m","tests/wheelMotionInputTest.m"];
     for file=sourceFiles
         messages=checkcode(char(file),'-config=factory','-id');
         for j=1:numel(messages),rows(end+1,:)={file,messages(j).line,string(messages(j).id),string(messages(j).message)};end %#ok<AGROW>

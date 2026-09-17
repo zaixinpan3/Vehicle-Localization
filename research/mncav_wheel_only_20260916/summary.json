@@ -1,0 +1,629 @@
+{
+  "metadata": {
+    "gnssSource": "/novatel/oem7/odom XY; diagonal recorded pose covariance; GNSS/INS aiding, not pure GNSS",
+    "lidarSource": "Frozen INSPVA-map per_frame_zero full-pose measurements",
+    "inputMetadata": {
+      "fixedLidarDelaySeconds": 0,
+      "clock": "INSPVA receiver time bridged from ROS headers; no pose used to fit the clock",
+      "inputInterpolation": "native wheel fusion; offline linear IMU/steering reconstruction",
+      "longitudinalVelocity": {
+        "source": "/vehicle/wheel_speed_report: four-wheel fusion with steering/IMU",
+        "wheelFile": "output/mncav_wheel_only_20260916/sensors/wheel_speed_report.csv",
+        "wheelPackets": 5845,
+        "configuration": {
+          "effectiveRadius": [
+            0.36174432400250023,
+            0.36171989347511019,
+            0.36211512344418256,
+            0.36192890803865896
+          ],
+          "lagCompensation": [
+            0.023250289618932964,
+            0.018715283671012252,
+            0.050584431465151007,
+            0.053303217475992481
+          ],
+          "wheelbase": 3.089,
+          "frontTrack": 1.734,
+          "rearTrack": 1.735,
+          "rearCgDistance": 1.714395,
+          "filterTimeConstant": 0.01,
+          "maximumWheelAge": 0.15,
+          "consensusThreshold": 0.15,
+          "maximumWheelRate": 200,
+          "maximumSteeringAngle": 0.6,
+          "stationaryWheelRate": 0.05,
+          "stationaryYawRate": 0.03,
+          "method": "robust",
+          "initialSpeed": 0
+        },
+        "initialSpeed": 0,
+        "initialPredictionOnlySamples": 3,
+        "maximumAcceptedWheelAge": 0.10904923989524207,
+        "forwardOnly": true,
+        "referenceVelocityUsed": false,
+        "alternativeSpeedFallback": false,
+        "upstreamReconstruction": "Offline linear IMU/steering reconstruction; native causal wheel packets"
+      },
+      "reference": "Legacy ODOM reference returned by exporter is discarded; INSPVA evaluation is supplied separately",
+      "gpsInput": "all covered recorded odom positions; no GNSS heading measurement",
+      "lidarInput": "accepted full/directional geometric samples; the continuous adapter rejects insufficient information",
+      "parameters": {
+        "software": {
+          "numpy": "2.5.3",
+          "scipy": "1.18.1",
+          "pandas": "3.0.5"
+        },
+        "calibration_sequence": "raw_data_2024-06-07-12-11-24_0",
+        "evaluation_sequence": "raw_data_2024-06-07-12-09-31_0",
+        "training_interval_seconds": [
+          1,
+          40
+        ],
+        "validation_start_seconds": 40,
+        "duration_seconds": 77.9199999999837,
+        "input_correction": {
+          "longitudinalAcceleration": {
+            "sign": 1,
+            "offset": 0.027522640649579853,
+            "diagnostic_unconstrained_slope": 0.862274566881592,
+            "validation_rmse": 0.23300290097687543
+          },
+          "lateralAcceleration": {
+            "sign": -1,
+            "offset": -0.15468705901689392,
+            "diagnostic_unconstrained_slope": -1.0279696365432991,
+            "validation_rmse": 0.13466583336166868
+          },
+          "yawRate": {
+            "sign": 1,
+            "offset": -0.012282345053570586,
+            "diagnostic_unconstrained_slope": 1.0019574026031479,
+            "validation_rmse": 0.0017621005548777205
+          }
+        },
+        "vehicle": {
+          "mass": 2273,
+          "lf": 1.3746049999999999,
+          "lr": 1.7143950000000001,
+          "yawInertia": 5874.6073304166666,
+          "frontCorneringStiffness": 108238.09523809524,
+          "rearCorneringStiffness": 80817.777777777781
+        },
+        "steeringRatio": 16.2,
+        "steeringWheelOffsetRad": 0.026179938779914945,
+        "steeringInterfaceCalibration": {
+          "steeringWheelOffsetRad": 0.026179938779914945,
+          "steeringWheelOffsetDeg": 1.5,
+          "scope": "Recorded Mississippi MnCAV steering-curvature equivalence, not a measured road-wheel or INS mounting calibration.",
+          "calibrationDrive": "raw_data_2024-06-07-12-11-24_0",
+          "calibrationReceiverIntervalSeconds": [
+            1,
+            40
+          ],
+          "method": "Fit steering_curvature = tan((steering_wheel_angle_rad - offset)/16.2)/3.089 using bag-time-paired topics. Fit 1.503989 degrees; round to 1.5 degrees. Validated on later calibration samples and the separate 12:09:31 drive.",
+          "auditScript": "scripts/auditMncavReplayInterfaces.py"
+        },
+        "provenance": {
+          "identity": "UMN identifies MnCAV as a 2021 Chrysler Pacifica Hybrid.",
+          "stock_specifications": "2273 kg EPA curb mass, 3.089 m wheelbase, 55.5/44.5 axle load split, 16.2 steering ratio; actual loaded MnCAV mass is unknown.",
+          "lf_lr": "Derived static unladen CG distances from published axle load fractions.",
+          "yawInertia": "Explicit uniform rectangular planform approximation, not a measured MnCAV inertia.",
+          "cornering_stiffness": "Unidentified nominal prior: existing generic model stiffnesses scaled by the stock mass ratio. Not a manufacturer specification.",
+          "sensitivity": "Repeat the experiment at 0.7 and 1.3 times nominal inertia and both axle stiffnesses; nominal mass and geometry remain fixed.",
+          "input_offsets": "Fixed signs plus median offsets from the independent calibration drive; no online truth injection. Residual road-bank and sensor-to-CG lever-arm errors remain.",
+          "sources": [
+            "https://www.cts.umn.edu/news-pubs/news/2021/august/mncav",
+            "https://www.stellantisfleet.com/content/dam/fca-fleet/na/fleet/en_us/chrysler/2021/Pacifica/specifications/2021_CH_PacificaHybrid_Specifications.pdf"
+          ]
+        },
+        "rejected_direct_identification": {
+          "front_stiffness_N_per_rad": 283190.01176280063,
+          "rear_stiffness_N_per_rad": -241684.25715679611,
+          "yaw_inertia_kg_m2": -45497.888364500774,
+          "design_condition_number": 34.184756749699041,
+          "used_in_observer": false,
+          "reason": "Nonphysical solution and unknown INS-to-CG reference point. This drive does not establish calibrated MnCAV bicycle parameters."
+        }
+      },
+      "sampleTimeSeconds": 0.01,
+      "samples": 11690,
+      "maximumReferenceEdgeExtrapolationSeconds": 0.028679951032131612
+    },
+    "evaluation": "Native INSPVA on identical 100 Hz timestamps",
+    "matchingRerun": false,
+    "referencePositionInput": false,
+    "zeroProcessingDelay": true,
+    "initialization": "Common first LiDAR pose plus wheel/lateral velocity and IMU acceleration; not a cold-start GNSS-only test",
+    "limitations": "Same-drive map and per-frame INSPVA matching seeds; shared receiver reference; unknown physical output-point transform; upstream motion preparation offline"
+  },
+  "design": {
+    "kind": "full-sampled-motion-observer-v1",
+    "gains": [
+      4,
+      4,
+      12,
+      4
+    ],
+    "gnssPositionGain": 1,
+    "gnssHeadingGain": 0.5,
+    "translationP": [
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    ],
+    "modes": [
+      "gnss",
+      "lidar",
+      "both"
+    ],
+    "comparisonMatrices": [
+      [
+        [
+          [
+            0.5,
+            2,
+            2.5
+          ],
+          [
+            0.5,
+            2,
+            2.5
+          ]
+        ],
+        [
+          [
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        [
+          [
+            8,
+            8,
+            8
+          ],
+          [
+            8,
+            8,
+            8
+          ]
+        ],
+        [
+          [
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1.1600000000000001,
+            -1.1600000000000001,
+            -1.1600000000000001
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          [
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1.1600000000000001,
+            -1.1600000000000001,
+            -1.1600000000000001
+          ]
+        ],
+        [
+          [
+            24,
+            24,
+            24
+          ],
+          [
+            24,
+            24,
+            24
+          ]
+        ]
+      ]
+    ],
+    "translationMargins": [
+      0.36798805743111485,
+      1.8361498799361595,
+      2.3219370364825984
+    ],
+    "commonTranslationMargin": 0.36798805743111485,
+    "lidarHeadingRate": 1,
+    "gnssHeadingRate": 0.41349667156634407,
+    "matrixCertificateVerified": true,
+    "unconditionalIssClaimed": false,
+    "scope": "Common continuous translation bound; conditional local heading ISS with available displacement/pose heading. No ISS during arbitrary simultaneous outages or stopped GNSS-only operation."
+  },
+  "metrics": [
+    {
+      "scenario": "both",
+      "population": "full",
+      "samples": 11690,
+      "positionRmseM": 0.11871111853985002,
+      "positionMedianM": 0.069269389465517778,
+      "positionP95M": 0.23724631310313876,
+      "positionMaximumM": 0.45471473655383449,
+      "fractionAtMost10cm": 0.70461933276304534,
+      "headingRmseDeg": 0.54802399667668744,
+      "bothActiveSamples": 10824,
+      "neitherActiveSamples": 0,
+      "runtimeSeconds": 1.718443
+    },
+    {
+      "scenario": "both",
+      "population": "outage_40_60",
+      "samples": 2000,
+      "positionRmseM": 0.0755275428944021,
+      "positionMedianM": 0.049627915078940738,
+      "positionP95M": 0.15180298785242852,
+      "positionMaximumM": 0.23866538175977345,
+      "fractionAtMost10cm": 0.811,
+      "headingRmseDeg": 0.20277692671084238,
+      "bothActiveSamples": 1989,
+      "neitherActiveSamples": 0,
+      "runtimeSeconds": 1.718443
+    },
+    {
+      "scenario": "both",
+      "population": "recovery_60_70",
+      "samples": 1000,
+      "positionRmseM": 0.11373593948113682,
+      "positionMedianM": 0.07997207870822981,
+      "positionP95M": 0.21684015495694076,
+      "positionMaximumM": 0.266471773189778,
+      "fractionAtMost10cm": 0.613,
+      "headingRmseDeg": 0.46005632932729379,
+      "bothActiveSamples": 945,
+      "neitherActiveSamples": 0,
+      "runtimeSeconds": 1.718443
+    },
+    {
+      "scenario": "lidar_only",
+      "population": "full",
+      "samples": 11690,
+      "positionRmseM": 0.23544478578232192,
+      "positionMedianM": 0.079773039970942053,
+      "positionP95M": 0.30561732138879188,
+      "positionMaximumM": 1.8181672734688061,
+      "fractionAtMost10cm": 0.64533789563729682,
+      "headingRmseDeg": 0.33381138103017538,
+      "bothActiveSamples": 0,
+      "neitherActiveSamples": 865,
+      "runtimeSeconds": 0.838828
+    },
+    {
+      "scenario": "lidar_only",
+      "population": "outage_40_60",
+      "samples": 2000,
+      "positionRmseM": 0.083286255207172866,
+      "positionMedianM": 0.057057683075102505,
+      "positionP95M": 0.16484264367572743,
+      "positionMaximumM": 0.25590956675071524,
+      "fractionAtMost10cm": 0.775,
+      "headingRmseDeg": 0.20293552254192537,
+      "bothActiveSamples": 0,
+      "neitherActiveSamples": 11,
+      "runtimeSeconds": 0.838828
+    },
+    {
+      "scenario": "lidar_only",
+      "population": "recovery_60_70",
+      "samples": 1000,
+      "positionRmseM": 0.1300350666852659,
+      "positionMedianM": 0.091009236020091,
+      "positionP95M": 0.24328072903592907,
+      "positionMaximumM": 0.30408879007779765,
+      "fractionAtMost10cm": 0.556,
+      "headingRmseDeg": 0.4618462778282183,
+      "bothActiveSamples": 0,
+      "neitherActiveSamples": 55,
+      "runtimeSeconds": 0.838828
+    },
+    {
+      "scenario": "gnss_only",
+      "population": "full",
+      "samples": 11690,
+      "positionRmseM": 0.30256342348040355,
+      "positionMedianM": 0.19228825634498931,
+      "positionP95M": 0.58564568541279249,
+      "positionMaximumM": 0.78495337937961662,
+      "fractionAtMost10cm": 0.28220701454234387,
+      "headingRmseDeg": 1.4395285635008668,
+      "bothActiveSamples": 0,
+      "neitherActiveSamples": 1,
+      "runtimeSeconds": 1.291571
+    },
+    {
+      "scenario": "gnss_only",
+      "population": "outage_40_60",
+      "samples": 2000,
+      "positionRmseM": 0.13866376663568353,
+      "positionMedianM": 0.098857979254622974,
+      "positionP95M": 0.20703257203287084,
+      "positionMaximumM": 0.20941384061366983,
+      "fractionAtMost10cm": 0.5025,
+      "headingRmseDeg": 1.0301065645147145,
+      "bothActiveSamples": 0,
+      "neitherActiveSamples": 0,
+      "runtimeSeconds": 1.291571
+    },
+    {
+      "scenario": "gnss_only",
+      "population": "recovery_60_70",
+      "samples": 1000,
+      "positionRmseM": 0.16449597353300216,
+      "positionMedianM": 0.13499491804415087,
+      "positionP95M": 0.26821303502509269,
+      "positionMaximumM": 0.27107481239343556,
+      "fractionAtMost10cm": 0.319,
+      "headingRmseDeg": 1.5080334984553616,
+      "bothActiveSamples": 0,
+      "neitherActiveSamples": 0,
+      "runtimeSeconds": 1.291571
+    },
+    {
+      "scenario": "gnss_outage",
+      "population": "full",
+      "samples": 11690,
+      "positionRmseM": 0.11962216013203376,
+      "positionMedianM": 0.070180507024985433,
+      "positionP95M": 0.23827211024045902,
+      "positionMaximumM": 0.45471473655383449,
+      "fractionAtMost10cm": 0.6984602224123182,
+      "headingRmseDeg": 0.54803404033815073,
+      "bothActiveSamples": 8835,
+      "neitherActiveSamples": 11,
+      "runtimeSeconds": 1.579978
+    },
+    {
+      "scenario": "gnss_outage",
+      "population": "outage_40_60",
+      "samples": 2000,
+      "positionRmseM": 0.083284967474492488,
+      "positionMedianM": 0.05705768458509769,
+      "positionP95M": 0.16484264439617047,
+      "positionMaximumM": 0.25590952226779023,
+      "fractionAtMost10cm": 0.775,
+      "headingRmseDeg": 0.20293552255320557,
+      "bothActiveSamples": 1,
+      "neitherActiveSamples": 11,
+      "runtimeSeconds": 1.579978
+    },
+    {
+      "scenario": "gnss_outage",
+      "population": "recovery_60_70",
+      "samples": 1000,
+      "positionRmseM": 0.1140621732582489,
+      "positionMedianM": 0.079923301422019241,
+      "positionP95M": 0.21684034619496845,
+      "positionMaximumM": 0.266471773189778,
+      "fractionAtMost10cm": 0.613,
+      "headingRmseDeg": 0.46005632932729379,
+      "bothActiveSamples": 944,
+      "neitherActiveSamples": 0,
+      "runtimeSeconds": 1.579978
+    },
+    {
+      "scenario": "lidar_outage",
+      "population": "full",
+      "samples": 11690,
+      "positionRmseM": 0.12668279446913816,
+      "positionMedianM": 0.075214353907662734,
+      "positionP95M": 0.23675044943502707,
+      "positionMaximumM": 0.45546271233406321,
+      "fractionAtMost10cm": 0.66056458511548333,
+      "headingRmseDeg": 0.57155590616054108,
+      "bothActiveSamples": 8845,
+      "neitherActiveSamples": 0,
+      "runtimeSeconds": 1.744647
+    },
+    {
+      "scenario": "lidar_outage",
+      "population": "outage_40_60",
+      "samples": 2000,
+      "positionRmseM": 0.1335777746049015,
+      "positionMedianM": 0.086257844315762056,
+      "positionP95M": 0.21242401524135021,
+      "positionMaximumM": 0.22230301488605642,
+      "fractionAtMost10cm": 0.53,
+      "headingRmseDeg": 0.44932171676634797,
+      "bothActiveSamples": 11,
+      "neitherActiveSamples": 0,
+      "runtimeSeconds": 1.744647
+    },
+    {
+      "scenario": "lidar_outage",
+      "population": "recovery_60_70",
+      "samples": 1000,
+      "positionRmseM": 0.1068778273162907,
+      "positionMedianM": 0.077213886426977379,
+      "positionP95M": 0.2022375864039645,
+      "positionMaximumM": 0.262796514570579,
+      "fractionAtMost10cm": 0.662,
+      "headingRmseDeg": 0.4379306352137261,
+      "bothActiveSamples": 944,
+      "neitherActiveSamples": 0,
+      "runtimeSeconds": 1.744647
+    },
+    {
+      "scenario": "both_outage",
+      "population": "full",
+      "samples": 11690,
+      "positionRmseM": 0.73175768913451777,
+      "positionMedianM": 0.085342391467347539,
+      "positionP95M": 2.0852874114277982,
+      "positionMaximumM": 2.8316830562395134,
+      "fractionAtMost10cm": 0.572027373823781,
+      "headingRmseDeg": 0.54281954924997633,
+      "bothActiveSamples": 8835,
+      "neitherActiveSamples": 1990,
+      "runtimeSeconds": 1.625964
+    },
+    {
+      "scenario": "both_outage",
+      "population": "outage_40_60",
+      "samples": 2000,
+      "positionRmseM": 1.7349297739987852,
+      "positionMedianM": 1.6598241758031191,
+      "positionP95M": 2.7387202176601155,
+      "positionMaximumM": 2.8316830562395134,
+      "fractionAtMost10cm": 0.037,
+      "headingRmseDeg": 0.10300697976602873,
+      "bothActiveSamples": 1,
+      "neitherActiveSamples": 1989,
+      "runtimeSeconds": 1.625964
+    },
+    {
+      "scenario": "both_outage",
+      "population": "recovery_60_70",
+      "samples": 1000,
+      "positionRmseM": 0.31492102374981079,
+      "positionMedianM": 0.082304394655881769,
+      "positionP95M": 0.2577785140226721,
+      "positionMaximumM": 2.8188145860267682,
+      "fractionAtMost10cm": 0.613,
+      "headingRmseDeg": 0.44720514771040204,
+      "bothActiveSamples": 944,
+      "neitherActiveSamples": 1,
+      "runtimeSeconds": 1.625964
+    },
+    {
+      "scenario": "alternating",
+      "population": "full",
+      "samples": 11690,
+      "positionRmseM": 0.21829313952242521,
+      "positionMedianM": 0.15886919646534139,
+      "positionP95M": 0.37654662836816155,
+      "positionMaximumM": 0.88090434608028134,
+      "fractionAtMost10cm": 0.19597946963216425,
+      "headingRmseDeg": 0.33839651506082497,
+      "bothActiveSamples": 291,
+      "neitherActiveSamples": 661,
+      "runtimeSeconds": 1.337665
+    },
+    {
+      "scenario": "alternating",
+      "population": "outage_40_60",
+      "samples": 2000,
+      "positionRmseM": 0.14134574540137179,
+      "positionMedianM": 0.12933226777533624,
+      "positionP95M": 0.21222503408893983,
+      "positionMaximumM": 0.2539494791466218,
+      "fractionAtMost10cm": 0.2505,
+      "headingRmseDeg": 0.1844149309680205,
+      "bothActiveSamples": 56,
+      "neitherActiveSamples": 74,
+      "runtimeSeconds": 1.337665
+    },
+    {
+      "scenario": "alternating",
+      "population": "recovery_60_70",
+      "samples": 1000,
+      "positionRmseM": 0.20489317895941267,
+      "positionMedianM": 0.18257098566234015,
+      "positionP95M": 0.30459637179771792,
+      "positionMaximumM": 0.33093619609884362,
+      "fractionAtMost10cm": 0.135,
+      "headingRmseDeg": 0.56305229581075655,
+      "bothActiveSamples": 0,
+      "neitherActiveSamples": 11,
+      "runtimeSeconds": 1.337665
+    }
+  ]
+}

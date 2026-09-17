@@ -3,7 +3,8 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
 % This is a data exporter. Its physical timestamp metadata is not an observer
 % timing model. reconstructContinuousObserverSignals supplies the separately
 % declared offline input reconstruction for the current continuous runner.
-% Inputs use linear reconstruction and independent-drive fixed corrections.
+% Vx comes exclusively from four-wheel fusion. IMU/steering use offline
+% linear reconstruction and independent-drive fixed corrections.
 % GNSS/INS yaw is reference data; only GNSS XY enters the measurement channel.
 % LiDAR samples carry the full physical [X,Y,psi] information matrix.
 % No delivery timestamps or artificial GNSS downsampling are introduced.
@@ -19,36 +20,16 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     ins=readtable(fullfile(folder,stem+"_inspva.csv"));
     odom=readtable(fullfile(folder,stem+"_odom.csv"));
     poses=readFramePoseTable(fullfile(folder,stem+"_front_lidar_pose_match_1_1170.csv"),1:1170);
-    twist=readtable(fullfile(sensorFolder,'twist.csv'));
-    imu=readtable(fullfile(sensorFolder,'imu.csv'));
-    steering=readtable(fullfile(sensorFolder,'steering.csv'));
     parameters=jsondecode(fileread(parameterFile));
     rosOrigin=ins.stamp_sec(1); receiver=ins.gps_seconds-ins.gps_seconds(1);
     bridge=@(stamp) interp1(ins.stamp_sec-rosOrigin,receiver,stamp-rosOrigin,'linear','extrap');
     start=bridge(poses.lidar_stamp_sec(1));
-    motionTime=bridge(twist.stamp_sec)-start;
-    imuTime=bridge(imu.stamp_sec)-start;
-    steeringTime=bridge(steering.stamp_sec)-start;
-    last=min([bridge(poses.lidar_stamp_sec(end))-start,motionTime(end),imuTime(end),steeringTime(end)]);
-    time=(0:.01:last).';
-    assert(max([motionTime(1),imuTime(1),steeringTime(1)])<=0,'Inputs do not cover replay start.');
-    high=struct('time',time);
-    high.longitudinalSpeed=interp1(motionTime,twist.linear_x_mps,time,'linear');
-    % Historical parameter files retain their original zero-offset convention.
-    wheelOffset=0;
-    if isfield(parameters,'steeringWheelOffsetRad')
-        wheelOffset=parameters.steeringWheelOffsetRad;
-    end
-    validateattributes(wheelOffset,{'numeric'},{'real','finite','scalar'});
-    high.steeringAngle=(interp1(steeringTime,steering.steering_wheel_angle_rad,time,'linear') ...
-        -wheelOffset)/parameters.steeringRatio;
-    rawFields=["acceleration_x_mps2","acceleration_y_mps2","angular_z_radps"];
-    names=["longitudinalAcceleration","lateralAcceleration","yawRate"];
-    for k=1:3
-        correction=parameters.input_correction.(names(k));
-        high.(names(k))=correction.sign*interp1(imuTime,imu.(rawFields(k)),time,'linear')+correction.offset;
-    end
-    sensorData=struct('highRate',high);
+    clock=struct('rosTime',ins.stamp_sec,'receiverTime',receiver);
+    % This recording starts stationary; initial prediction is declared and
+    % marked separately until the first actual wheel packet arrives.
+    [high,wheel,wheelMetadata]=prepareWheelMotionInputs(sensorFolder,parameters,clock, ...
+        start,bridge(poses.lidar_stamp_sec(end)),InitialSpeed=0);
+    time=high.time;sensorData=struct('highRate',high,'wheelVelocity',wheel);
     odomTime=bridge(odom.stamp_sec)-start;
     yaw=unwrap(atan2(2*(odom.qw.*odom.qz+odom.qx.*odom.qy),1-2*(odom.qy.^2+odom.qz.^2)));
     edgeExtrapolation=max([0,odomTime(1)-time(1),time(end)-odomTime(end)]);
@@ -88,7 +69,8 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     end
     metadata=struct('fixedLidarDelaySeconds',fixedLidarDelay, ...
         'clock',"INSPVA receiver time bridged from ROS headers; no pose used to fit the clock", ...
-        'inputInterpolation',"offline linear reconstruction of recorded input samples", ...
+        'inputInterpolation',"native wheel fusion; offline linear IMU/steering reconstruction", ...
+        'longitudinalVelocity',wheelMetadata, ...
         'reference',"NovAtel odom body-origin XY and quaternion yaw; also mapping reference", ...
         'gpsInput',"all covered recorded odom positions; no GNSS heading measurement", ...
         'lidarInput',"accepted full/directional geometric samples; the continuous adapter rejects insufficient information", ...

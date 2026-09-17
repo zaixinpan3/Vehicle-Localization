@@ -1,0 +1,17 @@
+{
+  "sourceRoutesWithoutAlternateSpeed": 7,
+  "exportedEvaluationWheelPackets": 5845,
+  "exportedCalibrationWheelPackets": 3894,
+  "nativeWheelValuesUnchanged": true,
+  "fullMetricRowsVerified": 21,
+  "maximumMetricDifference": 4.6629367034256575e-15,
+  "productionVxExactlyWheelDerived": true,
+  "initialPredictionOnlySamples": 3,
+  "sameAcceptedFrames": 1083,
+  "sameFramePositionRmseM": 0.09930409792271121,
+  "velocityRmseMps": 0.07474690899440432,
+  "optionalRunnerMaximumPoseDifference": 6.332993507385254e-08,
+  "matlabTestsPassed": 126,
+  "matchingSmokeFrames": 2,
+  "oldDefaultRemoved": true
+}

@@ -4,15 +4,15 @@ function report=runMncavFullObserverExperiment(outputFolder)
 % INSPVA positions enter scoring only; frozen matching/map remain reference
 % assisted. No matching is rerun and no future pose interpolation is used.
     arguments
-        outputFolder (1,1) string="output/full_observer_20260916"
+        outputFolder (1,1) string="output/mncav_wheel_only_20260916/full_observer"
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
-    sensorFolder="output/mississippi_20240607_120931_20260907/sensors";
+    sensorFolder="output/mncav_wheel_only_20260916/sensors";
     parameterFile="output/mncav_interface_audit_20260916/vehicle_parameters.json";
     [prepared,~,inputMetadata]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0);
     inputMetadata.reference="Legacy ODOM reference returned by exporter is discarded; INSPVA evaluation is supplied separately";
     h=prepared.highRate;t=h.time;
-    prior=load('output/mncav_inspva_observer_20260915/experiment.mat','lateralDesign','experiments');
+    prior=load('output/mncav_inspva_observer_20260915/experiment.mat','lateralDesign');
     lateralDesign=prior.lateralDesign;
     lateral=runLateralVelocityObserver(h,lateralDesign,lateralDesign.cfg);
     calls=readtable('output/saved_perception_inspva_20260915/calls.csv',TextType="string");
@@ -40,11 +40,11 @@ function report=runMncavFullObserverExperiment(outputFolder)
     data=struct('highRate',h,'gnss',gnss,'lidar',lidar);
     cfg=fullObserverConfig();
     % Identical initial state in every ablation, including GNSS-only replay.
-    old=load('output/mncav_interface_audit_20260916/correction_experiment.mat','runs');
-    baseline=old.runs{1,4}.estimate;
-    cfg.initialState=baseline.z(1,:).';
-    [exists,ix]=ismember(t,baseline.time);assert(all(exists));
-    baselinePose=baseline.pose(ix,:);
+    assert(lidar.valid(1) && lidar.time(1)==t(1),'Initial LiDAR pose is required.');
+    pose=lidar.pose(1,:);rotation=[cos(pose(3)),-sin(pose(3));sin(pose(3)),cos(pose(3))];
+    velocity=rotation*[h.longitudinalSpeed(1);lateral.lateralVelocity(1)];
+    acceleration=rotation*[h.longitudinalAcceleration(1);h.lateralAcceleration(1)];
+    cfg.initialState=[pose(1);velocity(1);acceleration(1);pose(2);velocity(2);acceleration(2);pose(3)];
     native=readtable('output/mncav_inspva_observer_20260915/native_reference.csv');
     reference=interp1(native.time,[native.x,native.y,native.psi],t,'linear');
     scenarios=["both","lidar_only","gnss_only","gnss_outage","lidar_outage","both_outage","alternating"];
@@ -81,17 +81,17 @@ function report=runMncavFullObserverExperiment(outputFolder)
         'lidarSource',"Frozen INSPVA-map per_frame_zero full-pose measurements", ...
         'inputMetadata',inputMetadata,'evaluation',"Native INSPVA on identical 100 Hz timestamps", ...
         'matchingRerun',false,'referencePositionInput',false,'zeroProcessingDelay',true, ...
-        'initialization',"Common prior LiDAR/motion initial state in all ablations; not a cold-start GNSS-only test", ...
+        'initialization',"Common first LiDAR pose plus wheel/lateral velocity and IMU acceleration; not a cold-start GNSS-only test", ...
         'limitations',"Same-drive map and per-frame INSPVA matching seeds; shared receiver reference; unknown physical output-point transform; upstream motion preparation offline"), ...
-        'design',designFullObserverGains(cfg),'metrics',metrics,'legacyOfflineMetrics',score(baselinePose,reference));
-    save(fullfile(outputFolder,'experiment.mat'),'data','lateral','lateralDesign','cfg','runs','reference','baselinePose','report','-v7.3');
+        'design',designFullObserverGains(cfg),'metrics',metrics);
+    wheel=prepared.wheelVelocity;
+    save(fullfile(outputFolder,'experiment.mat'),'data','lateral','lateralDesign','cfg','runs','reference','wheel','report','-v7.3');
     writetable(metrics,fullfile(outputFolder,'metrics.csv'));
     fid=fopen(fullfile(outputFolder,'summary.json'),'w');assert(fid>=0);cleanup=onCleanup(@()fclose(fid));
     fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
     fig=figure('Visible','off','Color','w','Position',[100,100,1250,800]);tiledlayout(2,1);
     nexttile;hold on;names=["both","lidar_only","gnss_only"];
     for k=1:3,plot(t,vecnorm(runs{k}.estimate.position-reference(:,1:2),2,2),DisplayName=names(k));end
-    plot(t,vecnorm(baselinePose(:,1:2)-reference(:,1:2),2,2),'k:',DisplayName='previous offline baseline');
     ylabel('Position discrepancy (m)');xlabel('Receiver time (s)');grid on;
     legend(Interpreter='none',FontName='DejaVu Sans',FontSize=9,NumColumns=1,Position=[.72,.77,.25,.15]);
     title('Same recorded measurements; sampled dual-source runtime');

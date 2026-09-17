@@ -1,0 +1,79 @@
+{
+  "selectedConfiguration": {
+    "effectiveRadius": [
+      0.36174432400250023,
+      0.36171989347511019,
+      0.36211512344418256,
+      0.36192890803865896
+    ],
+    "lagCompensation": [
+      0.023250289618932964,
+      0.018715283671012252,
+      0.050584431465151007,
+      0.053303217475992481
+    ],
+    "wheelbase": 3.089,
+    "frontTrack": 1.734,
+    "rearTrack": 1.735,
+    "rearCgDistance": 1.714395,
+    "filterTimeConstant": 0.01,
+    "maximumWheelAge": 0.15,
+    "consensusThreshold": 0.15,
+    "maximumWheelRate": 200,
+    "maximumSteeringAngle": 0.6,
+    "stationaryWheelRate": 0.05,
+    "stationaryYawRate": 0.03,
+    "method": "robust",
+    "initialSpeed": 0
+  },
+  "selectionRow": 1,
+  "calibrationSelected": [
+    {
+      "samples": 3790,
+      "rmseMps": 0.024270755994073464,
+      "biasMps": -0.0016828476496843373,
+      "p95Mps": 0.048375934667763687,
+      "maximumMps": 0.1713501482861659
+    }
+  ],
+  "velocityMetrics": [
+    {
+      "method": "wheel_fusion",
+      "samples": 11690,
+      "rmseMps": 0.0747469089944043,
+      "biasMps": 0.054502761757625709,
+      "p95Mps": 0.13127195476806897,
+      "maximumMps": 0.23337249893099532
+    }
+  ],
+  "localizationMetrics": [
+    {
+      "method": "wheel_fusion",
+      "samples": 11690,
+      "positionRmseM": 0.11871111800259423,
+      "positionMedianM": 0.06926938715731279,
+      "positionP95M": 0.23724631248901409,
+      "positionMaximumM": 0.45471473510032206,
+      "headingRmseDeg": 0.54802399651116285
+    }
+  ],
+  "pairedWheelMetrics": [
+    {
+      "samples": 1083,
+      "positionRmseM": 0.099304097922711221,
+      "positionMedianM": 0.066912887446265015,
+      "positionP95M": 0.19997648166759391,
+      "positionMaximumM": 0.40327076004494455,
+      "headingRmseDeg": 0.37571004013443338
+    }
+  ],
+  "initialPredictionOnlySamples": 3,
+  "rejectedWheelSamples": [
+    2,
+    5,
+    7,
+    8
+  ],
+  "runtimeReferenceVelocityUsed": false,
+  "globalObserverGainsChanged": false
+}

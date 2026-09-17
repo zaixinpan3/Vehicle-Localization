@@ -18,7 +18,7 @@ from rosbags.typesys import Stores, get_typestore, get_types_from_msg
 
 
 TOPICS = {
-    "/vehicle/twist": "twist",
+    "/vehicle/wheel_speed_report": "wheel_speed_report",
     "/vehicle/imu/data_raw": "imu",
     "/vehicle/steering_report": "steering",
     "/novatel/oem7/corrimu": "corrimu",
@@ -32,16 +32,15 @@ def sensor_row(message, timestamp, kind):
         "bag_time_sec": timestamp * 1e-9,
         "frame_id": message.header.frame_id,
     }
-    if kind == "twist":
-        for axis in "xyz":
-            row[f"linear_{axis}_mps"] = getattr(message.twist.linear, axis)
-            row[f"angular_{axis}_radps"] = getattr(message.twist.angular, axis)
+    if kind == "wheel_speed_report":
+        for wheel in ["front_left", "front_right", "rear_left", "rear_right"]:
+            row[wheel] = getattr(message, wheel)
     elif kind == "imu":
         for axis in "xyz":
             row[f"angular_{axis}_radps"] = getattr(message.angular_velocity, axis)
             row[f"acceleration_{axis}_mps2"] = getattr(message.linear_acceleration, axis)
     elif kind == "steering":
-        row.update(speed_mps=message.speed, steering_wheel_angle_rad=message.steering_wheel_angle,
+        row.update(steering_wheel_angle_rad=message.steering_wheel_angle,
                    enabled=message.enabled, override=message.override,
                    calibration_fault=message.fault_calibration)
     elif kind == "inspva":
@@ -87,6 +86,7 @@ def main():
             kind = TOPICS[connection.topic]
             rows[kind].append(sensor_row(message, timestamp, kind))
     metadata["exports"] = {}
+    metadata["longitudinal_velocity_source"] = "Four wheel rates (rad/s); no Twist or CAN vehicle-speed export"
     for kind, records in rows.items():
         assert records, f"Empty sensor stream: {kind}"
         path = args.output_dir / f"{kind}.csv"

@@ -1,0 +1,28 @@
+{
+  "tests": 126,
+  "allTestsPassed": true,
+  "repeatMaximumStateDifference": 0,
+  "halfStepMaximumPositionDifferenceM": 1.695237342225854E-7,
+  "halfStepMaximumHeadingDifferenceRad": 1.7536005980645086E-10,
+  "futureMutationPrefixDifference": 0,
+  "analyzerFindings": 0,
+  "modeCountsNoneGnssLidarBoth": [
+    0,
+    865,
+    1,
+    10824
+  ],
+  "positiveTranslationMarginSamples": 11690,
+  "headingUnavailableSamples": 0,
+  "gnssCourseUpdates": 5622,
+  "lidarBiasUpdates": 558,
+  "packetCounts": {
+    "gnssValid": 5844,
+    "gnssInvalid": 0,
+    "lidarValid": 1083,
+    "lidarInvalid": 86
+  },
+  "maximumTrackRate": 0.35474519017048345,
+  "rateEnvelopeSatisfied": true,
+  "allTheoremHypothesesVerified": false
+}

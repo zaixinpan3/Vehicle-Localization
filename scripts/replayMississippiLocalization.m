@@ -1,13 +1,15 @@
 function report = replayMississippiLocalization(mapFile, sensorFolder, outputFolder, mode, frameIndices,options)
 % replayMississippiLocalization Run every raw scan against one frozen map.
-% recursive uses recorded vehicle twist and accepted D2D poses after one
+% recursive uses four-wheel speed and accepted D2D poses after one
 % GNSS initialization. referenceSeed resets the initial guess on every scan
 % and is a local-registration diagnostic, not an autonomous trajectory.
 % Recorded GNSS/INS supplies known tilt and the evaluation reference. No
 % ground-truth position/yaw enters recursive predictions after initialization.
 % A receiver-time bridge corrects the recorded ROS/GPS clock-rate mismatch.
 % MotionInputs can supply time relative to the first selected scan, recorded
-% speed/corrected gyro, and actual lateral-observer velocity. Its final value
+% wheel-derived speed/corrected gyro, and actual lateral-observer velocity.
+% Supplied motion must explicitly declare longitudinalVelocitySource="four_wheel".
+% Its final value
 % may be held for at most 20 ms to cover a fractional final grid interval;
 % metadata reports the actual extension.
     arguments
@@ -18,6 +20,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         frameIndices (1,:) double {mustBeInteger,mustBePositive} = []
         options.FrameBlockSize (1,1) double {mustBeInteger,mustBePositive} = 50
         options.MotionInputs (1,1) struct = struct()
+        options.ParameterFile (1,1) string = "output/mncav_interface_audit_20260916/vehicle_parameters.json"
     end
     root=fileparts(fileparts(mfilename('fullpath')));
     if ~isfolder(outputFolder), mkdir(outputFolder); end
@@ -31,36 +34,47 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     assert(all(diff(frameIndices)>0) && frameIndices(end)<=frameCount,'Invalid frame subset.');
     n=numel(frameIndices);
     poses=readFramePoseTable(posePath,frameIndices);
+    if ismember('pose_source',poses.Properties.VariableNames)
+        poseReferenceSource=strjoin(unique(string(poses.pose_source)),', ')+" interpolated pose at LiDAR acquisition time";
+        referenceTimeOffset=0;
+    else
+        poseReferenceSource="nearest matched NovAtel ODOM pose";
+        referenceTimeOffset=max(abs(poses.odom_dt_sec));
+    end
     poseReference=zeros(n,3); tilt=zeros(3,3,n);
     for k=1:n
         [poseReference(k,:),tilt(:,:,k)]=poseRowToPlanarPose(poses(k,:));
     end
     gnssFolder=fileparts(posePath); stem="raw_data_2024-06-07-12-09-31_0";
     ins=readtable(fullfile(gnssFolder,stem+"_inspva.csv"));
-    twist=readtable(fullfile(sensorFolder,'twist.csv'));
     % Receiver seconds are a clock source only, never a motion/pose input.
     rosOrigin=ins.stamp_sec(1); receiverOrigin=ins.gps_seconds(1);
     receiverTime=ins.gps_seconds-receiverOrigin;
     assert(all(diff(receiverTime)>0) && all(diff(ins.stamp_sec)>0),'Invalid receiver clock.');
     scanTime=interp1(ins.stamp_sec-rosOrigin,receiverTime,poses.lidar_stamp_sec-rosOrigin,'linear','extrap');
-    motionTime=interp1(ins.stamp_sec-rosOrigin,receiverTime,twist.stamp_sec-rosOrigin,'linear','extrap');
-    motion=integrateRecordedPlanarMotion(motionTime, ...
-        [twist.linear_x_mps,twist.linear_y_mps,twist.angular_z_radps],scanTime);
-    motionSource="recorded /vehicle/twist with causal zero-order hold";
-    motionEndHoldSeconds=0;
-    if ~isempty(fieldnames(options.MotionInputs))
-        supplied=options.MotionInputs;
-        suppliedTime=supplied.time+scanTime(1);
-        suppliedValues=[supplied.longitudinalSpeed,supplied.lateralVelocity,supplied.yawRate];
-        motionEndHoldSeconds=max(0,scanTime(end)-suppliedTime(end));
-        assert(motionEndHoldSeconds<=.02,'VehicleLocalization:MotionCoverage', ...
-            'Supplied motion ends more than 20 ms before the final scan.');
-        if motionEndHoldSeconds>0
-            suppliedTime(end+1)=scanTime(end);suppliedValues(end+1,:)=suppliedValues(end,:);
-        end
-        motion=integrateRecordedPlanarMotion(suppliedTime,suppliedValues,scanTime);
-        motionSource="recorded speed and corrected gyro with actual lateral-observer velocity; causal zero-order hold";
+    supplied=options.MotionInputs;
+    if isempty(fieldnames(supplied))
+        [prepared,~,~]=prepareMncavObserverReplay(sensorFolder,options.ParameterFile);
+        lateralCfg=lateralObserverConfig("mncav");lateralDesign=designLateralObserverGains(lateralCfg);
+        lateral=runLateralVelocityObserver(prepared.highRate,lateralDesign,lateralCfg);
+        firstPose=readFramePoseTable(posePath,1);
+        firstTime=interp1(ins.stamp_sec-rosOrigin,receiverTime,firstPose.lidar_stamp_sec-rosOrigin,'linear','extrap');
+        supplied=struct('time',prepared.highRate.time+firstTime-scanTime(1), ...
+            'longitudinalSpeed',prepared.highRate.longitudinalSpeed,'lateralVelocity',lateral.lateralVelocity, ...
+            'yawRate',prepared.highRate.yawRate,'longitudinalVelocitySource',"four_wheel");
     end
+    assert(isfield(supplied,'longitudinalVelocitySource') && string(supplied.longitudinalVelocitySource)=="four_wheel", ...
+        'VehicleLocalization:WheelSpeedSourceRequired','Supplied replay motion must come from four-wheel estimation.');
+    suppliedTime=supplied.time+scanTime(1);
+    suppliedValues=[supplied.longitudinalSpeed,supplied.lateralVelocity,supplied.yawRate];
+    motionSource="four-wheel speed and corrected gyro with actual lateral-observer velocity; causal zero-order hold";
+    motionEndHoldSeconds=max(0,scanTime(end)-suppliedTime(end));
+    assert(motionEndHoldSeconds<=.02,'VehicleLocalization:MotionCoverage', ...
+            'Supplied motion ends more than 20 ms before the final scan.');
+    if motionEndHoldSeconds>0
+        suppliedTime(end+1)=scanTime(end);suppliedValues(end+1,:)=suppliedValues(end,:);
+    end
+    motion=integrateRecordedPlanarMotion(suppliedTime,suppliedValues,scanTime);
     timer=tic; loaded=load(mapFile);
     if isfield(loaded,'probabilityCloud')
         fullCloud=loaded.probabilityCloud;
@@ -146,9 +160,9 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         'clockSource',"INSPVA receiver GPS seconds interpolated on ROS stamp; edge extrapolation only", ...
         'rosDurationSeconds',poses.lidar_stamp_sec(end)-poses.lidar_stamp_sec(1), ...
         'receiverDurationSeconds',scanTime(end)-scanTime(1), ...
-        'reference',"nearest matched NovAtel odom base_link GNSS/INS pose, also used for mapping", ...
+        'reference',poseReferenceSource, ...
         'knownTilt',"recorded GNSS/INS roll/pitch through quaternion yaw/tilt decomposition", ...
-        'maximumReferenceTimeOffsetSeconds',max(abs(poses.odom_dt_sec)), ...
+        'maximumReferenceTimeOffsetSeconds',referenceTimeOffset, ...
         'maximumMatTimestampDifferenceSeconds',maxTimestampDifference, ...
         'timingScope',"map crop, fresh coarse perception, D2D and pose event; excludes disk read and offline preparation", ...
         'diskLoading',"blocks loaded before processing; diskLoadMs is block time divided by block frame count", ...

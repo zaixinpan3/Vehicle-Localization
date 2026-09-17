@@ -1,0 +1,242 @@
+[
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/12-09-31/motion.csv",
+    "sha256": "333d5866f726c93f1e89ba8a6021159fcd6065ad0674077783a5dd1d63532f3e",
+    "bytes": 1018914
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/12-09-31/reference.csv",
+    "sha256": "cf104d579d7e29bbcaeb4d0490d5f22a40771dfbd20337aa89ad5208ad95be6f",
+    "bytes": 216158
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/12-09-31/wheels.csv",
+    "sha256": "ade85fd2c390c3552016ff84c984473c05c08706ddf7eb110fd2cb63bec4dd4d",
+    "bytes": 519729
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/12-11-24/motion.csv",
+    "sha256": "2afe3cc913079db2fc5778510100519e1ce5d989fba7e30a02548fae0e3dbfa5",
+    "bytes": 675785
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/12-11-24/reference.csv",
+    "sha256": "0c24689b6b113a088e1094c77d3ecf65d17d407a680ab27f60ed5701f1d39f3a",
+    "bytes": 141942
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/12-11-24/wheels.csv",
+    "sha256": "c39db88eae7f9ba60ca85ae31e8c2df4be45bfa0dc674f8ec3a8e6236fcf015e",
+    "bytes": 351400
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/calibration_candidates.csv",
+    "sha256": "9693f63debf86ff98c6e574867b6931dc5d92b4122a1fe91ea7ff9a53ed467d8",
+    "bytes": 1168
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/experiment.mat",
+    "sha256": "bc027fdf1462897bdbcb2349144843d843ca0b6bed18de10b34bf2d03aa25a0b",
+    "bytes": 54341340
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/frame_errors.csv",
+    "sha256": "bdba62d090b51ad37ccfb52682f563082709a7fc7f92baa7c4774057220b4882",
+    "bytes": 48602
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/input_audit.json",
+    "sha256": "566c8aeeb1661d1033c4041a67cec3d3da537497a3726c65d8c8edfc89b32bfb",
+    "bytes": 2761
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/localization_metrics.csv",
+    "sha256": "cb0524b0cd140a875d0552c30ba07a4bb4861a5b247fe249d83bc86635c5bd55",
+    "bytes": 200
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/summary.json",
+    "sha256": "e2d9aa9e4beeb35ee46167553cad14e5fcdaf4231fe1a10df5626c0a32a7ddf1",
+    "bytes": 1976
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/velocity_comparison.csv",
+    "sha256": "c52052beff22e6b03fab67d892b2f3f756fb472d37417f8a3bef71dba15ebd3d",
+    "bytes": 713441
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration/velocity_metrics.csv",
+    "sha256": "9a155b7374d3867aa5e91a74ea6624d224896452a4565a35cfc74af7a2c06c8c",
+    "bytes": 142
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration_sensors/corrimu.csv",
+    "sha256": "8f6707f858b6eedeca8e6174a5a985ca30c2351dadd4e49c9148261b899842ea",
+    "bytes": 1518942
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration_sensors/imu.csv",
+    "sha256": "1751d1708ed3ee6ba51f25f13c3d8dfbb08a0fd5d99b776c670399913c3fafb9",
+    "bytes": 345764
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration_sensors/inspva.csv",
+    "sha256": "125b353460904965fea08a64a1f0dea0506843b56551ec77b6723da4e1bcfa24",
+    "bytes": 898521
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration_sensors/manifest.json",
+    "sha256": "3b7b17ba3b4be88fb68de897e390b572253f6daef68413ea8fd70c3c794aea9a",
+    "bytes": 8098
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration_sensors/steering.csv",
+    "sha256": "8bae669a19e05501341642998027dc01988ad8da74bc0d6dd17556caae882651",
+    "bytes": 603058
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/calibration_sensors/wheel_speed_report.csv",
+    "sha256": "ed0f0fa17d881aeb9cbca51af973f44cdb95228d012af771edf5e3b94d05e9ab",
+    "bytes": 435127
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/full_observer/code_analyzer.csv",
+    "sha256": "07850c15aa72fb606e7bb913dceea229a3d19ab2462f875fd51b6e9e4d91a3a6",
+    "bytes": 21
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/full_observer/comparison.png",
+    "sha256": "1fa3aa0cfa8b8af93b1a51aec40e6b07935738b744e838964e4a1304c486f056",
+    "bytes": 168778
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/full_observer/experiment.mat",
+    "sha256": "64c92ca60c100842c3fcdaeadf6cd512f9338d33f6f8401b5ea136e65933caab",
+    "bytes": 41318277
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/full_observer/metrics.csv",
+    "sha256": "9a2fc10e5437182211cb6e895d90dae6fa9992f959cea9b481a8b60c9da0001b",
+    "bytes": 3159
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/full_observer/summary.json",
+    "sha256": "5bab1046a3ab3a0586423a6abdaa116ed266a25297395fd8f491c729ca7229a9",
+    "bytes": 19544
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/full_observer/tests.csv",
+    "sha256": "83357b13a25812cecafc8c7f93a1c7d7e4f478877b214d03a94803c105519583",
+    "bytes": 9827
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/full_observer/validation.json",
+    "sha256": "3bf90f3d3239538daf3c44b04c1e31fe370c2271908bc155b0d10e0098cca48d",
+    "bytes": 715
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/matching_smoke/calls.csv",
+    "sha256": "575201e43be00cd69231eb5b3d604bde3f2491997fe9fe1d7055cf7f91daae9f",
+    "bytes": 1152
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/matching_smoke/dead_reckoning.csv",
+    "sha256": "6dda88706b62eb8031374eb4bf6a239d7db3cd4706acff2a7f0f5d01b8bdf553",
+    "bytes": 154
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/matching_smoke/disk_blocks.csv",
+    "sha256": "b9c18dd526200ef095f3d0cca6cd15e6c25ee86be0d054b1e1a87b7d8719e47e",
+    "bytes": 42
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/matching_smoke/metadata.json",
+    "sha256": "73cb9c92ee02f4713a4be23532d0dc4375320cb53b3f92ef9e5d4fdf0519d8f9",
+    "bytes": 1411
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/matching_smoke/replay.pdf",
+    "sha256": "c6b43b2137b55e2d44a985710c162725633e2b0c1afc457d67f657bacc3b0b97",
+    "bytes": 20162
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/matching_smoke/replay.png",
+    "sha256": "3a8ef32861d479b91dccf69c05685bac1453bf91fef15185f69b7b92a570ca2f",
+    "bytes": 141070
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/matching_smoke/report.mat",
+    "sha256": "c1699a01bf4f73e87fc3bde236ded419857403c2e2f86c3dd9f9ac85660a781a",
+    "bytes": 12120
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/matching_smoke/summary.json",
+    "sha256": "06001f4cdb428e91649569668fc6755667744132fb0062d2181c482fe53b50eb",
+    "bytes": 763
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/sensors/corrimu.csv",
+    "sha256": "6f40989b22ac65bff7cec791464df248d14d8942c0ee23a2d3567f82480bfbe7",
+    "bytes": 2282070
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/sensors/imu.csv",
+    "sha256": "52efb34d5815f46e1d1e02c7cdc94ae420666d6c49be49336761771d2d821701",
+    "bytes": 518357
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/sensors/inspva.csv",
+    "sha256": "8e4de8eefc2fa471f1699fe3142fa2848acbd83cb6c195c1a173abec835627a5",
+    "bytes": 1342433
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/sensors/manifest.json",
+    "sha256": "713e97d03a077f894c8331c60ba6567a83d9a8737b4969af2b985f4396d1896d",
+    "bytes": 8250
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/sensors/steering.csv",
+    "sha256": "edbb5905529d203dacbbe4b6858f5b8192c2bd0acfd331e4654f6661398bee52",
+    "bytes": 906572
+  },
+  {
+    "path": "output/mncav_wheel_only_20260916/sensors/wheel_speed_report.csv",
+    "sha256": "aa3bca4fedbfcbb79239ec09b71ecf130d9ba5c4d86fca51bb6aee007ded8424",
+    "bytes": 645932
+  },
+  {
+    "path": "scripts/calibrateMncavWheelSpeed.py",
+    "sha256": "3c0c185fa3a0ae397696a428c6ccb1156e46803fb9cd8810d70daaaee199cd16",
+    "bytes": 6969
+  },
+  {
+    "path": "scripts/extractVehicleReplaySensors.py",
+    "sha256": "cc5e95dc23c501b909e496bd62e038126fd5ee436c8635e266c858a1fb784222",
+    "bytes": 4826
+  },
+  {
+    "path": "scripts/prepareMncavObserverReplay.m",
+    "sha256": "70a0b2f4fb11aee416b389e844c38de5b0401c13322f08285bb57bce66d0c856",
+    "bytes": 5090
+  },
+  {
+    "path": "scripts/prepareWheelMotionInputs.m",
+    "sha256": "622805ef3bc2f9800d8b654cf47f3eeac4fefcf9ef74d6a0e9ce057c95353ec9",
+    "bytes": 4135
+  },
+  {
+    "path": "scripts/replayMississippiLocalization.m",
+    "sha256": "84a85f6fe99f577edb6b4678a51358057199eec54d9360535957fc8d28c1904e",
+    "bytes": 16122
+  },
+  {
+    "path": "scripts/runMncavFullObserverExperiment.m",
+    "sha256": "f6f33ca114de885a0cd9e3d0bf464d7faf3c4ee34f297de087d88c021f58e8bb",
+    "bytes": 8028
+  },
+  {
+    "path": "scripts/runMncavWheelSpeedExperiment.m",
+    "sha256": "429101f41719bc98da43f86290227f5eb99f7202d1188d297be4573229bdda93",
+    "bytes": 6427
+  }
+]

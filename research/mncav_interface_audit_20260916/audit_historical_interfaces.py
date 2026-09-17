@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Audit two recorded MnCAV drives without changing their INSPVA reference.
+"""Reproduce the historical interface audit using archived input exports.
 
-uv run --offline --with numpy --with scipy --with pandas python scripts/auditMncavReplayInterfaces.py
+uv run --offline --with numpy --with scipy --with pandas python research/mncav_interface_audit_20260916/audit_historical_interfaces.py
+This reproduces earlier evidence only; it is not a current Vx input method.
 Calibration fits use the separate 12:11:24 drive; all other fits are labeled
 diagnostic. No inferred installation geometry is deployed.
 """
@@ -12,7 +13,7 @@ import pandas as pd
 from scipy.optimize import least_squares, lsq_linear
 from scipy.signal import savgol_filter
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "output/mncav_interface_audit_20260916"
 BASE = ROOT / "output/mississippi_20240607_120931_20260907"
 

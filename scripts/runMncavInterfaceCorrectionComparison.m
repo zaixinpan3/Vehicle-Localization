@@ -1,7 +1,8 @@
 function report=runMncavInterfaceCorrectionComparison(outputFolder)
 % runMncavInterfaceCorrectionComparison Freeze gains and test audited inputs.
 % Original accepted measurements, information, evaluation times and gains are
-% retained. The LiDAR displacement adapter has fixed 2 s / 4 s constants,
+% retained from frozen historical results, not current wheel-only input
+% preparation. The LiDAR displacement adapter has fixed 2 s / 4 s constants,
 % chosen before this replay; it receives no INSPVA state or error metrics.
     arguments
         outputFolder (1,1) string="output/mncav_interface_audit_20260916"
@@ -14,9 +15,8 @@ function report=runMncavInterfaceCorrectionComparison(outputFolder)
     audit=readtable('output/mncav_inspva_median_20260915/motion_audit.csv');
     interface=jsondecode(fileread('config/mncavReplayInterface.json'));
     parameters=jsondecode(fileread(fullfile(outputFolder,'vehicle_parameters.json')));
-    [prepared,~,~]=prepareMncavObserverReplay( ...
-        'output/mississippi_20240607_120931_20260907/sensors',fullfile(outputFolder,'vehicle_parameters.json'));
-    h=prepared.highRate;
+    h=old.high;
+    h.steeringAngle=h.steeringAngle-interface.steeringWheelOffsetRad/parameters.steeringRatio;
     assert(isequal(h.time,old.high.time));
     for name=["longitudinalSpeed","longitudinalAcceleration","lateralAcceleration","yawRate"]
         assert(max(abs(h.(name)-old.high.(name)))<1e-12,'Only the steering conversion may change.');

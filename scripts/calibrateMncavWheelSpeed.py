@@ -14,9 +14,9 @@ import pandas as pd
 from scipy.optimize import least_squares
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = ROOT / "output/mississippi_20240607_120931_20260907"
+BASE = ROOT / "output/mncav_wheel_only_20260916"
 INTERFACES = ROOT / "output/mncav_interface_audit_20260916"
-OUT = ROOT / "output/mncav_wheel_speed_20260916"
+OUT = BASE / "calibration"
 WHEELS = ["front_left", "front_right", "rear_left", "rear_right"]
 TRACK_Y = np.array([1.734, -1.734, 1.735, -1.735]) / 2
 
@@ -27,8 +27,8 @@ def prepare(sequence, parameters):
                 ROOT / "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv")
     ins = pd.read_csv(ins_path)
     ins.columns = [x.replace("_deg", "").replace("_mps", "") for x in ins.columns]
-    imu, steering, twist = [pd.read_csv(folder / (name + ".csv")) for name in ["imu", "steering", "twist"]]
-    wheel_path = INTERFACES / sequence / "wheel_speed_report.csv"
+    imu, steering = [pd.read_csv(folder / (name + ".csv")) for name in ["imu", "steering"]]
+    wheel_path = folder / "wheel_speed_report.csv"
     wheel = pd.read_csv(wheel_path)
     origin = ins.stamp_sec.iloc[0]
     receiver = ins.gps_seconds.to_numpy() - ins.gps_seconds.iloc[0]
@@ -46,8 +46,7 @@ def prepare(sequence, parameters):
                bridge(steering.stamp_sec.iloc[-1]) - start) - .02
     time = np.arange(np.ceil(first*100), np.floor(last*100)+1)/100
     sample = lambda table, key: np.interp(time, bridge(table.stamp_sec)-start, table[key])
-    motion = pd.DataFrame({"time": time, "referenceVx": np.interp(time, native, reference_vx),
-                           "legacyTwist": sample(twist, "linear_x_mps")})
+    motion = pd.DataFrame({"time": time, "referenceVx": np.interp(time, native, reference_vx)})
     motion["steeringAngle"] = (sample(steering, "steering_wheel_angle_rad") - parameters["steeringWheelOffsetRad"]) / parameters["steeringRatio"]
     for name, raw in [("yawRate", "angular_z_radps"), ("longitudinalAcceleration", "acceleration_x_mps2")]:
         correction = parameters["input_correction"][name]

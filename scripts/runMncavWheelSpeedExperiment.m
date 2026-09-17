@@ -1,10 +1,10 @@
 function report=runMncavWheelSpeedExperiment(outputFolder)
 % runMncavWheelSpeedExperiment Select wheel fusion on a separate drive.
 % Calibration: 12:11:24, fit before 40 s and select on the remaining samples.
-% Localization: frozen 12:09:31 inputs with only longitudinal speed replaced;
-% the lateral observer is recomputed. Reference velocity is scoring-only.
+% Localization: current wheel-only 12:09:31 full-observer inputs; the lateral
+% observer is recomputed. Reference velocity is scoring-only.
     arguments
-        outputFolder (1,1) string="output/mncav_wheel_speed_20260916"
+        outputFolder (1,1) string="output/mncav_wheel_only_20260916/calibration"
     end
     setupVehicleLocalization();cfg=wheelSpeedObserverConfig();
     tab=readtable(fullfile(outputFolder,'12-11-24','motion.csv'));
@@ -21,10 +21,9 @@ function report=runMncavWheelSpeedExperiment(outputFolder)
     end
     candidateMetrics=cell2table(rows,VariableNames={'method','timeConstant','rmseMps','biasMps','p95Mps','maximumMps','samples'});
     [~,best]=min(candidateMetrics.rmseMps);selectedCfg=configs{best};selected=candidates{best};
-    calibrationBaseline=velocityScore(tab.legacyTwist(selection),tab.referenceVx(selection));
     writetable(candidateMetrics,fullfile(outputFolder,'calibration_candidates.csv'));
     disp(candidateMetrics);disp(selectedCfg);
-    stored=load('output/full_observer_20260916/experiment.mat');
+    stored=load('output/mncav_wheel_only_20260916/full_observer/experiment.mat');
     h=stored.data.highRate;native=readtable(fullfile(outputFolder,'12-09-31','wheels.csv'));
     d=h;d.wheels=struct('time',native.time,'angularVelocity',native{:,2:5});
     selectedCfg.initialSpeed=0; % Same known stationary start as the frozen experiment.
@@ -35,10 +34,10 @@ function report=runMncavWheelSpeedExperiment(outputFolder)
     estimate=runFullLocalizationObserver(data,stored.lateralDesign,stored.cfg,LateralInputs=lateral);
     ref=readtable(fullfile(outputFolder,'12-09-31','reference.csv'));
     referenceVx=interp1(ref.time,ref.referenceVx,h.time,'linear');assert(all(isfinite(referenceVx)));
-    speedMetrics=[velocityScore(h.longitudinalSpeed,referenceVx);velocityScore(data.highRate.longitudinalSpeed,referenceVx)];
-    speedMetrics=addvars(speedMetrics,["legacy_twist";"wheel_fusion"],Before=1,NewVariableNames="method");
-    positionMetrics=[poseScore(stored.runs{1}.estimate.pose,stored.reference);poseScore(estimate.pose,stored.reference)];
-    positionMetrics=addvars(positionMetrics,["legacy_twist";"wheel_fusion"],Before=1,NewVariableNames="method");
+    speedMetrics=velocityScore(data.highRate.longitudinalSpeed,referenceVx);
+    speedMetrics=addvars(speedMetrics,"wheel_fusion",Before=1,NewVariableNames="method");
+    positionMetrics=poseScore(estimate.pose,stored.reference);
+    positionMetrics=addvars(positionMetrics,"wheel_fusion",Before=1,NewVariableNames="method");
     % Exact accepted-frame states: event times already used by the integrator.
     lidar=data.lidar;accepted=lidar.valid;union=unique([h.time;lidar.time]);
     expanded=data;expanded.highRate.time=union;
@@ -60,13 +59,13 @@ function report=runMncavWheelSpeedExperiment(outputFolder)
     frameError=vecnorm(atNative.position(nativeIndex,:)-frameReference(:,1:2),2,2);
     writetable(table(frameIndex,lidar.time,accepted,frameError, ...
         VariableNames={'frame','time','accepted','positionErrorM'}),fullfile(outputFolder,'frame_errors.csv'));
-    output=table(h.time,h.longitudinalSpeed,data.highRate.longitudinalSpeed,referenceVx,wheel.valid,wheel.sourceAge, ...
-        VariableNames={'time','legacyVx','wheelVx','referenceVx','wheelValid','wheelAge'});
+    output=table(h.time,data.highRate.longitudinalSpeed,referenceVx,wheel.valid,wheel.sourceAge, ...
+        VariableNames={'time','wheelVx','referenceVx','wheelValid','wheelAge'});
     writetable(output,fullfile(outputFolder,'velocity_comparison.csv'));
     writetable(speedMetrics,fullfile(outputFolder,'velocity_metrics.csv'));
     writetable(positionMetrics,fullfile(outputFolder,'localization_metrics.csv'));
     report=struct('selectedConfiguration',selectedCfg,'selectionRow',best, ...
-        'calibrationBaseline',calibrationBaseline,'calibrationSelected',velocityScore(selected.longitudinalSpeed(selection),tab.referenceVx(selection)), ...
+        'calibrationSelected',velocityScore(selected.longitudinalSpeed(selection),tab.referenceVx(selection)), ...
         'velocityMetrics',speedMetrics,'localizationMetrics',positionMetrics,'pairedWheelMetrics',pairedMetrics, ...
         'initialPredictionOnlySamples',nnz(~wheel.valid),'rejectedWheelSamples',sum(wheel.rejectedWheels), ...
         'runtimeReferenceVelocityUsed',false,'globalObserverGainsChanged',false);

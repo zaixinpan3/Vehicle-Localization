@@ -17,6 +17,22 @@ report = runMncavFullObserverExperiment;  % recorded dual-source/outage ablation
 validation = validateFullLocalizationObserver;
 ```
 
+Recorded longitudinal velocity must come from `estimateWheelLongitudinalSpeed`.
+`prepareWheelMotionInputs` reads the four-wheel `wheel_speed_report.csv`,
+steering and IMU streams; it has no alternate vehicle-speed source or fallback.
+`prepareMncavObserverReplay` uses this preparation for both the lateral and
+global observers. Wheel packets expire after 0.15 s; the recorded adapter
+rejects unsupported gaps rather than truncating them out of the experiment.
+The declared stationary initial speed covers only the short pre-packet start.
+Recursive matching uses the same wheel-derived motion and actual lateral
+observer. Supplied matching motion must declare
+`longitudinalVelocitySource="four_wheel"`.
+
+The current experiment and validation write to
+`output/mncav_wheel_only_20260916/full_observer`. See the
+[input migration and executed results](../research/mncav_wheel_only_20260916/README.md).
+Older reports are retained as historical evidence and are not current defaults.
+
 Each source declares `delay=0`, strictly increasing `time`, `valid`, and
 `information` (2-by-2-by-N for GNSS, 3-by-3-by-N for LiDAR). GNSS supplies
 `position` (N-by-2); LiDAR supplies `pose` (N-by-3). Invalid packets may have

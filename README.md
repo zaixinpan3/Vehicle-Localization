@@ -309,6 +309,7 @@ are explicit:
 | `featureMapBuildConfig` | `buildFeatureMap` |
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |
 | `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` |
+| `wheelSpeedObserverConfig` | `estimateWheelLongitudinalSpeed`, `prepareWheelMotionInputs` |
 | `improvedObserverConfig` | `designImprovedObserverGains`, `runImprovedVehicleObserver` |
 | `fullObserverConfig` | `designFullObserverGains`, `runFullLocalizationObserver` |
 
@@ -316,9 +317,16 @@ are explicit:
 
 For the complete MnCAV localization experiment with GNSS/INS XY, precomputed
 LiDAR and zero processing delay, run `runMncavFullObserverExperiment` after
-setup. Use `validateFullLocalizationObserver` for the associated checks.
-The [full-runtime report](research/full_observer_20260916/validation.md)
-compares simultaneous sources, each source alone, and separate/common outages.
+setup. Longitudinal velocity is derived exclusively from four wheel rates,
+with steering/IMU compensation. No vehicle-speed or Twist alternative is
+available. Export `wheel_speed_report.csv`, `imu.csv` and `steering.csv` using
+`scripts/extractVehicleReplaySensors.py`; the current full experiment reads
+`output/mncav_wheel_only_20260916/sensors` and writes its separate
+`full_observer` subdirectory. Missing or expired wheel input is an explicit
+preparation error. Use `validateFullLocalizationObserver` for the associated
+checks. The [wheel-only input migration report](research/mncav_wheel_only_20260916/README.md)
+records the executed source removal and current accuracy; earlier reports
+retain their historical inputs and measurements.
 
 The historical LiDAR-only offline experiment is `runMncavMotionAidedExperiment`.
 The [motion-aided seven-state observer](research/mncav_motion_aided_20260914/validation.md)
