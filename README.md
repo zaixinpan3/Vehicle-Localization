@@ -316,7 +316,9 @@ are explicit:
 ## Quick start
 
 For the complete MnCAV localization experiment, first export BESTPOS with
-`scripts/prepareMncavBestpos.py`, then run `runMncavFullObserverExperiment` after
+`scripts/prepareMncavBestpos.py`, calibrate the relative output point with
+`scripts/calibrateMncavBestposOutputPoint.py` on the separate 12-11-24 drive,
+then run `runMncavFullObserverExperiment` after
 setup. BESTPOS and LiDAR both supply approximately 10 Hz measurements. The
 current observer updates once per synchronized LiDAR frame, without inter-frame
 measurement-pose transport. The recorded BESTPOS types are INS assisted, not
@@ -326,11 +328,14 @@ with steering/IMU compensation. No vehicle-speed or Twist alternative is
 available. Export `wheel_speed_report.csv`, `imu.csv` and `steering.csv` using
 `scripts/extractVehicleReplaySensors.py`; the current full experiment reads
 `output/mncav_wheel_only_20260916/sensors` and writes
-`output/mncav_synchronous_bestpos_20260917`. Missing or expired wheel input is an explicit
+`output/mncav_bestpos_alignment_20260917`. Missing or expired wheel input is an explicit
 preparation error. Use `validateFullLocalizationObserver` for the associated
-checks. The [synchronous BESTPOS report](research/mncav_synchronous_bestpos_20260917/README.md)
-records the current implementation, accuracy and unresolved position-reference
-discrepancy. Earlier reports retain their historical inputs and measurements.
+checks. The [aligned BESTPOS report](research/mncav_bestpos_alignment_20260917/README.md)
+records the independent-drive point correction and matched GNSS/LiDAR position
+gains: full-frame RMSE 7.8474 cm, same accepted-frame fusion/raw-LiDAR RMSE
+6.8231/14.8629 cm. These are reference-assisted replay discrepancies, not
+independent absolute accuracy. Earlier reports retain their historical inputs
+and measurements.
 
 The historical LiDAR-only offline experiment is `runMncavMotionAidedExperiment`.
 The [motion-aided seven-state observer](research/mncav_motion_aided_20260914/validation.md)

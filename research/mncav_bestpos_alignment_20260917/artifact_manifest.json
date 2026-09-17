@@ -1,0 +1,67 @@
+[
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/alignment_controls.csv",
+    "sha256": "345dfb676deb3f783eba87c04aef4cb9a66054d804ed0e8ed68b6778d39d9f87",
+    "bytes": 822
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/calibration_sources/bestpos.csv",
+    "sha256": "6ce9cd73e130743f18abc3be7ace6f08c7ada5b1cfde5310e53f8e25adcbf3ae",
+    "bytes": 182194
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/calibration_sources/body_offsets.csv",
+    "sha256": "25d208ceee749132e95926434850253cf17f9ff8fb298b7eb95e411104a61970",
+    "bytes": 52556
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/calibration_sources/inspva.csv",
+    "sha256": "420a5391e7704d580b9340491b098a6ebd5d921b3101f9facac741a71bac0075",
+    "bytes": 920850
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/calibration_validation.csv",
+    "sha256": "af09c5cb68efe740bb5fbd48bd70d9b93cb25c912a67827916d6d717922ffe95",
+    "bytes": 320
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/code_analyzer.csv",
+    "sha256": "07850c15aa72fb606e7bb913dceea229a3d19ab2462f875fd51b6e9e4d91a3a6",
+    "bytes": 21
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/comparison.png",
+    "sha256": "c925b762687b644485159bc469a9c33b6385c52a79f9c6b9640b52479ed512dc",
+    "bytes": 154354
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/experiment.mat",
+    "sha256": "0b0376df7dda73b5e842c319f1ad9d6d0aabeb60d23db0979e9c3f6e5b91aaa1",
+    "bytes": 4261178
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/metrics.csv",
+    "sha256": "d4baeceface1ac6a7dc44b72978bcd56b36ec049a39a459a300128b62a3ae8a1",
+    "bytes": 3177
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/paired_comparison.csv",
+    "sha256": "d5c7cbd85cd6e6c00acb90b35d11d0030e75be777588bd67a41753945aaa2fcc",
+    "bytes": 743
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/summary.json",
+    "sha256": "90420a9df5c01000031df9481b55dc661392b0bb103b9f37878123bed4dc63c5",
+    "bytes": 60500
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/tests.csv",
+    "sha256": "9922a471300116704bef4af4ac80776db509275e318908975391c71fe4bff44d",
+    "bytes": 11817
+  },
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/validation.json",
+    "sha256": "3a8c6271a734fceac452d102bf1274d1dabd55d75c7de7588cb8d362d8265520",
+    "bytes": 889
+  }
+]

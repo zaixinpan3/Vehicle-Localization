@@ -1,14 +1,14 @@
 function validation=validateFullLocalizationObserver(outputFolder)
 % validateFullLocalizationObserver Check recorded replay and regression scope.
     arguments
-        outputFolder (1,1) string="output/mncav_synchronous_bestpos_20260917"
+        outputFolder (1,1) string="output/mncav_bestpos_alignment_20260917"
     end
     setupVehicleLocalization();
     files=["tests/fullLocalizationObserverTest.m","tests/motionAidedObserverTest.m", ...
         "tests/improvedObserverTest.m","tests/lateralObserverTest.m", ...
         "tests/lidarVelocityConsistencyTest.m","tests/mncavVehicleConfigTest.m", ...
         "tests/wheelLongitudinalSpeedTest.m","tests/wheelMotionInputTest.m", ...
-        "tests/synchronousLocalizationTest.m"];
+        "tests/synchronousLocalizationTest.m","tests/gnssOutputPointTest.m"];
     results=runtests(cellstr(files));writetable(table(results),fullfile(outputFolder,'tests.csv'));
     assert(all([results.Passed]),'VehicleLocalization:RegressionFailure','Observer regression failed.');
     stored=load(fullfile(outputFolder,'experiment.mat'));
@@ -40,7 +40,8 @@ function validation=validateFullLocalizationObserver(outputFolder)
         "scripts/prepareWheelMotionInputs.m","scripts/prepareMncavObserverReplay.m", ...
         "scripts/replayMississippiLocalization.m","tests/wheelMotionInputTest.m", ...
         "localization/synchronizeLocalizationInputs.m","localization/runSynchronousLocalizationObserver.m", ...
-        "tests/synchronousLocalizationTest.m"];
+        "tests/synchronousLocalizationTest.m","localization/correctGnssOutputPoint.m", ...
+        "tests/gnssOutputPointTest.m","config/mncavFullObserverConfig.m"];
     for file=sourceFiles
         messages=checkcode(char(file),'-config=factory','-id');
         for j=1:numel(messages),rows(end+1,:)={file,messages(j).line,string(messages(j).id),string(messages(j).message)};end %#ok<AGROW>

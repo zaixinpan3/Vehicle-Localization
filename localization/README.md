@@ -13,6 +13,7 @@ that raw sensor acquisition and every estimator run at 10 Hz.
 
 ```bash
 uv run --offline --with numpy --with pandas --with pyproj python scripts/prepareMncavBestpos.py
+uv run --offline --with rosbags --with numpy --with pandas --with pyproj python scripts/calibrateMncavBestposOutputPoint.py
 ```
 
 ```matlab
@@ -26,7 +27,11 @@ ODOM XY. The recorded BESTPOS types 54, 55 and 56 are INS-assisted solutions;
 this channel must not be called pure GNSS. No ODOM position is read by the
 current entry point. INSPVA timestamps locate the common epoch; INSPVA state
 is used for evaluation and the existing reference-assisted map, not the
-BESTPOS export. The sensor/reference physical point alignment remains unresolved.
+BESTPOS export. `mncavFullObserverConfig` loads a relative output-point offset
+calibrated using seconds 1--40 of the separate 12-11-24 drive. Runtime subtracts
+the rotated offset using its own estimated heading and adds calibration/heading
+uncertainty to the receiver covariance. This empirical planar correction is
+not a surveyed physical installation transform.
 
 GNSS alignment uses bounded linear brackets of actual samples, not motion
 extrapolation. It records both endpoint timestamps and the required future
@@ -41,16 +46,21 @@ Invalid or missing source packets withdraw only that frame's channel; older
 poses are not retained as substitute measurements. Both sources missing leaves
 only state dynamics. Synchronized lateral estimates are required explicitly.
 One implicit solve uses each frame interval; `maximumIntegrationStep` is unused
-in this mode. Existing gains are unchanged. The continuous gain certificate is
+in this mode. MnCAV GNSS position gain is now 4/s, matching the LiDAR gain;
+other gains are unchanged. The continuous gain certificate is
 reported as context, with `sampledSystemCertified=false` for the complete new
 sampled nonlinear implementation. See the
-[current report and discrete equations](../research/mncav_synchronous_bestpos_20260917/README.md).
+[current calibration, gain and accuracy report](../research/mncav_bestpos_alignment_20260917/README.md)
+and the [discrete equations](../research/mncav_synchronous_bestpos_20260917/README.md).
 
 Longitudinal speed remains exclusively wheel derived.
 `prepareWheelMotionInputs` reads wheel rates, steering and IMU with no alternate
 speed fallback. Missing/expired wheel aiding is an error, except the declared
 short stationary startup. The latest output directory is
-`output/mncav_synchronous_bestpos_20260917`.
+`output/mncav_bestpos_alignment_20260917`. Full-frame RMSE is 7.8474 cm;
+on identical accepted frames, fusion is 6.8231 cm versus raw LiDAR 14.8629 cm.
+These remain discrepancies against the shared INSPVA reference in a
+reference-assisted map/matching experiment, not independent absolute accuracy.
 
 ## Historical transported full runtime
 

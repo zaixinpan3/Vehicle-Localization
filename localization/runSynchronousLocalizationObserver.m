@@ -19,14 +19,17 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             'VehicleLocalization:InvalidFullInput','Invalid aligned lateral output.');
     end
     G=source(data,'gnss',t,2);L=source(data,'lidar',t,3);
+    alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
+    if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     continuous=designFullObserverGains(cfg);
     design=struct('kind',"synchronous-backward-euler",'continuousDesign',continuous, ...
-        'sampledSystemCertified',false,'gainsRetuned',false);
+        'sampledSystemCertified',false,'gainsRetuned',isfield(cfg.gnss,'positionGainDesign'));
     x=cfg.initialState;
     assert(numel(x)==7 && all(isfinite(x)),'VehicleLocalization:FullInitializationRequired', ...
         'Supply an explicit common initial state.');x=x(:);
     z=zeros(n,7);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
     yawCorrection=zeros(n,2);biasTrace=zeros(n,1);courseTrace=nan(n,1);
+    gnssPosition=nan(n,2);gnssInformation=nan(2,2,n);
     margins=nan(n,1);weights=nan(n,2);gyro=0;rawIntegral=0;bodyIntegral=0;rotationIntegral=0;
     gh=history();lh=history();bias=0;targetBias=0;courseUpdates=0;biasUpdates=0;maximumRate=0;
     for k=1:n
@@ -43,12 +46,15 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             bodyIntegral=bodyIntegral+delta*complex(meanSpeed,meanVy+part*bias);
             rotationIntegral=rotationIntegral+delta;gyro=gyro+rate*dt;
         end
-        course=NaN;
+        predYaw=x(7)+rate*dt;course=NaN;
         if G.valid(k)
-            gh=append(gh,t(k),[G.values(k,:),0],gyro,bodyIntegral,rotationIntegral,speed);
+            % Course history uses only the current predicted attitude. No
+            % reference attitude or future observer state enters alignment.
+            coursePosition=correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),predYaw,alignment);
+            gh=append(gh,t(k),[coursePosition,0],gyro,bodyIntegral,rotationIntegral,speed);
             [gh,first]=window(gh,t(k),cfg.gnss.courseWindow,cfg.gnss.maximumCourseGap,cfg.gnss.minimumSpeed);
             if ~isempty(first)
-                displacement=complex(G.values(k,1)-gh.pose(first,1),G.values(k,2)-gh.pose(first,2));
+                displacement=complex(coursePosition(1)-gh.pose(first,1),coursePosition(2)-gh.pose(first,2));
                 motion=exp(-1i*gyro)*(bodyIntegral-gh.integral(first));
                 if min(abs([displacement,motion]))>=cfg.gnss.minimumCourseDisplacement
                     course=angle(displacement)-angle(motion);courseUpdates=courseUpdates+1;
@@ -78,10 +84,8 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         vy=rawVy+part*bias;betaRate=0;
         if dt>0,betaRate=part*(bias-oldBias)/dt*speed/max(speed^2+vy^2,1);end
         q=h.yawRate(k)+lateral.sideSlipAngleRate(k)+betaRate;maximumRate=max(maximumRate,abs(q));
-        Wg=weight(G,k,cfg.gnss.gainInformationScale,2);
         Wl=weight(L,k,cfg.lidar.gainInformationScale,3);
-        K=cfg.gnss.positionGain*Wg+cfg.gains(1)*Wl(1:2,1:2);
-        predYaw=x(7)+rate*dt;yaw=predYaw;
+        yaw=predYaw;
         if L.valid(k) && Wl(3,3)>=cfg.lidar.minimumPoseWeight
             gain=cfg.gains(4)*Wl(3,3);yaw=predYaw+dt*gain/(1+dt*gain)*wrap(L.values(k,3)-predYaw);
             headingMode(k)=2;yawCorrection(k,2)=gain*wrap(L.values(k,3)-yaw);
@@ -92,18 +96,24 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             end
             headingMode(k)=1;yawCorrection(k,1)=cfg.gnss.headingGain*sin(course-yaw);
         end
+        Wg=zeros(2);
+        if G.valid(k)
+            [gnssPosition(k,:),gnssInformation(:,:,k)]=correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),yaw,alignment);
+            I=gnssInformation(:,:,k);Wg=I/(I+cfg.gnss.gainInformationScale*eye(2));Wg=(Wg+Wg.')/2;
+        end
+        K=cfg.gnss.positionGain*Wg+cfg.gains(1)*Wl(1:2,1:2);
         R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
         velocity=R*[speed;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
         A=[(1+dt*cfg.gains(2))*eye(2),-dt*eye(2); ...
             -dt*q^2*eye(2),(1+dt*cfg.gains(3))*eye(2)-2*dt*q*J];
         va=A\[x([2,5])+dt*cfg.gains(2)*velocity;x([3,6])+dt*cfg.gains(3)*acceleration];
         b=zeros(2,1);
-        if G.valid(k),b=b+cfg.gnss.positionGain*Wg*G.values(k,:).';end
+        if G.valid(k),b=b+cfg.gnss.positionGain*Wg*gnssPosition(k,:).';end
         if L.valid(k),b=b+cfg.gains(1)*Wl(1:2,1:2)*L.values(k,1:2).';end
         p=(eye(2)+dt*K)\(x([1,4])+dt*va(1:2)+dt*b);
         x=[p(1);va(1);va(3);p(2);va(2);va(4);yaw];
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Synchronous update became nonfinite.');
-        if G.valid(k),correction(k,1:2)=(cfg.gnss.positionGain*Wg*(G.values(k,:).'-p)).';weights(k,1)=min(eig(Wg));end
+        if G.valid(k),correction(k,1:2)=(cfg.gnss.positionGain*Wg*(gnssPosition(k,:).'-p)).';weights(k,1)=min(eig(Wg));end
         if L.valid(k),correction(k,3:4)=(cfg.gains(1)*Wl(1:2,1:2)*(L.values(k,1:2).'-p)).';weights(k,2)=min(eig(Wl));end
         alpha=min(eig(K));q2=cfg.maximumTrackAngleRate^2;
         margins(k)=min(eig([2*alpha,-1,0;-1,2*cfg.gains(2),-(1+q2);0,-(1+q2),2*cfg.gains(3)]));
@@ -113,6 +123,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'position',z(:,[1,4]),'velocity',z(:,[2,5]),'acceleration',z(:,[3,6]), ...
         'heading',wrap(z(:,7)),'headingUnwrapped',z(:,7),'lateral',lateral,'observer',design);
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'positionCorrection',correction, ...
+        'gnssPositionAtObserverPoint',gnssPosition,'gnssInformationAtObserverPoint',gnssInformation, ...
         'yawCorrection',yawCorrection,'lidarVelocityBias',biasTrace,'gnssDerivedHeading',courseTrace, ...
         'minimumWeights',weights,'translationDissipationMargin',margins,'gnssCourseUpdates',courseUpdates, ...
         'lidarBiasUpdates',biasUpdates,'maximumTrackAngleRate',maximumRate, ...

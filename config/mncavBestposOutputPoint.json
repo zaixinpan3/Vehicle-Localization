@@ -1,0 +1,40 @@
+{
+  "identifier": "mncav-bestpos-relative-point-12-11-24-seconds-1-40-v1",
+  "bodyOffset": [
+    1.72485903887133,
+    0.2644114700440067
+  ],
+  "bodyCovariance": [
+    [
+      0.0025000000000000005,
+      0.0
+    ],
+    [
+      0.0,
+      0.0025000000000000005
+    ]
+  ],
+  "headingStdRad": 0.017453292519943295,
+  "convention": "BESTPOS point minus observer/map INSPVA output point; forward/left metres; subtract R(estimated yaw)*offset",
+  "interpretation": "Independent-drive empirical relative output-point calibration, not a surveyed antenna-to-CG lever arm",
+  "calibrationBag": "data/raw/Missisipi/raw_data_2024-06-07-12-11-24_0.bag",
+  "trainingSeconds": [
+    1,
+    40
+  ],
+  "trainingSamples": 360,
+  "evaluationDriveUsed": false,
+  "runtimeReferenceAttitudeUsed": false,
+  "runtimeReferencePositionUsed": false,
+  "uncertainty": "Per-sample robust training residual sigma with 0.05 m floor per body axis; declared 1 degree heading sigma; unknown receiver correlations",
+  "sources": [
+    {
+      "path": "output/mncav_bestpos_alignment_20260917/calibration_sources/bestpos.csv",
+      "sha256": "6ce9cd73e130743f18abc3be7ace6f08c7ada5b1cfde5310e53f8e25adcbf3ae"
+    },
+    {
+      "path": "output/mncav_bestpos_alignment_20260917/calibration_sources/inspva.csv",
+      "sha256": "420a5391e7704d580b9340491b098a6ebd5d921b3101f9facac741a71bac0075"
+    }
+  ]
+}

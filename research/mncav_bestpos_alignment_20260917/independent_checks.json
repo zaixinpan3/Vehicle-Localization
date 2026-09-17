@@ -1,0 +1,37 @@
+{
+  "metricRowsVerified": 21,
+  "maximumMetricDifference": 4.440892098500626e-15,
+  "correctedPositionEquationResidualM": 0.0,
+  "correctedInformationResidual": 1.1368683772161603e-13,
+  "unchangedRawSourcesClocksLateralStatesAndOtherGains": true,
+  "gnssPositionGainBefore": 1,
+  "gnssPositionGainAfter": 4,
+  "wheelOnlyVx": true,
+  "calibrationTrainingSamples": 360,
+  "calibrationUsesSeparateDrive": true,
+  "evaluationReferenceUsedByRuntime": false,
+  "matlabTests": 152,
+  "worstFrame": {
+    "time": 80.5715006113104,
+    "errorM": 0.2687047735668135,
+    "lidarAccepted": false
+  },
+  "errorPopulations": {
+    "lidar_accepted": {
+      "samples": 1083,
+      "rmseM": 0.06823077066802022,
+      "squaredErrorFraction": 0.7003576740010111
+    },
+    "lidar_unavailable": {
+      "samples": 86,
+      "rmseM": 0.15837510409832575,
+      "squaredErrorFraction": 0.2996423259989887
+    }
+  },
+  "outputPointTransferDiagnostic": {
+    "samples": 1169,
+    "beforeRmseM": 1.7217979310297327,
+    "afterRmseM": 0.061517468381388475,
+    "scope": "Frozen independent-drive calibration; evaluation-reference yaw used for this diagnostic only"
+  }
+}
