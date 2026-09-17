@@ -1,4 +1,4 @@
-function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFolder,parameterFile,calls,fixedLidarDelay)
+function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFolder,parameterFile,calls,fixedLidarDelay,options)
 % prepareMncavObserverReplay Export recorded inputs and physical pose samples.
 % This is a data exporter. Its physical timestamp metadata is not an observer
 % timing model. reconstructContinuousObserverSignals supplies the separately
@@ -13,12 +13,12 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
         parameterFile (1,1) string
         calls table = table()
         fixedLidarDelay (1,1) double {mustBeNonnegative} = .15
+        options.IncludeOdom (1,1) logical = true
     end
     root=fileparts(fileparts(mfilename('fullpath')));
     folder=fullfile(root,'data','raw','Missisipi','gnss');
     stem="raw_data_2024-06-07-12-09-31_0";
     ins=readtable(fullfile(folder,stem+"_inspva.csv"));
-    odom=readtable(fullfile(folder,stem+"_odom.csv"));
     poses=readFramePoseTable(fullfile(folder,stem+"_front_lidar_pose_match_1_1170.csv"),1:1170);
     parameters=jsondecode(fileread(parameterFile));
     rosOrigin=ins.stamp_sec(1); receiver=ins.gps_seconds-ins.gps_seconds(1);
@@ -30,6 +30,9 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     [high,wheel,wheelMetadata]=prepareWheelMotionInputs(sensorFolder,parameters,clock, ...
         start,bridge(poses.lidar_stamp_sec(end)),InitialSpeed=0);
     time=high.time;sensorData=struct('highRate',high,'wheelVelocity',wheel);
+    reference=table();sensorData.gps=struct();edgeExtrapolation=0;
+    if options.IncludeOdom
+    odom=readtable(fullfile(folder,stem+"_odom.csv"));
     odomTime=bridge(odom.stamp_sec)-start;
     yaw=unwrap(atan2(2*(odom.qw.*odom.qz+odom.qx.*odom.qy),1-2*(odom.qy.^2+odom.qz.^2)));
     edgeExtrapolation=max([0,odomTime(1)-time(1),time(end)-odomTime(end)]);
@@ -40,6 +43,7 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     selected=find(odomTime>=0 & odomTime<=time(end));
     sensorData.gps=struct('timestamp',odomTime(selected), ...
         'pose',[odom.x_m(selected),odom.y_m(selected)]);
+    end
     sensorData.lidar=struct();
     if ~isempty(calls)
         assert(all(ismember(calls.accepted,[0 1])),'Invalid recorded acceptance flag.');
@@ -76,4 +80,8 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
         'lidarInput',"accepted full/directional geometric samples; the continuous adapter rejects insufficient information", ...
         'parameters',parameters,'sampleTimeSeconds',.01,'samples',numel(time), ...
         'maximumReferenceEdgeExtrapolationSeconds',edgeExtrapolation);
+    if ~options.IncludeOdom
+        metadata.reference="No reference returned; ODOM not read";
+        metadata.gpsInput="No GNSS channel exported; caller supplies BESTPOS";
+    end
 end

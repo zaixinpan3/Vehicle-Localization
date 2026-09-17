@@ -1,16 +1,16 @@
 function report=runMncavFullObserverExperiment(outputFolder)
 % runMncavFullObserverExperiment Exercise simultaneous and missing sources.
-% Recorded ODOM XY supplies the GNSS/INS aiding channel, not pure GNSS.
+% Recorded BESTPOS XY supplies the receiver position channel, still INS aided.
 % INSPVA positions enter scoring only; frozen matching/map remain reference
-% assisted. No matching is rerun and no future pose interpolation is used.
+% assisted. Matching is frozen; frame alignment interpolates real GNSS samples
+% and reports the required future-endpoint wait, without motion extrapolation.
     arguments
-        outputFolder (1,1) string="output/mncav_wheel_only_20260916/full_observer"
+        outputFolder (1,1) string="output/mncav_synchronous_bestpos_20260917"
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
     parameterFile="output/mncav_interface_audit_20260916/vehicle_parameters.json";
-    [prepared,~,inputMetadata]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0);
-    inputMetadata.reference="Legacy ODOM reference returned by exporter is discarded; INSPVA evaluation is supplied separately";
+    [prepared,~,inputMetadata]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
     h=prepared.highRate;t=h.time;
     prior=load('output/mncav_inspva_observer_20260915/experiment.mat','lateralDesign');
     lateralDesign=prior.lateralDesign;
@@ -24,21 +24,18 @@ function report=runMncavFullObserverExperiment(outputFolder)
     end
     lidar=struct('time',calls.time,'pose',[calls.measurementX,calls.measurementY,calls.measurementPsi], ...
         'information',information,'valid',logical(calls.fullPose),'delay',0);
-    folder='data/raw/Missisipi/gnss';stem='raw_data_2024-06-07-12-09-31_0';
-    odom=readtable(fullfile(folder,[stem,'_odom.csv']));ins=readtable(fullfile(folder,[stem,'_inspva.csv']));
-    poses=readFramePoseTable(fullfile(folder,[stem,'_front_lidar_pose_match_1_1170.csv']),1:1170);
-    origin=ins.stamp_sec(1);receiver=ins.gps_seconds-ins.gps_seconds(1);
-    bridge=@(stamp) interp1(ins.stamp_sec-origin,receiver,stamp-origin,'linear','extrap');
-    time=bridge(odom.stamp_sec)-bridge(poses.lidar_stamp_sec(1));
-    selected=time>=t(1) & time<=t(end);odom=odom(selected,:);time=time(selected);
-    assert(isequal(time,prepared.gps.timestamp) && isequal([odom.x_m,odom.y_m],prepared.gps.pose));
-    valid=isfinite(odom.pose_cov_xx) & isfinite(odom.pose_cov_yy) & odom.pose_cov_xx>0 & odom.pose_cov_yy>0;
+    bestpos=readtable('output/mncav_synchronous_bestpos_20260917/bestpos.csv');
+    time=bestpos.time;valid=logical(bestpos.valid);
     information=nan(2,2,numel(time));
-    for k=find(valid).',information(:,:,k)=diag(1./[odom.pose_cov_xx(k),odom.pose_cov_yy(k)]);end
-    gnss=struct('time',time,'position',[odom.x_m,odom.y_m], ...
+    for k=find(valid).'
+        information(:,:,k)=[bestpos.informationXX(k),bestpos.informationXY(k);bestpos.informationXY(k),bestpos.informationYY(k)];
+    end
+    gnss=struct('time',time,'position',[bestpos.x,bestpos.y], ...
         'information',information,'valid',valid,'delay',0);
     data=struct('highRate',h,'gnss',gnss,'lidar',lidar);
     cfg=fullObserverConfig();
+    [data,lateral,synchronization]=synchronizeLocalizationInputs(data,lateral,cfg);
+    h=data.highRate;t=h.time;gnss=data.gnss;lidar=data.lidar;time=gnss.time;valid=gnss.valid;
     % Identical initial state in every ablation, including GNSS-only replay.
     assert(lidar.valid(1) && lidar.time(1)==t(1),'Initial LiDAR pose is required.');
     pose=lidar.pose(1,:);rotation=[cos(pose(3)),-sin(pose(3));sin(pose(3)),cos(pose(3))];
@@ -77,15 +74,28 @@ function report=runMncavFullObserverExperiment(outputFolder)
     metrics=cell2table(rows,VariableNames={'scenario','population','samples','positionRmseM', ...
         'positionMedianM','positionP95M','positionMaximumM','fractionAtMost10cm','headingRmseDeg', ...
         'bothActiveSamples','neitherActiveSamples','runtimeSeconds'});
-    report=struct('metadata',struct('gnssSource',"/novatel/oem7/odom XY; diagonal recorded pose covariance; GNSS/INS aiding, not pure GNSS", ...
+    report=struct('metadata',struct('gnssSource',"/novatel/oem7/bestpos XY; reported uncertainty projected to UTM; recorded solution types are INS aided", ...
         'lidarSource',"Frozen INSPVA-map per_frame_zero full-pose measurements", ...
-        'inputMetadata',inputMetadata,'evaluation',"Native INSPVA on identical 100 Hz timestamps", ...
-        'matchingRerun',false,'referencePositionInput',false,'zeroProcessingDelay',true, ...
+        'inputMetadata',inputMetadata,'synchronization',synchronization, ...
+        'evaluation',"INSPVA on native LiDAR frame timestamps, approximately 10 Hz", ...
+        'matchingRerun',false,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
+        'offlineSynchronization',true, ...
         'initialization',"Common first LiDAR pose plus wheel/lateral velocity and IMU acceleration; not a cold-start GNSS-only test", ...
         'limitations',"Same-drive map and per-frame INSPVA matching seeds; shared receiver reference; unknown physical output-point transform; upstream motion preparation offline"), ...
-        'design',designFullObserverGains(cfg),'metrics',metrics);
+        'design',runs{1}.estimate.observer,'metrics',metrics);
+    old=load('output/mncav_wheel_only_20260916/calibration/experiment.mat','atNative');
+    [found,index]=ismember(t,old.atNative.time);assert(all(found),'Historical comparison needs exact common timestamps.');
+    accepted=lidar.valid;paired=cell(0,9);
+    labels=["synchronous_10hz","historical_transport_100hz","raw_lidar"];
+    posesToCompare={runs{1}.estimate.pose,old.atNative.pose(index,:),lidar.pose};
+    for k=1:3
+        paired(end+1,:)=[{labels(k),"accepted_lidar_frames",nnz(accepted)},num2cell(score(posesToCompare{k}(accepted,:),reference(accepted,:)))]; %#ok<AGROW>
+    end
+    report.pairedComparison=cell2table(paired,VariableNames={'method','population','samples','positionRmseM', ...
+        'positionMedianM','positionP95M','positionMaximumM','fractionAtMost10cm','headingRmseDeg'});
+    writetable(report.pairedComparison,fullfile(outputFolder,'paired_comparison.csv'));
     wheel=prepared.wheelVelocity;
-    save(fullfile(outputFolder,'experiment.mat'),'data','lateral','lateralDesign','cfg','runs','reference','wheel','report','-v7.3');
+    save(fullfile(outputFolder,'experiment.mat'),'data','lateral','lateralDesign','cfg','runs','reference','wheel','report','bestpos','-v7.3');
     writetable(metrics,fullfile(outputFolder,'metrics.csv'));
     fid=fopen(fullfile(outputFolder,'summary.json'),'w');assert(fid>=0);cleanup=onCleanup(@()fclose(fid));
     fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
@@ -94,7 +104,7 @@ function report=runMncavFullObserverExperiment(outputFolder)
     for k=1:3,plot(t,vecnorm(runs{k}.estimate.position-reference(:,1:2),2,2),DisplayName=names(k));end
     ylabel('Position discrepancy (m)');xlabel('Receiver time (s)');grid on;
     legend(Interpreter='none',FontName='DejaVu Sans',FontSize=9,NumColumns=1,Position=[.72,.77,.25,.15]);
-    title('Same recorded measurements; sampled dual-source runtime');
+    title('Synchronized localization at native LiDAR frame times');
     nexttile;hold on;
     for k=4:6,plot(t,vecnorm(runs{k}.estimate.position-reference(:,1:2),2,2),DisplayName=scenarios(k));end
     xline(40,'k:',HandleVisibility='off');xline(60,'k:',HandleVisibility='off');

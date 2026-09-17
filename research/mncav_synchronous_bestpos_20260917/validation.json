@@ -1,0 +1,31 @@
+{
+  "tests": 142,
+  "allTestsPassed": true,
+  "repeatMaximumStateDifference": 0,
+  "integrationSettingPositionDifferenceM": 0,
+  "integrationSettingHeadingDifferenceRad": 0,
+  "integrationCheckScope": "Synchronous: old integration-step parameter has no effect; historical: half-step refinement",
+  "synchronous": true,
+  "implicitPositionEquationMaximumResidual": 2.653542940933562E-9,
+  "futureMutationPrefixDifference": 0,
+  "analyzerFindings": 0,
+  "modeCountsNoneGnssLidarBoth": [
+    0,
+    86,
+    0,
+    1083
+  ],
+  "positiveTranslationMarginSamples": 1169,
+  "headingUnavailableSamples": 0,
+  "gnssCourseUpdates": 1123,
+  "lidarBiasUpdates": 558,
+  "packetCounts": {
+    "gnssValid": 1169,
+    "gnssInvalid": 0,
+    "lidarValid": 1083,
+    "lidarInvalid": 86
+  },
+  "maximumTrackRate": 0.354744598565342,
+  "rateEnvelopeSatisfied": true,
+  "allTheoremHypothesesVerified": false
+}

@@ -1,0 +1,17 @@
+{
+  "metricRowsVerified": 21,
+  "maximumMetricDifference": 4.884981308350689e-15,
+  "frames": 1169,
+  "acceptedFrames": 1083,
+  "localizationRateHz": 9.99636277030507,
+  "bestposRateHz": 10.000000002327951,
+  "identicalSourceClocks": true,
+  "wheelOnlyVx": true,
+  "originalLidarPosesPreserved": true,
+  "bestposProjectionVerified": true,
+  "measurementPoseExtrapolation": false,
+  "integrationSubsteps": 0,
+  "matlabTests": 142,
+  "maximumGnssAlignmentWaitSeconds": 0.09996724954422209,
+  "bestposPureGnss": false
+}

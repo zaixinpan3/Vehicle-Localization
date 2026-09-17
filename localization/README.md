@@ -1,61 +1,66 @@
 # Continuous localization observer
 
-## Full runtime: GNSS and LiDAR together
+## Current synchronous runtime
 
-Use `runFullLocalizationObserver` for the complete zero-processing-delay
-localization module. GNSS XY and LiDAR pose have independent sampled streams,
-validity flags and finite maximum ages. Both position innovations are added
-to the same seven-state observer whenever available. Invalid or expired data
-withdraw only their own channel. When both are absent the state continues
-prediction with motion inputs, without an absolute-position ISS claim.
+`runFullLocalizationObserver` defaults to one backward-Euler update per common
+localization frame. `synchronizeLocalizationInputs` aligns motion/lateral
+estimates and BESTPOS positions on native LiDAR times, approximately 10 Hz.
+No GNSS/LiDAR pose is propagated between frames and no 100 Hz localization
+trajectory is generated. `highRate` remains the compatibility field name, but
+contains frame-rate samples after synchronization. The wheel and lateral
+estimators retain their separate upstream preprocessing; this is not a claim
+that raw sensor acquisition and every estimator run at 10 Hz.
+
+```bash
+uv run --offline --with numpy --with pandas --with pyproj python scripts/prepareMncavBestpos.py
+```
 
 ```matlab
-cfg = fullObserverConfig;
-design = designFullObserverGains(cfg);
-estimate = runFullLocalizationObserver(data, lateralDesign, cfg);
-report = runMncavFullObserverExperiment;  % recorded dual-source/outage ablations
+setupVehicleLocalization;
+report = runMncavFullObserverExperiment;
 validation = validateFullLocalizationObserver;
 ```
 
-Recorded longitudinal velocity must come from `estimateWheelLongitudinalSpeed`.
-`prepareWheelMotionInputs` reads the four-wheel `wheel_speed_report.csv`,
-steering and IMU streams; it has no alternate vehicle-speed source or fallback.
-`prepareMncavObserverReplay` uses this preparation for both the lateral and
-global observers. Wheel packets expire after 0.15 s; the recorded adapter
-rejects unsupported gaps rather than truncating them out of the experiment.
-The declared stationary initial speed covers only the short pre-packet start.
-Recursive matching uses the same wheel-derived motion and actual lateral
-observer. Supplied matching motion must declare
-`longitudinalVelocitySource="four_wheel"`.
+The default experiment reads `/novatel/oem7/bestpos` in EPSG:32615 instead of
+ODOM XY. The recorded BESTPOS types 54, 55 and 56 are INS-assisted solutions;
+this channel must not be called pure GNSS. No ODOM position is read by the
+current entry point. INSPVA timestamps locate the common epoch; INSPVA state
+is used for evaluation and the existing reference-assisted map, not the
+BESTPOS export. The sensor/reference physical point alignment remains unresolved.
 
-The current experiment and validation write to
-`output/mncav_wheel_only_20260916/full_observer`. See the
-[input migration and executed results](../research/mncav_wheel_only_20260916/README.md).
-Older reports are retained as historical evidence and are not current defaults.
+GNSS alignment uses bounded linear brackets of actual samples, not motion
+extrapolation. It records both endpoint timestamps and the required future
+sample wait. No interpolation crosses an invalid endpoint or a bracket longer
+than 0.15 s. LiDAR poses are unchanged at their native frame times. Motion and
+lateral values use the existing 100 Hz preparation, interpolated at the common
+frame time. Thus this experiment is offline synchronization; zero LiDAR
+processing delay does not mean zero alignment latency.
 
-Each source declares `delay=0`, strictly increasing `time`, `valid`, and
-`information` (2-by-2-by-N for GNSS, 3-by-3-by-N for LiDAR). GNSS supplies
-`position` (N-by-2); LiDAR supplies `pose` (N-by-3). Invalid packets may have
-NaN payloads. A valid packet requires finite full-rank information. The current
-map replay marks directional-only registrations unavailable rather than
-inventing a full pose. Missing source fields are allowed. An initial state is
-required if neither source supplies a valid position at the start.
+Each available source must have exactly the same time array as `highRate`.
+Invalid or missing source packets withdraw only that frame's channel; older
+poses are not retained as substitute measurements. Both sources missing leaves
+only state dynamics. Synchronized lateral estimates are required explicitly.
+One implicit solve uses each frame interval; `maximumIntegrationStep` is unused
+in this mode. Existing gains are unchanged. The continuous gain certificate is
+reported as context, with `sampledSystemCertified=false` for the complete new
+sampled nonlinear implementation. See the
+[current report and discrete equations](../research/mncav_synchronous_bestpos_20260917/README.md).
 
-The runtime uses only current and past measurement packets. Between packets,
-anchors propagate with held body motion/gyro; they expire after 0.2 s by
-default. GNSS-only heading correction is reconstructed from past GNSS
-displacement and integrated body motion over 2 s, subject to speed, distance
-and gap admission. It is not a supplied GNSS heading measurement. With
-qualified LiDAR yaw, LiDAR supplies heading feedback. GNSS-only standstill
-and startup without a displacement window do not provide heading correction.
-The slow LiDAR lateral-velocity correction is recomputed inside the causal
-runtime and therefore respects LiDAR outages.
+Longitudinal speed remains exclusively wheel derived.
+`prepareWheelMotionInputs` reads wheel rates, steering and IMU with no alternate
+speed fallback. Missing/expired wheel aiding is an error, except the declared
+short stationary startup. The latest output directory is
+`output/mncav_synchronous_bestpos_20260917`.
 
-The legacy independent GNSS and LiDAR ISS analyses below remain separate
-analysis cases. They are not a runtime requirement to choose only one sensor,
-and their gains/proofs are not silently transferred to this newer motion-aided
-structure. See the [full observer equations and conditional common certificate](../research/full_observer_20260916/design.md)
-and [executed comparison](../research/full_observer_20260916/validation.md).
+## Historical transported full runtime
+
+Saved configurations without `timing`, or explicit
+`cfg.timing="historical_transport"`, retain the old 100 Hz/asynchronous replay
+for reproducibility. That path propagates the last GNSS/LiDAR anchor between
+packets and expires it after 0.2 s. It is no longer the current default.
+Its [conditional continuous analysis](../research/full_observer_20260916/design.md)
+and [recorded validation](../research/full_observer_20260916/validation.md)
+remain historical and do not certify the new frame-rate discretization.
 
 ## Historical LiDAR-only motion-aided baseline
 

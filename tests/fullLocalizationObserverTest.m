@@ -119,7 +119,8 @@ function f=fixture(duration,mode)
     data=struct('highRate',high);
     if ismember(mode,["gnss","both"]),data.gnss=gnss;end
     if ismember(mode,["lidar","both"]),data.lidar=lidar;end
-    cfg=fullObserverConfig;cfg.bias.enabled=false;cfg.initialState=[0;8;0;0;0;0;0];
+    cfg=fullObserverConfig;cfg.timing="historical_transport";
+    cfg.bias.enabled=false;cfg.initialState=[0;8;0;0;0;0;0];
     f=struct('data',data,'lateral',lateral,'cfg',cfg,'truth',[8*t,zero,zero]);
 end
 

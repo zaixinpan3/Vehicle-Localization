@@ -1,9 +1,11 @@
 function cfg=fullObserverConfig()
-% fullObserverConfig Simultaneous sampled GNSS/LiDAR and motion observer.
-% Positive processing delays require a separate transport/history design.
-% This runtime consumes zero-delay measurements on one acquisition clock.
+% fullObserverConfig Synchronous frame-rate GNSS/LiDAR and motion observer.
+% Source alignment is offline bracket interpolation with declared wait.
+% Measurement channels have zero perception delay; no pose transport occurs.
     cfg=motionAidedObserverConfig();
-    cfg.kind="full-sampled-motion-observer-v1";
+    cfg.kind="full-synchronous-observer-v2";
+    cfg.timing="synchronous";
+    cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('positionGain',1,'headingGain',.5, ...
         'gainInformationScale',16,'minimumPositionWeight',.25, ...
         'maximumAge',.2,'courseWindow',2,'maximumCourseGap',.25, ...

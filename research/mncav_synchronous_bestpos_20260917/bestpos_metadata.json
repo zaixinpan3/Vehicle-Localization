@@ -1,0 +1,32 @@
+{
+  "source": "/novatel/oem7/bestpos",
+  "samples": 1170,
+  "medianRateHz": 10.000000002328306,
+  "positionTypes": {
+    "55": 683,
+    "56": 437,
+    "54": 50
+  },
+  "interpretation": "Recorded INS_RTKFIXED (56), INS_RTKFLOAT (55), INS_PSRDIFF (54); not pure GNSS",
+  "coordinates": "EPSG:32615, same map projection; no spatial fit or lever-arm compensation",
+  "information": "Reported east/north standard deviations projected by a numerical UTM Jacobian; unreported EN covariance assumed zero",
+  "clock": "BESTPOS GPS week/seconds directly; INSPVA timestamps only locate the first LiDAR epoch",
+  "runtimeReferencePoseUsed": false,
+  "odomUsed": false,
+  "validSamples": 1170,
+  "sourceDocumentation": "https://docs.novatel.com/OEM7/Content/Logs/BESTPOS.htm",
+  "inputs": [
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_bestpos.csv",
+      "sha256": "e1088cc019109008d7d08c7e0581f09b8e5775b02b1424f4cbc37b32743a082b"
+    },
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+      "sha256": "2c3abb303f16b7ba5f75f34e96daad3f83aeac3aed22fb8fad7fa4ce133dccdb"
+    },
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_points.csv",
+      "sha256": "b056f457aca22a4f03dd074ef5b84ec2432b851f0f0630286ac3217eb6a1b3d7"
+    }
+  ]
+}

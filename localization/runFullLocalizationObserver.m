@@ -1,5 +1,8 @@
 function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
-% runFullLocalizationObserver Inject available GNSS and LiDAR simultaneously.
+% runFullLocalizationObserver Run synchronized low-rate localization by default.
+% Current configuration requires one aligned sample per localization frame.
+% Configurations without timing retain the historical transported runtime.
+% The remaining interface description applies to that historical branch:
 % highRate and optional LateralInputs are sampled, left-held input streams.
 % data.gnss: time, position (N-by-2), information (2-by-2-by-N), valid, delay=0.
 % data.lidar: time, pose (N-by-3), information (3-by-3-by-N), valid, delay=0.
@@ -15,6 +18,14 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
         lateralDesign (1,1) struct
         cfg (1,1) struct=fullObserverConfig()
         options.LateralInputs (1,1) struct=struct()
+    end
+    if isfield(cfg,'timing')
+        assert(ismember(cfg.timing,["synchronous","historical_transport"]), ...
+            'VehicleLocalization:InvalidFullConfig','Unknown localization timing contract.');
+    end
+    if isfield(cfg,'timing') && cfg.timing=="synchronous"
+        estimate=runSynchronousLocalizationObserver(data,cfg,options.LateralInputs);
+        return;
     end
     design=designFullObserverGains(cfg);validateConfig(cfg);
     h=data.highRate;t=h.time(:);n=numel(t);

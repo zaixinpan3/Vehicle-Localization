@@ -1,0 +1,23 @@
+{
+  "positionRmseM": 1.7215589652427563,
+  "bodyMedianM": [
+    1.7041677015044556,
+    0.2700974499837585
+  ],
+  "bodyP05M": [
+    1.6089473313817761,
+    0.21770943788159153
+  ],
+  "bodyP95M": [
+    1.788496668730643,
+    0.3087717881516486
+  ],
+  "samples": 1169,
+  "excludedOutsideReferenceCoverage": 1,
+  "stationarySamples": 13,
+  "stationaryBodyMedianM": [
+    1.7950511450298738,
+    0.25268559341916985
+  ],
+  "interpretation": "A persistent body-frame offset including standstill suggests different output points; no verified lever arm or correction inferred."
+}

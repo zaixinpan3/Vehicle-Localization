@@ -1,0 +1,57 @@
+[
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/bestpos.csv",
+    "sha256": "529bdedec8608482bda461198ab92b6a37c69863b0bc37cb853ca4a883d07e96",
+    "bytes": 161740
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/bestpos_metadata.json",
+    "sha256": "8d8e0c7d3b43b8ecde7656737801d25424749c4337bdb8a64c57bf3765a77b69",
+    "bytes": 1333
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/code_analyzer.csv",
+    "sha256": "07850c15aa72fb606e7bb913dceea229a3d19ab2462f875fd51b6e9e4d91a3a6",
+    "bytes": 21
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/comparison.png",
+    "sha256": "ef1aa92639b19296c6bf7aadb17450dcbc3e67ed5c6cda971a9cc45e75a6501b",
+    "bytes": 172099
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/experiment.mat",
+    "sha256": "89cb5f88d190b4e874f9e2e8ffec6afa6b7ee4a9227397805044628abfea2206",
+    "bytes": 3958999
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/metrics.csv",
+    "sha256": "7bafd1a07a266c8ceba8202b998456affe2f3512fcb69a4a7d5e1f86478bdf65",
+    "bytes": 3098
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/paired_comparison.csv",
+    "sha256": "b85b5d66b3e9bcb2fa04256e71292d5627a8220e2cafd8f74276f96745d19c3a",
+    "bytes": 579
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/preparation.log",
+    "sha256": "8d8e0c7d3b43b8ecde7656737801d25424749c4337bdb8a64c57bf3765a77b69",
+    "bytes": 1333
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/summary.json",
+    "sha256": "995b827b82d3b4904ea0112e0f008413bdee3cb53c062394fd280271c595da7f",
+    "bytes": 56579
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/tests.csv",
+    "sha256": "65006a2b8863aaf11c2273fdfe95e9c7a7dbc1525f6012ea5455c1e819ed7c73",
+    "bytes": 11083
+  },
+  {
+    "path": "output/mncav_synchronous_bestpos_20260917/validation.json",
+    "sha256": "a4c4b2fee146f46d3a000cbf6db78330dfce33460606aa792e59c4d4df8c26ff",
+    "bytes": 888
+  }
+]

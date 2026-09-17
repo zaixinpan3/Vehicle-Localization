@@ -315,18 +315,22 @@ are explicit:
 
 ## Quick start
 
-For the complete MnCAV localization experiment with GNSS/INS XY, precomputed
-LiDAR and zero processing delay, run `runMncavFullObserverExperiment` after
-setup. Longitudinal velocity is derived exclusively from four wheel rates,
+For the complete MnCAV localization experiment, first export BESTPOS with
+`scripts/prepareMncavBestpos.py`, then run `runMncavFullObserverExperiment` after
+setup. BESTPOS and LiDAR both supply approximately 10 Hz measurements. The
+current observer updates once per synchronized LiDAR frame, without inter-frame
+measurement-pose transport. The recorded BESTPOS types are INS assisted, not
+GNSS-only. Frame alignment interpolates real samples and reports its wait.
+Longitudinal velocity is derived exclusively from four wheel rates,
 with steering/IMU compensation. No vehicle-speed or Twist alternative is
 available. Export `wheel_speed_report.csv`, `imu.csv` and `steering.csv` using
 `scripts/extractVehicleReplaySensors.py`; the current full experiment reads
-`output/mncav_wheel_only_20260916/sensors` and writes its separate
-`full_observer` subdirectory. Missing or expired wheel input is an explicit
+`output/mncav_wheel_only_20260916/sensors` and writes
+`output/mncav_synchronous_bestpos_20260917`. Missing or expired wheel input is an explicit
 preparation error. Use `validateFullLocalizationObserver` for the associated
-checks. The [wheel-only input migration report](research/mncav_wheel_only_20260916/README.md)
-records the executed source removal and current accuracy; earlier reports
-retain their historical inputs and measurements.
+checks. The [synchronous BESTPOS report](research/mncav_synchronous_bestpos_20260917/README.md)
+records the current implementation, accuracy and unresolved position-reference
+discrepancy. Earlier reports retain their historical inputs and measurements.
 
 The historical LiDAR-only offline experiment is `runMncavMotionAidedExperiment`.
 The [motion-aided seven-state observer](research/mncav_motion_aided_20260914/validation.md)
