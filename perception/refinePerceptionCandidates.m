@@ -214,9 +214,12 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
 % prepareFineStructuralCandidates: Rebuild detailed geometry exclusively offline.
 % Fine detection is independent of coarse candidate recall. Existing detailed
 % object support and per-point tests remain available for high-quality mapping.
-    % The fine index is the off-ground pillar lattice split into height layers
-    % on the fixed vehicle-frame lattice; no separate geometry is configured.
-    fineGrid=voxelizePillars(context.offGroundVoxelGrid,cfg.fine.poleSupportHeightResolution);
+    % Keep the height-histogram phase used to calibrate the structural gates.
+    % Use all retained returns (including ground), not only nonground returns.
+    % This is an offline support statistic; coarse pillars never index Z.
+    zReference=0;
+    if ~isempty(context.voxelGrid.points), zReference=min(context.voxelGrid.points(:,3)); end
+    fineGrid=voxelizePillars(context.offGroundVoxelGrid,cfg.fine.poleSupportHeightResolution,zReference);
     fineCfg=fineStructuralConfig();
     common=intersect(fieldnames(fineCfg),fieldnames(cfg.offGroundFeatures));
     for k=1:numel(common), fineCfg.(common{k})=cfg.offGroundFeatures.(common{k}); end

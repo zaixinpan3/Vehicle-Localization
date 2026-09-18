@@ -15,11 +15,11 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(pillars.pointPillarLinIdx(1),pillars.pointPillarLinIdx(2));
             testCase.verifyEqual(pillars.statistics.count,[2;1]);
         end
-        function fineLayersFollowTheFixedHeightLattice(testCase)
+        function fineLayersFollowTheSuppliedHeightReference(testCase)
             cfg=pillarGridConfig();
             points=[10 2 -0.8;10.1 2.1 4;10.1 2.1 -0.3;11 3 0.5;NaN 0 0];
             pillars=pillarizePointCloud(points,cfg);
-            grid=voxelizePillars(pillars,0.5);
+            grid=voxelizePillars(pillars,0.5,-1);
             % Layer edges sit on multiples of 0.5 m, not on the lowest return,
             % and a return exactly on the top edge keeps its own layer.
             testCase.verifyEqual(grid.gridConfig.minCorner,[pillars.gridConfig.minCorner,-1],'AbsTol',1e-12);
@@ -31,7 +31,7 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(grid.pointVoxelLinIdx,int32(sub2ind(grid.gridConfig.dims, ...
                 double(grid.pointVoxelSub(:,1)),double(grid.pointVoxelSub(:,2)),double(grid.pointVoxelSub(:,3)))));
             testCase.verifyFalse(any(isfield(grid,{'count','sumX','voxelPointLocalIdx'})));
-            empty=voxelizePillars(pillarizePointCloud(zeros(0,3),cfg),0.5);
+            empty=voxelizePillars(pillarizePointCloud(zeros(0,3),cfg),0.5,0);
             testCase.verifyEqual(empty.gridConfig.dims,[pillars.gridConfig.dims,1]);
             testCase.verifySize(empty.pointVoxelSub,[0 3]);
         end

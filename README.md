@@ -33,9 +33,10 @@ LiDAR XYZ points, optionally organized (vehicle coordinates)
 
 `perceiveFrame(frame, perceptionConfig())` returns `probabilityCloud`,
 `candidates`, and compact source counts. The analysis unit is a 0.3 m XY pillar
-on a fixed lattice: `pillarGridConfig().gridDims` = 200 x 200 pillars centered
-at the sensor origin, covering [-30, 30) m in x and y. There is no ROI, data
-fit, or origin override: `pillarizePointCloud` has one lattice, returns outside
+on a fixed lattice: `pillarGridConfig().gridDims` = 334 x 334 pillars with center
+`latticeOffset = [0.1, 0.1]` m, covering [-50, 50.2) m in x and y. This retains
+the cell boundaries used to tune the detector. There is no separate ROI or data
+fit: `pillarizePointCloud` has one lattice, returns outside
 it are ignored, ground segmentation rasters on the same lattice, and the 0.9 m
 coarse output grid shares its origin.
 Every pillar stores its point count, XYZ mean, full XYZ covariance, bounds,
@@ -303,7 +304,7 @@ are explicit:
 | --- | --- |
 | `perceptionConfig` | `perceiveFrame` (aggregates the four below) |
 | `coarseSemanticProbabilityCloudConfig` | `perceiveCoarseProbabilityCloud`, `buildCoarseSemanticProbabilityCloud` |
-| `pillarGridConfig` | fixed origin-centered pillar lattice (`gridDims`, `voxelSize`) shared by pillarization, ground segmentation, the coarse cloud and the NDT map extent |
+| `pillarGridConfig` | fixed pillar lattice (`gridDims`, `voxelSize`, `latticeOffset`) shared by pillarization, ground segmentation, the coarse cloud and the NDT map extent |
 | `structuralPillarConfig` | whole-pillar pole/facade/sign detection |
 | `finePerceptionConfig` | `refinePerceptionCandidates` (offline only) |
 | `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` |
@@ -503,8 +504,9 @@ All XY geometry comes from `pillarGridConfig`; a `roiLimits` field is
 rejected. Coarse spacing must contain exactly two XY values. Only the offline
 fine stage constructs a sparse 3D index, `voxelizePillars`, which splits the
 off-ground pillars into `finePerceptionConfig().poleSupportHeightResolution`
-layers anchored to the vehicle-frame height lattice; it has no ROI, range or
-data-driven geometry of its own, and no dense voxel-statistic or
+layers whose reference height is the minimum of all retained returns, including
+ground. Preserve this histogram phase when using the calibrated structural gates.
+It has no separate XY geometry, and no dense voxel-statistic or
 inverse-lookup alternative remains. Detailed candidate settings come from
 `fineStructuralConfig`.
 

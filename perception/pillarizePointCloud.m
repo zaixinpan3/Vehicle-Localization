@@ -1,7 +1,7 @@
 function pillars = pillarizePointCloud(frame, cfg)
 % pillarizePointCloud: Index whole XY pillars and retain their XYZ statistics.
 % Z is never quantized. The lattice is fixed by cfg: gridDims pillars of
-% voxelSize meters centered at the sensor origin (see pillarGridExtent).
+% voxelSize meters centered at latticeOffset (see pillarGridExtent).
 % Returns outside the lattice, outside [minRange, maxRange], or inside the
 % exclusionHalfSize box around the sensor are ignored.
     [xyz, indices, attributes, meta] = readPerceptionPoints(frame);

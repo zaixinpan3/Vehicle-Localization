@@ -157,7 +157,7 @@ end
 function [frame,cfg,expected]=signScene()
     [x,y]=meshgrid(-15:0.3:15,-10:0.3:10);
     ground=[x(:),y(:),-1.44*ones(numel(x),1)];
-    % One pillar of the origin-centered 0.3 m lattice: x in [9.9,10.2), y in [4.8,5.1).
+    % One pillar of the configured lattice: x in [10,10.3), y in [4.9,5.2).
     expected=[10.06 4.96 0.5;10.08 4.98 1.5;10.09 4.99 3.5;10.1 5.0 4.5];
     xyz=[ground;expected]; intensity=zeros(size(xyz,1),1); intensity(end)=1900;
     frame=struct('x',xyz(:,1),'y',xyz(:,2),'z',xyz(:,3),'intensity',intensity);

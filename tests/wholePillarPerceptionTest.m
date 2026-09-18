@@ -8,7 +8,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
     methods (Test)
         function wholePillarMomentsRetainAllXYZCorrelations(testCase)
             cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
-            p=[.01 .02 -4;.05 .08 1;.08 .14 8];
+            p=[-.19 -.18 -4;-.15 -.12 1;-.12 -.06 8];
             grid=pillarizePointCloud(p,cfg);
             expected=cov(p,1);
             testCase.verifyEqual(grid.statistics.count,3);
@@ -19,19 +19,19 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyFalse(any(contains(string(fieldnames(grid)),["Voxel","voxelStatistics"])));
             testCase.verifySize(grid.pointPillarSub,[3 2]);
         end
-        function defaultLatticeIsCenteredAndIgnoresOutsideReturns(testCase)
+        function defaultLatticePreservesTunedCellBoundaries(testCase)
             cfg=pillarGridConfig();
             testCase.verifyFalse(isfield(cfg,'roiLimits'));
-            testCase.verifyEqual(cfg.gridDims,[200 200]);
-            testCase.verifyEqual(pillarGridExtent(cfg),[-30 30 -30 30],'AbsTol',1e-12);
-            p=[-30 -30 0;29.99 -29.99 1;30 0 2;0 -30.01 3;12 5 4];
+            testCase.verifyEqual(cfg.gridDims,[334 334]);
+            testCase.verifyEqual(pillarGridExtent(cfg),[-50 50.2 -50 50.2],'AbsTol',1e-12);
+            p=[-50 -50 0;50.19 -49.99 1;50.21 0 2;0 -50.01 3;12 5 4];
             grid=pillarizePointCloud(p,cfg);
-            testCase.verifyEqual(grid.gridConfig.dims,[200 200]);
-            testCase.verifyEqual(grid.gridConfig.minCorner,[-30 -30],'AbsTol',1e-12);
-            testCase.verifyEqual(grid.gridConfig.maxCorner,[30 30],'AbsTol',1e-12);
-            testCase.verifyEqual(grid.pillarGeometry.mapSize,[200 200]);
+            testCase.verifyEqual(grid.gridConfig.dims,[334 334]);
+            testCase.verifyEqual(grid.gridConfig.minCorner,[-50 -50],'AbsTol',1e-12);
+            testCase.verifyEqual(grid.gridConfig.maxCorner,[50.2 50.2],'AbsTol',1e-12);
+            testCase.verifyEqual(grid.pillarGeometry.mapSize,[334 334]);
             testCase.verifyEqual(grid.pointIndices,int32([1;2;5]));
-            testCase.verifyEqual(grid.pointPillarSub,int32([1 1;200 1;141 117]));
+            testCase.verifyEqual(grid.pointPillarSub,int32([1 1;334 1;207 184]));
             testCase.verifyEqual(grid.numFilteredPoints,3);
         end
         function obsoleteRoiLimitsAreRejected(testCase)
@@ -61,7 +61,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
         function splitBoundaryPoleUsesWholeNeighborPillars(testCase)
             cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
             z=repelem(linspace(-1,3,12).',2);
-            x=repmat([1.19;1.21],12,1); y=ones(size(x))*1.05;
+            x=repmat([1.29;1.31],12,1); y=ones(size(x))*1.05;
             grid=pillarizePointCloud([x y z],cfg);
             cloudCfg=coarseSemanticProbabilityCloudConfig(); cloudCfg.semanticNames="pole";
             result=analyzeStructuralPillars(grid,structuralPillarConfig(),cloudCfg);

@@ -1,8 +1,8 @@
-function voxelGrid = voxelizePillars(pillars, dz)
+function voxelGrid = voxelizePillars(pillars, dz, zReference)
 % voxelizePillars: Split whole XY pillars into fixed height layers for offline fine detection.
-% Layer boundaries lie on the vehicle-frame height lattice k*dz, so a return's
-% layer never depends on which other returns the frame contains; layer 1 is the
-% lowest occupied lattice layer. XY membership is taken from the pillars as is.
+% Height boundaries are zReference + k*dz. The caller supplies the reference
+% from common preprocessing so dropping ground returns cannot change the
+% histogram phase. XY membership is taken from the pillars as is.
 % No dense statistics or inverse voxel lookup is allocated.
     assert(isstruct(pillars) && all(isfield(pillars, ["gridConfig", "points", "pointIndices", ...
         "pointPillarSub", "pointAttributes"])), "voxelizePillars requires pillarizePointCloud output.");
@@ -11,10 +11,10 @@ function voxelGrid = voxelizePillars(pillars, dz)
         "Height layers require one positive finite spacing.");
     xy = pillars.gridConfig;
     z = double(pillars.points(:, 3));
-    zFloor = 0;
-    if ~isempty(z)
-        zFloor = floor(min(z)./dz).*dz;
-    end
+    zFloor = double(zReference);
+    assert(isscalar(zFloor) && isfinite(zFloor) && all(z >= zFloor), ...
+        "perception:InvalidHeightReference", ...
+        "The height reference must be finite and no higher than any retained return.");
     zBin = floor((z - zFloor)./dz) + 1;
     dims = [double(xy.dims(1:2)), max([zBin; 1])];
     voxelSize = [double(xy.voxelSize(1:2)), dz];

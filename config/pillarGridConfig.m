@@ -1,8 +1,9 @@
 function cfg = pillarGridConfig()
-% pillarGridConfig: Whole XY pillar lattice and retained-return limits.
-% The lattice is fixed: gridDims pillars of voxelSize meters, centered at the
-% sensor origin. No ROI is stated separately; returns outside the lattice are
-% ignored. 200 x 200 pillars of 0.3 m cover [-30, 30) m in x and y.
-    cfg = struct('voxelSize',[0.3 0.3],'gridDims',[200 200], ...
+% pillarGridConfig: Fixed whole XY pillar lattice and retained-return limits.
+% Keep the tuned 0.3 m cell boundaries at -50 + k*0.3 m. The fixed 334-cell
+% lattice covers [-50, 50.2) m; latticeOffset sets its center relative to the
+% sensor. Bounds and cell phase are shared by every perception stage.
+    cfg = struct('voxelSize',[0.3 0.3],'gridDims',[334 334], ...
+        'latticeOffset',[0.1 0.1], ...
         'exclusionHalfSize',3.0,'minRange',0,'maxRange',Inf);
 end
