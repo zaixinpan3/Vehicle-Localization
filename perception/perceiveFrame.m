@@ -21,7 +21,6 @@ function perception = perceiveFrame(frame, cfg)
     backend = "auto";
     if isfield(cfg, "executionBackend"), backend = cfg.executionBackend; end
     useNative = perceptionNativeAvailable(backend);
-    cfg.groundSegmentation.slopeGridXYCellSize=cfg.voxel.voxelSize(1:2);
     cfg.voxel.useNativeKernels = useNative;
     cfg.groundSegmentation.useNativeKernels = useNative;
     cfg.groundFeatures.road.useNativeKernels = useNative;
@@ -97,7 +96,7 @@ function xyView = buildGroundXYView(voxelGrid, cellSizeXY, groundPointMask, curb
 % per-point XY cell assignments and per-cell point lookup metadata.
 %
 % Input:
-%   voxelGrid: canonical voxelizePointCloud output with retained points
+%   voxelGrid: pillarizePointCloud output with retained points
 %   cellSizeXY: [1 x 2] XY cell size in meters
 %
 % Output:

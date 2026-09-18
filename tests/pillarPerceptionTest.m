@@ -8,14 +8,32 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
     methods (Test)
         function sparsePillarsNeverAllocateHeightVolume(testCase)
             cfg=pillarGridConfig();
-            cfg.roiLimits=[-30 30 -30 30 -1000 1000];
-            cfg.maxRange=Inf;
             points=[10 2 0;10.01 2.01 50;11 3 5];
             pillars=pillarizePointCloud(points,cfg);
             testCase.verifyFalse(isfield(pillars,'pointVoxelSub'));
             testCase.verifySize(pillars.statistics.covarianceXYZ,[2 6]);
             testCase.verifyEqual(pillars.pointPillarLinIdx(1),pillars.pointPillarLinIdx(2));
             testCase.verifyEqual(pillars.statistics.count,[2;1]);
+        end
+        function fineLayersFollowTheFixedHeightLattice(testCase)
+            cfg=pillarGridConfig();
+            points=[10 2 -0.8;10.1 2.1 4;10.1 2.1 -0.3;11 3 0.5;NaN 0 0];
+            pillars=pillarizePointCloud(points,cfg);
+            grid=voxelizePillars(pillars,0.5);
+            % Layer edges sit on multiples of 0.5 m, not on the lowest return,
+            % and a return exactly on the top edge keeps its own layer.
+            testCase.verifyEqual(grid.gridConfig.minCorner,[pillars.gridConfig.minCorner,-1],'AbsTol',1e-12);
+            testCase.verifyEqual(grid.gridConfig.dims,[pillars.gridConfig.dims,11]);
+            testCase.verifyEqual(grid.gridConfig.voxelSize,[0.3 0.3 0.5]);
+            testCase.verifyEqual(grid.points,points(1:4,:));
+            testCase.verifyEqual(grid.pointIndices,int32((1:4).'));
+            testCase.verifyEqual(grid.pointVoxelSub,int32([pillars.pointPillarSub,[1;11;2;4]]));
+            testCase.verifyEqual(grid.pointVoxelLinIdx,int32(sub2ind(grid.gridConfig.dims, ...
+                double(grid.pointVoxelSub(:,1)),double(grid.pointVoxelSub(:,2)),double(grid.pointVoxelSub(:,3)))));
+            testCase.verifyFalse(any(isfield(grid,{'count','sumX','voxelPointLocalIdx'})));
+            empty=voxelizePillars(pillarizePointCloud(zeros(0,3),cfg),0.5);
+            testCase.verifyEqual(empty.gridConfig.dims,[pillars.gridConfig.dims,1]);
+            testCase.verifySize(empty.pointVoxelSub,[0 3]);
         end
         function momentAggregationUsesActualReturnLocations(testCase)
             moments=aggregatePlanarCellMoments([0 0;0.2 0.4;2 3],[1;1;2],3);

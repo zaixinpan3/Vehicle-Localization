@@ -19,8 +19,7 @@ function cfg = groundSegmentationConfig()
     cfg.slopeGridPriorTolerance = 0.35;
     cfg.slopeGridPriorMinSeedCells = 20;
 
-    % Raster resolution and per-cell robust low height
-    cfg.slopeGridXYCellSize = [0.3, 0.3];
+    % Per-cell robust low height on the pillar lattice
     cfg.slopeGridLowOutlierThreshold = 0.35;
     cfg.slopeGridMinCellPoints = 1;
 

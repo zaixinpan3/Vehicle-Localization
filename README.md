@@ -32,7 +32,12 @@ LiDAR XYZ points, optionally organized (vehicle coordinates)
 ### Perception (`perception/`)
 
 `perceiveFrame(frame, perceptionConfig())` returns `probabilityCloud`,
-`candidates`, and compact source counts. The analysis unit is a 0.3 m XY pillar.
+`candidates`, and compact source counts. The analysis unit is a 0.3 m XY pillar
+on a fixed lattice: `pillarGridConfig().gridDims` = 200 x 200 pillars centered
+at the sensor origin, covering [-30, 30) m in x and y. There is no ROI, data
+fit, or origin override: `pillarizePointCloud` has one lattice, returns outside
+it are ignored, ground segmentation rasters on the same lattice, and the 0.9 m
+coarse output grid shares its origin.
 Every pillar stores its point count, XYZ mean, full XYZ covariance, bounds,
 and available intensity/reflectivity maxima with finite sample counts.
 The coarse path has no Z index, height bins, occupancy runs or finer cells.
@@ -298,7 +303,7 @@ are explicit:
 | --- | --- |
 | `perceptionConfig` | `perceiveFrame` (aggregates the four below) |
 | `coarseSemanticProbabilityCloudConfig` | `perceiveCoarseProbabilityCloud`, `buildCoarseSemanticProbabilityCloud` |
-| `frameVoxelizationConfig` | ROI defaults, offline and historical voxel geometry; online uses XY spacing only |
+| `pillarGridConfig` | fixed origin-centered pillar lattice (`gridDims`, `voxelSize`) shared by pillarization, ground segmentation, the coarse cloud and the NDT map extent |
 | `structuralPillarConfig` | whole-pillar pole/facade/sign detection |
 | `finePerceptionConfig` | `refinePerceptionCandidates` (offline only) |
 | `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` |
@@ -494,11 +499,14 @@ Obsolete execution modes, format readers, compatibility wrappers and experiment
 scripts that require deleted algorithms are removed. Git history and frozen
 reference data preserve comparison evidence without providing runtime fallbacks.
 
-Coarse geometry comes from `pillarGridConfig`, detailed offline indexing from
-`fineVoxelizationConfig`, and detailed candidate settings from
-`fineStructuralConfig`. Coarse spacing must contain exactly two XY values.
-Only the fine stage constructs a sparse 3D index; no dense voxel-statistic or
-inverse-lookup alternative remains.
+All XY geometry comes from `pillarGridConfig`; a `roiLimits` field is
+rejected. Coarse spacing must contain exactly two XY values. Only the offline
+fine stage constructs a sparse 3D index, `voxelizePillars`, which splits the
+off-ground pillars into `finePerceptionConfig().poleSupportHeightResolution`
+layers anchored to the vehicle-frame height lattice; it has no ROI, range or
+data-driven geometry of its own, and no dense voxel-statistic or
+inverse-lookup alternative remains. Detailed candidate settings come from
+`fineStructuralConfig`.
 
 Lateral-observer runtime configurations must include the current `hybrid` fields.
 Use `lateralObserverConfig` and `estimate.diagnostics.sideSlipCommandValid` for

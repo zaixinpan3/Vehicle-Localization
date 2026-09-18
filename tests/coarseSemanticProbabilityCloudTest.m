@@ -180,7 +180,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
 
         function masks = referenceSourceMasks(frame, reference, cfg)
         % Project immutable point masks into the complete XY lattice.
-            bounds=cfg.voxel.roiLimits; spacing=cfg.voxel.voxelSize(1:2);
+            bounds=pillarGridExtent(cfg.voxel); spacing=cfg.voxel.voxelSize(1:2);
             dims=ceil(([bounds(2),bounds(4)]-[bounds(1),bounds(3)])./spacing);
             x=floor((double(frame.x(:))-bounds(1))/spacing(1))+1;
             y=floor((double(frame.y(:))-bounds(3))/spacing(2))+1;

@@ -8,12 +8,12 @@ function cfg = semanticNdtGridMapConfig()
 %
 % Output:
 %   cfg: struct consumed by buildSemanticNdtGridMap
-    voxelCfg = pillarGridConfig();
+    extent = pillarGridExtent(pillarGridConfig());
     cfg = struct();
-    cfg.xMin = voxelCfg.roiLimits(1);
-    cfg.xMax = voxelCfg.roiLimits(2);
-    cfg.yMin = voxelCfg.roiLimits(3);
-    cfg.yMax = voxelCfg.roiLimits(4);
+    cfg.xMin = extent(1);
+    cfg.xMax = extent(2);
+    cfg.yMin = extent(3);
+    cfg.yMax = extent(4);
     cfg.resolution = 1.0;
     cfg.semanticNames = ["roadSurface", "curbCandidate", "roadBoundary", ...
         "facadeCandidate", "poleCandidate", ...

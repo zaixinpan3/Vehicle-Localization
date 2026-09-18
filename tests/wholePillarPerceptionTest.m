@@ -7,8 +7,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
     end
     methods (Test)
         function wholePillarMomentsRetainAllXYZCorrelations(testCase)
-            cfg=pillarGridConfig(); cfg.roiLimits=[0 2 0 2];
-            cfg.exclusionHalfSize=0;
+            cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
             p=[.01 .02 -4;.05 .08 1;.08 .14 8];
             grid=pillarizePointCloud(p,cfg);
             expected=cov(p,1);
@@ -19,6 +18,26 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(grid.statistics.maximumXYZ,max(p,[],1),'AbsTol',1e-12);
             testCase.verifyFalse(any(contains(string(fieldnames(grid)),["Voxel","voxelStatistics"])));
             testCase.verifySize(grid.pointPillarSub,[3 2]);
+        end
+        function defaultLatticeIsCenteredAndIgnoresOutsideReturns(testCase)
+            cfg=pillarGridConfig();
+            testCase.verifyFalse(isfield(cfg,'roiLimits'));
+            testCase.verifyEqual(cfg.gridDims,[200 200]);
+            testCase.verifyEqual(pillarGridExtent(cfg),[-30 30 -30 30],'AbsTol',1e-12);
+            p=[-30 -30 0;29.99 -29.99 1;30 0 2;0 -30.01 3;12 5 4];
+            grid=pillarizePointCloud(p,cfg);
+            testCase.verifyEqual(grid.gridConfig.dims,[200 200]);
+            testCase.verifyEqual(grid.gridConfig.minCorner,[-30 -30],'AbsTol',1e-12);
+            testCase.verifyEqual(grid.gridConfig.maxCorner,[30 30],'AbsTol',1e-12);
+            testCase.verifyEqual(grid.pillarGeometry.mapSize,[200 200]);
+            testCase.verifyEqual(grid.pointIndices,int32([1;2;5]));
+            testCase.verifyEqual(grid.pointPillarSub,int32([1 1;200 1;141 117]));
+            testCase.verifyEqual(grid.numFilteredPoints,3);
+        end
+        function obsoleteRoiLimitsAreRejected(testCase)
+            cfg=pillarGridConfig(); cfg.roiLimits=[0 1 0 1];
+            testCase.verifyError(@() pillarizePointCloud([0.5 0.5 0],cfg),'perception:ObsoleteRoiLimits');
+            testCase.verifyError(@() pillarGridExtent(cfg),'perception:ObsoleteRoiLimits');
         end
         function rejectsVerticalPillarSpacing(testCase)
             cfg=pillarGridConfig(); cfg.voxelSize(3)=0.5;
@@ -40,7 +59,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(stats.meanXYZ,mean(points,1),'AbsTol',1e-12);
         end
         function splitBoundaryPoleUsesWholeNeighborPillars(testCase)
-            cfg=pillarGridConfig(); cfg.roiLimits=[0 3 0 3]; cfg.exclusionHalfSize=0;
+            cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
             z=repelem(linspace(-1,3,12).',2);
             x=repmat([1.19;1.21],12,1); y=ones(size(x))*1.05;
             grid=pillarizePointCloud([x y z],cfg);
@@ -51,7 +70,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyFalse(isfield(result.columnMaps,'voxelStatistics'));
         end
         function horizontalDistributionIsNotAPole(testCase)
-            cfg=pillarGridConfig(); cfg.roiLimits=[0 3 0 3]; cfg.exclusionHalfSize=0;
+            cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
             x=linspace(1.21,1.49,20).'; y=ones(size(x))*1.35;
             grid=pillarizePointCloud([x y zeros(size(x))],cfg);
             cloudCfg=coarseSemanticProbabilityCloudConfig(); cloudCfg.semanticNames="pole";
@@ -84,7 +103,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             result=perceiveFrame(frame,cfg);
             profile off; audit=profile('info');
             names=string({audit.FunctionTable.FunctionName});
-            forbidden=["voxelizePointCloud","analyzeFineStructuralCandidates","detectPoleCandidates", ...
+            forbidden=["voxelizePillars","analyzeFineStructuralCandidates","detectPoleCandidates", ...
                 "refinePerceptionCandidates","buildFineColumnFeatureMaps","refineFacadeWithFineGrid"];
             testCase.verifyFalse(any(contains(names,forbidden)));
             testCase.verifyFalse(isfield(result,'refinement'));

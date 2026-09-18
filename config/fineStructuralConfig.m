@@ -11,7 +11,8 @@ function cfg = fineStructuralConfig()
 %   cfg: detailed offline structural candidate parameters
     cfg = struct();
 
-    % Fine-column point-versus-line shape scores (the voxel size comes from fineVoxelizationConfig)
+    % Fine-column point-versus-line shape scores on the pillar lattice split into
+    % finePerceptionConfig().poleSupportHeightResolution height layers
     cfg.fineShapeScoreNeighborhoodRadiusCells = 2;
     cfg.fineShapeScoreWeightPower = 2.0;
     cfg.fineShapeScoreLinearityPower = 1.0;

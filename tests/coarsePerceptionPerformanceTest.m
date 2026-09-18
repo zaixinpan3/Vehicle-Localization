@@ -70,9 +70,9 @@ classdef coarsePerceptionPerformanceTest < matlab.unittest.TestCase
             z=-1.44+0.01*x+0.03*sin(y);
             z(x>4 & y>1)=z(x>4 & y>1)+0.45;
             frame=[x(:),y(:),z(:)];
-            voxelCfg=fineVoxelizationConfig();
-            grid=voxelizePointCloud(frame,voxelCfg);
-            cfg=groundSegmentationConfig(); cfg.slopeGridXYCellSize=spacing;
+            voxelCfg=pillarGridConfig(); voxelCfg.voxelSize=spacing;
+            grid=pillarizePointCloud(frame,voxelCfg);
+            cfg=groundSegmentationConfig();
             cfg.useNativeKernels=false; reference=segmentGround(grid,cfg);
             cfg.useNativeKernels=true; actual=segmentGround(grid,cfg);
             testCase.verifyEqual(actual,reference);
@@ -113,16 +113,6 @@ classdef coarsePerceptionPerformanceTest < matlab.unittest.TestCase
             testCase.verifyEqual(native.candidates,reference.candidates);
             testCase.verifyEqual(native.probabilityCloud.components.semanticProbability, ...
                 reference.probabilityCloud.components.semanticProbability,'AbsTol',1e-10);
-        end
-        function sparseFineIndexPreservesOriginalMembership(testCase)
-            cfg=fineVoxelizationConfig(); cfg.roiLimits=[-50 50 -50 50 -2 6];
-            points=[10 2 -1;10.1 2.1 4;10.1 2.1 -0.8;11 3 0;NaN 0 0];
-            grid=voxelizePointCloud(points,cfg);
-            bins=floor((points(1:4,:)-grid.gridConfig.minCorner)./cfg.voxelSize)+1;
-            testCase.verifyEqual(grid.points,points(1:4,:));
-            testCase.verifyEqual(grid.pointIndices,int32((1:4).'));
-            testCase.verifyEqual(grid.pointVoxelSub,int32(bins));
-            testCase.verifyFalse(any(isfield(grid,{'count','sumX','voxelPointLocalIdx'})));
         end
         function recordedCompactRasterPreservesPublicPillarIdsAndFinePoints(testCase,frameIndex)
             root=fileparts(fileparts(mfilename('fullpath')));

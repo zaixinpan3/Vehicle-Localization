@@ -214,19 +214,9 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
 % prepareFineStructuralCandidates: Rebuild detailed geometry exclusively offline.
 % Fine detection is independent of coarse candidate recall. Existing detailed
 % object support and per-point tests remain available for high-quality mapping.
-    source=context.offGroundVoxelGrid;
-    input=struct('x',source.points(:,1),'y',source.points(:,2),'z',source.points(:,3), ...
-        'pointIndices',source.pointIndices);
-    attributes=fieldnames(source.pointAttributes);
-    for k=1:numel(attributes), input.(attributes{k})=source.pointAttributes.(attributes{k}); end
-    base=0;
-    if ~isempty(context.voxelGrid.points), base=min(context.voxelGrid.points(:,3)); end
-    voxelCfg=fineVoxelizationConfig();
-    voxelCfg.voxelSize=[source.pillarGeometry.cellSize,cfg.fine.poleSupportHeightResolution];
-    voxelCfg.roiLimits=[]; voxelCfg.exclusionHalfSize=0;
-    voxelCfg.minCorner=[source.pillarGeometry.origin,base];
-
-    fineGrid=voxelizePointCloud(input,voxelCfg);
+    % The fine index is the off-ground pillar lattice split into height layers
+    % on the fixed vehicle-frame lattice; no separate geometry is configured.
+    fineGrid=voxelizePillars(context.offGroundVoxelGrid,cfg.fine.poleSupportHeightResolution);
     fineCfg=fineStructuralConfig();
     common=intersect(fieldnames(fineCfg),fieldnames(cfg.offGroundFeatures));
     for k=1:numel(common), fineCfg.(common{k})=cfg.offGroundFeatures.(common{k}); end

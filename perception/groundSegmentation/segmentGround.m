@@ -10,8 +10,9 @@ function groundPointIdx = segmentGround(voxelGrid, cfg)
 % its residual to the cell ground estimate is within tolerance.
 %
 % Input:
-%   voxelGrid: spatial index with gridConfig, points [K x 3], and aligned
-%       pointIndices [K x 1]. Dense 3D voxel statistics are not required.
+%   voxelGrid: pillarizePointCloud output. Its XY lattice (gridConfig and
+%       pointPillarSub) is the slope grid; points [K x 3] and pointIndices
+%       [K x 1] are aligned with it.
 %   cfg: struct from groundSegmentationConfig
 %
 % Output:
@@ -21,17 +22,20 @@ function groundPointIdx = segmentGround(voxelGrid, cfg)
         "cfg must be provided as a struct from groundSegmentationConfig.");
 
     assert(isstruct(voxelGrid), "voxelGrid must be a struct.");
-    assert(isfield(voxelGrid, "gridConfig") && isstruct(voxelGrid.gridConfig), ...
-        "voxelGrid must contain gridConfig from voxelizePointCloud.");
+    assert(isfield(voxelGrid, "gridConfig") && isstruct(voxelGrid.gridConfig) && ...
+        all(isfield(voxelGrid.gridConfig, ["dims", "voxelSize", "minCorner"])), ...
+        "voxelGrid must contain the pillar lattice gridConfig from pillarizePointCloud.");
     assert(isfield(voxelGrid, "points") && size(voxelGrid.points, 2) == 3, ...
         "voxelGrid must contain points [K x 3].");
     assert(isfield(voxelGrid, "pointIndices") && isvector(voxelGrid.pointIndices) && ...
         numel(voxelGrid.pointIndices) == size(voxelGrid.points, 1), ...
         "voxelGrid must contain pointIndices aligned to points.");
+    assert(isfield(voxelGrid, "pointPillarSub") && size(voxelGrid.pointPillarSub, 1) == size(voxelGrid.points, 1), ...
+        "voxelGrid must contain pointPillarSub aligned to points.");
 
     seedMaxZ = readRequiredScalarConfig(cfg, "groundSeedMaxZ");
     assert(isfinite(seedMaxZ), "groundSeedMaxZ must be finite.");
-    cellSizeXY = resolveSlopeGridXYCellSize(cfg, voxelGrid);
+    cellSizeXY = double(voxelGrid.gridConfig.voxelSize(1:2));
     params = resolveSlopeGridParams(cfg, seedMaxZ);
     params.useNativeKernels = isfield(cfg, "useNativeKernels") && cfg.useNativeKernels;
     groundMask = extractGroundMaskSlopeGrid(voxelGrid, cellSizeXY, params);
@@ -44,68 +48,6 @@ function groundPointIdx = segmentGround(voxelGrid, cfg)
     assert(numel(voxelGrid.pointIndices) == numel(groundMask), ...
         "pointIndices length must match filtered points.");
     groundPointIdx = double(voxelGrid.pointIndices(groundMask));
-end
-
-function cellSizeXY = resolveSlopeGridXYCellSize(cfg, gridResult)
-% resolveSlopeGridXYCellSize: Resolve the XY cell resolution used by
-% slope-grid ground segmentation, allowing a slopeGridXYCellSize override
-% so the propagation grid can be coarser than the fine 3D voxel grid.
-%
-% Input:
-%   cfg: segmentGround config
-%   gridResult: canonical voxelizePointCloud output
-%
-% Output:
-%   cellSizeXY: [1 x 2] XY cell size
-    if isfield(cfg, "slopeGridXYCellSize") && ~isempty(cfg.slopeGridXYCellSize)
-        rawCellSize = double(cfg.slopeGridXYCellSize(:).');
-        if isscalar(rawCellSize)
-            cellSizeXY = [rawCellSize, rawCellSize];
-        elseif numel(rawCellSize) >= 2
-            cellSizeXY = rawCellSize(1:2);
-        else
-            cellSizeXY = [1, 1];
-        end
-        assert(all(isfinite(cellSizeXY)) && all(cellSizeXY > 0), ...
-            "slopeGridXYCellSize must contain positive finite values.");
-        return;
-    end
-
-    cellSizeXY = resolveGroundXYCellSize(cfg, gridResult);
-end
-
-function cellSizeXY = resolveGroundXYCellSize(cfg, gridResult)
-% resolveGroundXYCellSize: Resolve the XY cell resolution used by
-% ground-segmentation before points are grouped into 2D seed cells.
-%
-% Input:
-%   cfg: segmentGround config
-%   gridResult: canonical voxelizePointCloud output
-%
-% Output:
-%   cellSizeXY: [1 x 2] XY cell size
-    if isfield(cfg, "xyCellSize") && ~isempty(cfg.xyCellSize)
-        rawCellSize = double(cfg.xyCellSize(:).');
-    elseif isfield(cfg, "groundXYCellSize") && ~isempty(cfg.groundXYCellSize)
-        rawCellSize = double(cfg.groundXYCellSize(:).');
-    elseif isfield(cfg, "cellSize") && ~isempty(cfg.cellSize)
-        rawCellSize = double(cfg.cellSize(:).');
-    elseif isfield(gridResult, "gridConfig") && isstruct(gridResult.gridConfig) && ...
-            isfield(gridResult.gridConfig, "voxelSize") && numel(gridResult.gridConfig.voxelSize) >= 2
-        rawCellSize = double(gridResult.gridConfig.voxelSize(1:2));
-    else
-        rawCellSize = [1, 1];
-    end
-
-    if isscalar(rawCellSize)
-        cellSizeXY = [rawCellSize, rawCellSize];
-    elseif numel(rawCellSize) >= 2
-        cellSizeXY = rawCellSize(1:2);
-    else
-        cellSizeXY = [1, 1];
-    end
-    assert(all(isfinite(cellSizeXY)) && all(cellSizeXY > 0), ...
-        "XY cell size must contain positive finite values.");
 end
 
 function params = resolveSlopeGridParams(cfg, fallbackPriorHeight)
@@ -164,7 +106,7 @@ function groundMask = extractGroundMaskSlopeGrid(gridResult, cellSizeXY, params)
 % point-to-ground residual labeling.
 %
 % Input:
-%   gridResult: canonical voxelizePointCloud output
+%   gridResult: pillarizePointCloud output
 %   cellSizeXY: [1 x 2] XY cell size
 %   params: slope-grid ground segmentation parameters
 %
@@ -177,12 +119,7 @@ function groundMask = extractGroundMaskSlopeGrid(gridResult, cellSizeXY, params)
         return;
     end
 
-    [pointCellLinIdx, dimsXY, minCornerXY] = mapPointsToSlopeGridCells(gridResult, cellSizeXY);
-    validPointMask = pointCellLinIdx >= 1 & all(isfinite(points), 2);
-    if ~any(validPointMask)
-        return;
-    end
-
+    [pointCellLinIdx, dimsXY, minCornerXY] = mapPointsToSlopeGridCells(gridResult);
     [cellStats, pointCellLinIdx] = computeSlopeGridCellStats(points, pointCellLinIdx, dimsXY, params);
     if isempty(cellStats.occupiedLinIdx)
         return;
@@ -211,53 +148,23 @@ function groundMask = extractGroundMaskSlopeGrid(gridResult, cellSizeXY, params)
         points, pointCellLinIdx, groundHeight, state, cellRange, cellStats.occupiedLinIdx, params);
 end
 
-function [pointCellLinIdx, dimsXY, minCornerXY] = mapPointsToSlopeGridCells(gridResult, cellSizeXY)
-% mapPointsToSlopeGridCells: Assign retained points to the XY grid
-% used by slope-grid ground segmentation and return the grid dimensions and
-% lower metric corner required for cell-center range computation.
+function [pointCellLinIdx, dimsXY, minCornerXY] = mapPointsToSlopeGridCells(gridResult)
+% mapPointsToSlopeGridCells: Address the retained points on the pillar
+% lattice with the x-fastest linear cell index used by the slope-grid rasters,
+% and return the lattice dimensions and lower metric corner.
 %
 % Input:
-%   gridResult: canonical voxelizePointCloud output
-%   cellSizeXY: [1 x 2] XY cell size
+%   gridResult: pillarizePointCloud output
 %
 % Output:
-%   pointCellLinIdx: [K x 1] int32 linear cell indices, 0 for invalid cells
+%   pointCellLinIdx: [K x 1] int32 linear cell indices
 %   dimsXY: [1 x 2] grid dimensions [Nx Ny]
 %   minCornerXY: [1 x 2] lower XY grid corner
-    points = double(gridResult.points);
-    numPoints = size(points, 1);
-    pointCellLinIdx = zeros(numPoints, 1, "int32");
     gridCfg = gridResult.gridConfig;
-    minCornerXY = [0, 0];
-    if isfield(gridCfg, "minCorner") && numel(gridCfg.minCorner) >= 2
-        minCornerXY = double(gridCfg.minCorner(1:2));
-    elseif isfield(gridCfg, "origin") && numel(gridCfg.origin) >= 2 && ...
-            isfield(gridCfg, "voxelSize") && numel(gridCfg.voxelSize) >= 2
-        minCornerXY = double(gridCfg.origin(1:2)) - (0.5 .* double(gridCfg.voxelSize(1:2)));
-    end
-
-    maxCornerXY = minCornerXY + cellSizeXY;
-    if isfield(gridCfg, "maxCorner") && numel(gridCfg.maxCorner) >= 2
-        maxCornerXY = double(gridCfg.maxCorner(1:2));
-    elseif isfield(gridCfg, "dims") && numel(gridCfg.dims) >= 2 && ...
-            isfield(gridCfg, "voxelSize") && numel(gridCfg.voxelSize) >= 2
-        maxCornerXY = minCornerXY + (double(gridCfg.dims(1:2)) .* double(gridCfg.voxelSize(1:2)));
-    elseif numPoints > 0
-        maxCornerXY = max(points(:, 1:2), [], 1);
-    end
-
-    dimsXY = max(ceil((maxCornerXY - minCornerXY) ./ cellSizeXY), 1);
-    if numPoints == 0
-        return;
-    end
-
-    xBin = floor((points(:, 1) - minCornerXY(1)) ./ cellSizeXY(1)) + 1;
-    yBin = floor((points(:, 2) - minCornerXY(2)) ./ cellSizeXY(2)) + 1;
-    valid = isfinite(xBin) & isfinite(yBin);
-    valid = valid & xBin >= 1 & xBin <= dimsXY(1) & yBin >= 1 & yBin <= dimsXY(2);
-    if any(valid)
-        pointCellLinIdx(valid) = int32(sub2ind(dimsXY, double(xBin(valid)), double(yBin(valid))));
-    end
+    dimsXY = double(gridCfg.dims(1:2));
+    minCornerXY = double(gridCfg.minCorner(1:2));
+    pillarSub = double(gridResult.pointPillarSub);
+    pointCellLinIdx = int32(sub2ind(dimsXY, pillarSub(:, 1), pillarSub(:, 2)));
 end
 
 function [cellStats, pointCellLinIdx] = computeSlopeGridCellStats(points, pointCellLinIdx, dimsXY, params)

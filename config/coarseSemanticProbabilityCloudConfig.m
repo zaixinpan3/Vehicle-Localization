@@ -11,14 +11,15 @@ function cfg = coarseSemanticProbabilityCloudConfig()
 % Output:
 %   cfg: struct consumed by perceiveCoarseProbabilityCloud and
 %       buildCoarseSemanticProbabilityCloud
-    voxelCfg = pillarGridConfig();
+    extent = pillarGridExtent(pillarGridConfig());
     cfg = struct();
     cfg.frameCalibration = lidarFrameCalibrationConfig();
-    cfg.xMin = voxelCfg.roiLimits(1);
-    cfg.xMax = voxelCfg.roiLimits(2);
-    cfg.yMin = voxelCfg.roiLimits(3);
-    cfg.yMax = voxelCfg.roiLimits(4);
-    % Three source cells per output cell preserve exact 0.3 m boundaries.
+    cfg.xMin = extent(1);
+    cfg.xMax = extent(2);
+    cfg.yMin = extent(3);
+    cfg.yMax = extent(4);
+    % Three source cells per output cell preserve exact 0.3 m boundaries from
+    % the shared lattice origin; the last output column/row may be partial.
     cfg.resolution = 0.9;
     cfg.coordinateFrame = "sensorLocalXY";
     % Optional known IMU tilt: transform sufficient statistics before BEV
