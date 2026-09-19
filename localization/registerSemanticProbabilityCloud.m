@@ -1,11 +1,17 @@
 function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initialPose,cfg)
 % registerSemanticProbabilityCloud: Semantic Gaussian geometry registration.
-% GICP-style distribution residuals use both covariances. Elongated ground
+% The default GICP-style residuals use both covariances. Elongated ground
 % components constrain their normal direction; poles constrain horizontal XY.
 % Mixture volume/count mass never becomes a geometric correspondence weight.
 % Height conditions correspondence compatibility, not the planar pose force.
 % A partially observable solution is reported but never accepted as full SE(2).
+% weightedNdtRegistrationConfig opts into the evaluated Gaussian-overlap
+% candidate; the geometric solver remains the default pending better accuracy.
     if nargin<4, cfg=distributionRegistrationConfig(); end
+    if string(cfg.method)=="weightedNdt"
+        result=registerWeightedNdtProbabilityCloud(fixedCloud,movingCloud,initialPose,cfg);
+        return
+    end
     assert(string(cfg.method)=="geometricD2D",'VehicleLocalization:InvalidRegistrationMethod', ...
         'Use geometricD2D registration.');
     [f,m,height]=registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);

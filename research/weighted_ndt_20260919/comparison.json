@@ -1,0 +1,180 @@
+{
+  "same_drive_map": true,
+  "reference": "interpolated INSPVA, not independent ground truth",
+  "runs": {
+    "geometric_baseline": {
+      "recursive": {
+        "accepted_measurements": {
+          "samples": 1072,
+          "position_rmse_m": 0.19713208556464507,
+          "heading_rmse_deg": 0.5892639365245832,
+          "position_max_m": 1.08776794545555
+        },
+        "all_outputs_including_predictions": {
+          "samples": 1170,
+          "position_rmse_m": 0.2226278670885218,
+          "heading_rmse_deg": 0.6910240026448348,
+          "position_max_m": 1.08776794545555
+        },
+        "acceptance_fraction": 0.9162393162393162,
+        "reasons": {
+          "accepted": 1072,
+          "inconsistentClasses": 96,
+          "notConverged": 2
+        }
+      },
+      "referenceSeed": {
+        "accepted_measurements": {
+          "samples": 1071,
+          "position_rmse_m": 0.20577257222011872,
+          "heading_rmse_deg": 0.6272520696751145,
+          "position_max_m": 2.20828494226168
+        },
+        "all_outputs_including_predictions": {
+          "samples": 1170,
+          "position_rmse_m": 0.27102000819085503,
+          "heading_rmse_deg": 0.8358320309289883,
+          "position_max_m": 2.20828494226168
+        },
+        "acceptance_fraction": 0.9153846153846154,
+        "reasons": {
+          "accepted": 1071,
+          "inconsistentClasses": 98,
+          "notConverged": 1
+        }
+      }
+    },
+    "log_mixture_candidate": {
+      "recursive": {
+        "accepted_measurements": {
+          "samples": 873,
+          "position_rmse_m": 0.31793596397505747,
+          "heading_rmse_deg": 0.6278189878849801,
+          "position_max_m": 2.00254801975802
+        },
+        "all_outputs_including_predictions": {
+          "samples": 1170,
+          "position_rmse_m": 0.3817225056323142,
+          "heading_rmse_deg": 0.691364089445401,
+          "position_max_m": 2.024748186817
+        },
+        "acceptance_fraction": 0.7461538461538462,
+        "reasons": {
+          "inconsistentClasses": 294,
+          "accepted": 873,
+          "insufficientOverlap": 2,
+          "nonMinimumOrDegenerate": 1
+        }
+      },
+      "referenceSeed": {
+        "accepted_measurements": {
+          "samples": 862,
+          "position_rmse_m": 0.25913789051916647,
+          "heading_rmse_deg": 0.5973668988409684,
+          "position_max_m": 1.71447828001758
+        },
+        "all_outputs_including_predictions": {
+          "samples": 1170,
+          "position_rmse_m": 0.39674466891407956,
+          "heading_rmse_deg": 1.1471265836000373,
+          "position_max_m": 1.71447828001758
+        },
+        "acceptance_fraction": 0.7367521367521368,
+        "reasons": {
+          "inconsistentClasses": 305,
+          "accepted": 862,
+          "insufficientOverlap": 1,
+          "notConverged": 2
+        }
+      }
+    },
+    "weighted_overlap_candidate": {
+      "recursive": {
+        "accepted_measurements": {
+          "samples": 810,
+          "position_rmse_m": 0.37702798140126187,
+          "heading_rmse_deg": 0.9633800465266277,
+          "position_max_m": 1.96600417852109
+        },
+        "all_outputs_including_predictions": {
+          "samples": 1170,
+          "position_rmse_m": 0.3884226323000428,
+          "heading_rmse_deg": 0.9159891461825345,
+          "position_max_m": 1.98566771997838
+        },
+        "acceptance_fraction": 0.6923076923076923,
+        "reasons": {
+          "accepted": 810,
+          "inconsistentClasses": 354,
+          "insufficientOverlap": 1,
+          "notConverged": 4,
+          "nonMinimumOrDegenerate": 1
+        }
+      },
+      "referenceSeed": {
+        "accepted_measurements": {
+          "samples": 799,
+          "position_rmse_m": 0.281117091808056,
+          "heading_rmse_deg": 0.7626167272520175,
+          "position_max_m": 1.70586289348608
+        },
+        "all_outputs_including_predictions": {
+          "samples": 1170,
+          "position_rmse_m": 0.42892474260360475,
+          "heading_rmse_deg": 1.2905593546041931,
+          "position_max_m": 1.70586289348608
+        },
+        "acceptance_fraction": 0.6829059829059829,
+        "reasons": {
+          "accepted": 799,
+          "inconsistentClasses": 355,
+          "nonMinimumOrDegenerate": 8,
+          "insufficientOverlap": 1,
+          "notConverged": 7
+        }
+      }
+    }
+  },
+  "common_accepted_frames": {
+    "recursive": {
+      "geometric_baseline": {
+        "samples": 597,
+        "position_rmse_m": 0.20041203531050406,
+        "heading_rmse_deg": 0.6102208874132771,
+        "position_max_m": 1.08776794545555
+      },
+      "log_mixture_candidate": {
+        "samples": 597,
+        "position_rmse_m": 0.2756415672516945,
+        "heading_rmse_deg": 0.5889027289390255,
+        "position_max_m": 2.00254801975802
+      },
+      "weighted_overlap_candidate": {
+        "samples": 597,
+        "position_rmse_m": 0.28134573918411476,
+        "heading_rmse_deg": 0.6386324948113145,
+        "position_max_m": 1.96600417852109
+      }
+    },
+    "referenceSeed": {
+      "geometric_baseline": {
+        "samples": 587,
+        "position_rmse_m": 0.2141181582580587,
+        "heading_rmse_deg": 0.6632974185709882,
+        "position_max_m": 2.20828494226168
+      },
+      "log_mixture_candidate": {
+        "samples": 587,
+        "position_rmse_m": 0.24609449612967646,
+        "heading_rmse_deg": 0.5775756170087623,
+        "position_max_m": 1.71447828001758
+      },
+      "weighted_overlap_candidate": {
+        "samples": 587,
+        "position_rmse_m": 0.2518126195866263,
+        "heading_rmse_deg": 0.644991692048993,
+        "position_max_m": 1.70586289348608
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-function report=runMississippiMapMatchingExperiment(outputFolder)
+function report=runMississippiMapMatchingExperiment(outputFolder,options)
 % runMississippiMapMatchingExperiment Evaluate raw coarse D2D pose measurements.
 % No global GNSS/LiDAR observer is run. Wheel/gyro/lateral motion supplies only
 % recursive initial guesses; accepted matching poses are scored without fusion.
@@ -6,6 +6,7 @@ function report=runMississippiMapMatchingExperiment(outputFolder)
 % Rejected frames have no full-pose measurement and are counted separately.
     arguments
         outputFolder (1,1) string="output/mississippi_matching_only_20260919"
+        options.RegistrationConfig (1,1) struct=distributionRegistrationConfig()
     end
     setupVehicleLocalization();
     if ~isfolder(outputFolder),mkdir(outputFolder);end
@@ -22,7 +23,7 @@ function report=runMississippiMapMatchingExperiment(outputFolder)
     modes=["recursive","referenceSeed"];runs=cell(2,1);rows=cell(0,10);
     for k=1:numel(modes)
         result=replayMississippiLocalization(mapFile,sensorFolder,fullfile(outputFolder,modes(k)), ...
-            modes(k),[],MotionInputs=motion);runs{k}=result;
+            modes(k),[],MotionInputs=motion,RegistrationConfig=options.RegistrationConfig);runs{k}=result;
         c=result.calls;
         for population=["accepted_matching_measurements","all_outputs_with_prediction"]
             selected=true(height(c),1);
@@ -37,6 +38,7 @@ function report=runMississippiMapMatchingExperiment(outputFolder)
         'positionMedianM','positionP95M','positionMaximumM','headingRmseDeg','mapXRmseM','mapYRmseM'});
     report=struct('metadata',struct('rawFramesPerMode',height(runs{1}.calls), ...
         'perceptionMode',"coarseProbabilityCloud",'finePerceptionUsed',false, ...
+        'registrationMethod',options.RegistrationConfig.method, ...
         'globalFusionObserverUsed',false,'mapRebuilt',false,'mapFile',mapFile, ...
         'primaryMode',"recursive",'reference',runs{1}.metadata.reference, ...
         'referenceControl',"Every frame starts at reference plus [0.5 m,-0.4 m,2 degrees]; diagnostic only", ...

@@ -1,0 +1,365 @@
+{
+  "passed": 89,
+  "failed": 0,
+  "incomplete": 0,
+  "existing_suites_passed": 74,
+  "candidate_tests_passed": 15,
+  "tests": [
+    {
+      "name": "distributionRegistrationTest/zeroMassComponentsPreserveScoreAndGradient(dimension=xy)",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/zeroMassComponentsPreserveScoreAndGradient(dimension=xyz)",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/energyIsIndependentOfRequestedGradient(dimension=xy)",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/energyIsIndependentOfRequestedGradient(dimension=xyz)",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/analyticGradientIncludesCovarianceRotation",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/recoversKnownPoseAtLargeMapCoordinates",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/classBalanceIsInvariantToSemanticMassScale",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/rejectsUnobservableYaw",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/rejectsNoOverlapAndIncompatibleSemantics",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/supportsSingletonAndRejectsInvalidCovariance",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/rejectsUnsupportedMapExport",
+      "passed": true
+    },
+    {
+      "name": "distributionRegistrationTest/emptyMapProducesRejectedResult",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/oneCorrespondenceRejectsWithoutDimensionError",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/repeatedTargetsPreserveFirstTieAcrossBlocks(repeatedComponents=1)",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/repeatedTargetsPreserveFirstTieAcrossBlocks(repeatedComponents=200)",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/recoversGaussianPoseAtLargeCoordinates",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/ignoresPositiveComponentSamplingMass",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/parallelRoadKeepsPredictedLongitudinalPosition",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/shiftingRoadDensityCannotCreateLongitudinalConstraint",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/conflictingClassesCannotProduceAcceptedPose",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/heightRejectsAnotherFloor",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/compatibleHeightDoesNotPullPlanarPose",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/transformsGeometryConsistentlyBeforeRecordedAttitude",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/requiresMatchingExplicitCalibration",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/exportsCalibrationFromSelectedMapWindow",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/rejectsInvalidSemanticQuality",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/recoversOfflinePitchWithoutAddingPoseStates",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/refusesStationaryCalibrationData",
+      "passed": true
+    },
+    {
+      "name": "geometricRegistrationTest/projectionPreservesCalibrationAndGeometricEvidence",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/projectionRetainsStabilityWithoutChangingMass(dimension=2)",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/projectionRetainsStabilityWithoutChangingMass(dimension=3)",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=negative)",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=aboveOne)",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=nan)",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=infinite)",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=complex)",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=wrongLength)",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=matrix)",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/requiresExplicitMapRepeatability",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/classBalancingDoesNotEraseUniformLowStability",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/preservesAbsoluteReliabilityBetweenClasses",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/stableLandmarksDominateConflictingSameClassLandmarks",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/positiveSamplingMassCannotReplaceStability",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/zeroStabilityDisablesTargets",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/allZeroStabilityRejectsMeasurement",
+      "passed": true
+    },
+    {
+      "name": "repeatabilityRegistrationTest/onlyMapStabilityDiscountsSingleFrameEvidence",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/matchesAnalyticIsotropicLandmarkInformation",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/numericalYawScalingDoesNotChangePhysicalInformation",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/globalRotationTransformsInformationAndRetainsCrossTerms",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/uniformMapRepeatabilityReducesInformation",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/duplicatedSourceComponentsDoNotInventIndependentEvidence",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/roadTangentRemainsUnobservableInDirectionalEvent",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/unvalidatedPartialFlagCannotAuthorizeAnEvent",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/nonconvergedDirectionalGeometryEmitsNoEvent",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/inconsistentPartialClassesEmitsNoEvent",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/directionalInformationAndProjectorUsePhysicalCoordinates",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/filteredWeakDirectionsDoNotLeakIntoExport",
+      "passed": true
+    },
+    {
+      "name": "registrationInformationTest/acceptedPoseCannotOmitOrFakeInformation",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/retainsFullEmpiricalCovarianceAfterTilt",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/emptyAndSingletonHaveDefinedHeightMoments",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/heightReferenceMatchesOfflineCoordinateTransform",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/planarMapDoesNotInventHeight",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/aggregatesWithinAndBetweenPillarHeight",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/heightLiftPreservesTemporalMapXYAndMass",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/spatialGradientIncludesCrossCovariance(poseAxis=x)",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/spatialGradientIncludesCrossCovariance(poseAxis=y)",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/spatialGradientIncludesCrossCovariance(poseAxis=yaw)",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/recoversPlanarPoseWithKnownGlobalHeight",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/missingVerticalReferenceUsesExactXYMarginal",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/explicitXYZRejectsMissingHeight",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/defaultKeepsHeightWithoutEnablingExperimentalMatcher",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/heightDistinguishesIdenticalXYDistributions",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/uncertaintySoftensSmallVerticalMismatch",
+      "passed": true
+    },
+    {
+      "name": "heightProbabilityCloudTest/invalidRetainedCovarianceIsRejected",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/explicitConfigurationSelectsCandidateWithoutChangingDefault",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/analyticDerivativeMatchesCostDifference(poseAxis=1,dimension=2)",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/analyticDerivativeMatchesCostDifference(poseAxis=1,dimension=3)",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/analyticDerivativeMatchesCostDifference(poseAxis=2,dimension=2)",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/analyticDerivativeMatchesCostDifference(poseAxis=2,dimension=3)",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/analyticDerivativeMatchesCostDifference(poseAxis=3,dimension=2)",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/analyticDerivativeMatchesCostDifference(poseAxis=3,dimension=3)",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/observedCurvatureMatchesSecondCostDifference(poseAxis=1)",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/observedCurvatureMatchesSecondCostDifference(poseAxis=2)",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/observedCurvatureMatchesSecondCostDifference(poseAxis=3)",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/existingMapWeightScalesObjectiveOnce",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/metadataDoesNotMultiplyStoredWeightAgain",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/acceptsMapWithWeightsAndNoRedundantRepeatability",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/mapWeightChangesSelectedAlignment",
+      "passed": true
+    },
+    {
+      "name": "weightedNdtObjectiveTest/splitMapComponentsPreserveTheSameField",
+      "passed": true
+    }
+  ]
+}

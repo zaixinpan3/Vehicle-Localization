@@ -18,16 +18,17 @@ function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initia
 % The returned timestamped record is a registration product, not the input
 % contract of the continuous observer. An offline reconstruction must explicitly
 % provide continuous, uniformly informative pose output before using it there.
-% Empty measurement means rejection. Information is the final robust Gaussian
-% model information in physical map-frame [X,Y,psi] coordinates, not an
-% inverse empirically calibrated pose covariance or a density-score Hessian.
+% Empty measurement means rejection. Geometric D2D returns robust Gaussian
+% model information; the opt-in weightedNdt candidate returns overlap-objective
+% curvature. Both use physical map-frame [X,Y,psi] coordinates, and neither
+% is an empirically calibrated inverse pose-error covariance.
     if nargin < 5 || isempty(cfg)
         cfg = struct('perception',perceptionConfig(),'registration',distributionRegistrationConfig());
     end
     assert(isscalar(timestamp) && isfinite(timestamp), 'Expected finite acquisition time.');
-    assert(isfield(cfg.registration,'method') && string(cfg.registration.method)=="geometricD2D", ...
+    assert(isfield(cfg.registration,'method') && ismember(string(cfg.registration.method),["geometricD2D","weightedNdt"]), ...
         'VehicleLocalization:RegistrationInformationUnavailable', ...
-        'Online pose events require geometricD2D with Gaussian pose information.');
+        'Online pose events require a registration method with explicit pose information.');
     startTime = tic;
     cloud = perceiveCoarseProbabilityCloud(frame,cfg.perception);
     perceptionSeconds = toc(startTime);

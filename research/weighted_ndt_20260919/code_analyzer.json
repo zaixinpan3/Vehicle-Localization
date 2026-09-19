@@ -1,0 +1,15 @@
+{
+  "configuration": "factory",
+  "files": [
+    "config/weightedNdtRegistrationConfig.m",
+    "localization/semanticNdtSupport.m",
+    "localization/registerWeightedNdtProbabilityCloud.m",
+    "localization/registerSemanticProbabilityCloud.m",
+    "localization/localizeLidarFrame.m",
+    "scripts/runMississippiMapMatchingExperiment.m",
+    "scripts/replayMississippiLocalization.m",
+    "tests/weightedNdtObjectiveTest.m",
+    "research/weighted_ndt_20260919/checkFinalDispatch.m"
+  ],
+  "findings": []
+}

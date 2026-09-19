@@ -1,0 +1,106 @@
+[
+  {
+    "path": "config/weightedNdtRegistrationConfig.m",
+    "sha256": "16782bf39dceeff14d771898fa0b67e4b6ebc0554589aba7035dd65babca72e0"
+  },
+  {
+    "path": "localization/semanticNdtSupport.m",
+    "sha256": "2633ebba309b3bc6bb5b84654c222476ab35f863059e521974cc9aea08ad0abd"
+  },
+  {
+    "path": "localization/registerWeightedNdtProbabilityCloud.m",
+    "sha256": "6c2e09d22cbe3c1e5939f3fa39ac3d8670aa4f7a676d193b14413ea1f0a9e659"
+  },
+  {
+    "path": "localization/registerSemanticProbabilityCloud.m",
+    "sha256": "72fc6e634456aefbd34041c42b1f61f97aac88ccc3c74959e463ec0837987eb9"
+  },
+  {
+    "path": "localization/localizeLidarFrame.m",
+    "sha256": "8e2fb3577639d7ce64e6949dda191df21f0606fabd1829cd612b7f21b632768e"
+  },
+  {
+    "path": "scripts/runMississippiMapMatchingExperiment.m",
+    "sha256": "d176c3f0cf1830542f9fe3679f923e861b3eaffeb59e134d5704d30874c94ea6"
+  },
+  {
+    "path": "scripts/replayMississippiLocalization.m",
+    "sha256": "15ea6b17c18934fcd4337de8fbbe2a712b5e50ad2e54097cd760ff747c794d5c"
+  },
+  {
+    "path": "tests/weightedNdtObjectiveTest.m",
+    "sha256": "d15187beedd91359f585114664c907ecfb752897133c97360006c269358078a4"
+  },
+  {
+    "path": "output/mississippi_mapping_inspva_20260915/probability_cloud.mat",
+    "sha256": "ad2a55e0b8a0a222432a3a4bd3a8b70f0a92ecd686b19c81b5237ef2657baffd"
+  },
+  {
+    "path": "output/stability_ndt_20260919/full/experiment.mat",
+    "sha256": "5c6afa124a05cb7553baf59446d1a2bdc93959ab39352676a293de3266cc4adb"
+  },
+  {
+    "path": "output/stability_ndt_20260919/full/summary.json",
+    "sha256": "27a3c224f3b0e532aa94376a01bd88567c8031f054b8ffae8685bec3760e6936"
+  },
+  {
+    "path": "output/stability_ndt_20260919/full/metrics.csv",
+    "sha256": "821ef97b6c4ae60c7cf0db489c5b8854388ce3012370058fc27ee396dcb1c7c3"
+  },
+  {
+    "path": "output/stability_ndt_20260919/full/run.log",
+    "sha256": "5f629d234d2366a3ab397139b8dcc43d32fc1627973781c1385ff25d21e3e64d"
+  },
+  {
+    "path": "output/stability_ndt_20260919/full/recursive/calls.csv",
+    "sha256": "8fd4a0f441273f387dac6e57d13a6a1497f82247b0180d985911a33712c9d710"
+  },
+  {
+    "path": "output/stability_ndt_20260919/full/referenceSeed/calls.csv",
+    "sha256": "c315d4d87df8a539d64b6832b9fceedcb3ecb19c4c127ad66efad9048e6e8669"
+  },
+  {
+    "path": "output/stability_ndt_20260919/overlap_full/experiment.mat",
+    "sha256": "f60efb71337bf41203e434e56657a8153926ea8ed264c0fe51a3fd38ee37dcd0"
+  },
+  {
+    "path": "output/stability_ndt_20260919/overlap_full/summary.json",
+    "sha256": "01a5045282400867da216a22021b2e5052483e2490cef46d546d43025b5af45e"
+  },
+  {
+    "path": "output/stability_ndt_20260919/overlap_full/metrics.csv",
+    "sha256": "cc38becb62f3cf8a4aaba80219c4bfa171e4e86336ceb8c4fa7ad5e0de32c000"
+  },
+  {
+    "path": "output/stability_ndt_20260919/overlap_full/run.log",
+    "sha256": "256683048ed1a2d1ee8e63a28e089b784e62443ffced28bdf933268667320dfb"
+  },
+  {
+    "path": "output/stability_ndt_20260919/overlap_full/recursive/calls.csv",
+    "sha256": "0ad4137396792ae12c690db15ffd4cc1d960c2f63dc2ea8990bc27bb6e499f0a"
+  },
+  {
+    "path": "output/stability_ndt_20260919/overlap_full/referenceSeed/calls.csv",
+    "sha256": "a7294acb1b0951f3fdef2bf1a70a04bd580c2f0dcf28099965fc658e98de9a8b"
+  },
+  {
+    "path": "output/stability_ndt_20260919/nll_source/distributionRegistrationConfig.m",
+    "sha256": "b483a627a60dee2bdeecab916792e2d5665d860d6d24aef73be723a60b0fb1b2"
+  },
+  {
+    "path": "output/stability_ndt_20260919/nll_source/semanticNdtSupport.m",
+    "sha256": "cda866a6d29c14f42e58299831f585a3c8cac34273877b3be433a9f8438eff6e"
+  },
+  {
+    "path": "output/stability_ndt_20260919/nll_source/registerSemanticProbabilityCloud.m",
+    "sha256": "b649fb0f972220f11503f6d5ec083ca0ec25987050df2160bdd2dae312d51bc1"
+  },
+  {
+    "path": "output/stability_ndt_20260919/nll_source/localizeLidarFrame.m",
+    "sha256": "32dd0d0bda242d73a6b8e15749e2b604f2fb2094496204db16b84f628c04d2ea"
+  },
+  {
+    "path": "output/stability_ndt_20260919/probe.mat",
+    "sha256": "e19ea83ba402daf14987ea41c199f7eb061144253646f6c1075a08cbfd423af7"
+  }
+]
