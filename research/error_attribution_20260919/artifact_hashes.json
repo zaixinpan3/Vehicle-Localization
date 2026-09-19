@@ -1,0 +1,95 @@
+{
+  "runtimeRevision": "2700c10b414a86b0cb1824144d97c943f980909f",
+  "artifacts": [
+    {
+      "path": "output/matching_refinement_20260919/inputs.mat",
+      "sha256": "fcb197b24c734439ae08508f1b9fcb2ac783c6c25f140c9b30946105e2ff183d",
+      "bytes": 80371959
+    },
+    {
+      "path": "output/matching_refinement_20260919/validated/recursive/report.mat",
+      "sha256": "57a9ab7eae5bf180a65ff289aef347eb9f0730ebcb9503a972025a1fbb1b492d",
+      "bytes": 262652
+    },
+    {
+      "path": "output/matching_refinement_20260919/observer_final/experiment.mat",
+      "sha256": "87232ce6c1c1eafcb1d4c2f9a6fde56a65d5629cf1c9949cf6807792240fc562",
+      "bytes": 4384531
+    },
+    {
+      "path": "output/mississippi_mapping_inspva_20260915/feature_observations.mat",
+      "sha256": "3a4a0d06a8c0f43a9af766714af37899835b3a3c08f3cf08a4bdd437bd575533",
+      "bytes": 11080646
+    },
+    {
+      "path": "output/error_attribution_20260919/aligned_inputs.csv",
+      "sha256": "809ae02da409f315427e5acd541994382eb7e8dbbb4f0d28e897858e7064cd44",
+      "bytes": 291473
+    },
+    {
+      "path": "output/error_attribution_20260919/association_geometry.json",
+      "sha256": "8580022bd91b88d4035250a7ae2a6ca3a8da8c412a064491bac9ef00fb6c036d",
+      "bytes": 114405
+    },
+    {
+      "path": "output/error_attribution_20260919/code_analyzer.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "bytes": 2
+    },
+    {
+      "path": "output/error_attribution_20260919/diagnostics.mat",
+      "sha256": "00bd71dadc27742d105c61b6135929c099b2f9836a96f1a8aee627655aadd560",
+      "bytes": 5391374
+    },
+    {
+      "path": "output/error_attribution_20260919/error_attribution.pdf",
+      "sha256": "63f8532ff60836d582a1bfb97fc96d53bf64c95f210f0c1de70de62f9a64b97a",
+      "bytes": 77002
+    },
+    {
+      "path": "output/error_attribution_20260919/error_attribution.png",
+      "sha256": "26c784e496c99a19226f426004717524a37e43f3a3edccec118d6c8b3b54f080",
+      "bytes": 486354
+    },
+    {
+      "path": "output/error_attribution_20260919/fine_controls.csv",
+      "sha256": "41dbd70b44ac39211b3cf603ce4538d5ea6d577611573c069e98694baa6c7903",
+      "bytes": 29173
+    },
+    {
+      "path": "output/error_attribution_20260919/fine_controls.mat",
+      "sha256": "77a9fd4ebcbe8cdc447ea78754dce087a298bbb8ec3189a936505ae70551ea32",
+      "bytes": 215944
+    },
+    {
+      "path": "output/error_attribution_20260919/frozen_pairs.csv",
+      "sha256": "afa2fff7a66505b837227a06e2c803ac3157a30ff6065ccb7848fd41edc7a1aa",
+      "bytes": 2610
+    },
+    {
+      "path": "output/error_attribution_20260919/matching_controls.csv",
+      "sha256": "28a9a83575c8157909157f91843561504d7d0e50065985d917e1eeabe74863ac",
+      "bytes": 1538527
+    },
+    {
+      "path": "output/error_attribution_20260919/observer_controls.csv",
+      "sha256": "addf0232cfbf6134d3ba3315e6db33f5630bde0ef6f8ca7ffd4ae50448ed6ef9",
+      "bytes": 583
+    },
+    {
+      "path": "output/error_attribution_20260919/observer_inputs.csv",
+      "sha256": "7c87af05d7c353d8d1135f9ac6a771b214ada36b24ca3193a666ca3b06387a88",
+      "bytes": 291447
+    },
+    {
+      "path": "output/error_attribution_20260919/pair_details.csv",
+      "sha256": "55f0f90c5b5703511d3b31abbfdd3de9aa8fea3ee5e4558e1a89764f71121dd1",
+      "bytes": 18738
+    },
+    {
+      "path": "output/error_attribution_20260919/raw_time_fields.json",
+      "sha256": "e1b060b001378b970ba991c1a55bf3e70f5f8081a574333206697e14b3558455",
+      "bytes": 2356
+    }
+  ]
+}

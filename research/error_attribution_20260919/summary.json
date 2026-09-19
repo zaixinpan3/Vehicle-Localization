@@ -1,0 +1,75 @@
+{
+  "productionAllOutputs": {
+    "samples": 1170,
+    "rmseM": 0.18253482477572402,
+    "p95M": 0.328015227217839,
+    "maximumM": 0.844665885966459
+  },
+  "aboveHalfMeterCount": 31,
+  "aboveHalfMeterSquaredErrorShare": 0.34498200248530325,
+  "oracleControlsAreIndependentPerFrame": true,
+  "fineControlFrames": 73,
+  "fineControlReusesMapBuildingObservations": true,
+  "acceptedReplayMaxDifferenceM": 9.33139791123185e-10,
+  "turnRateGroups": [
+    {
+      "minYawRateDegPerS": 0,
+      "maxYawRateDegPerS": 3,
+      "samples": 882,
+      "rmseM": 0.13391817095044622,
+      "p95M": 0.2394143621418706,
+      "maximumM": 0.661314760175685,
+      "squaredErrorShare": 0.40616738857033347
+    },
+    {
+      "minYawRateDegPerS": 3,
+      "maxYawRateDegPerS": 10,
+      "samples": 199,
+      "rmseM": 0.1720421919026951,
+      "p95M": 0.30832859916061933,
+      "maximumM": 0.343252898580959,
+      "squaredErrorShare": 0.15124480205079222
+    },
+    {
+      "minYawRateDegPerS": 10,
+      "maxYawRateDegPerS": null,
+      "samples": 88,
+      "rmseM": 0.4425676485205006,
+      "p95M": 0.7723858411385184,
+      "maximumM": 0.844665885966459,
+      "squaredErrorShare": 0.44258780937887554
+    }
+  ],
+  "lidarMeasurementCommonValid": {
+    "samples": 1165,
+    "rmseM": 0.18233207073166424,
+    "p95M": 0.3280213849221075,
+    "maximumM": 0.844665885549916
+  },
+  "gnssMeasurementCommonValid": {
+    "samples": 1165,
+    "rmseM": 0.06398711174798345,
+    "p95M": 0.12828154856466464,
+    "maximumM": 0.148176428988139
+  },
+  "regions": {
+    "first_peak": {
+      "samples": 21,
+      "rmseM": 0.5284769253402112,
+      "p95M": 0.830379455987143,
+      "maximumM": 0.844665885966459,
+      "longitudinalRmseM": 0.06742109323483562,
+      "lateralRmseM": 0.5241586181020681,
+      "squaredErrorShare": 0.15045063523333055
+    },
+    "second_peak": {
+      "samples": 43,
+      "rmseM": 0.497680484260981,
+      "p95M": 0.7031973437633914,
+      "maximumM": 0.769146959656784,
+      "longitudinalRmseM": 0.45816845127146494,
+      "lateralRmseM": 0.19433871146628634,
+      "squaredErrorShare": 0.27320733132708636
+    }
+  }
+}

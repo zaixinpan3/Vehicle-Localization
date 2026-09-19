@@ -1,0 +1,134 @@
+[
+  {
+    "frame": 92,
+    "timestampDifferenceSeconds": 0.0,
+    "fields": [
+      {
+        "name": "x",
+        "datatype": 7,
+        "offset": 0,
+        "count": 1
+      },
+      {
+        "name": "y",
+        "datatype": 7,
+        "offset": 4,
+        "count": 1
+      },
+      {
+        "name": "z",
+        "datatype": 7,
+        "offset": 8,
+        "count": 1
+      },
+      {
+        "name": "intensity",
+        "datatype": 7,
+        "offset": 16,
+        "count": 1
+      },
+      {
+        "name": "t",
+        "datatype": 6,
+        "offset": 20,
+        "count": 1
+      },
+      {
+        "name": "reflectivity",
+        "datatype": 4,
+        "offset": 24,
+        "count": 1
+      },
+      {
+        "name": "ring",
+        "datatype": 2,
+        "offset": 26,
+        "count": 1
+      },
+      {
+        "name": "ambient",
+        "datatype": 4,
+        "offset": 28,
+        "count": 1
+      },
+      {
+        "name": "range",
+        "datatype": 6,
+        "offset": 32,
+        "count": 1
+      }
+    ],
+    "pointTimeRaw": {
+      "field": "t",
+      "min": 0.0,
+      "max": 99804570.0,
+      "unit": "not asserted from field name alone"
+    }
+  },
+  {
+    "frame": 820,
+    "timestampDifferenceSeconds": 0.0,
+    "fields": [
+      {
+        "name": "x",
+        "datatype": 7,
+        "offset": 0,
+        "count": 1
+      },
+      {
+        "name": "y",
+        "datatype": 7,
+        "offset": 4,
+        "count": 1
+      },
+      {
+        "name": "z",
+        "datatype": 7,
+        "offset": 8,
+        "count": 1
+      },
+      {
+        "name": "intensity",
+        "datatype": 7,
+        "offset": 16,
+        "count": 1
+      },
+      {
+        "name": "t",
+        "datatype": 6,
+        "offset": 20,
+        "count": 1
+      },
+      {
+        "name": "reflectivity",
+        "datatype": 4,
+        "offset": 24,
+        "count": 1
+      },
+      {
+        "name": "ring",
+        "datatype": 2,
+        "offset": 26,
+        "count": 1
+      },
+      {
+        "name": "ambient",
+        "datatype": 4,
+        "offset": 28,
+        "count": 1
+      },
+      {
+        "name": "range",
+        "datatype": 6,
+        "offset": 32,
+        "count": 1
+      }
+    ],
+    "pointTimeRaw": {
+      "field": "t",
+      "min": 0.0,
+      "max": 99859800.0,
+      "unit": "not asserted from field name alone"
+    }
+  }
+]

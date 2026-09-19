@@ -1,0 +1,14 @@
+{
+  "cachedAcceptedPoseReproductionToleranceM": 1e-05,
+  "actualMaximumDifferenceM": 9.33139791123185e-10,
+  "controlCount": 8,
+  "framesPerControl": 1170,
+  "fineControlFrames": 73,
+  "fineVariants": 4,
+  "frozenPairFits": 36,
+  "frozenPairFitsConverged": 36,
+  "observerControls": 4,
+  "matlabFactoryAnalyzerFiles": 4,
+  "matlabFactoryAnalyzerMessages": 0,
+  "productionCodeChanged": false
+}
