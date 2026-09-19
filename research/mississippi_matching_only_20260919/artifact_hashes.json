@@ -1,0 +1,26 @@
+[
+  {
+    "path": "scripts/runMississippiMapMatchingExperiment.m",
+    "sha256": "73925ca9ae2f80cf5348ec19be2b1a3c71c8c9c51a2d818bedcb9712c86aa811"
+  },
+  {
+    "path": "scripts/replayMississippiLocalization.m",
+    "sha256": "326ce282f91fd3645486f4dde018406273bb3d7780bbcd89bae6cba5e867a7bb"
+  },
+  {
+    "path": "config/distributionRegistrationConfig.m",
+    "sha256": "9f2bf61e09ffde1b683ed0bea6ee37bf3256901120050d1e16b8ac97b28de32d"
+  },
+  {
+    "path": "config/coarseSemanticProbabilityCloudConfig.m",
+    "sha256": "bf6bc3abcf37c12bb0790e14b685ce11e109b664cc1647aa468762f9197d2d97"
+  },
+  {
+    "path": "output/mississippi_mapping_inspva_20260915/probability_cloud.mat",
+    "sha256": "ad2a55e0b8a0a222432a3a4bd3a8b70f0a92ecd686b19c81b5237ef2657baffd"
+  },
+  {
+    "path": "output/mississippi_matching_only_20260919/experiment.mat",
+    "sha256": "15bc88d949066682c66f12f9c253d43a11feaeafbfebea583d23374eca533b46"
+  }
+]
