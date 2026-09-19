@@ -1,0 +1,40 @@
+{
+  "samples": 1071,
+  "lidarRmseM": 0.1971479644326047,
+  "gnssAtFusedObserverPointRmseM": 0.06397714936214641,
+  "lidarBodyMeanErrorM": [
+    0.0035457867326668694,
+    -0.030299687970423334
+  ],
+  "gnssBodyMeanErrorM": [
+    -0.023676930328820726,
+    -0.005337385752840023
+  ],
+  "lidarWeightEigenvalueRange": [
+    0.998179524487716,
+    0.9999409936410247
+  ],
+  "lidarWeightEigenvalueMedian": [
+    0.9998924188093844,
+    0.9999202352420697
+  ],
+  "gnssWeightEigenvalueMedian": [
+    0.6656195361132914,
+    0.6911197134628264
+  ],
+  "medianLidarPositionGainPerSecond": [
+    3.9995696752375376,
+    3.999680940968279
+  ],
+  "medianGnssPositionGainPerSecond": [
+    2.6624781444531656,
+    2.7644788538513057
+  ],
+  "errorCorrelationBodyLongitudinal": 0.02553146873199586,
+  "errorCorrelationBodyLateral": 0.3064823083170921,
+  "lidarLagOneErrorCorrelationMapXY": [
+    0.6216001613694647,
+    0.5068747960917998
+  ],
+  "fractionAcceptedLidarFurtherFromReferenceThanAlignedGnss": 0.8272642390289449
+}
