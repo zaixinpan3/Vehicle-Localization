@@ -1,12 +1,13 @@
-function report=runMncavFullObserverExperiment(outputFolder)
+function report=runMncavFullObserverExperiment(outputFolder,options)
 % runMncavFullObserverExperiment Exercise simultaneous and missing sources.
 % Recorded BESTPOS XY supplies the receiver position channel, still INS aided.
 % Evaluation-drive INSPVA positions enter scoring only; a separate drive
-% calibrates the relative receiver output point. Frozen matching/map remain reference
-% assisted. Matching is frozen; frame alignment interpolates real GNSS samples
-% and reports the required future-endpoint wait, without motion extrapolation.
+% calibrates the relative receiver output point. MatchingFolder consumes a raw
+% coarse-perception replay. Frame alignment interpolates real GNSS samples and reports the
+% required future-endpoint wait, without motion extrapolation.
     arguments
-        outputFolder (1,1) string="output/mncav_bestpos_alignment_20260917"
+        outputFolder (1,1) string="output/mncav_coarse_localization_20260918/observer"
+        options.MatchingFolder (1,1) string="output/mncav_coarse_localization_20260918/matching"
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
@@ -16,8 +17,8 @@ function report=runMncavFullObserverExperiment(outputFolder)
     prior=load('output/mncav_inspva_observer_20260915/experiment.mat','lateralDesign');
     lateralDesign=prior.lateralDesign;
     lateral=runLateralVelocityObserver(h,lateralDesign,lateralDesign.cfg);
-    calls=readtable('output/saved_perception_inspva_20260915/calls.csv',TextType="string");
-    calls=calls(calls.mode=="per_frame_zero" & calls.time<=t(end),:);
+    [calls,matching]=readMatchingInputs(options.MatchingFolder);
+    calls=calls(calls.time>=t(1) & calls.time<=t(end),:);
     n=height(calls);information=zeros(3,3,n);
     for k=1:n
         c=calls(k,:);information(:,:,k)=[c.informationXX,c.informationXY,c.informationXPsi; ...
@@ -76,20 +77,23 @@ function report=runMncavFullObserverExperiment(outputFolder)
         'positionMedianM','positionP95M','positionMaximumM','fractionAtMost10cm','headingRmseDeg', ...
         'bothActiveSamples','neitherActiveSamples','runtimeSeconds'});
     report=struct('metadata',struct('gnssSource',"/novatel/oem7/bestpos XY; reported uncertainty projected to UTM; recorded solution types are INS aided", ...
-        'lidarSource',"Frozen INSPVA-map per_frame_zero full-pose measurements", ...
+        'lidarSource',matching.source,'matching',matching, ...
         'inputMetadata',inputMetadata,'synchronization',synchronization, ...
         'evaluation',"INSPVA on native LiDAR frame timestamps, approximately 10 Hz", ...
-        'matchingRerun',false,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
+        'matchingRerun',matching.rerun,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
         'offlineSynchronization',true, ...
         'gnssOutputPointCalibration',cfg.gnss.outputPoint, ...
         'initialization',"Common first LiDAR pose plus wheel/lateral velocity and IMU acceleration; not a cold-start GNSS-only test", ...
-        'limitations',"Same-drive map and per-frame INSPVA matching seeds; shared receiver reference; empirical planar output-point alignment is not a hardware survey; upstream motion preparation offline"), ...
+        'limitations',matching.limitations+"; shared receiver reference; empirical planar output-point alignment is not a hardware survey; upstream motion preparation offline"), ...
         'design',runs{1}.estimate.observer,'metrics',metrics);
     old=load('output/mncav_wheel_only_20260916/calibration/experiment.mat','atNative');
-    [found,index]=ismember(t,old.atNative.time);assert(all(found),'Historical comparison needs exact common timestamps.');
+    [found,index]=ismembertol(t,old.atNative.time,1e-10,DataScale=1);
+    assert(all(found) && numel(unique(index))==numel(t),'Historical comparison needs the same frame timestamps.');
     accepted=lidar.valid;paired=cell(0,9);
     baseline=load('output/mncav_synchronous_bestpos_20260917/experiment.mat','runs');
-    assert(isequal(baseline.runs{1}.estimate.time,t),'Unaligned comparison needs identical frame times.');
+    assert(isequal(size(baseline.runs{1}.estimate.time),size(t)) && ...
+        max(abs(baseline.runs{1}.estimate.time-t))<1e-10,'Unaligned comparison needs the same frame times.');
+    report.metadata.historicalClockToleranceSeconds=1e-10;
     labels=["aligned_bestpos_10hz","unaligned_bestpos_10hz","historical_transport_100hz","raw_lidar"];
     posesToCompare={runs{1}.estimate.pose,baseline.runs{1}.estimate.pose,old.atNative.pose(index,:),lidar.pose};
     for k=1:numel(labels)
@@ -135,6 +139,30 @@ function report=runMncavFullObserverExperiment(outputFolder)
     grid on;title('Declared channel withdrawals from 40 to 60 seconds');
     exportgraphics(fig,fullfile(outputFolder,'comparison.png'),Resolution=160);close(fig);
     disp(metrics(metrics.population=="full",:));
+end
+
+function [calls,metadata]=readMatchingInputs(folder)
+    recorded=jsondecode(fileread(fullfile(folder,'metadata.json')));
+    assert(string(recorded.perceptionMode)=="coarseProbabilityCloud" && recorded.perceptionRerun && ...
+        ~recorded.finePerceptionUsed,'VehicleLocalization:CoarseReplayRequired', ...
+        'MatchingFolder must contain a fresh coarse-only localization replay.');
+    % CSV's decimal formatting can lose microseconds in epoch timestamps.
+    % Keep the MAT result authoritative for clocks, poses and information.
+    saved=load(fullfile(folder,'report.mat'),'report');calls=saved.report.calls;
+    mapCfg=featureMapBuildConfig();root=fileparts(fileparts(mfilename('fullpath')));
+    poses=readFramePoseTable(fullfile(root,'data',mapCfg.poseMatchCsvPath),calls.frame.');
+    assert(max(abs(poses.lidar_stamp_sec-calls.rosStamp))<1e-6,'Replay acquisition stamps differ.');
+    % Use the canonical native-frame clock to avoid subtractive roundoff in
+    % comparisons with previous experiments. No pose value enters the inputs.
+    calls.time=poses.receiver_time_sec;
+    assert(max(abs(calls.time-calls.timeSeconds))<1e-7,'Receiver clock mismatch.');
+    calls.fullPose=logical(calls.accepted);
+    calls.measurementX=calls.x;calls.measurementY=calls.y;calls.measurementPsi=calls.psi;
+    calls{~calls.fullPose,{'measurementX','measurementY','measurementPsi'}}=NaN;
+    metadata=struct('source',"Fresh raw-scan whole-pillar coarse D2D measurements", ...
+        'rerun',true,'folder',folder,'replay',recorded, ...
+        'directionalMeasurementsWithheld',nnz(calls.directionalAccepted), ...
+        'limitations',string(recorded.mapOverlap)+"; "+string(recorded.mode)+" matching initialization");
 end
 
 function m=score(pose,reference)

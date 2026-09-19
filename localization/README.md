@@ -18,9 +18,17 @@ uv run --offline --with rosbags --with numpy --with pandas --with pyproj python 
 
 ```matlab
 setupVehicleLocalization;
-report = runMncavFullObserverExperiment;
+report = runMncavCoarseLocalizationExperiment;
 validation = validateFullLocalizationObserver;
 ```
+
+The complete replay runs raw scans through `localizeLidarFrame` and its
+whole-pillar coarse perception entry only. The existing offline map stays
+fixed. Recursive D2D prediction uses four-wheel speed, gyro and lateral
+velocity plus accepted matches after a single initial pose. No per-frame
+reference pose resets the matcher. `runMncavFullObserverExperiment` can then
+rerun observer scenarios from those coarse matching results; it reads their
+MAT file to preserve timestamp, pose and information-matrix precision.
 
 The default experiment reads `/novatel/oem7/bestpos` in EPSG:32615 instead of
 ODOM XY. The recorded BESTPOS types 54, 55 and 56 are INS-assisted solutions;
@@ -57,10 +65,15 @@ Longitudinal speed remains exclusively wheel derived.
 `prepareWheelMotionInputs` reads wheel rates, steering and IMU with no alternate
 speed fallback. Missing/expired wheel aiding is an error, except the declared
 short stationary startup. The latest output directory is
-`output/mncav_bestpos_alignment_20260917`. Full-frame RMSE is 7.8474 cm;
-on identical accepted frames, fusion is 6.8231 cm versus raw LiDAR 14.8629 cm.
-These remain discrepancies against the shared INSPVA reference in a
-reference-assisted map/matching experiment, not independent absolute accuracy.
+`output/mncav_coarse_localization_20260918`. On 1170 raw scans, recursive D2D
+accepts 1072 full poses. The 1169 motion-covered observer outputs have fused
+position RMSE 10.3445 cm and heading RMSE 0.7062 degrees. GNSS-only position
+RMSE is 8.8252 cm, so fusion does not improve position error on this replay;
+it does improve heading. See the [coarse-only replay report](../research/mncav_coarse_localization_20260918/README.md).
+The earlier 7.8474 cm experiment used stored fine features and per-frame
+reference matching seeds. It is a historical comparison, not an isolated
+coarse-versus-fine test. Both experiments use a same-drive map and shared
+INSPVA reference, rather than independent absolute ground truth.
 
 ## Historical transported full runtime
 

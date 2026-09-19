@@ -324,7 +324,7 @@ are explicit:
 For the complete MnCAV localization experiment, first export BESTPOS with
 `scripts/prepareMncavBestpos.py`, calibrate the relative output point with
 `scripts/calibrateMncavBestposOutputPoint.py` on the separate 12-11-24 drive,
-then run `runMncavFullObserverExperiment` after
+then run `runMncavCoarseLocalizationExperiment` after
 setup. BESTPOS and LiDAR both supply approximately 10 Hz measurements. The
 current observer updates once per synchronized LiDAR frame, without inter-frame
 measurement-pose transport. The recorded BESTPOS types are INS assisted, not
@@ -334,17 +334,21 @@ with steering/IMU compensation. No vehicle-speed or Twist alternative is
 available. Export `wheel_speed_report.csv`, `imu.csv` and `steering.csv` using
 `scripts/extractVehicleReplaySensors.py`; the current full experiment reads
 `output/mncav_wheel_only_20260916/sensors` and writes
-`output/mncav_bestpos_alignment_20260917`. Missing or expired wheel input is an explicit
+`output/mncav_coarse_localization_20260918`. All 1170 scans use fresh whole-pillar
+coarse perception and recursive D2D; online localization never runs point-level
+fine refinement. The offline map remains fixed. Missing or expired wheel input is an explicit
 preparation error. Use `validateFullLocalizationObserver` for the associated
-checks. The [aligned BESTPOS report](research/mncav_bestpos_alignment_20260917/README.md)
-records the independent-drive point correction and matched GNSS/LiDAR position
-gains: full-frame RMSE 7.8474 cm, same accepted-frame fusion/raw-LiDAR RMSE
-6.8231/14.8629 cm. These are reference-assisted replay discrepancies, not
-independent absolute accuracy. Earlier reports retain their historical inputs
-and measurements.
+checks. The [coarse localization report](research/mncav_coarse_localization_20260918/README.md)
+records 1072 accepted poses and fused position RMSE 10.3445 cm over 1169
+motion-covered outputs. GNSS-only position RMSE is 8.8252 cm; fusion improves
+heading but not position in this run. The [aligned BESTPOS report](research/mncav_bestpos_alignment_20260917/README.md)
+documents the retained independent-drive point correction and gains. Its
+historical 7.8474 cm result used fine features and per-frame reference seeds,
+so this is not an isolated comparison of perception modes. The same-drive map
+and shared INSPVA reference do not establish independent absolute accuracy.
 
 The [updated localization video](research/localization_video_20260917/README.md)
-displays this result on aerial imagery with current perception and the paired
+displays the September 17 result on aerial imagery with perception and the paired
 LiDAR comparison. Run `exportLocalizationVideoData`, then the cloud preparation
 and rendering commands in that record. The 1080p/30 fps video repeats actual
 10 Hz outputs and is saved as

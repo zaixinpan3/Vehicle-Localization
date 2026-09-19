@@ -1,0 +1,42 @@
+{
+  "rawScans": 1170,
+  "observerFrames": 1169,
+  "fullPoseMeasurements": 1072,
+  "directionalMeasurements": 0,
+  "minimumAcceptedInformationEigenvalue": 0.5443151491452658,
+  "recursivePredictionMaximumResidualM": 1.7695128917694092e-08,
+  "metricRowsVerified": 21,
+  "maximumMetricResidual": 4.6629367034256575e-15,
+  "observerSourceMaximumRoundoff": {
+    "data/highRate/time": 4.973799150320701e-13,
+    "data/highRate/longitudinalSpeed": 7.833733661755105e-13,
+    "data/gnss/position": 9.313225746154785e-10,
+    "data/gnss/information": 8.185452315956354e-11,
+    "lateral/lateralVelocity": 7.850230882011644e-14,
+    "reference": 9.313225746154785e-10,
+    "cfg/gains": 0.0,
+    "cfg/gnss/positionGain": 0.0
+  },
+  "rejectedFullPosePayloadsAreNaN": true,
+  "sourceMapWasNotRebuilt": true,
+  "fineRefinementCallsInIndependentTrace": 0,
+  "historicalComparison": {
+    "current": {
+      "positionRmseM": 0.10344540054998545,
+      "positionMedianM": 0.06576837411182096,
+      "positionP95M": 0.21069517146583316,
+      "positionMaximumM": 0.4428213693695504,
+      "fractionAtMost10cm": 0.7074422583404619,
+      "headingRmseDeg": 0.7061617160260226
+    },
+    "previous": {
+      "positionRmseM": 0.07847427346629021,
+      "positionMedianM": 0.04615088981394352,
+      "positionP95M": 0.1719131897672819,
+      "positionMaximumM": 0.2687047735668135,
+      "fractionAtMost10cm": 0.8391787852865698,
+      "headingRmseDeg": 0.5401723773675614
+    },
+    "caution": "Fine per-frame reference-seeded historical input versus fresh coarse recursive matching; not an isolated perception comparison"
+  }
+}

@@ -1,0 +1,5 @@
+file,findings
+scripts/runMncavCoarseLocalizationExperiment.m,0
+scripts/runMncavFullObserverExperiment.m,0
+scripts/replayMississippiLocalization.m,0
+scripts/validateFullLocalizationObserver.m,0

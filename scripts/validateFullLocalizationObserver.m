@@ -1,7 +1,7 @@
 function validation=validateFullLocalizationObserver(outputFolder)
 % validateFullLocalizationObserver Check recorded replay and regression scope.
     arguments
-        outputFolder (1,1) string="output/mncav_bestpos_alignment_20260917"
+        outputFolder (1,1) string="output/mncav_coarse_localization_20260918/observer"
     end
     setupVehicleLocalization();
     files=["tests/fullLocalizationObserverTest.m","tests/motionAidedObserverTest.m", ...
