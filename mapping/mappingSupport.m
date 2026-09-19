@@ -233,7 +233,8 @@ classdef mappingSupport
                 assert(flag == 0, 'VehicleLocalization:InvalidCovariance', 'Covariances must be positive definite.');
             end
             if n > 0
-                assert(sum(components.mixtureWeight)>0, 'A nonempty cloud must have positive mass.');
+                assert(sum(components.mixtureWeight)>0, 'VehicleLocalization:ZeroMixtureMass', ...
+                    'A nonempty cloud must have positive mass.');
             end
             if isfield(cloud,'queryRelationship') && cloud.queryRelationship=="exactIntensityNormalization"
                 assert(isfinite(cloud.totalMass) && cloud.totalMass>=0 && ...

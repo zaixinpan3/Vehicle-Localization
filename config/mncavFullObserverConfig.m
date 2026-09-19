@@ -1,11 +1,12 @@
 function cfg=mncavFullObserverConfig()
 % mncavFullObserverConfig Apply independent-drive receiver point calibration.
-% Give either position channel the same nominal 0.25 s correction time scale.
-% The choice is structural, not a sweep against evaluation-reference error.
+% Keep nominal correction bandwidth, with soft information-dependent gains.
+% Geometric LiDAR information is not a calibrated inverse pose-error covariance.
     cfg=fullObserverConfig();
-    cfg.kind="mncav-synchronous-aligned-observer-v3";
+    cfg.kind="mncav-synchronous-aligned-observer-v4";
     cfg.gnss.outputPoint=jsondecode(fileread(fullfile(fileparts(mfilename('fullpath')), ...
         'mncavBestposOutputPoint.json')));
     cfg.gnss.positionGain=cfg.gains(1);
-    cfg.gnss.positionGainDesign="Match the LiDAR position gain; preserve correction bandwidth when either source is missing";
+    cfg.lidar.gainInformationScale=cfg.gnss.gainInformationScale;
+    cfg.gnss.positionGainDesign="Equal nominal position gains and information saturation scales; geometric LiDAR information remains uncalibrated";
 end

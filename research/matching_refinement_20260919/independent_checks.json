@@ -1,0 +1,20 @@
+{
+  "recursive": {
+    "accepted": 1166,
+    "rejected": 4,
+    "minimumInformationEigenvalue": 1.5623472148939155,
+    "maximumSourceAgeSeconds": 0.245300221220781,
+    "causalPredictionAudit": true
+  },
+  "referenceSeed": {
+    "accepted": 1167,
+    "rejected": 3,
+    "minimumInformationEigenvalue": 1.562345465956842,
+    "maximumSourceAgeSeconds": 0.245300221220781,
+    "causalPredictionAudit": true
+  },
+  "noReferenceBasedClipping": true,
+  "scoring": "All outputs retained; rejected matching predictions included",
+  "informationCalibrated": false,
+  "sharedMapAndReceiverReference": true
+}

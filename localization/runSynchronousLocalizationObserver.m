@@ -28,7 +28,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     assert(numel(x)==7 && all(isfinite(x)),'VehicleLocalization:FullInitializationRequired', ...
         'Supply an explicit common initial state.');x=x(:);
     z=zeros(n,7);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
-    yawCorrection=zeros(n,2);biasTrace=zeros(n,1);courseTrace=nan(n,1);
+    yawCorrection=zeros(n,2);biasTrace=zeros(n,2);courseTrace=nan(n,1);
     gnssPosition=nan(n,2);gnssInformation=nan(2,2,n);
     margins=nan(n,1);weights=nan(n,2);gyro=0;rawIntegral=0;bodyIntegral=0;rotationIntegral=0;
     gh=history();lh=history();bias=0;targetBias=0;courseUpdates=0;biasUpdates=0;maximumRate=0;
@@ -43,7 +43,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             meanVy=(lateral.lateralVelocity(k-1)+rawVy)/2;
             delta=rotationStep(gyro,rate,dt);
             rawIntegral=rawIntegral+delta*complex(meanSpeed,meanVy);
-            bodyIntegral=bodyIntegral+delta*complex(meanSpeed,meanVy+part*bias);
+            bodyIntegral=bodyIntegral+delta*complex(meanSpeed+part*real(bias),meanVy+part*imag(bias));
             rotationIntegral=rotationIntegral+delta;gyro=gyro+rate*dt;
         end
         predYaw=x(7)+rate*dt;course=NaN;
@@ -73,16 +73,25 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
                 if abs(B)>.7*(t(k)-lh.time(first))
                     candidate=(displacement-rotation*(rawIntegral-lh.integral(first)))/B;
                     if max(abs([real(candidate),imag(candidate)]))<=cfg.bias.maximumMagnitude
-                        targetBias=imag(candidate);biasUpdates=biasUpdates+1;
+                        % The same displacement identifies both body-velocity
+                        % discrepancies. Retain the longitudinal component
+                        % instead of discarding wheel-speed bias evidence.
+                        targetBias=candidate;biasUpdates=biasUpdates+1;
                     end
                 end
             end
         else
             lh=history();
+            % No new displacement evidence: hold the learned velocity bias.
+            % Continuing toward the last noisy target during a long outage
+            % would change the motion model without a new observation.
+            targetBias=bias;
         end
         oldBias=bias;bias=targetBias+(bias-targetBias)*exp(-dt/cfg.bias.timeConstant);
-        vy=rawVy+part*bias;betaRate=0;
-        if dt>0,betaRate=part*(bias-oldBias)/dt*speed/max(speed^2+vy^2,1);end
+        vx=speed+part*real(bias);vy=rawVy+part*imag(bias);betaRate=0;
+        if dt>0
+            betaRate=part/dt*(imag(bias-oldBias)*vx-real(bias-oldBias)*vy)/max(vx^2+vy^2,1);
+        end
         q=h.yawRate(k)+lateral.sideSlipAngleRate(k)+betaRate;maximumRate=max(maximumRate,abs(q));
         Wl=weight(L,k,cfg.lidar.gainInformationScale,3);
         yaw=predYaw;
@@ -103,7 +112,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         end
         K=cfg.gnss.positionGain*Wg+cfg.gains(1)*Wl(1:2,1:2);
         R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
-        velocity=R*[speed;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
+        velocity=R*[vx;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
         A=[(1+dt*cfg.gains(2))*eye(2),-dt*eye(2); ...
             -dt*q^2*eye(2),(1+dt*cfg.gains(3))*eye(2)-2*dt*q*J];
         va=A\[x([2,5])+dt*cfg.gains(2)*velocity;x([3,6])+dt*cfg.gains(3)*acceleration];
@@ -117,14 +126,17 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         if L.valid(k),correction(k,3:4)=(cfg.gains(1)*Wl(1:2,1:2)*(L.values(k,1:2).'-p)).';weights(k,2)=min(eig(Wl));end
         alpha=min(eig(K));q2=cfg.maximumTrackAngleRate^2;
         margins(k)=min(eig([2*alpha,-1,0;-1,2*cfg.gains(2),-(1+q2);0,-(1+q2),2*cfg.gains(3)]));
-        z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));biasTrace(k)=part*bias;courseTrace(k)=course;
+        z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));
+        biasTrace(k,:)=part*[real(bias),imag(bias)];courseTrace(k)=course;
     end
     estimate=struct('time',t,'z',z,'onlineZ',z,'pose',[z(:,[1,4]),wrap(z(:,7))], ...
         'position',z(:,[1,4]),'velocity',z(:,[2,5]),'acceleration',z(:,[3,6]), ...
         'heading',wrap(z(:,7)),'headingUnwrapped',z(:,7),'lateral',lateral,'observer',design);
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition,'gnssInformationAtObserverPoint',gnssInformation, ...
-        'yawCorrection',yawCorrection,'lidarVelocityBias',biasTrace,'gnssDerivedHeading',courseTrace, ...
+        'yawCorrection',yawCorrection,'lidarVelocityBias',biasTrace(:,2), ...
+        'lidarLongitudinalVelocityBias',biasTrace(:,1),'gnssDerivedHeading',courseTrace, ...
+        'motionBiasSource',"Past accepted LiDAR displacement versus wheel/gyro/lateral integration; held without LiDAR", ...
         'minimumWeights',weights,'translationDissipationMargin',margins,'gnssCourseUpdates',courseUpdates, ...
         'lidarBiasUpdates',biasUpdates,'maximumTrackAngleRate',maximumRate, ...
         'rateEnvelopeSatisfied',maximumRate<=cfg.maximumTrackAngleRate,'stateResets',0, ...

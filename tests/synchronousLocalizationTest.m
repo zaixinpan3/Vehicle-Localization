@@ -33,6 +33,24 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             testCase.verifyEqual(r.position(:,1),8*r.time,AbsTol=1e-10);
             testCase.verifyEqual(r.diagnostics.mode,zeros(21,1));
         end
+        function missingDisplacementsCannotContinueLearningVelocityBias(testCase)
+            f=biasGap();r=run(f);
+            testCase.verifyGreaterThan(r.diagnostics.lidarVelocityBias(40),0);
+            testCase.verifyEqual(r.diagnostics.lidarVelocityBias(41:end), ...
+                repmat(r.diagnostics.lidarVelocityBias(40),21,1),AbsTol=0);
+            testCase.verifyEqual(r.diagnostics.mode(41:end),zeros(21,1));
+        end
+        function learnedWheelBiasReducesDriftWithoutAbsoluteMeasurements(testCase)
+            f=biasGap();f.data.highRate.longitudinalSpeed(:)=8.4;
+            f.data.lidar.pose(:,2)=0;f.cfg.initialState(2)=8.4;
+            corrected=run(f);f.cfg.bias.enabled=false;uncorrected=run(f);
+            testCase.verifyLessThan(corrected.diagnostics.lidarLongitudinalVelocityBias(40),-.1);
+            testCase.verifyEqual(corrected.diagnostics.lidarLongitudinalVelocityBias(41:end), ...
+                repmat(corrected.diagnostics.lidarLongitudinalVelocityBias(40),21,1),AbsTol=0);
+            testCase.verifyLessThan(abs(corrected.position(end,1)-48), ...
+                .75*abs(uncorrected.position(end,1)-48));
+            testCase.verifyFalse(corrected.diagnostics.referenceUsed);
+        end
         function noFutureFrameChangesThePast(testCase)
             f=fixture();a=run(f);f.data.gnss.position(12:end,:)=100;f.data.lidar.pose(12:end,:)=100;b=run(f);
             testCase.verifyEqual(a.z(1:11,:),b.z(1:11,:),AbsTol=0);
@@ -124,4 +142,14 @@ function f=unaligned()
     g=(-.01:.02:2.01).';n=numel(g);
     f.data.gnss=struct('time',g,'position',[8*g,zeros(n,1)],'valid',true(n,1), ...
         'information',repmat(1e6*eye(2),1,1,n),'delay',0);
+end
+
+function f=biasGap()
+    f=fixture();t=(0:.1:6).';z=zeros(size(t));n=numel(t);
+    f.data=struct('highRate',struct('time',t,'longitudinalSpeed',8+z, ...
+        'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z), ...
+        'lidar',struct('time',t,'pose',[8*t,.2*t,z],'valid',t<4, ...
+        'information',repmat(1e6*eye(3),1,1,n),'delay',0));
+    f.lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
+    f.cfg.bias.enabled=true;f.cfg.bias.window=1;
 end

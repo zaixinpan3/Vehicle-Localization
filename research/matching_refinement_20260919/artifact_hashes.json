@@ -1,0 +1,98 @@
+[
+  {
+    "path": "config/distributionRegistrationConfig.m",
+    "sha256": "346b22677ea46ab5f391c97d6b017d1133f5f375a40873e9b2498c690b2be566"
+  },
+  {
+    "path": "config/fullObserverConfig.m",
+    "sha256": "d5c04b1ae511065444dab7080da2dfeb259088a40cf7ab3a163743be97c5a372"
+  },
+  {
+    "path": "config/mncavFullObserverConfig.m",
+    "sha256": "173a4b8372a1d9406fe86b753edcd7873374c24cf1bf941c58c5c87f5d734d41"
+  },
+  {
+    "path": "localization/localizeLidarFrame.m",
+    "sha256": "0c03b4c3b17c7fab4a0075da9c6ce9a8e44b8f2618a001fd041a3fdc81a471be"
+  },
+  {
+    "path": "localization/registerSemanticProbabilityCloud.m",
+    "sha256": "6e65a5f71c5a73a3148ff7a830ce8ae382710abadf85908ea01748af6b1531e4"
+  },
+  {
+    "path": "localization/registrationSupport.m",
+    "sha256": "cd2735ac353fa8e936c16ca49575deb83d9efa39438a7801c50568707fcfb814"
+  },
+  {
+    "path": "localization/runSynchronousLocalizationObserver.m",
+    "sha256": "db282ea2ba4a1f33c5900321a0cdad2c44aa0d6c518fc9bdf6481f68636d258b"
+  },
+  {
+    "path": "mapping/mappingSupport.m",
+    "sha256": "eb8ff8ec6e77c563ad7afddd6636a3767dd17af36c6db7d2029b1a93418fbcad"
+  },
+  {
+    "path": "scripts/replayMississippiLocalization.m",
+    "sha256": "e088d9327b5ea27e45fdb670d622ed9d62369ce42830e3c1b3c702283770822f"
+  },
+  {
+    "path": "scripts/runMississippiMapMatchingExperiment.m",
+    "sha256": "8f16476dfbdfcb113e1ee70dc74a6fea946968fab32ba50673d3da73314aabe3"
+  },
+  {
+    "path": "tests/geometricRegistrationTest.m",
+    "sha256": "30bfe4baecafd8d8850a710861f1caad1627a221563f6b8cc44298e78ff8fb63"
+  },
+  {
+    "path": "tests/registrationInformationTest.m",
+    "sha256": "4f6c41ae98b652c0a2f5a9f6abfa7e77358100f6f731a35d5a202eb0559a6a4a"
+  },
+  {
+    "path": "tests/repeatabilityRegistrationTest.m",
+    "sha256": "d502b968391c6336e53fd64f7ca4458d9498fb7b554d86a141ff0b407f5f2144"
+  },
+  {
+    "path": "tests/synchronousLocalizationTest.m",
+    "sha256": "27b196978d84857711d376da3a0430b3222adfeee32d1dc891d930ee97339cb1"
+  },
+  {
+    "path": "config/localizationSourceWindowConfig.m",
+    "sha256": "b3c702c8ef533b9f5699420d558d1cb140fc891cc2b0e951eeee96708789b2c8"
+  },
+  {
+    "path": "localization/updateLocalizationSourceWindow.m",
+    "sha256": "9e6efa8b16b85a1c25a755842a0dc6cedc252235dc034d4f6e83191a458b5d25"
+  },
+  {
+    "path": "research/matching_refinement_20260919/exportValidation.m",
+    "sha256": "c342a0c909178551542fec1d98b19f7d9a2246f9c798f44ae2d323d49283cdab"
+  },
+  {
+    "path": "tests/localizationSourceWindowTest.m",
+    "sha256": "5f1cb7b6fa8552b8eaea63302e485d1ceccc84518b8f346f8d1279aad77e9083"
+  },
+  {
+    "path": "research/matching_refinement_20260919/analyze_results.py",
+    "sha256": "de2f6cd23646140502c6bb824b093dc7ddcc150891f2bb40609e89c21f687f76"
+  },
+  {
+    "path": "config/coarseSemanticProbabilityCloudConfig.m",
+    "sha256": "bf6bc3abcf37c12bb0790e14b685ce11e109b664cc1647aa468762f9197d2d97"
+  },
+  {
+    "path": "output/mississippi_mapping_inspva_20260915/probability_cloud.mat",
+    "sha256": "ad2a55e0b8a0a222432a3a4bd3a8b70f0a92ecd686b19c81b5237ef2657baffd"
+  },
+  {
+    "path": "output/matching_refinement_20260919/validated/experiment.mat",
+    "sha256": "4d78001a19e4cbd55095578dd4a439f3544f78b1cd9fee01d5d26db69d9e57af"
+  },
+  {
+    "path": "output/matching_refinement_20260919/observer_final/experiment.mat",
+    "sha256": "87232ce6c1c1eafcb1d4c2f9a6fde56a65d5629cf1c9949cf6807792240fc562"
+  },
+  {
+    "path": "output/matching_refinement_20260919/validated_comparison.png",
+    "sha256": "3324363342cdf8c2f96593407509e105df27442058a5fc3358cc66d27780fe4a"
+  }
+]

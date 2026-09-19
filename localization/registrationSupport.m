@@ -5,6 +5,19 @@ classdef registrationSupport
 % Example: cloud = registrationSupport.projectSemanticProbabilityCloud(cloud,3).
 
     methods (Static)
+        function status = validateRegistrationCalibration(fixedCloud,movingCloud)
+        % Require matching explicit extrinsic provenance for map/source/history.
+            assert(isfield(fixedCloud,'frameCalibration') && isfield(movingCloud,'frameCalibration'), ...
+                'VehicleLocalization:MissingCalibration','Both clouds require frameCalibration.');
+            fixed=validateLidarFrameCalibration(fixedCloud.frameCalibration);
+            moving=validateLidarFrameCalibration(movingCloud.frameCalibration);
+            same=norm(fixed.rotation-moving.rotation,'fro')<1e-8 && ...
+                norm(fixed.translation-moving.translation)<1e-8;
+            assert(same,'VehicleLocalization:CalibrationMismatch', ...
+                'Map and source require the same frame calibration; rebuild the map with the selected transform.');
+            status="verifiedTransform";
+        end
+
         function projected = projectSemanticProbabilityCloud(cloud, dimension)
         % projectSemanticProbabilityCloud: Select XYZ or its exact XY marginal.
         % Mixture mass is unchanged. Height is a normalized conditional density,
@@ -40,7 +53,7 @@ classdef registrationSupport
         % Auto uses the XY marginal if height or the reference is unavailable.
             fixed = mappingSupport.validateSemanticProbabilityCloud(fixedCloud);
             moving = mappingSupport.validateSemanticProbabilityCloud(movingCloud);
-            calibrationStatus=validateRegistrationCalibration(fixedCloud,movingCloud);
+            calibrationStatus=registrationSupport.validateRegistrationCalibration(fixedCloud,movingCloud);
             mode = "xy";
             translation = NaN;
             heightSd = 0.20;
@@ -217,19 +230,6 @@ end
 function available=hasHeight(components)
     available=size(components.mean,2)==3 || ...
         (isfield(components,'heightAvailable') && all(components.heightAvailable));
-end
-
-function status = validateRegistrationCalibration(fixedCloud,movingCloud)
-% Require explicit calibration provenance from both current cloud producers.
-    assert(isfield(fixedCloud,'frameCalibration') && isfield(movingCloud,'frameCalibration'), ...
-        'VehicleLocalization:MissingCalibration','Both clouds require frameCalibration.');
-    fixed=validateLidarFrameCalibration(fixedCloud.frameCalibration);
-    moving=validateLidarFrameCalibration(movingCloud.frameCalibration);
-    same=norm(fixed.rotation-moving.rotation,'fro')<1e-8 && ...
-        norm(fixed.translation-moving.translation)<1e-8;
-    assert(same,'VehicleLocalization:CalibrationMismatch', ...
-        'Map and source require the same frame calibration; rebuild the map with the selected transform.');
-    status="verifiedTransform";
 end
 
 function [energy, gradient] = spatialGaussianOverlap(fixed, moving, pose)

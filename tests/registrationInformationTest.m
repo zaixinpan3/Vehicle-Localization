@@ -37,12 +37,12 @@ classdef registrationInformationTest < matlab.unittest.TestCase
             testCase.verifyEqual(second.information,transform*first.information*transform.','AbsTol',1e-7);
             testCase.verifyGreaterThan(norm(first.information(1:2,3)),1);
         end
-        function uniformMapRepeatabilityReducesInformation(testCase)
+        function redundantMapRepeatabilityDoesNotRescaleInformation(testCase)
             cloud=poles(); fixed=cloud;
             fixed.components.repeatability=.25*ones(4,1);
             first=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
             second=registerSemanticProbabilityCloud(fixed,cloud,[0 0 0]);
-            testCase.verifyEqual(second.information,.25*first.information,'AbsTol',1e-12);
+            testCase.verifyEqual(second.information,first.information,'AbsTol',1e-12);
         end
         function duplicatedSourceComponentsDoNotInventIndependentEvidence(testCase)
             cloud=poles(); moving=cloud; c=cloud.components;

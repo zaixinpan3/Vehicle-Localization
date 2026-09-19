@@ -1,4 +1,4 @@
-function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initialPose, timestamp, cfg)
+function [measurement, result, history] = localizeLidarFrame(frame, localMapCloud, initialPose, timestamp, cfg, history, motionPose)
 % localizeLidarFrame: Online pillar perception -> local D2D -> observer event.
 % localMapCloud is one selected/cached window from temporalMapToProbabilityCloud.
 % initialPose is [mapX mapY yaw] in meters/radians, timestamp is acquisition
@@ -18,24 +18,39 @@ function [measurement, result] = localizeLidarFrame(frame, localMapCloud, initia
 % The returned timestamped record is a registration product, not the input
 % contract of the continuous observer. An offline reconstruction must explicitly
 % provide continuous, uniformly informative pose output before using it there.
-% Empty measurement means rejection. Geometric D2D returns robust Gaussian
-% model information; the opt-in weightedNdt candidate returns overlap-objective
-% curvature. Both use physical map-frame [X,Y,psi] coordinates, and neither
-% is an empirically calibrated inverse pose-error covariance.
+% Optional history and cumulative wheel/gyro motionPose enable a causal
+% three-scan XY source window. Pass returned history into the next call. Never
+% use previous registration poses as this odometry input. Without motionPose
+% the call uses the current scan. The window introduces no look-ahead delay.
+% Empty measurement means rejection. Exported robust Gaussian information
+% uses physical map-frame [X,Y,psi] coordinates and is not empirically calibrated.
     if nargin < 5 || isempty(cfg)
         cfg = struct('perception',perceptionConfig(),'registration',distributionRegistrationConfig());
     end
     assert(isscalar(timestamp) && isfinite(timestamp), 'Expected finite acquisition time.');
-    assert(isfield(cfg.registration,'method') && ismember(string(cfg.registration.method),["geometricD2D","weightedNdt"]), ...
+    if nargin<6,history=[];end
+    if nargin<7,motionPose=[];end
+    assert(isfield(cfg.registration,'method') && string(cfg.registration.method)=="geometricD2D", ...
         'VehicleLocalization:RegistrationInformationUnavailable', ...
         'Online pose events require a registration method with explicit pose information.');
     startTime = tic;
     cloud = perceiveCoarseProbabilityCloud(frame,cfg.perception);
     perceptionSeconds = toc(startTime);
     registrationStart = tic;
-    result = registerSemanticProbabilityCloud(localMapCloud,cloud,initialPose,cfg.registration);
+    matchingCloud=cloud;window=struct('frameCount',1,'spanSeconds',0,'dimension',2);
+    if ~isempty(motionPose)
+        assert(string(cfg.registration.heightMode)=="xy", ...
+            'VehicleLocalization:WindowRequiresXY','The source window requires XY registration.');
+        windowCfg=localizationSourceWindowConfig();
+        if isfield(cfg,'sourceWindow'),windowCfg=cfg.sourceWindow;end
+        [matchingCloud,history,window]=updateLocalizationSourceWindow(cloud,timestamp,motionPose,history,windowCfg);
+    else
+        history=[];
+    end
+    result = registerSemanticProbabilityCloud(localMapCloud,matchingCloud,initialPose,cfg.registration);
     result.perceptionSeconds = perceptionSeconds;
     result.registrationSeconds = toc(registrationStart);
     result.probabilityCloud = cloud;
+    result.sourceWindow=window;
     measurement = registrationSupport.registrationPoseMeasurement(result,timestamp);
 end

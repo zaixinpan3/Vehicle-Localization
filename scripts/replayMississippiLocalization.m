@@ -22,12 +22,13 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         options.MotionInputs (1,1) struct = struct()
         options.ParameterFile (1,1) string = "output/mncav_interface_audit_20260916/vehicle_parameters.json"
         options.RegistrationConfig (1,1) struct = distributionRegistrationConfig()
+        options.SourceWindowConfig (1,1) struct = localizationSourceWindowConfig()
     end
     root=fileparts(fileparts(mfilename('fullpath')));
     if ~isfolder(outputFolder), mkdir(outputFolder); end
     mapCfg=featureMapBuildConfig();
     pcfg=perceptionConfig("Mississippi");
-    cfg=struct('perception',pcfg,'registration',options.RegistrationConfig);
+    cfg=struct('perception',pcfg,'registration',options.RegistrationConfig,'sourceWindow',options.SourceWindowConfig);
     matPath=fullfile(root,'data',mapCfg.pointCloudMatPath);
     posePath=fullfile(root,'data',mapCfg.poseMatchCsvPath);
     [~,frameCount]=loadPointCloudFrame(matPath,1);
@@ -98,8 +99,8 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     for k=1:n, deadReckoning(k,:)=compose(state,motion(k,:)); end
     cfg.registration.heightMode="xy";
     radius=100; rows=cell(n,32); maxTimestampDifference=0;
-    store=matfile(matPath); frameBlock=[]; firstInBlock=0;
-    diskBlocks=zeros(0,3);
+    store=matfile(matPath); frameBlock=[]; firstInBlock=0;sourceHistory=[];
+    diskBlocks=zeros(0,3);candidatePoses=zeros(n,3);windowDetails=zeros(n,3);
     for k=1:n
         if isempty(frameBlock) || k>=firstInBlock+numel(frameBlock)
             firstInBlock=k; lastInBlock=min(n,k+options.FrameBlockSize-1);
@@ -122,7 +123,9 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         timer=tic; selectionTimer=tic;
         local=selectMap(cloud,predicted,radius);
         selectionSeconds=toc(selectionTimer);
-        [event,result]=localizeLidarFrame(frame,local,predicted,scanTime(k),cfg);
+        [event,result,sourceHistory]=localizeLidarFrame(frame,local,predicted,scanTime(k),cfg,sourceHistory,motion(k,:));
+        candidatePoses(k,:)=result.poseXYTheta;
+        windowDetails(k,:)=[result.sourceWindow.frameCount,result.sourceWindow.spanSeconds,result.sourceWindow.componentCount];
         elapsed=toc(timer);
         assert((result.accepted || result.directionalAccepted)==~isempty(event),'Acceptance/event mismatch.');
         state=predicted;
@@ -152,6 +155,8 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         end
     end
     report.calls=callTable(rows);
+    report.candidatePoses=array2table([frameIndices(:),candidatePoses],VariableNames={'frame','x','y','psi'});
+    report.sourceWindows=array2table([frameIndices(:),windowDetails],VariableNames={'frame','scans','spanSeconds','components'});
     report.diskBlocks=array2table(diskBlocks,'VariableNames',{'firstQuery','lastQuery','seconds'});
     report.deadReckoning=array2table([frameIndices(:),scanTime-scanTime(1),deadReckoning], ...
         'VariableNames',{'frame','timeSeconds','x','y','psi'});
@@ -160,6 +165,8 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         'initialOffset',offset,'mapCropRadiusM',radius,'mapComponents',cloud.components.numComponents, ...
         'mapPreparationSeconds',mapPreparationSeconds,'features',pcfg.featureNames, ...
         'heightMode',"xy",'registrationMethod',cfg.registration.method, ...
+        'sourceWindow',cfg.sourceWindow, ...
+        'sourceWindowMotion',"Causal relative wheel/gyro/lateral odometry; no matching pose is reused in source geometry", ...
         'poseState',"X,Y,psi",'motionSource',motionSource, ...
         'motionEndHoldSeconds',motionEndHoldSeconds, ...
         'clockSource',"INSPVA receiver GPS seconds interpolated on ROS stamp; edge extrapolation only", ...
@@ -176,6 +183,8 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         'matlabVersion',version,'computationalThreads',maxNumCompThreads);
     report.summary=summarize(report.calls,deadReckoning,poseReference);
     writetable(report.calls,fullfile(outputFolder,'calls.csv'));
+    writetable(report.candidatePoses,fullfile(outputFolder,'candidate_poses.csv'));
+    writetable(report.sourceWindows,fullfile(outputFolder,'source_windows.csv'));
     writetable(report.diskBlocks,fullfile(outputFolder,'disk_blocks.csv'));
     writetable(report.deadReckoning,fullfile(outputFolder,'dead_reckoning.csv'));
     writeJson(fullfile(outputFolder,'metadata.json'),report.metadata);

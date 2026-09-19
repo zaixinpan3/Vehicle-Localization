@@ -1,0 +1,3 @@
+variant,positionRmseM,positionP95M,positionMaximumM
+almost_saturated_lidar_gain,0.110720932542544,0.193248381270369,0.516599904272898
+lateral_bias_only_both_outage,0.465606301944402,1.34327062525354,1.44885726012885

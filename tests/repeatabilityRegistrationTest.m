@@ -1,5 +1,5 @@
 classdef repeatabilityRegistrationTest < matlab.unittest.TestCase
-% repeatabilityRegistrationTest Map stability affects geometric pose evidence.
+% repeatabilityRegistrationTest Stored map mass is the sole stability prior.
     properties (TestParameter)
         dimension = {2,3}
         invalidRepeatability = struct('negative',[-.1;ones(5,1)], ...
@@ -22,97 +22,78 @@ classdef repeatabilityRegistrationTest < matlab.unittest.TestCase
             testCase.verifyEqual(projected.components.repeatability,(1:6).'/6,'AbsTol',0);
             testCase.verifyEqual(projected.components.mixtureWeight,cloud.components.mixtureWeight,'AbsTol',0);
         end
-        function rejectsMalformedStability(testCase,invalidRepeatability)
+        function rejectsMalformedStabilityMetadata(testCase,invalidRepeatability)
             cloud=distributionRegistrationTest.exampleCloud();
             cloud.components.repeatability=invalidRepeatability;
             testCase.verifyError(@() registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]), ...
                 'VehicleLocalization:InvalidRepeatability');
         end
-        function requiresExplicitMapRepeatability(testCase)
-            moving=distributionRegistrationTest.exampleCloud();
-            fixed=moving; fixed.components=rmfield(fixed.components,'repeatability');
-            testCase.verifyError(@() registerSemanticProbabilityCloud(fixed,moving,[0 0 0]), ...
-                'VehicleLocalization:MissingRepeatability');
+        function storedWeightsDoNotRequireRedundantRepeatability(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            fixed=cloud;fixed.components=rmfield(fixed.components,'repeatability');
+            result=registerSemanticProbabilityCloud(fixed,cloud,[.1 .1 .01]);
+            testCase.verifyTrue(result.accepted,result.reason);
+            testCase.verifyEqual(result.poseXYTheta,[0 0 0],AbsTol=1e-4);
         end
-        function classBalancingDoesNotEraseUniformLowStability(testCase)
+        function changingMetadataCannotDoubleDiscountMapMass(testCase)
             cloud=distributionRegistrationTest.exampleCloud();
             unit=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
-            fixed=cloud; fixed.components.repeatability=.25*ones(6,1);
-            low=registerSemanticProbabilityCloud(fixed,cloud,[0 0 0]);
-            testCase.verifyTrue(low.accepted,low.reason);
-            testCase.verifyEqual(low.scaledCurvature,.25*unit.scaledCurvature,'AbsTol',1e-12);
-            testCase.verifyEqual(low.similarity,.25*unit.similarity,'AbsTol',1e-12);
-            testCase.verifyEqual(low.correspondences.weight,.25*unit.correspondences.weight,'AbsTol',1e-12);
+            fixed=cloud;fixed.components.repeatability=zeros(6,1);
+            actual=registerSemanticProbabilityCloud(fixed,cloud,[0 0 0]);
+            testCase.verifyEqual(actual.information,unit.information,AbsTol=0);
+            testCase.verifyEqual(actual.similarity,unit.similarity,AbsTol=0);
+            testCase.verifyEqual(actual.correspondences.weight,unit.correspondences.weight,AbsTol=0);
         end
-        function preservesAbsoluteReliabilityBetweenClasses(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            fixed=cloud; fixed.components.repeatability=ones(6,1);
-            fixed.components.repeatability(fixed.components.semanticName=="pole")=.25;
-            result=registerSemanticProbabilityCloud(fixed,cloud,[0 0 0]);
-            pairs=result.correspondences;
-            testCase.verifyEqual(sum(pairs.weight(pairs.semanticName=="pole")),1/12,'AbsTol',1e-12);
-            testCase.verifyEqual(sum(pairs.weight(pairs.semanticName=="curb")),1/3,'AbsTol',1e-12);
-            testCase.verifyEqual(result.similarity,.75,'AbsTol',1e-12);
+        function existingPriorResolvesAmbiguousLandmarks(testCase)
+            [moving,fixed]=ambiguousPoles();
+            first=registerSemanticProbabilityCloud(fixed,moving,[.3 0 0]);
+            fixed.components.mixtureWeight=flipud(fixed.components.mixtureWeight);
+            second=registerSemanticProbabilityCloud(fixed,moving,[.3 0 0]);
+            testCase.verifyTrue(first.accepted,first.reason);
+            testCase.verifyTrue(second.accepted,second.reason);
+            testCase.verifyEqual(first.poseXYTheta,[0 0 0],AbsTol=1e-4);
+            testCase.verifyEqual(second.poseXYTheta,[.6 0 0],AbsTol=1e-4);
+            testCase.verifyEqual(first.correspondences.target,(1:4).');
+            testCase.verifyEqual(second.correspondences.target,(5:8).');
         end
-        function stableLandmarksDominateConflictingSameClassLandmarks(testCase)
-            [moving,fixed]=conflictingPoles();
-            equal=registerSemanticProbabilityCloud(fixed,moving,[0 0 0]);
-            fixed.components.repeatability=[ones(4,1);.1*ones(4,1)];
-            stable=registerSemanticProbabilityCloud(fixed,moving,[0 0 0]);
-            fixed.components.repeatability=flipud(fixed.components.repeatability);
-            swapped=registerSemanticProbabilityCloud(fixed,moving,[0 0 0]);
-            testCase.verifyTrue(stable.accepted,stable.reason);
-            testCase.verifyTrue(swapped.accepted,swapped.reason);
-            testCase.verifyEqual(equal.poseXYTheta,[.3 0 0],'AbsTol',2e-4);
-            testCase.verifyLessThan(abs(stable.poseXYTheta(1)),.08);
-            testCase.verifyLessThan(abs(swapped.poseXYTheta(1)-.6),.08);
-            testCase.verifyEqual(stable.poseXYTheta(2:3),[0 0],'AbsTol',1e-8);
-            testCase.verifyEqual(stable.correspondences.weight(1)/stable.correspondences.weight(5),10,'AbsTol',1e-12);
-            testCase.verifyEqual(stable.correspondences.robustWeight,stable.correspondences.weight./ ...
-                (1+stable.correspondences.squaredStandardizedResidual/2.5^2),'AbsTol',1e-12);
+        function commonPriorScaleCannotChangeTheSolutionOrInformation(testCase)
+            [moving,fixed]=ambiguousPoles();
+            first=registerSemanticProbabilityCloud(fixed,moving,[.3 0 0]);
+            fixed.components.mixtureWeight=1e-200*fixed.components.mixtureWeight;
+            second=registerSemanticProbabilityCloud(fixed,moving,[.3 0 0]);
+            testCase.verifyEqual(second.poseXYTheta,first.poseXYTheta,AbsTol=1e-12);
+            testCase.verifyEqual(second.information,first.information,AbsTol=1e-10);
         end
-        function positiveSamplingMassCannotReplaceStability(testCase)
-            [moving,fixed]=conflictingPoles();
-            fixed.components.repeatability=[ones(4,1);.1*ones(4,1)];
-            before=registerSemanticProbabilityCloud(fixed,moving,[0 0 0]);
-            fixed.components.mixtureWeight=10.^(-4:3).';
-            after=registerSemanticProbabilityCloud(fixed,moving,[0 0 0]);
-            testCase.verifyEqual(after.poseXYTheta,before.poseXYTheta,'AbsTol',0);
-            testCase.verifyEqual(after.scaledCurvature,before.scaledCurvature,'AbsTol',0);
-        end
-        function zeroStabilityDisablesTargets(testCase)
-            [moving,fixed]=conflictingPoles();
-            fixed.components.repeatability=[ones(4,1);zeros(4,1)];
-            result=registerSemanticProbabilityCloud(fixed,moving,[0 0 0]);
+        function zeroStoredWeightDisablesTargets(testCase)
+            [moving,fixed]=ambiguousPoles();
+            fixed.components.mixtureWeight(1:4)=0;
+            result=registerSemanticProbabilityCloud(fixed,moving,[.3 0 0]);
             testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyEqual(result.correspondences.target,(1:4).');
-            testCase.verifyEqual(result.poseXYTheta,[0 0 0],'AbsTol',1e-12);
+            testCase.verifyEqual(result.correspondences.target,(5:8).');
+            testCase.verifyEqual(result.poseXYTheta,[.6 0 0],AbsTol=1e-4);
         end
-        function allZeroStabilityRejectsMeasurement(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            fixed=cloud; fixed.components.repeatability=zeros(6,1);
-            result=registerSemanticProbabilityCloud(fixed,cloud,[0 0 0]);
-            testCase.verifyFalse(result.accepted);
-            testCase.verifyEqual(result.reason,"insufficientOverlap");
-            testCase.verifyEmpty(result.correspondences);
+        function rejectsMapWithoutAnyPositiveStoredMass(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();fixed=cloud;
+            fixed.components.mixtureWeight=zeros(6,1);
+            testCase.verifyError(@()registerSemanticProbabilityCloud(fixed,cloud,[0 0 0]), ...
+                'VehicleLocalization:ZeroMixtureMass');
         end
-        function onlyMapStabilityDiscountsSingleFrameEvidence(testCase)
+        function sourceRepeatabilityIsNotInventedForASingleScan(testCase)
             cloud=distributionRegistrationTest.exampleCloud();
             before=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
-            moving=cloud; moving.components.repeatability=zeros(6,1);
+            moving=cloud;moving.components.repeatability=zeros(6,1);
             after=registerSemanticProbabilityCloud(cloud,moving,[0 0 0]);
-            testCase.verifyEqual(after.scaledCurvature,before.scaledCurvature,'AbsTol',0);
-            testCase.verifyEqual(after.similarity,before.similarity,'AbsTol',0);
+            testCase.verifyEqual(after.information,before.information,AbsTol=0);
         end
     end
 end
 
-function [moving,fixed]=conflictingPoles()
-% Two symmetric, separated groups constrain the same translation differently.
-    means=[-8 -8;-8 8;8 -8;8 8;-16 -16;-16 16;16 -16;16 16];
-    c=struct('mean',means,'covariance',repmat(.2*eye(2),1,1,8), ...
-        'semanticName',repmat("pole",8,1),'mixtureWeight',ones(8,1)/8,'numComponents',8);
-    c.repeatability=ones(c.numComponents,1);
-    moving=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig()); fixed=moving;
-    fixed.components.mean(5:8,1)=fixed.components.mean(5:8,1)+.6;
+function [moving,fixed]=ambiguousPoles()
+    c=struct('mean',[-8 -8;-8 8;8 -8;8 8], ...
+        'covariance',repmat(.2*eye(2),1,1,4),'semanticName',repmat("pole",4,1), ...
+        'mixtureWeight',ones(4,1)/4,'numComponents',4);
+    moving=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());fixed=moving;
+    fixed.components=struct('mean',[c.mean;c.mean+[.6 0]], ...
+        'covariance',repmat(c.covariance,1,1,2),'semanticName',repmat("pole",8,1), ...
+        'mixtureWeight',[.9*ones(4,1);.1*ones(4,1)]/4,'numComponents',8);
 end

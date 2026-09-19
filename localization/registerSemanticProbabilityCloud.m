@@ -2,16 +2,12 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
 % registerSemanticProbabilityCloud: Semantic Gaussian geometry registration.
 % The default GICP-style residuals use both covariances. Elongated ground
 % components constrain their normal direction; poles constrain horizontal XY.
-% Mixture volume/count mass never becomes a geometric correspondence weight.
+% Stored map mixture weights are priors in same-class Gaussian association.
+% They already contain temporal stability; do not multiply repeatability again.
+% Ground-line tangents bound association but do not create pose information.
 % Height conditions correspondence compatibility, not the planar pose force.
 % A partially observable solution is reported but never accepted as full SE(2).
-% weightedNdtRegistrationConfig opts into the evaluated Gaussian-overlap
-% candidate; the geometric solver remains the default pending better accuracy.
     if nargin<4, cfg=distributionRegistrationConfig(); end
-    if string(cfg.method)=="weightedNdt"
-        result=registerWeightedNdtProbabilityCloud(fixedCloud,movingCloud,initialPose,cfg);
-        return
-    end
     assert(string(cfg.method)=="geometricD2D",'VehicleLocalization:InvalidRegistrationMethod', ...
         'Use geometricD2D registration.');
     [f,m,height]=registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
@@ -19,10 +15,7 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
     assert(numel(initialPose)==3 && all(isfinite(initialPose)),'Expected finite [x y yaw].');
     gcfg=cfg.geometric;
     validateParameters(cfg,gcfg);
-    f.quality=quality(f); m.quality=quality(m);
-    repeatabilitySource="mapPosterior";
-    assert(isfield(f,'repeatability'),'VehicleLocalization:MissingRepeatability', ...
-        'Fixed map components require measured repeatability.');
+    m.quality=quality(m);
     % Height/tilt uncertainty belongs to the compatibility calculation. Keep
     % the planar metric identical when only height mode/reference changes.
     m.planarCovariance=movingCloud.components.covariance(1:2,1:2,:);
@@ -42,9 +35,9 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
         'directionalInformation',zeros(3),'supportedConverged',false, ...
         'observableProjectorCoordinates',"scaled correction q=diag(1,1,yawLeverArm)*deltaPose", ...
         'curvatureSemantics',"uncalibratedGaussianGeometryNormalMatrix", ...
-        'similaritySemantics',"repeatabilityWeightedClassGaussianCompatibilityWithCoverage", ...
-        'repeatabilitySource',repeatabilitySource, ...
-        'weightSemantics',"classBalancedQualityTimesMapRepeatability", ...
+        'similaritySemantics',"sourceClassBalancedGaussianCompatibilityWithCoverage", ...
+        'mapWeightSource',"storedMixtureWeight", ...
+        'weightSemantics',"mapMixtureAssociationPriorAndSourceClassBalancedQuality", ...
         'information',zeros(3), ...
         'informationSemantics',"robustCompositeGaussianGaussNewton", ...
         'informationCoordinates',"additive map X,Y,psi; meters,radians", ...
@@ -104,7 +97,8 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
     % q = diag(1,1,yawLeverArm) * deltaPose. Undo this numerical
     % conditioning before exporting physical pose information. The normal
     % matrix sums J_i' W_i J_i, where W_i contains summed source/map scatter,
-    % class-balanced quality, map repeatability, and final robust influence.
+    % class-balanced source quality and final robust influence. Map priors
+    % determine associations; their mass is not a second residual multiplier.
     % Keep cross terms and genuine null directions; add no diagonal prior.
     inverseScale=diag(1./scale);
     result.information=inverseScale*((system.H+system.H.')/2)*inverseScale;
@@ -125,7 +119,7 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
         result.reason="searchBoundary";
     elseif rank==0
         result.reason="degenerateGeometry";
-    elseif any(result.classDiagnostics.observableCorrection>gcfg.maximumClassCorrection)
+    elseif any(result.classDiagnostics.informationWeightedCorrection>gcfg.maximumClassCorrection)
         result.reason="inconsistentClasses";
     elseif ~converged || (rank<3 && ~result.supportedConverged)
         result.reason="notConverged";
@@ -139,13 +133,17 @@ end
 function groups=correspondenceGroups(f,m)
 % Class membership and eligible targets are invariant during one solve.
     names=intersect(unique(f.semanticName),unique(m.semanticName));
-    groups=repmat(struct('source',[],'target',[],'line',false),numel(names),1);
+    groups=repmat(struct('source',[],'target',[],'priorCost',[],'line',false),numel(names),1);
     for k=1:numel(names)
         groups(k).line=any(names(k)==["curb","facade"]);
         groups(k).source=find(m.semanticName==names(k) & m.quality>0);
-        keep=f.semanticName==names(k) & f.quality>0 & f.repeatability>0;
+        keep=f.semanticName==names(k) & f.mixtureWeight>0;
         if groups(k).line, keep=keep & f.lineEligible; end
         groups(k).target=find(keep);
+        prior=f.mixtureWeight(keep);
+        % Subtracting a common log mass preserves the MAP assignment while
+        % making global map-weight scaling immaterial. No new stability score.
+        groups(k).priorCost=-2*(log(prior)-log(max(prior)));
     end
 end
 
@@ -194,6 +192,7 @@ function system=linearize(f,m,pose,cfg,scale,groups)
                     valid(:,k)=valid(:,k) & abs(dz(:,k))<=cfg.heightCompatibilitySigma*sqrt(zVariance);
                 end
             end
+            distance=distance+group.priorCost;
             distance(~valid)=Inf;
             [best,index]=min(distance,[],1);
             keep=isfinite(best); selected=source(keep);
@@ -227,18 +226,13 @@ function system=linearize(f,m,pose,cfg,scale,groups)
     jacobian(2,3,:)=(w21.*yawDerivative(:,1)+w22.*yawDerivative(:,2))*scale(3);
     delta=means(source,:)-f.mean(target,1:2);
     residual=[w11.*delta(:,1)+w12.*delta(:,2),w21.*delta(:,1)+w22.*delta(:,2)].';
-    weights=m.quality(source).*f.quality(target);
-    mapRepeatability=f.repeatability(target);
+    weights=m.quality(source);
     qvalue=sum(residual.^2,1).'; zResidual=chosenZ(source);
     names=m.semanticName(source); classes=intersect(unique(f.semanticName),unique(m.semanticName));
     similarity=0;
     for name=classes.'
         selected=names==name; possible=m.semanticName==name & m.quality>0;
         weights(selected)=weights(selected)/max(sum(weights(selected)),eps)/max(1,numel(classes));
-        % Discount AFTER class balancing: normalizing r*q by sum(r*q) would
-        % erase a uniformly unreliable class. Apply the map posterior once;
-        % integrated map mass also contains support area and is not confidence.
-        weights(selected)=weights(selected).*mapRepeatability(selected);
         coverage=nnz(selected)/max(1,nnz(possible));
         similarity=similarity+coverage*sum(weights(selected).*exp(-qvalue(selected)/2));
     end
@@ -250,7 +244,7 @@ function system=linearize(f,m,pose,cfg,scale,groups)
     gradient=stacked.'*(residual(:).*rowWeights);
     pairs=struct('source',source,'target',target,'semanticName',names, ...
         'squaredStandardizedResidual',qvalue,'heightResidual',zResidual(1:rows), ...
-        'mapRepeatability',mapRepeatability,'weight',weights,'robustWeight',weights.*robust);
+        'mapMixtureWeight',f.mixtureWeight(target),'weight',weights,'robustWeight',weights.*robust);
     system=struct('H',h,'gradient',gradient,'numPairs',rows,'pairs',pairs, ...
         'J',jacobian,'residual',residual,'weights',weights,'robust',robust, ...
         'precision',precision(:,:,1:rows),'targetMean',f.mean(target,1:2), ...
@@ -277,7 +271,7 @@ end
 
 function diagnostics=classDiagnostics(system,cfg)
     classes=unique(system.pairs.semanticName); correction=zeros(numel(classes),1);
-    ranks=zeros(numel(classes),1); matches=zeros(numel(classes),1);
+    ranks=zeros(numel(classes),1); matches=zeros(numel(classes),1);weighted=zeros(numel(classes),1);
     for c=1:numel(classes)
         h=zeros(3); gradient=zeros(3,1); selected=find(system.pairs.semanticName==classes(c));
         for j=selected.'
@@ -286,9 +280,14 @@ function diagnostics=classDiagnostics(system,cfg)
         end
         [step,~,ranks(c)]=observableStep(h,gradient,cfg.minimumObservabilityRatio);
         correction(c)=norm(step); matches(c)=numel(selected);
+        % Measure disagreement in supported geometry. A large Newton step
+        % in a weak class direction must not veto the other classes. The
+        % largest eigenvalue keeps this engineering score in scaled meters;
+        % it is not a chi-square statistic or a calibrated confidence.
+        weighted(c)=sqrt(max(0,step'*h*step)/max(max(eig(h)),eps));
     end
-    diagnostics=table(classes,matches,ranks,correction, ...
-        'VariableNames',{'semanticName','matchedComponents','observableRank','observableCorrection'});
+    diagnostics=table(classes,matches,ranks,correction,weighted, ...
+        'VariableNames',{'semanticName','matchedComponents','observableRank','observableCorrection','informationWeightedCorrection'});
 end
 
 function [normal,major,eligible]=normalGeometry(f,cfg)

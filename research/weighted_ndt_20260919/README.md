@@ -2,6 +2,13 @@
 
 Date: 2026-09-19. Control commit: `cd5b91440f7009890ffded069692e7ffb7a00a76`.
 
+Status update, 2026-09-19: the unsuccessful experimental implementation and
+its dispatch were subsequently removed from active code. The historical
+implementation remains reproducible from commit
+`549700f89e2dae602d5c75651070ae5915a17939`; the numerical results below describe
+that revision. See `research/matching_refinement_20260919/README.md` for the
+replacement and its validation. No unused alternative solver remains active.
+
 ## Decision
 
 Use the map's existing `components.mixtureWeight` when evaluating the NDT
@@ -9,10 +16,10 @@ candidate. These stored weights already encode temporal feature stability.
 Do not reconstruct a second stability score, renormalize map mass separately
 within each class, or multiply by `repeatability` again.
 
-The candidate is implemented and tested, but **is not promoted to the default**:
+At the recorded revision, the candidate was implemented and tested, but **was not promoted to the default**:
 two complete 1170-frame experiments found worse errors and fewer accepted
-measurements. The existing geometric matcher remains the active control and
-default; the new matcher is an explicitly selectable research method. Neither
+measurements. The geometric matcher remained the active control and
+default; the candidate was an explicitly selectable research method. Neither
 perception, the whole-pillar representation, map contents nor observer gains
 were changed. This work does not demonstrate an improvement in localization.
 
