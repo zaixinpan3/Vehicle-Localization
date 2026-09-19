@@ -1,0 +1,13 @@
+{
+  "frames": 1170,
+  "maximumCoarseMeanDifferenceM": 0.0,
+  "maximumCoarseCovarianceDifference": 0.0,
+  "finePointCounts": {
+    "curbPoints": 133836,
+    "polePoints": 194300,
+    "trafficSignPoints": 70955
+  },
+  "finePerceptionMedianSeconds": 1.7192105,
+  "fineConversionMedianSeconds": 0.001985,
+  "timingScope": "Four simultaneous MATLAB perception partitions, two computational threads each; not isolated benchmarking"
+}

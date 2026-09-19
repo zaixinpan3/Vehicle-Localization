@@ -1,0 +1,94 @@
+{
+  "coarse_recursive": {
+    "accepted": 1166,
+    "directional": 0,
+    "rejections": {
+      "notConverged": 4
+    },
+    "rejectionFrames": [
+      387,
+      612,
+      815,
+      1057
+    ],
+    "coveragePassed": true,
+    "causalPredictionPassed": true,
+    "rejectedFallbackPassed": true,
+    "acceptedInformationPositive": true
+  },
+  "fine_recursive": {
+    "accepted": 1164,
+    "directional": 0,
+    "rejections": {
+      "inconsistentClasses": 4,
+      "insufficientOverlap": 1,
+      "notConverged": 1
+    },
+    "rejectionFrames": [
+      123,
+      814,
+      815,
+      816,
+      829,
+      830
+    ],
+    "coveragePassed": true,
+    "causalPredictionPassed": true,
+    "rejectedFallbackPassed": true,
+    "acceptedInformationPositive": true
+  },
+  "coarse_binary_quality_recursive": {
+    "accepted": 1167,
+    "directional": 0,
+    "rejections": {
+      "inconsistentClasses": 2,
+      "notConverged": 1
+    },
+    "rejectionFrames": [
+      816,
+      819,
+      1057
+    ],
+    "coveragePassed": true,
+    "causalPredictionPassed": true,
+    "rejectedFallbackPassed": true,
+    "acceptedInformationPositive": true
+  },
+  "coarse_commonInitialGuess": {
+    "accepted": 1166,
+    "directional": 0,
+    "rejections": {
+      "notConverged": 4
+    },
+    "rejectionFrames": [
+      387,
+      612,
+      815,
+      1057
+    ],
+    "coveragePassed": true,
+    "causalPredictionPassed": true,
+    "rejectedFallbackPassed": true,
+    "acceptedInformationPositive": true
+  },
+  "fine_commonInitialGuess": {
+    "accepted": 1164,
+    "directional": 0,
+    "rejections": {
+      "inconsistentClasses": 4,
+      "notConverged": 2
+    },
+    "rejectionFrames": [
+      123,
+      814,
+      815,
+      816,
+      829,
+      830
+    ],
+    "coveragePassed": true,
+    "causalPredictionPassed": true,
+    "rejectedFallbackPassed": true,
+    "acceptedInformationPositive": true
+  }
+}

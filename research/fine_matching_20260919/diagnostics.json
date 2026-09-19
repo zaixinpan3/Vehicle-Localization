@@ -1,0 +1,34 @@
+{
+  "coarse": {
+    "medianComponents": {
+      "curb": 69.0,
+      "pole": 7.0,
+      "trafficSign": 3.0
+    },
+    "medianMatchedComponents": 228.0,
+    "medianSimilarity": 0.5841288481735796
+  },
+  "fine": {
+    "medianComponents": {
+      "curb": 29.0,
+      "pole": 3.0,
+      "trafficSign": 3.0
+    },
+    "medianMatchedComponents": 105.0,
+    "medianSimilarity": 0.814617110424191
+  },
+  "fineVsCoarse": {
+    "improvedFrames": 619,
+    "improvedByMoreThanTenCm": 74,
+    "worsenedByMoreThanTenCm": 112
+  },
+  "finePeak": {
+    "frame": 809,
+    "recursiveErrorM": 1.01628110055701,
+    "commonInitialGuessErrorM": 0.280745430130734,
+    "predictedPositionDifferenceM": 0.7693722005275556,
+    "accepted": true,
+    "similarity": 0.481758040322832,
+    "observableRank": 3
+  }
+}

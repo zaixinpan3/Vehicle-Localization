@@ -1,0 +1,5 @@
+Name,Passed,Failed,Incomplete,Duration,Details
+fineMatchingCloudTest/excludesUnselectedOutlierAndUsesPopulationCovariance,1,0,0,0.24168,
+fineMatchingCloudTest/appliesCalibrationThenTiltExactlyOnce,1,0,0,0.003967,
+fineMatchingCloudTest/emptyFeaturesRemainEmpty,1,0,0,0.006291,
+fineMatchingCloudTest/unorganizedOrderDoesNotChangeStatistics,1,0,0,0.035569,

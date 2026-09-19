@@ -1,0 +1,261 @@
+{
+  "runtimeRevision": "48d043b083ccc2fb44c19726655223b1d5054484",
+  "scope": "Technical inputs and outputs only; no weekly or monthly report is hashed.",
+  "artifacts": [
+    {
+      "path": "data/raw/MissisipiPointClouds.mat",
+      "bytes": 1273317517,
+      "sha256": "75c4842872acb3a5cfaf25fa52c37572a0653c544ff6d275adad21b189218f1d"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_binary_quality_recursive/calls.csv",
+      "bytes": 468193,
+      "sha256": "e6356b89319c75aa5aff74e19f6d11d4eb4a84237cbd47bd8c8a7cef1e3e975a"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_binary_quality_recursive/candidate_poses.csv",
+      "bytes": 65339,
+      "sha256": "2f872594c84be8d2ead498865b3cd456ba79169acedc28ff28f05c438fe2a011"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_binary_quality_recursive/component_counts.csv",
+      "bytes": 13431,
+      "sha256": "bfe0057e712047244b1e68a86fef09708baba6fc94a6c84992c0b74c99ad74f2"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_binary_quality_recursive/dead_reckoning.csv",
+      "bytes": 85070,
+      "sha256": "bd96a591dbe46ffbf47dea2f275d33ba3606eef44f0b7e5a543c12bae7081652"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_binary_quality_recursive/source_windows.csv",
+      "bytes": 32706,
+      "sha256": "26fb73993232071cb9fd58f5957ad2fa496ce11da31b5e0cd3262460d0efca20"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_commonInitialGuess/calls.csv",
+      "bytes": 468159,
+      "sha256": "6d495a12e41e3f278a077f3d1fd0ab90ec455ea69315288c8d2f0f1b93a484be"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_commonInitialGuess/candidate_poses.csv",
+      "bytes": 65334,
+      "sha256": "9d9107b43d6ed902dc47b0e09f91281fe434b21cea3b908c1a50c447d1f78da5"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_commonInitialGuess/component_counts.csv",
+      "bytes": 13431,
+      "sha256": "bfe0057e712047244b1e68a86fef09708baba6fc94a6c84992c0b74c99ad74f2"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_commonInitialGuess/dead_reckoning.csv",
+      "bytes": 85070,
+      "sha256": "bd96a591dbe46ffbf47dea2f275d33ba3606eef44f0b7e5a543c12bae7081652"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_commonInitialGuess/source_windows.csv",
+      "bytes": 32706,
+      "sha256": "26fb73993232071cb9fd58f5957ad2fa496ce11da31b5e0cd3262460d0efca20"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_recursive/calls.csv",
+      "bytes": 468318,
+      "sha256": "01d6d1020d5d877e092e246badf07745f5184ad21553120342712d0e1b2303a5"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_recursive/candidate_poses.csv",
+      "bytes": 65352,
+      "sha256": "d214a07344815ea18ccaee2d4cda951ccb87117771c5ba8b6566aa1baf437c18"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_recursive/component_counts.csv",
+      "bytes": 13431,
+      "sha256": "bfe0057e712047244b1e68a86fef09708baba6fc94a6c84992c0b74c99ad74f2"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_recursive/dead_reckoning.csv",
+      "bytes": 85070,
+      "sha256": "bd96a591dbe46ffbf47dea2f275d33ba3606eef44f0b7e5a543c12bae7081652"
+    },
+    {
+      "path": "output/fine_matching_20260919/coarse_recursive/source_windows.csv",
+      "bytes": 32706,
+      "sha256": "26fb73993232071cb9fd58f5957ad2fa496ce11da31b5e0cd3262460d0efca20"
+    },
+    {
+      "path": "output/fine_matching_20260919/experiment.mat",
+      "bytes": 3144904,
+      "sha256": "cbe63a498d0d6c52f9d395bb536e6f1ff33e9bc8bb074c7cdf8018df1b295829"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_commonInitialGuess/calls.csv",
+      "bytes": 472012,
+      "sha256": "4355387a95cb668c63e86239e1f6a19a8b91bb513031f0a094886de10049f8df"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_commonInitialGuess/candidate_poses.csv",
+      "bytes": 65347,
+      "sha256": "707d18f89846a87ee073f4b71f58b31364d9759f4b710cea8ae0d9b68a0ccbfb"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_commonInitialGuess/component_counts.csv",
+      "bytes": 13077,
+      "sha256": "21a2b2118fa47f156699595b591cd559a766cb0241db0f420676b32f0fab3440"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_commonInitialGuess/dead_reckoning.csv",
+      "bytes": 85070,
+      "sha256": "bd96a591dbe46ffbf47dea2f275d33ba3606eef44f0b7e5a543c12bae7081652"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_commonInitialGuess/source_windows.csv",
+      "bytes": 32249,
+      "sha256": "e7962726584e26a3028409d32fcf56edfa140982c06ba53b41117c0352d6559b"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_recursive/calls.csv",
+      "bytes": 471980,
+      "sha256": "48a0dc704a422fbcb35a86f603c22e6a5d1bceae5b9472f010e07901c209a6fd"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_recursive/candidate_poses.csv",
+      "bytes": 65358,
+      "sha256": "52b3801229e17be941a1fefea23610c41c5ebcc3040bc70316cff11b7ea12c5e"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_recursive/component_counts.csv",
+      "bytes": 13077,
+      "sha256": "21a2b2118fa47f156699595b591cd559a766cb0241db0f420676b32f0fab3440"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_recursive/dead_reckoning.csv",
+      "bytes": 85070,
+      "sha256": "bd96a591dbe46ffbf47dea2f275d33ba3606eef44f0b7e5a543c12bae7081652"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_recursive/source_windows.csv",
+      "bytes": 32249,
+      "sha256": "e7962726584e26a3028409d32fcf56edfa140982c06ba53b41117c0352d6559b"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_vs_coarse.pdf",
+      "bytes": 71850,
+      "sha256": "fb1f31770e10a7813f544bdd4f6967a8cabfdb7dc33363d1b6f0d72bd68a17e4"
+    },
+    {
+      "path": "output/fine_matching_20260919/fine_vs_coarse.png",
+      "bytes": 374980,
+      "sha256": "3b69fa49f99cfbe0f014ef0c573f22f80b5649f05426eb05e9724d0eb2f09c9b"
+    },
+    {
+      "path": "output/fine_matching_20260919/input_audit.csv",
+      "bytes": 42183,
+      "sha256": "36247b9edc9273ab45034b9976fffe05616402337129c12dd5f1931061c5428e"
+    },
+    {
+      "path": "output/fine_matching_20260919/inputs_1.mat",
+      "bytes": 24964696,
+      "sha256": "07219f01329284cb60e7d394de5ed180f95a0d8ea12b9f03b09a007a882246b8"
+    },
+    {
+      "path": "output/fine_matching_20260919/inputs_2.mat",
+      "bytes": 25741956,
+      "sha256": "625416d29a1a6b0ccdd87b9ffe5a99881e1377a67f759463d4767d470ba3eb08"
+    },
+    {
+      "path": "output/fine_matching_20260919/inputs_3.mat",
+      "bytes": 24699334,
+      "sha256": "e5b229a30cec0795fbbc88802da850575f40ff017fad73b2e832abc9b53c851f"
+    },
+    {
+      "path": "output/fine_matching_20260919/inputs_4.mat",
+      "bytes": 25135279,
+      "sha256": "33a48a9fc66260a2c139330d3da8a22dbf99c9c648d74f3773b6cba13b5e6634"
+    },
+    {
+      "path": "output/matching_refinement_20260919/inputs.mat",
+      "bytes": 80371959,
+      "sha256": "fcb197b24c734439ae08508f1b9fcb2ac783c6c25f140c9b30946105e2ff183d"
+    },
+    {
+      "path": "output/matching_refinement_20260919/validated/recursive/report.mat",
+      "bytes": 262652,
+      "sha256": "57a9ab7eae5bf180a65ff289aef347eb9f0730ebcb9503a972025a1fbb1b492d"
+    },
+    {
+      "path": "output/mississippi_mapping_inspva_20260915/probability_cloud.mat",
+      "bytes": 269784,
+      "sha256": "ad2a55e0b8a0a222432a3a4bd3a8b70f0a92ecd686b19c81b5237ef2657baffd"
+    },
+    {
+      "path": "research/fine_matching_20260919/README.md",
+      "bytes": 9250,
+      "sha256": "95b58e43759bdead7713d16c12cf16c0d6ddd22e22adfeca538f8f0ed92add80"
+    },
+    {
+      "path": "research/fine_matching_20260919/adapter_tests.csv",
+      "bytes": 354,
+      "sha256": "69e338a0f9b3f7fd631007c1f21307468dd4898659c0702db3beccec4de5dd05"
+    },
+    {
+      "path": "research/fine_matching_20260919/analyze.py",
+      "bytes": 8139,
+      "sha256": "df5b336de6342ba8b3b2e408e146489c4827a3403e85a01c17c5d909b77832ef"
+    },
+    {
+      "path": "research/fine_matching_20260919/buildFineMatchingCloud.m",
+      "bytes": 2650,
+      "sha256": "913a2917a12d4a939d906e8e22dd0284e4f799dc38462085388109e34c94d82f"
+    },
+    {
+      "path": "research/fine_matching_20260919/cacheInputs.m",
+      "bytes": 2305,
+      "sha256": "0535bf3956f0f531c99b01cfd2bc0eee59ff5298de97b36c84b41423057e0f40"
+    },
+    {
+      "path": "research/fine_matching_20260919/checks.json",
+      "bytes": 1891,
+      "sha256": "f491bbdf0c5a6eb3b5ddbb9139cf76c7522360be3f5c23ce61a8d9aad03b66b8"
+    },
+    {
+      "path": "research/fine_matching_20260919/code_analyzer.csv",
+      "bytes": 101,
+      "sha256": "35bd83bd702fe55cc9cd4c3b3e2ce2832d1706024f54a396efa28c391f372a28"
+    },
+    {
+      "path": "research/fine_matching_20260919/diagnostics.json",
+      "bytes": 786,
+      "sha256": "9a64c988803b739ebc50d9b583bd2f82fb6504ea84bea7578acd140ed98735e9"
+    },
+    {
+      "path": "research/fine_matching_20260919/fineMatchingCloudTest.m",
+      "bytes": 2940,
+      "sha256": "72f3637bfc3e51baddc19201fb382f05ef8f4c92bce7eab88d6f6784008ea2bf"
+    },
+    {
+      "path": "research/fine_matching_20260919/frame92_coordinate_audit.csv",
+      "bytes": 136,
+      "sha256": "7aadde11eb526c0374d3376b66bda9f34e433f07766e85550b6558c3995156dd"
+    },
+    {
+      "path": "research/fine_matching_20260919/input_summary.json",
+      "bytes": 428,
+      "sha256": "6f9d7074614770585a6160d8263403c62613ec7a1ddb3fc7dc8267583cf7d3f3"
+    },
+    {
+      "path": "research/fine_matching_20260919/metrics.csv",
+      "bytes": 1767,
+      "sha256": "461acbadb2fa240d712708a8a8227436a6fb245448487599e7a9a8505a9030c3"
+    },
+    {
+      "path": "research/fine_matching_20260919/runExperiment.m",
+      "bytes": 8011,
+      "sha256": "b41d61d0d82bb12745e4aa14fffd7f9ead14ae526e21983f531b8e5618beddf8"
+    },
+    {
+      "path": "research/fine_matching_20260919/selected_frames.csv",
+      "bytes": 66104,
+      "sha256": "f9dea795c2bdb56ac3791b96c9a078a4bd5a30ae47b8618c3d2b0bd46d619375"
+    }
+  ]
+}
