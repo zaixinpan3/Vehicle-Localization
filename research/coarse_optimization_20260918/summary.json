@@ -1,0 +1,52 @@
+{
+  "validation": {
+    "baselineCommit": "e4ae02980a4740d5044ea1788d8ea8081cccd5c2",
+    "mississippiCoarseFrames": 1170,
+    "mississippiCoarseExactlyEqual": 1170,
+    "downtownCoarseFrames": 12,
+    "downtownCoarseExactlyEqual": 12,
+    "fineFrames": 78,
+    "fineExactlyEqual": 78,
+    "fineChangedPolePoints": 0,
+    "fineChangedCurbPoints": 0,
+    "fineChangedSignPoints": 0,
+    "testCount": 132,
+    "testsPassed": 132,
+    "testsIncomplete": 0,
+    "finalKernelTests": 25,
+    "finalKernelTestsPassed": 25,
+    "randomizedFootprintCases": 1000,
+    "randomizedFootprintFailures": 0
+  },
+  "timing": {
+    "frames": [
+      28,
+      91,
+      214,
+      260,
+      384,
+      615,
+      746,
+      901,
+      1047,
+      1137
+    ],
+    "repetitions": 9,
+    "warmupsPerVersionPerFrame": 5,
+    "baselineMedianMilliseconds": 66.74799999999999,
+    "optimizedMedianMilliseconds": 58.8185,
+    "reductionPercent": 11.879756696829858,
+    "speedup": 1.1348130265137668,
+    "baselineFrameMedianRange": [
+      52.178000000000004,
+      71.269
+    ],
+    "optimizedFrameMedianRange": [
+      41.55,
+      63.123
+    ],
+    "exactFrames": 10,
+    "version": "26.1.0.3276743 (R2026a) Update 3",
+    "threads": 8
+  }
+}

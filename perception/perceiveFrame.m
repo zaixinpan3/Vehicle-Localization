@@ -121,8 +121,10 @@ function xyView = buildGroundXYView(voxelGrid, cellSizeXY, groundPointMask, curb
     % Keep the original lattice phase when trimming empty ground margins.
     % All ground points and a halo survive; off-ground points outside this
     % raster remain in the separate structural branch.
-    xBin = floor((points(:,1)-minCorner(1))./cellSizeXY(1))+1;
-    yBin = floor((points(:,2)-minCorner(2))./cellSizeXY(2))+1;
+    % Branch views use the already assigned shared lattice, including points
+    % on exact boundaries; no second point-to-pillar quantization is needed.
+    xBin = double(voxelGrid.pointPillarSub(:,1));
+    yBin = double(voxelGrid.pointPillarSub(:,2));
     first = [1 1]; last = dimsXY;
     if isfield(curbCfg,"compactRaster") && curbCfg.compactRaster && any(groundPointMask)
         padding = ceil(max([curbCfg.detrendBoxRadiusCells+1, curbCfg.relativeHeightRadiusCells, ...

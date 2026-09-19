@@ -10,269 +10,135 @@ function [footprint,context,compact,ratio,componentSum,contextSum]= ...
 end
 
 function candidateMask = buildPoleFootprintCandidates(coreMask, supportMask, pointCountMap, evidenceMap, params)
-% buildPoleFootprintCandidates: Build unified pole
-% footprint candidates by selecting the smallest candidate footprint that
-% already satisfies local pole-candidate context support: singleton first
-% and edge-adjacent pair second.
-%
-% Input:
-%   coreMask: [Ny x Nx] logical unified pole-core mask
-%   supportMask: [Ny x Nx] logical cells allowed to join a core footprint
-%   pointCountMap: [Ny x Nx] numeric qualified point count map
-%   evidenceMap: [Ny x Nx] numeric whole-pillar geometric evidence map
-%   params: struct from resolvePoleDetectionParams with context
-%       window parameters
-%
-% Output:
-%   candidateMask: [Ny x Nx] logical raw footprint candidate mask
+% Batch singleton and edge-pair evidence tests once per core. Reuse the
+% tests during component reduction; preserve up/down/left/right tie order.
     candidateMask = false(size(coreMask));
     if isempty(coreMask) || isempty(supportMask) || isempty(pointCountMap) || isempty(evidenceMap) || ...
-            ~isequal(size(coreMask), size(supportMask)) || ~isequal(size(coreMask), size(pointCountMap)) || ...
-            ~isequal(size(coreMask), size(evidenceMap)) || ~any(coreMask(:))
+            ~isequal(size(coreMask), size(supportMask), size(pointCountMap), size(evidenceMap)) || ~any(coreMask(:))
         return;
     end
-
-    mapSize = size(coreMask);
     pointCountMap = double(pointCountMap);
     pointCountMap(~isfinite(pointCountMap)) = 0;
     evidenceMap = double(evidenceMap);
     evidenceMap(~isfinite(evidenceMap)) = 0;
-    supportMask = logical(supportMask);
-    [coreRows, coreCols] = find(logical(coreMask));
-    for iCore = 1:numel(coreRows)
-        coreRow = coreRows(iCore);
-        coreCol = coreCols(iCore);
-        coreLinIdx = sub2ind(mapSize, coreRow, coreCol);
-        selectedLinIdx = selectMinimalPoleSupportFootprint( ...
-            coreLinIdx, supportMask, pointCountMap, evidenceMap, mapSize, params);
-        candidateMask(selectedLinIdx) = true;
+    coreIds = find(coreMask); coreIds = coreIds(:);
+    evidenceValues = evidenceMap(:); pointCountMap = pointCountMap(:);
+    supportMask = supportMask(:);
+    [rows, cols] = ind2sub(size(coreMask), coreIds);
+    tests = buildContextTests(coreIds, rows, cols, evidenceMap, params);
+    candidateMask(coreIds) = true;
+    bestScore = -inf(size(coreIds));
+    bestNeighbor = zeros(size(coreIds));
+    for direction = 1:4
+        neighbor = tests.neighbors(:,direction);
+        eligible = ~tests.singlePass & tests.pairPass(:,direction) & ...
+            logical(supportMask(max(neighbor,1)));
+        score = evidenceValues(coreIds) + evidenceValues(max(neighbor,1)) + ...
+            0.01 .* (pointCountMap(coreIds) + pointCountMap(max(neighbor,1)));
+        better = eligible & score > bestScore + eps;
+        bestScore(better) = score(better);
+        bestNeighbor(better) = neighbor(better);
     end
-    candidateMask = filterMinimalPoleCandidateFootprints(candidateMask, coreMask, evidenceMap, params);
-end
+    candidateMask(bestNeighbor(bestNeighbor > 0)) = true;
 
-function selectedLinIdx = selectMinimalPoleSupportFootprint(coreLinIdx, supportMask, pointCountMap, evidenceMap, mapSize, params)
-% selectMinimalPoleSupportFootprint: Choose the smallest valid
-% footprint subset containing one core cell that satisfies pole-candidate
-% local context support, using vertical whole-pillar height evidence as the primary
-% tie breaker so stronger pillar cells are absorbed first.
-%
-% Input:
-%   coreLinIdx: scalar linear index of the unified core cell
-%   supportMask: [Ny x Nx] logical cells allowed to join a core footprint
-%   pointCountMap: [Ny x Nx] numeric qualified point count map
-%   evidenceMap: [Ny x Nx] numeric whole-pillar geometric evidence map
-%   mapSize: [1 x 2] map size [Ny Nx]
-%   params: struct from resolvePoleDetectionParams with context
-%       window parameters
-%
-% Output:
-%   selectedLinIdx: [M x 1] selected valid footprint linear indices
-    selectedLinIdx = double(coreLinIdx);
-    if isempty(coreLinIdx) || isempty(supportMask)
-        return;
-    end
-
-    if passesPoleCandidateContext(selectedLinIdx, evidenceMap, mapSize, params)
-        return;
-    end
-
-    [coreRow, coreCol] = ind2sub(mapSize, double(coreLinIdx));
-    neighborOffsets = [-1 0; 1 0; 0 -1; 0 1];
-    bestScore = -inf;
-    bestLinIdx = zeros(0, 1);
-    for iNbr = 1:size(neighborOffsets, 1)
-        rowIdx = coreRow + neighborOffsets(iNbr, 1);
-        colIdx = coreCol + neighborOffsets(iNbr, 2);
-        if rowIdx < 1 || rowIdx > mapSize(1) || colIdx < 1 || colIdx > mapSize(2) || ~supportMask(rowIdx, colIdx)
-            continue;
+    % Connected components use the same column-major core traversal as the
+    % scalar selector. Only passing proposals enter the sequential tie test.
+    components = bwconncomp(candidateMask,8);
+    labels = labelmatrix(components); labels = labels(:);
+    coreRows = zeros(numel(coreMask),1);
+    coreRows(coreIds) = 1:numel(coreIds);
+    candidateMask(:) = false;
+    for component = 1:components.NumObjects
+        members = components.PixelIdxList{component}(:);
+        core = coreRows(members); core = core(core > 0);
+        passed = core(tests.singlePass(core));
+        if ~isempty(passed)
+            chosen = firstBestScore(evidenceValues(coreIds(passed)));
+            selected = coreIds(passed(chosen));
+        else
+            neighbor = tests.neighbors(core,:);
+            neighborLabels = reshape(labels(max(neighbor,1)),size(neighbor));
+            eligible = tests.pairPass(core,:) & neighborLabels == component;
+            % Transpose before find: core first, then up/down/left/right.
+            [direction, localCore] = find(eligible.');
+            if isempty(localCore)
+                selected = selectBestValidPoleFootprintSubset(coreIds(core),evidenceMap,size(coreMask));
+                if isempty(selected)
+                    selected = selectBestValidPoleFootprintSubset(members,evidenceMap,size(coreMask));
+                end
+            else
+                a = coreIds(core(localCore));
+                b = tests.neighbors(core(localCore) + (direction-1).*numel(coreIds));
+                chosen = firstBestScore(evidenceValues(a) + evidenceValues(b));
+                selected = [a(chosen);b(chosen)];
+            end
         end
-        neighborLinIdx = sub2ind(mapSize, rowIdx, colIdx);
-        candidateLinIdx = [double(coreLinIdx); double(neighborLinIdx)];
-        if ~passesPoleCandidateContext(candidateLinIdx, evidenceMap, mapSize, params)
-            continue;
-        end
-        candidateScore = sum(double(evidenceMap(candidateLinIdx))) + ...
-            (0.01 .* sum(double(pointCountMap(candidateLinIdx))));
-        if candidateScore > (bestScore + eps)
-            bestScore = candidateScore;
-            bestLinIdx = candidateLinIdx;
-        end
-    end
-    if ~isempty(bestLinIdx)
-        selectedLinIdx = bestLinIdx;
+        candidateMask(selected) = true;
     end
 end
 
-function filteredMask = filterMinimalPoleCandidateFootprints(componentMask, coreMask, evidenceMap, params)
-% filterMinimalPoleCandidateFootprints: Reduce each connected raw pole
-% candidate to the smallest valid singleton or edge-adjacent pair footprint
-% containing at least one core cell that already satisfies local context
-% support.
-%
-% Input:
-%   componentMask: [Ny x Nx] logical raw footprint mask
-%   coreMask: [Ny x Nx] logical pole-core cells
-%   evidenceMap: [Ny x Nx] numeric whole-pillar geometric evidence map
-%   params: struct from resolvePoleDetectionParams with context
-%       window parameters
-%
-% Output:
-%   filteredMask: [Ny x Nx] logical smallest feasible footprint mask
-    filteredMask = false(size(componentMask));
-    if isempty(componentMask) || ~any(componentMask(:)) || ~isequal(size(componentMask), size(coreMask))
-        return;
-    end
-
-    mapSize = size(componentMask);
-    evidenceMap = double(evidenceMap);
-    evidenceMap(~isfinite(evidenceMap)) = 0;
-    cc = bwconncomp(logical(componentMask), 8);
-    for iComp = 1:cc.NumObjects
-        compLinIdx = double(cc.PixelIdxList{iComp}(:));
-        if isempty(compLinIdx)
-            continue;
-        end
-
-        selectedLinIdx = selectPreferredMinimalPoleFootprint(compLinIdx, coreMask, evidenceMap, mapSize, params);
-        if isempty(selectedLinIdx)
-            coreLinIdx = compLinIdx(logical(coreMask(compLinIdx)));
-            selectedLinIdx = selectBestValidPoleFootprintSubset(coreLinIdx, evidenceMap, mapSize);
-            if isempty(selectedLinIdx)
-                selectedLinIdx = selectBestValidPoleFootprintSubset(compLinIdx, evidenceMap, mapSize);
-            end
-        end
-        filteredMask(selectedLinIdx) = true;
-    end
-end
-
-function selectedLinIdx = selectPreferredMinimalPoleFootprint(compLinIdx, coreMask, evidenceMap, mapSize, params)
-% selectPreferredMinimalPoleFootprint: Select the smallest pole
-% footprint that passes context support using an explicit singleton then
-% edge-pair order, with the strongest whole-pillar height sum used only to break ties
-% within the same footprint size.
-%
-% Input:
-%   compLinIdx: [N x 1] candidate component linear indices
-%   coreMask: [Ny x Nx] logical pole-core cells
-%   evidenceMap: [Ny x Nx] numeric whole-pillar geometric evidence map
-%   mapSize: [1 x 2] map size [Ny Nx]
-%   params: struct from resolvePoleDetectionParams with context
-%       window parameters
-%
-% Output:
-%   selectedLinIdx: [M x 1] selected footprint, or empty
-    selectedLinIdx = zeros(0, 1);
-    compLinIdx = double(compLinIdx(:));
-    if isempty(compLinIdx)
-        return;
-    end
-
-    coreLinIdx = compLinIdx(logical(coreMask(compLinIdx)));
-    selectedLinIdx = selectBestPassingFootprintOfSize(coreLinIdx, compLinIdx, 1, evidenceMap, mapSize, params);
-    if ~isempty(selectedLinIdx)
-        return;
-    end
-
-    selectedLinIdx = selectBestPassingFootprintOfSize(coreLinIdx, compLinIdx, 2, evidenceMap, mapSize, params);
-    if ~isempty(selectedLinIdx)
-        return;
-    end
-
-end
-
-function selectedLinIdx = selectBestPassingFootprintOfSize(coreLinIdx, compLinIdx, subsetSize, evidenceMap, mapSize, params)
-% selectBestPassingFootprintOfSize: Find the strongest valid
-% footprint of one requested size that contains a core cell and passes the
-% component context-ratio candidate test.
-%
-% Input:
-%   coreLinIdx: [K x 1] core-cell linear indices inside the component
-%   compLinIdx: [N x 1] component linear indices
-%   subsetSize: scalar footprint size to test
-%   evidenceMap: [Ny x Nx] numeric whole-pillar geometric evidence map
-%   mapSize: [1 x 2] map size [Ny Nx]
-%   params: struct from resolvePoleDetectionParams
-%
-% Output:
-%   selectedLinIdx: [subsetSize x 1] best passing footprint, or empty
-    selectedLinIdx = zeros(0, 1);
-    if isempty(coreLinIdx) || numel(compLinIdx) < subsetSize
-        return;
-    end
-
-    bestScore = -inf;
-    if subsetSize == 1
-        for iCore = 1:numel(coreLinIdx)
-            candidateLinIdx = double(coreLinIdx(iCore));
-            if ~passesPoleCandidateContext(candidateLinIdx, evidenceMap, mapSize, params)
-                continue;
-            end
-            candidateScore = double(evidenceMap(candidateLinIdx));
-            if candidateScore > (bestScore + eps)
-                bestScore = candidateScore;
-                selectedLinIdx = candidateLinIdx;
-            end
-        end
-        return;
-    end
-
-    if subsetSize ~= 2
-        return;
-    end
-
-    compMemberMask = false(mapSize);
-    compMemberMask(compLinIdx) = true;
-    neighborOffsets = [-1 0; 1 0; 0 -1; 0 1];
-    for iCore = 1:numel(coreLinIdx)
-        [coreRow, coreCol] = ind2sub(mapSize, double(coreLinIdx(iCore)));
-        for iNbr = 1:size(neighborOffsets, 1)
-            rowIdx = coreRow + neighborOffsets(iNbr, 1);
-            colIdx = coreCol + neighborOffsets(iNbr, 2);
-            if rowIdx < 1 || rowIdx > mapSize(1) || colIdx < 1 || colIdx > mapSize(2) || ~compMemberMask(rowIdx, colIdx)
-                continue;
-            end
-            neighborLinIdx = sub2ind(mapSize, rowIdx, colIdx);
-            candidateLinIdx = [double(coreLinIdx(iCore)); double(neighborLinIdx)];
-            if ~passesPoleCandidateContext(candidateLinIdx, evidenceMap, mapSize, params)
-                continue;
-            end
-            candidateScore = sum(double(evidenceMap(candidateLinIdx)));
-            if candidateScore > (bestScore + eps)
-                bestScore = candidateScore;
-                selectedLinIdx = candidateLinIdx(:);
-            end
+function chosen = firstBestScore(scores)
+% Retain strict score > best + eps, including the original first-win order.
+    best = -inf; chosen = 1;
+    for k = 1:numel(scores)
+        if scores(k) > best + eps
+            best = scores(k); chosen = k;
         end
     end
 end
 
-function passesContext = passesPoleCandidateContext(candidateLinIdx, evidenceMap, mapSize, params)
-% passesPoleCandidateContext: Apply the same component/context
-% whole-pillar height ratio used by pole candidate filtering to one proposed
-% singleton or edge-adjacent pair footprint before allowing it to absorb
-% more cells.
-%
-% Input:
-%   candidateLinIdx: [N x 1] proposed footprint linear indices
-%   evidenceMap: [Ny x Nx] numeric whole-pillar geometric evidence map
-%   mapSize: [1 x 2] map size [Ny Nx]
-%   params: struct from resolvePoleDetectionParams with context
-%       window size and minimum ratio
-%
-% Output:
-%   passesContext: logical scalar true when the footprint passes context
-    candidateLinIdx = double(candidateLinIdx(:));
-    if isempty(candidateLinIdx)
-        passesContext = false;
-        return;
+function tests = buildContextTests(ids, rows, cols, evidence, params)
+% Query only core-centered windows, never all pairs in the whole raster.
+% Each column of neighbors represents up, down, left, then right.
+    mapSize = size(evidence);
+    minRatio = max(0,double(params.minimumContextFraction));
+    rowOffset = [-1 1 0 0]; colOffset = [0 0 -1 1];
+    nr = rows + rowOffset; nc = cols + colOffset;
+    valid = nr >= 1 & nr <= mapSize(1) & nc >= 1 & nc <= mapSize(2);
+    neighbors = nr + (nc-1).*mapSize(1);
+    neighbors(~valid) = 0;
+    tests = struct('neighbors',neighbors,'singlePass',false(size(ids)), ...
+        'pairPass',false(size(neighbors)));
+    tests.singlePass = contextPassBatch(ids,zeros(size(ids)),rows,cols, ...
+        rows,cols,evidence,minRatio);
+    for direction = 1:4
+        use = valid(:,direction);
+        tests.pairPass(use,direction) = contextPassBatch(ids(use),neighbors(use,direction), ...
+            rows(use),cols(use),nr(use,direction),nc(use,direction),evidence,minRatio);
     end
+end
 
-    minContextRatio = max(0, double(params.minimumContextFraction));
-    [~, componentEvidenceSum, contextEvidenceSum] = computePoleCandidateContextRatio( ...
-        candidateLinIdx, evidenceMap, mapSize);
-    if contextEvidenceSum <= eps
-        passesContext = true;
-    else
-        passesContext = (componentEvidenceSum ./ contextEvidenceSum) > minContextRatio;
+function passed = contextPassBatch(a,b,ar,ac,br,bc,evidence,minRatio)
+% Sum each small rectangle in column-major order. Unlike an integral image,
+% this avoids subtracting large distant sums for weak local pole evidence.
+    if isempty(a), passed = false(size(a)); return; end
+    mapSize = size(evidence);
+    loR = max(min(ar,br)-1,1); hiR = min(max(ar,br)+1,mapSize(1));
+    loC = max(min(ac,bc)-1,1); hiC = min(max(ac,bc)+1,mapSize(2));
+    height = hiR-loR+1; width = hiC-loC+1;
+    count = height.*width;
+    offset = 0:max(count)-1;
+    queryR = loR + mod(offset,height);
+    queryC = loC + floor(offset./height);
+    valid = offset < count;
+    idx = queryR + (queryC-1).*mapSize(1); idx(~valid) = 1;
+    flatEvidence = evidence(:);
+    values = flatEvidence(idx); values = reshape(values,size(idx)); values(~valid) = 0;
+    context = sum(values,2);
+    component = flatEvidence(a);
+    pair = b > 0; component(pair) = component(pair) + flatEvidence(b(pair));
+    ratio = component./context;
+    passed = context <= eps | ratio > minRatio;
+    % SIMD reduction order can differ from sum(rectangle,"all"). Resolve
+    % floating-point threshold ties with the original local reduction. This
+    % also handles cancellation when a caller supplies signed evidence.
+    errorBound = 32 .* eps .* sum(abs(values),2);
+    ambiguous = abs(context-eps) <= errorBound | ...
+        abs(component-minRatio.*context) <= (abs(minRatio)+1).*errorBound | ...
+        ~isfinite(ratio);
+    for k = find(ambiguous).'
+        exactContext = sum(evidence(loR(k):hiR(k),loC(k):hiC(k)),"all");
+        passed(k) = exactContext <= eps || component(k)./exactContext > minRatio;
     end
 end
 

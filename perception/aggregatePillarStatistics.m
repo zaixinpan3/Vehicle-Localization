@@ -7,7 +7,23 @@ function stats=aggregatePillarStatistics(points, pillarIds, attributes, useNativ
     if nargin<4, useNative=false; end
     [ids,~,group]=unique(pillarIds(:));
     n=numel(ids);
-    moments=aggregatePlanarCellMoments(points,group,n,eye(3),[0 0 0],useNative);
+    names=intersect(fieldnames(attributes),{'intensity','reflectivity'});
+    if useNative
+        % One grouped traversal retains every XYZ bound and radiometric
+        % summary alongside centered moments; no statistic is dropped.
+        values=zeros(size(points,1),numel(names));
+        for k=1:numel(names), values(:,k)=double(attributes.(names{k})(:)); end
+        [count,meanXYZ,covarianceXYZ,lower,upper,attributeCount,attributeMaximum]= ...
+            perceptionKernelsMex('cellMoments',double(points),double(group),double(n),values);
+        stats=struct('pillarIndices',int32(ids),'count',count,'meanXYZ',meanXYZ, ...
+            'covarianceXYZ',covarianceXYZ,'covarianceOrder',"xx xy yy xz yz zz", ...
+            'minimumXYZ',lower,'maximumXYZ',upper);
+        for k=1:numel(names)
+            stats.(names{k})=struct('count',attributeCount(:,k),'maximum',attributeMaximum(:,k));
+        end
+        return;
+    end
+    moments=aggregatePlanarCellMoments(points,group,n,eye(3),[0 0 0],false);
     lower=zeros(n,3); upper=lower;
     if ~isempty(points)
         for axisIndex=1:3
@@ -19,7 +35,6 @@ function stats=aggregatePillarStatistics(points, pillarIds, attributes, useNativ
         'meanXYZ',[moments.mean moments.meanZ], ...
         'covarianceXYZ',[moments.covariance moments.heightCovariance], ...
         'covarianceOrder',"xx xy yy xz yz zz",'minimumXYZ',lower,'maximumXYZ',upper);
-    names=intersect(fieldnames(attributes),{'intensity','reflectivity'});
     for k=1:numel(names)
         values=double(attributes.(names{k})(:));
         finite=isfinite(values);

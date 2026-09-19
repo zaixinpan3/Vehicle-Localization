@@ -215,7 +215,9 @@ void smoothComponents(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
     }
 }
 void cellMoments(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
-    require(nrhs==4 && nlhs==3,"Cell moments need points, indices, size and three outputs.");
+    const bool wholePillar = nrhs==5;
+    require((nrhs==4 && nlhs==3) || (wholePillar && nlhs==7),
+        "Cell moments need three outputs, or seven outputs with pillar attributes.");
     const mwSize n=mxGetM(in[1]), dimensions=mxGetN(in[1]);
     require(mxGetNumberOfDimensions(in[1])==2 && (dimensions==2 || dimensions==3),"Expected XY or XYZ points.");
     array(in[1],mxDOUBLE_CLASS,n*dimensions); array(in[2],mxDOUBLE_CLASS,n); array(in[3],mxDOUBLE_CLASS,1);
@@ -228,12 +230,46 @@ void cellMoments(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
     out[1]=mxCreateDoubleMatrix(cells,dimensions,mxREAL);
     out[2]=mxCreateDoubleMatrix(cells,dimensions==3 ? 6 : 3,mxREAL);
     double* count=mxGetDoubles(out[0]); double* mean=mxGetDoubles(out[1]); double* covariance=mxGetDoubles(out[2]);
+    double* lower=nullptr; double* upper=nullptr;
+    double* attributeCount=nullptr; double* attributeMaximum=nullptr;
+    const double* attributes=nullptr; mwSize numAttributes=0;
+    if (wholePillar) {
+        require(dimensions==3 && mxGetM(in[4])==n && mxGetNumberOfDimensions(in[4])==2,
+            "Pillar attributes must have one row per XYZ point.");
+        numAttributes=mxGetN(in[4]); array(in[4],mxDOUBLE_CLASS,n*numAttributes);
+        attributes=mxGetDoubles(in[4]);
+        out[3]=mxCreateDoubleMatrix(cells,3,mxREAL); out[4]=mxCreateDoubleMatrix(cells,3,mxREAL);
+        out[5]=mxCreateDoubleMatrix(cells,numAttributes,mxREAL);
+        out[6]=mxCreateDoubleMatrix(cells,numAttributes,mxREAL);
+        lower=mxGetDoubles(out[3]); upper=mxGetDoubles(out[4]);
+        attributeCount=mxGetDoubles(out[5]); attributeMaximum=mxGetDoubles(out[6]);
+        if (cells) std::fill(lower,lower+cells*3,std::numeric_limits<double>::quiet_NaN());
+        if (cells) std::fill(upper,upper+cells*3,std::numeric_limits<double>::quiet_NaN());
+        if (cells && numAttributes) std::fill(attributeMaximum,attributeMaximum+cells*numAttributes,
+            std::numeric_limits<double>::quiet_NaN());
+    }
     // Two centered passes retain small scatter at large coordinate offsets.
     // Each cell's additions follow the original point order, as in accumarray.
     for (mwSize k=0;k<n;++k) {
         const mwSize c=static_cast<mwSize>(indices[k])-1;
         ++count[c];
-        for (mwSize d=0;d<dimensions;++d) mean[c+d*cells]+=points[k+d*n];
+        for (mwSize d=0;d<dimensions;++d) {
+            const double value=points[k+d*n];
+            mean[c+d*cells]+=value;
+            if (wholePillar) {
+                double& lo=lower[c+d*cells]; double& hi=upper[c+d*cells];
+                if (std::isnan(lo) || value<lo) lo=value;
+                if (std::isnan(hi) || value>hi) hi=value;
+            }
+        }
+        for (mwSize d=0;d<numAttributes;++d) {
+            const double value=attributes[k+d*n];
+            if (std::isfinite(value)) {
+                ++attributeCount[c+d*cells];
+                double& maximum=attributeMaximum[c+d*cells];
+                if (std::isnan(maximum) || value>maximum) maximum=value;
+            }
+        }
     }
     for (mwSize c=0;c<cells;++c) if (count[c]) {
         for (mwSize d=0;d<dimensions;++d) mean[c+d*cells]/=count[c];
@@ -249,6 +285,44 @@ void cellMoments(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
     }
     for (mwSize c=0;c<cells;++c) if (count[c]) {
         for (mwSize d=0;d<(dimensions==3 ? 6 : 3);++d) covariance[c+d*cells]/=count[c];
+    }
+}
+void boxSum(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
+    require(nrhs==3 && nlhs==1,"Box sum needs a map, two radii and one output.");
+    const mwSize rows=mxGetM(in[1]),cols=mxGetN(in[1]),n=rows*cols;
+    require(mxGetNumberOfDimensions(in[1])==2,"Expected a map matrix.");
+    array(in[1],mxDOUBLE_CLASS,n); array(in[2],mxDOUBLE_CLASS,2);
+    const double* radius=mxGetDoubles(in[2]);
+    for (int k=0;k<2;++k) require(std::isfinite(radius[k]) && radius[k]>=0
+        && radius[k]==std::floor(radius[k]),"Invalid box radius.");
+    const mwSize ry=static_cast<mwSize>(std::min(radius[0],static_cast<double>(rows)));
+    const mwSize rx=static_cast<mwSize>(std::min(radius[1],static_cast<double>(cols)));
+    const double* values=mxGetDoubles(in[1]);
+    out[0]=mxCreateDoubleMatrix(rows,cols,mxREAL);
+    double* result=mxGetDoubles(out[0]);
+    // Match cumsum(cumsum(values,1),2), then the four-corner subtraction
+    // order. Reuse one prefix buffer instead of full-size gather temporaries.
+    std::vector<double> prefix(n);
+    for (mwSize x=0;x<cols;++x) {
+        double sum=0;
+        for (mwSize y=0;y<rows;++y) {
+            const mwSize k=y+x*rows;
+            sum+=std::isfinite(values[k]) ? values[k] : 0;
+            prefix[k]=sum;
+        }
+    }
+    for (mwSize x=1;x<cols;++x)
+        for (mwSize y=0;y<rows;++y) prefix[y+x*rows]+=prefix[y+(x-1)*rows];
+    for (mwSize x=0;x<cols;++x) {
+        const mwSize hiX=std::min(x+rx,cols-1);
+        for (mwSize y=0;y<rows;++y) {
+            const mwSize hiY=std::min(y+ry,rows-1);
+            double value=prefix[hiY+hiX*rows];
+            if (y>ry) value-=prefix[y-ry-1+hiX*rows];
+            if (x>rx) value-=prefix[hiY+(x-rx-1)*rows];
+            if (y>ry && x>rx) value+=prefix[y-ry-1+(x-rx-1)*rows];
+            result[y+x*rows]=value;
+        }
     }
 }
 void neighborDifference(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
@@ -375,12 +449,13 @@ void mexFunction(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
     try {
         if (!std::strcmp(command,"version")) {
             require(nrhs==1 && nlhs==1,"Version needs no data and one output.");
-            out[0]=mxCreateDoubleScalar(2);
+            out[0]=mxCreateDoubleScalar(3);
         }
         else if (!std::strcmp(command, "propagateGround")) propagate(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "growRoad")) roadGrowth(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "pillarShape")) pillarShape(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "cellMoments")) cellMoments(nlhs, out, nrhs, in);
+        else if (!std::strcmp(command, "boxSum")) boxSum(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "neighborDifference")) neighborDifference(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "directionalSupport")) directionalSupport(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "groundStats")) groundStats(nlhs, out, nrhs, in);

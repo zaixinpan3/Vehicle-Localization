@@ -124,7 +124,7 @@ function [stats, maps] = buildGroundFeatureEnergyMaps(groundPoints, groundCellLi
         & single(heightStepMap) >= single(cfg.extractionHeightStepMinMeters) ...
         & single(stats.roughnessMap) >= single(cfg.extractionStandaloneRoughnessMinMeters);
     bridgeRadiusCells = max(0, round(double(cfg.extractionStandaloneBridgeRadiusCells)));
-    baseStandaloneSeedCount = boxSumMap(double(baseStandaloneSeedMask), bridgeRadiusCells, bridgeRadiusCells) ...
+    baseStandaloneSeedCount = boxSumMap(double(baseStandaloneSeedMask), bridgeRadiusCells, bridgeRadiusCells, cfg) ...
         - double(baseStandaloneSeedMask);
     baseStandaloneBridgeMask = totalEnergyBase >= single(cfg.extractionStandaloneBridgeBaseEnergyThreshold) ...
         & single(linearityMaps.componentCenterEvidence) >= single(cfg.extractionStandaloneBridgeCenterEvidenceMin) ...
@@ -492,14 +492,14 @@ function [linearityMaps, gatedEnergy] = applyLocalLinearityEnergyGate(totalEnerg
     weightMap = softWeight .* double(supportMask);
     seedMap = double(supportMask & e > tau);
 
-    m00 = boxSumMap(weightMap, rowRadius, colRadius);
-    m10 = boxSumMap(weightMap .* xGrid, rowRadius, colRadius);
-    m01 = boxSumMap(weightMap .* yGrid, rowRadius, colRadius);
-    m20 = boxSumMap(weightMap .* xGrid .* xGrid, rowRadius, colRadius);
-    m02 = boxSumMap(weightMap .* yGrid .* yGrid, rowRadius, colRadius);
-    m11 = boxSumMap(weightMap .* xGrid .* yGrid, rowRadius, colRadius);
-    seedCount = boxSumMap(seedMap, rowRadius, colRadius);
-    validCount = boxSumMap(double(supportMask), rowRadius, colRadius);
+    m00 = boxSumMap(weightMap, rowRadius, colRadius, cfg);
+    m10 = boxSumMap(weightMap .* xGrid, rowRadius, colRadius, cfg);
+    m01 = boxSumMap(weightMap .* yGrid, rowRadius, colRadius, cfg);
+    m20 = boxSumMap(weightMap .* xGrid .* xGrid, rowRadius, colRadius, cfg);
+    m02 = boxSumMap(weightMap .* yGrid .* yGrid, rowRadius, colRadius, cfg);
+    m11 = boxSumMap(weightMap .* xGrid .* yGrid, rowRadius, colRadius, cfg);
+    seedCount = boxSumMap(seedMap, rowRadius, colRadius, cfg);
+    validCount = boxSumMap(double(supportMask), rowRadius, colRadius, cfg);
     windowCount = boxWindowCountMap(mapSize, rowRadius, colRadius);
     validRatio = validCount ./ max(windowCount, eps);
 
@@ -543,7 +543,7 @@ function [linearityMaps, gatedEnergy] = applyLocalLinearityEnergyGate(totalEnerg
     if logical(cfg.componentLineSupportEnabled)
         componentFillRadius = max(0, round(double(cfg.componentFillSupportRadiusCells)));
         strongLinearitySeed = double(supportMask) .* double(linearity >= double(cfg.componentFillLinearityThreshold));
-        componentFillSupportCount = boxSumMap(strongLinearitySeed, componentFillRadius, componentFillRadius);
+        componentFillSupportCount = boxSumMap(strongLinearitySeed, componentFillRadius, componentFillRadius, cfg);
         componentFillGate = smoothStepMap(componentFillSupportCount, cfg.componentFillMinStrongLinearityCount, cfg.componentFillSaturatedStrongLinearityCount);
         componentFill = max(double(cfg.componentFillWeight), 0) .* componentScore .* componentPeakEnergy .* componentCenterEvidence .* componentFillGate;
         gated = max(gated, componentFill);
@@ -809,7 +809,7 @@ function smoothMap = smoothStepMap(valueMap, lowerValue, upperValue)
     smoothMap(~isfinite(smoothMap)) = 0;
 end
 
-function sumMap = boxSumMap(valueMap, rowRadius, colRadius)
+function sumMap = boxSumMap(valueMap, rowRadius, colRadius, cfg)
 % boxSumMap: Sum finite map values inside a rectangular cell window
 % centered at every output location using zero padding outside the map
 % extent so edge windows naturally contain fewer valid samples.
@@ -831,6 +831,10 @@ function sumMap = boxSumMap(valueMap, rowRadius, colRadius)
         return;
     end
 
+    if isfield(cfg,"useNativeKernels") && cfg.useNativeKernels
+        sumMap = perceptionKernelsMex('boxSum',valueMap,[rowRadius colRadius]);
+        return;
+    end
     integralMap = zeros(mapSize(1) + 1, mapSize(2) + 1);
     integralMap(2:end, 2:end) = cumsum(cumsum(valueMap, 1), 2);
     rowStart = max((1:mapSize(1)).' - rowRadius, 1);
