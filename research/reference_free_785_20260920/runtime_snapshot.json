@@ -1,0 +1,6 @@
+{
+  "revision": "d6502080b392e6d368696eeb0b7fd755f556752b",
+  "snapshot": "output/reference_free_785_20260920/historical_runtime",
+  "scope": "Unmodified historical runtime extracted from Git for this experiment only; not an active alternative implementation.",
+  "archiveSha256": "89ec6651c182ea3547694fd7f11b8b7be405b8fdd3a58f7ad5f497d7be9d1780"
+}

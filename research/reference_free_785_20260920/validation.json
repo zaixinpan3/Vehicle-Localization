@@ -1,0 +1,81 @@
+{
+  "passed": 56,
+  "failed": 0,
+  "incomplete": 0,
+  "testNames": [
+    "gnssOutputPointTest/rotatedPointUsesForwardLeftSign",
+    "gnssOutputPointTest/calibrationAndHeadingUncertaintyReduceInformation",
+    "gnssOutputPointTest/invalidCalibrationRejected",
+    "gnssOutputPointTest/turningReceiverPointMatchesCoincidentInput",
+    "gnssOutputPointTest/gnssOnlyRetainsPointCorrection",
+    "gnssOutputPointTest/absentGnssIgnoresOutputPoint",
+    "gnssOutputPointTest/legacyConfigurationKeepsCoincidentBehavior",
+    "gnssOutputPointTest/estimatedAttitudeControlsCorrection",
+    "gnssOutputPointTest/independentPointConfigurationHasCommonPositionBandwidth",
+    "gnssOutputPointTest/matchedGainLimitsDriftWithGnssAlone",
+    "geometricRegistrationTest/oneCorrespondenceRejectsWithoutDimensionError",
+    "geometricRegistrationTest/repeatedTargetsPreserveFirstTieAcrossBlocks(repeatedComponents=1)",
+    "geometricRegistrationTest/repeatedTargetsPreserveFirstTieAcrossBlocks(repeatedComponents=200)",
+    "geometricRegistrationTest/recoversGaussianPoseAtLargeCoordinates",
+    "geometricRegistrationTest/ignoresPositiveComponentSamplingMass",
+    "geometricRegistrationTest/parallelRoadKeepsPredictedLongitudinalPosition",
+    "geometricRegistrationTest/shiftingRoadDensityCannotCreateLongitudinalConstraint",
+    "geometricRegistrationTest/conflictingClassesCannotProduceAcceptedPose",
+    "geometricRegistrationTest/heightRejectsAnotherFloor",
+    "geometricRegistrationTest/compatibleHeightDoesNotPullPlanarPose",
+    "geometricRegistrationTest/transformsGeometryConsistentlyBeforeRecordedAttitude",
+    "geometricRegistrationTest/requiresMatchingExplicitCalibration",
+    "geometricRegistrationTest/exportsCalibrationFromSelectedMapWindow",
+    "geometricRegistrationTest/rejectsInvalidSemanticQuality",
+    "geometricRegistrationTest/recoversOfflinePitchWithoutAddingPoseStates",
+    "geometricRegistrationTest/refusesStationaryCalibrationData",
+    "geometricRegistrationTest/projectionPreservesCalibrationAndGeometricEvidence",
+    "registrationInformationTest/matchesAnalyticIsotropicLandmarkInformation",
+    "registrationInformationTest/numericalYawScalingDoesNotChangePhysicalInformation",
+    "registrationInformationTest/globalRotationTransformsInformationAndRetainsCrossTerms",
+    "registrationInformationTest/uniformMapRepeatabilityReducesInformation",
+    "registrationInformationTest/duplicatedSourceComponentsDoNotInventIndependentEvidence",
+    "registrationInformationTest/roadTangentRemainsUnobservableInDirectionalEvent",
+    "registrationInformationTest/unvalidatedPartialFlagCannotAuthorizeAnEvent",
+    "registrationInformationTest/nonconvergedDirectionalGeometryEmitsNoEvent",
+    "registrationInformationTest/inconsistentPartialClassesEmitsNoEvent",
+    "registrationInformationTest/directionalInformationAndProjectorUsePhysicalCoordinates",
+    "registrationInformationTest/filteredWeakDirectionsDoNotLeakIntoExport",
+    "registrationInformationTest/acceptedPoseCannotOmitOrFakeInformation",
+    "repeatabilityRegistrationTest/projectionRetainsStabilityWithoutChangingMass(dimension=2)",
+    "repeatabilityRegistrationTest/projectionRetainsStabilityWithoutChangingMass(dimension=3)",
+    "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=negative)",
+    "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=aboveOne)",
+    "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=nan)",
+    "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=infinite)",
+    "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=complex)",
+    "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=wrongLength)",
+    "repeatabilityRegistrationTest/rejectsMalformedStability(invalidRepeatability=matrix)",
+    "repeatabilityRegistrationTest/requiresExplicitMapRepeatability",
+    "repeatabilityRegistrationTest/classBalancingDoesNotEraseUniformLowStability",
+    "repeatabilityRegistrationTest/preservesAbsoluteReliabilityBetweenClasses",
+    "repeatabilityRegistrationTest/stableLandmarksDominateConflictingSameClassLandmarks",
+    "repeatabilityRegistrationTest/positiveSamplingMassCannotReplaceStability",
+    "repeatabilityRegistrationTest/zeroStabilityDisablesTargets",
+    "repeatabilityRegistrationTest/allZeroStabilityRejectsMeasurement",
+    "repeatabilityRegistrationTest/onlyMapStabilityDiscountsSingleFrameEvidence"
+  ],
+  "codeAnalyzer": [
+    {
+      "file": "bootstrapFromGnss785.m",
+      "messages": []
+    },
+    {
+      "file": "replayWithoutReference785.m",
+      "messages": []
+    },
+    {
+      "file": "runReferenceFree785.m",
+      "messages": []
+    },
+    {
+      "file": "validateReferenceFree785.m",
+      "messages": []
+    }
+  ]
+}

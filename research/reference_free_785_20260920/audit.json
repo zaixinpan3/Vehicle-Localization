@@ -1,0 +1,19 @@
+{
+  "frames": 1169,
+  "historicalAccepted": 1083,
+  "bootstrapSeedCorrectionDifference": 4.6566128730773926e-09,
+  "bootstrapSelected": 7,
+  "bootstrapInitialHeadingDeg": -120.00000000000027,
+  "bootstrapPositionErrorM": 0.03371626028691953,
+  "bootstrapHeadingErrorDeg": -0.08723246376465849,
+  "matching_prediction": {
+    "accepted": 1081,
+    "rejected": 88,
+    "maximumSeedReconstructionDifference": 9.313225746154785e-09
+  },
+  "fusion_prediction": {
+    "accepted": 1087,
+    "rejected": 82,
+    "maximumSeedReconstructionDifference": 9.313225746154785e-09
+  }
+}

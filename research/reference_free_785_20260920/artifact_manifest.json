@@ -1,0 +1,182 @@
+[
+  {
+    "path": "output/mncav_bestpos_alignment_20260917/experiment.mat",
+    "bytes": 4261178,
+    "sha256": "0b0376df7dda73b5e842c319f1ad9d6d0aabeb60d23db0979e9c3f6e5b91aaa1",
+    "role": "input"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/experiment.mat",
+    "bytes": 348390498,
+    "sha256": "7d8f2007c4376fc6064e75249b6202b96feb1380c7c8606714879d1f35c0e08e",
+    "role": "input"
+  },
+  {
+    "path": "output/mississippi_mapping_inspva_20260915/probability_cloud.mat",
+    "bytes": 269784,
+    "sha256": "ad2a55e0b8a0a222432a3a4bd3a8b70f0a92ecd686b19c81b5237ef2657baffd",
+    "role": "input"
+  },
+  {
+    "path": "output/reference_free_785_20260920/runtime_snapshot.json",
+    "bytes": 350,
+    "sha256": "9561218b95abacc05d2fcad81d6a5a75f3f5e6798bdb25af8fc2672335a9aec3",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/bootstrap_candidates.csv",
+    "bytes": 5059,
+    "sha256": "cbe5edca368898af68c729a6e46584c8fe34da5860d6abeb3f2b7ccd53896349",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/historical_fused.csv",
+    "bytes": 191617,
+    "sha256": "2a4adf3212e3745f0831c41fa469ae9efa618450b84da981e7c18f07a89fc6fb",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/historical_gnss_only.csv",
+    "bytes": 190150,
+    "sha256": "6ba59732dee58b275dc8e4863cca275485c3e5327d193bf41f74cdc2ef62a273",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/motion.csv",
+    "bytes": 151915,
+    "sha256": "9fabefe8c8a7e661b9602c466bd6ceab1618891d19b29685f327e9b11c6a28d0",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/historical_matching.csv",
+    "bytes": 104881,
+    "sha256": "0dc8a50f89f75d29d058ed920b05050c6b1e3ea01a3131563495042c5e8b3be3",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/experiment.mat",
+    "bytes": 5193144,
+    "sha256": "c1a8b04d8b3ea839c4399a7b901db241c6d00a522c49227b81e1ddb56345509b",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/verification.json",
+    "bytes": 233,
+    "sha256": "1881b3d4316611ad16f7d37cbd81d0ebec66742864db3d87e18f750ba99e06c5",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/metrics.csv",
+    "bytes": 2469,
+    "sha256": "23d21b91be4488e81e906cd0fa88f64bc17a15018cca1cdf871aeec15924b8d6",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/audit.json",
+    "bytes": 571,
+    "sha256": "7ccca802fb4a956868c0c2286efe543905f9877462e384156a9e9ccb14e2bff0",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/comparison.png",
+    "bytes": 612558,
+    "sha256": "924c5607c7fe06397bb4822c40ea29290133decf10b6e3db7df67bc163db86b0",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/comparison.pdf",
+    "bytes": 81590,
+    "sha256": "179f9d2eb9ab9ae4dd3829bd37fb6309e9f4d61d6c9321996e3435d03aeffaba",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/validation.json",
+    "bytes": 4823,
+    "sha256": "a2298861101b5c601487a0d1a955fabe888587345c8e21f96ea7e6d86dc3916b",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/matching_prediction/matching.csv",
+    "bytes": 374518,
+    "sha256": "ef7396d818c4450ad6d0670aea6378956bbde5d5dffc2319ab71d8fb7be08df9",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/matching_prediction/fused.csv",
+    "bytes": 191116,
+    "sha256": "497456670f61da613135401f449c07bf4ce275265d2ac221c00cca1276789441",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/matching_prediction/gnss_only.csv",
+    "bytes": 190171,
+    "sha256": "7f8422acd1f4492e21590d4f4eaf411b5b81e78cd4ee87f7b72629ade2f2a01a",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/matching_prediction/experiment.mat",
+    "bytes": 1390879,
+    "sha256": "27dc7994055db5c298846886687d295ed8ecd5a51090996a2dbffd213668f7bd",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/fusion_prediction/matching.csv",
+    "bytes": 374456,
+    "sha256": "4c2a0c72db9caca0c2aacb21798398199a23117b5cc41ef3b167d47574ae4bd1",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/fusion_prediction/fused.csv",
+    "bytes": 191282,
+    "sha256": "7f0b770b616636ca1640ed58e1c61d05dca3f95b25eec0f50f577befa33ebd50",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/fusion_prediction/gnss_only.csv",
+    "bytes": 190171,
+    "sha256": "7f8422acd1f4492e21590d4f4eaf411b5b81e78cd4ee87f7b72629ade2f2a01a",
+    "role": "output"
+  },
+  {
+    "path": "output/reference_free_785_20260920/fusion_prediction/experiment.mat",
+    "bytes": 1413017,
+    "sha256": "3088d49287762efb47453f868aa81c66325463daefa8af72da9da83c709a11b0",
+    "role": "output"
+  },
+  {
+    "path": "research/reference_free_785_20260920/bootstrapFromGnss785.m",
+    "bytes": 1431,
+    "sha256": "ff76cc3e65ecc11d9d0b24ab02ce74a4c1a24fd9c9269326f0a40ca2316c8d95",
+    "role": "source"
+  },
+  {
+    "path": "research/reference_free_785_20260920/replayWithoutReference785.m",
+    "bytes": 4466,
+    "sha256": "6bd27a4e0fdd484f2e11f30787a8e087cfa6f211b735f08bdb74c203d8088623",
+    "role": "source"
+  },
+  {
+    "path": "research/reference_free_785_20260920/runReferenceFree785.m",
+    "bytes": 5249,
+    "sha256": "717481f79ec5bf1640108cb02ee380e49a3251272fee7728f8e6d4ff870020b2",
+    "role": "source"
+  },
+  {
+    "path": "research/reference_free_785_20260920/prepare_runtime.py",
+    "bytes": 1358,
+    "sha256": "4fa6c0c8c09613416fa1d4be9e4c9c4a0855483b52ca3b8a550a3cc47c9e4b47",
+    "role": "source"
+  },
+  {
+    "path": "research/reference_free_785_20260920/analyze.py",
+    "bytes": 9475,
+    "sha256": "c29eb80579788bfde150f4b189416e7370402a8ed231dbb9d8108c3058ae65b1",
+    "role": "source"
+  },
+  {
+    "path": "research/reference_free_785_20260920/validateReferenceFree785.m",
+    "bytes": 1621,
+    "sha256": "54acaf3870c4a61fd0aab7a8a574183ce0396095f922709570114691d4820af5",
+    "role": "source"
+  }
+]
