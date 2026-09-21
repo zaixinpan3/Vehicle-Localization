@@ -37,6 +37,11 @@ function [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg)
     probabilityCloudMap = buildSlidingWindowMap(featureData, cfg);
     probabilityCloudMap.sourceMatPath = string(matPath);
     probabilityCloudMap.poseMatchCsvPath = string(poseMatchCsvPath);
+    if ismember('clock_model_id',framePoseTable.Properties.VariableNames)
+        identities=unique(string(framePoseTable.clock_model_id));
+        assert(isscalar(identities),'VehicleLocalization:ClockMismatch','Mapping poses mix clock models.');
+        probabilityCloudMap.clockModelId=identities;
+    end
 
     if strlength(string(cfg.mapOutputPath)) > 0
         mapOutputPath = fullfile(dataRoot, cfg.mapOutputPath);

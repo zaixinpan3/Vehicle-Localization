@@ -4,8 +4,8 @@ function report=runMncavZeroDelayExperiment(outputFolder,options)
 % that cache and runs the existing continuous global observer with d=0.
 % Accepted frame knots are exact; intervals use offline linear reconstruction.
     arguments
-        outputFolder (1,1) string="output/mncav_zero_delay_20260914"
-        options.MapFile (1,1) string="output/mississippi_mapping_20260912/probability_cloud_map.mat"
+        outputFolder (1,1) string="output/mncav_zero_delay"
+        options.MapFile (1,1) string="output/mississippi_mapping_synchronized/probability_cloud_map.mat"
         options.MatchingFolder (1,1) string=""
         options.InformationScale (1,1) double {mustBeFinite,mustBePositive}=.001
         options.MaximumOfflineGap (1,1) double {mustBeFinite,mustBePositive}=1
@@ -28,7 +28,7 @@ function report=runMncavZeroDelayExperiment(outputFolder,options)
         matchingFolder=fullfile(outputFolder,'matching');
         motion=struct('time',raw.highRate.time,'longitudinalSpeed',raw.highRate.longitudinalSpeed, ...
             'lateralVelocity',lateral.lateralVelocity,'yawRate',raw.highRate.yawRate, ...
-            'longitudinalVelocitySource',"four_wheel");
+            'longitudinalVelocitySource',"four_wheel",'clockModelId',raw.clockModelId);
         matching=replayMississippiLocalization(options.MapFile,sensorFolder,matchingFolder, ...
             "recursive",[],MotionInputs=motion);
         matchingReused=false;
@@ -41,6 +41,9 @@ function report=runMncavZeroDelayExperiment(outputFolder,options)
             && contains(string(matching.metadata.motionSource),'four-wheel'), ...
             'VehicleLocalization:MatchingProvenance','Precomputed matching must use the declared map and actual lateral aid.');
     end
+    assert(isfield(matching.metadata,'clockModelId') && ...
+        string(matching.metadata.clockModelId)==raw.clockModelId, ...
+        'VehicleLocalization:ClockMismatch','Cached matching and motion clocks differ.');
     calls=matching.calls;assert(isequal(calls.frame,(1:1170).'), ...
         'VehicleLocalization:IncompletePrecomputation','All 1170 frames must be processed before observer replay.');
     accepted=calls.accepted==1;pose=[calls.x,calls.y,calls.psi];pose(~accepted,:)=NaN;

@@ -6,11 +6,11 @@ function report=runMncavCoarseLocalizationExperiment(outputFolder)
 % The observer consumes full-pose measurements with their information matrices;
 % rejected or directional-only matches do not become full-pose measurements.
     arguments
-        outputFolder (1,1) string="output/mncav_coarse_localization_20260918"
+        outputFolder (1,1) string="output/mncav_coarse_localization"
     end
     setupVehicleLocalization();
     if ~isfolder(outputFolder),mkdir(outputFolder);end
-    mapFile="output/mississippi_mapping_inspva_20260915/probability_cloud.mat";
+    mapFile="output/mississippi_mapping_synchronized/probability_cloud.mat";
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
     parameterFile="output/mncav_interface_audit_20260916/vehicle_parameters.json";
     [prepared,~,~]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
@@ -19,7 +19,7 @@ function report=runMncavCoarseLocalizationExperiment(outputFolder)
     h=prepared.highRate;
     motion=struct('time',h.time,'longitudinalSpeed',h.longitudinalSpeed, ...
         'lateralVelocity',lateral.lateralVelocity,'yawRate',h.yawRate, ...
-        'longitudinalVelocitySource',"four_wheel");
+        'longitudinalVelocitySource',"four_wheel",'clockModelId',prepared.clockModelId);
     % Profile a separate representative call to verify the actual call path.
     % Profiling and disk loading are excluded from full-sequence timing.
     map=load(mapFile,'cloud');mapCfg=featureMapBuildConfig();

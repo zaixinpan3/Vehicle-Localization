@@ -1,0 +1,23 @@
+test_bursts_do_not_warp_query_time (test_receiver_clock.ReceiverClockTest.test_bursts_do_not_warp_query_time) ... ok
+test_clock_reset_rejected (test_receiver_clock.ReceiverClockTest.test_clock_reset_rejected) ... ok
+test_invalid_coefficients_rejected (test_receiver_clock.ReceiverClockTest.test_invalid_coefficients_rejected) ... ok
+test_missing_packets_and_gps_week_rollover (test_receiver_clock.ReceiverClockTest.test_missing_packets_and_gps_week_rollover) ... ok
+test_no_unbounded_extrapolation_or_nan (test_receiver_clock.ReceiverClockTest.test_no_unbounded_extrapolation_or_nan) ... ok
+test_nonlinear_drift_rejected (test_receiver_clock.ReceiverClockTest.test_nonlinear_drift_rejected) ... ok
+test_shared_matlab_fixture_matches_python (test_receiver_clock.ReceiverClockTest.test_shared_matlab_fixture_matches_python) ... ok
+test_source_change_invalidates_cached_clock (test_receiver_clock.ReceiverClockTest.test_source_change_invalidates_cached_clock) ... ok
+test_too_few_or_duplicate_pairs_rejected (test_receiver_clock.ReceiverClockTest.test_too_few_or_duplicate_pairs_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.045s
+
+OK
+test_grid_north_agrees_with_projected_north_displacement (test_inspva_pose_preparation.InspvaPosePreparationTest.test_grid_north_agrees_with_projected_north_displacement) ... ok
+test_preparation_retains_free_navigation_and_interpolates_height (test_inspva_pose_preparation.InspvaPosePreparationTest.test_preparation_retains_free_navigation_and_interpolates_height) ... ok
+test_slerp_crosses_heading_wrap_by_short_arc (test_inspva_pose_preparation.InspvaPosePreparationTest.test_slerp_crosses_heading_wrap_by_short_arc) ... ok
+test_slerp_handles_equivalent_opposite_signs (test_inspva_pose_preparation.InspvaPosePreparationTest.test_slerp_handles_equivalent_opposite_signs) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.016s
+
+OK

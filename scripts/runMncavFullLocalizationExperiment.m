@@ -5,8 +5,8 @@ function report=runMncavFullLocalizationExperiment(outputFolder,options)
 % The continuous input is an explicitly offline reconstruction of accepted
 % matching poses and their actual information. No real-time claim follows.
     arguments
-        outputFolder (1,1) string="output/mncav_full_localization_20260914"
-        options.MapFile (1,1) string="output/mississippi_mapping_20260912/probability_cloud_map.mat"
+        outputFolder (1,1) string="output/mncav_full_localization"
+        options.MapFile (1,1) string="output/mississippi_mapping_synchronized/probability_cloud_map.mat"
         options.MatchingFolder (1,1) string=""
         options.InformationScale (1,1) double {mustBeFinite,mustBePositive}=.001
         options.MaximumOfflineGap (1,1) double {mustBeFinite,mustBePositive}=1
@@ -28,7 +28,7 @@ function report=runMncavFullLocalizationExperiment(outputFolder,options)
         matchingFolder=fullfile(outputFolder,'matching');
         motion=struct('time',raw.highRate.time,'longitudinalSpeed',raw.highRate.longitudinalSpeed, ...
             'lateralVelocity',lateral.lateralVelocity,'yawRate',raw.highRate.yawRate, ...
-            'longitudinalVelocitySource',"four_wheel");
+            'longitudinalVelocitySource',"four_wheel",'clockModelId',raw.clockModelId);
         matching=replayMississippiLocalization(options.MapFile,sensorFolder,matchingFolder, ...
             "recursive",[],MotionInputs=motion);
         matchingReused=false;
@@ -41,6 +41,9 @@ function report=runMncavFullLocalizationExperiment(outputFolder,options)
             && contains(string(matching.metadata.motionSource),'four-wheel'), ...
             'VehicleLocalization:MatchingProvenance','Matching must use the declared map and actual lateral-observer motion.');
     end
+    assert(isfield(matching.metadata,'clockModelId') && ...
+        string(matching.metadata.clockModelId)==raw.clockModelId, ...
+        'VehicleLocalization:ClockMismatch','Cached matching and motion clocks differ.');
     calls=matching.calls;accepted=calls.accepted==1;
     assert(nnz(accepted)>=2,'VehicleLocalization:InsufficientMatches','Need at least two full-pose matches.');
     poseTime=calls.timeSeconds(accepted);pose=[calls.x(accepted),calls.y(accepted),calls.psi(accepted)];

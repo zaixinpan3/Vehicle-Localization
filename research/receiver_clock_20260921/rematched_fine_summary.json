@@ -1,0 +1,16 @@
+{
+  "frames": 1170,
+  "accepted": 1108,
+  "positionRmseM": 0.10356145125862867,
+  "positionMedianM": 0.066551535708548826,
+  "positionP95M": 0.19435532401301306,
+  "positionMaximumM": 0.6019662131987229,
+  "frame307ErrorM": 0.0897831784667254,
+  "frame307Accepted": true,
+  "seconds": 24.73018,
+  "clockModelId": "10d901c3326ba355f1cceeb0ec824996a54645f65eea8b644a14d69490d91dcc",
+  "solverRevision": "d6502080",
+  "referenceSeedEveryFrame": true,
+  "source": "unchanged saved fine labels reprojected with corrected full poses",
+  "limitation": "Historical fine-input reference-seeded same-drive diagnostic; not production coarse-only localization or independent ground truth"
+}

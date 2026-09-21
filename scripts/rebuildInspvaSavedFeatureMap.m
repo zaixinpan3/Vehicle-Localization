@@ -3,7 +3,7 @@ function report = rebuildInspvaSavedFeatureMap(outputFolder,options)
 % Cached global features are reprojected with INSPVA poses at LiDAR times.
 % Original perception/map artifacts remain the historical baseline.
     arguments
-        outputFolder (1,1) string="output/mississippi_mapping_inspva_20260915"
+        outputFolder (1,1) string="output/mississippi_mapping_synchronized"
         options.ObservationFile (1,1) string="output/mississippi_perception_video_20260912/feature_observations.mat"
         options.PoseFile (1,1) string=""
     end
@@ -13,6 +13,12 @@ function report = rebuildInspvaSavedFeatureMap(outputFolder,options)
     if strlength(options.PoseFile)==0,options.PoseFile=fullfile("data",cfg.poseMatchCsvPath);end
     poses=readFramePoseTable(options.PoseFile,cfg.frameIndices);
     assert(all(poses.pose_source=="INSPVA"),'Expected INSPVA-only mapping poses.');
+    root=fileparts(fileparts(mfilename('fullpath')));
+    clock=loadReceiverClock(fullfile(root,'data','raw','Missisipi','gnss', ...
+        'raw_data_2024-06-07-12-09-31_0_inspva.csv'));
+    assert(ismember('clock_model_id',poses.Properties.VariableNames) && ...
+        all(string(poses.clock_model_id)==string(clock.modelId)), ...
+        'VehicleLocalization:ClockMismatch','Rebuild requires synchronized pose epochs.');
     loaded=load(options.ObservationFile,'featureData');original=loaded.featureData;
     [featureData,reprojection]=reprojectSavedFeatureObservations(original,poses);
     assert(isequal(sum(featureData.counts,1),[133836,194300,70950]),'Unexpected perception point counts.');
@@ -22,6 +28,8 @@ function report = rebuildInspvaSavedFeatureMap(outputFolder,options)
     timer=tic;probabilityCloudMap=buildSlidingWindowMap(featureData,cfg);buildSeconds=toc(timer);
     probabilityCloudMap.sourceObservationPath=fullfile(outputFolder,'feature_observations.mat');
     probabilityCloudMap.poseMatchCsvPath=options.PoseFile;
+    probabilityCloudMap.clockModelId=string(clock.modelId);
+    probabilityCloudMap.receiverClock=clock;
     probabilityCloudMap.poseSource="INSPVA";
     probabilityCloudMap.poseCrs="EPSG:32615";
     probabilityCloudMap.heightDatum="ellipsoidal";
@@ -45,7 +53,7 @@ function report = rebuildInspvaSavedFeatureMap(outputFolder,options)
     assert(all(abs(reconstructed(details.valid)-scores(details.valid))<=details.scoreErrorBound(details.valid)+1e-10));
     report=struct('sourceObservationFile',options.ObservationFile,'poseFile',options.PoseFile, ...
         'frames',height(poses),'poseSource',"INSPVA",'poseCrs',"EPSG:32615",'heightDatum',"ellipsoidal", ...
-        'reprojection',reprojection,'buildSeconds',buildSeconds,'publishedComponents',cloud.components.numComponents, ...
+        'clock',clock,'reprojection',reprojection,'buildSeconds',buildSeconds,'publishedComponents',cloud.components.numComponents, ...
         'totalPublishedMass',cloud.totalMass,'maximumIntensityReconstructionError',max(abs(intensity-details.intensity),[],'all'), ...
         'maximumScoreReconstructionError',max(abs(reconstructed(details.valid)-scores(details.valid))), ...
         'schemaAndMassChecksPassed',true,'perceptionRerun',false, ...

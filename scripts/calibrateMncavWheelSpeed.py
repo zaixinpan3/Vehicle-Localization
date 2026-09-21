@@ -12,6 +12,7 @@ import json
 import numpy as np
 import pandas as pd
 from scipy.optimize import least_squares
+from receiverClock import ensure_clock, convert_time, native_seconds
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "output/mncav_wheel_only_20260916"
@@ -30,13 +31,13 @@ def prepare(sequence, parameters):
     imu, steering = [pd.read_csv(folder / (name + ".csv")) for name in ["imu", "steering"]]
     wheel_path = folder / "wheel_speed_report.csv"
     wheel = pd.read_csv(wheel_path)
-    origin = ins.stamp_sec.iloc[0]
-    receiver = ins.gps_seconds.to_numpy() - ins.gps_seconds.iloc[0]
+    clock = ensure_clock(ins_path)
+    receiver = native_seconds(ins.gps_week, ins.gps_seconds)
     start = 0.0
-    bridge = lambda stamps: np.interp(np.asarray(stamps) - origin, ins.stamp_sec - origin, receiver)
+    bridge = lambda stamps: convert_time(clock, stamps)
     if sequence == "12-09-31":
-        poses = pd.read_csv(ROOT / "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_pose_match_1_1170.csv")
-        start = float(bridge(poses.lidar_stamp_sec.iloc[0]))
+        poses = pd.read_csv(ROOT / "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_points.csv")
+        start = float(bridge(poses.stamp_sec.iloc[0]))
     native = receiver - start
     yaw = np.pi / 2 - np.deg2rad(ins.azimuth)
     reference_vx = ins.east_velocity * np.cos(yaw) + ins.north_velocity * np.sin(yaw)
@@ -69,7 +70,7 @@ def prepare(sequence, parameters):
                 "wheelExportSha256": hashlib.sha256(wheel_path.read_bytes()).hexdigest(),
                 "wheelTopic": "/vehicle/wheel_speed_report", "messageType": "dbw_fca_msgs/WheelSpeedReport",
                 "units": "rad/s, confirmed from the message definition embedded in the original evaluation bag",
-                "clock": "Existing ROS-to-INSPVA receiver-time bridge; no clock or pose fit"}
+                "clock": clock}
     return motion, wheels, metadata
 
 

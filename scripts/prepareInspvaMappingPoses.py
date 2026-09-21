@@ -12,6 +12,7 @@ import json
 
 import numpy as np
 from pyproj import Proj, Transformer
+from receiverClock import ensure_clock, convert_time, native_seconds
 
 
 def quaternion_from_rpy(roll, pitch, yaw):
@@ -44,13 +45,10 @@ def interpolate_quaternions(first, second, fraction):
 def prepare(lidar_path, inspva_path, output_path):
     lidar = np.genfromtxt(lidar_path, delimiter=",", names=True)
     pva = np.genfromtxt(inspva_path, delimiter=",", names=True)
-    ros = pva["stamp_sec"] - pva["stamp_sec"][0]
-    query = lidar["stamp_sec"] - pva["stamp_sec"][0]
-    receiver = pva["gps_seconds"] - pva["gps_seconds"][0]
-    assert np.all(np.diff(ros) > 0) and np.all(np.diff(receiver) > 0)
-    assert np.all(np.diff(query) > 0) and query[0] >= ros[0] and query[-1] <= ros[-1]
-    # Bridge clocks from timestamps only, without a fitted spatial alignment.
-    target = np.interp(query, ros, receiver)
+    clock = ensure_clock(inspva_path)
+    receiver = native_seconds(pva["gps_week"], pva["gps_seconds"])
+    target = convert_time(clock, lidar["stamp_sec"])
+    assert np.all(np.diff(target) > 0) and target[0] >= receiver[0] and target[-1] <= receiver[-1]
     upper = np.clip(np.searchsorted(receiver, target, side="right"), 1, len(receiver) - 1)
     lower = upper - 1
     fraction = (target - receiver[lower]) / (receiver[upper] - receiver[lower])
@@ -71,7 +69,7 @@ def prepare(lidar_path, inspva_path, output_path):
     fields = ["frame_index", "lidar_stamp_sec", "receiver_time_sec", "pose_source", "pose_crs",
               "pose_height_datum", "pose_reference_point", "pose_x_m", "pose_y_m", "pose_z_m",
               "pose_qw", "pose_qx", "pose_qy", "pose_qz", "inspva_lower_index",
-              "inspva_upper_index", "interpolation_fraction", "ins_status_lower", "ins_status_upper"]
+              "inspva_upper_index", "interpolation_fraction", "ins_status_lower", "ins_status_upper", "clock_model_id"]
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", newline="") as stream:
         writer = csv.writer(stream, lineterminator="\n")
@@ -81,12 +79,12 @@ def prepare(lidar_path, inspva_path, output_path):
                              "INSPVA", "EPSG:32615", "ellipsoidal", "recorded_INS_output_point",
                              *position[k], *orientation[k], int(pva["index"][lower[k]]),
                              int(pva["index"][upper[k]]), fraction[k],
-                             int(pva["ins_status"][lower[k]]), int(pva["ins_status"][upper[k]])])
+                             int(pva["ins_status"][lower[k]]), int(pva["ins_status"][upper[k]]), clock["modelId"]])
     metadata = {
         "source": "INSPVA only; no ODOM or BESTPOS position/orientation input",
         "frames": len(lidar), "native_samples": len(pva), "epsg": 32615,
         "height_datum": "INSPVA ellipsoidal height; no mixed MSL height",
-        "clock": "Linear ROS-header to receiver-time bridge; no pose fit, delay or extrapolation",
+        "clock": clock,
         "position_interpolation": "Linear projected XYZ at bridged receiver time",
         "orientation": "SLERP of Rz(90-azimuth+grid_convergence) Ry(-pitch) Rx(roll)",
         "grid_convergence_deg_range": [float(gamma.min()), float(gamma.max())],
@@ -109,6 +107,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lidar", type=Path, default=folder / (stem + "_front_lidar_points.csv"))
     parser.add_argument("--inspva", type=Path, default=folder / (stem + "_inspva.csv"))
-    parser.add_argument("--output", type=Path, default=folder / (stem + "_front_lidar_inspva_pose_1_1170.csv"))
+    parser.add_argument("--output", type=Path, default=folder / (stem + "_front_lidar_synchronized_pose_1_1170.csv"))
     args = parser.parse_args()
     prepare(args.lidar, args.inspva, args.output)

@@ -1,0 +1,36 @@
+{
+  "clockModelId": "10d901c3326ba355f1cceeb0ec824996a54645f65eea8b644a14d69490d91dcc",
+  "frames": 1170,
+  "maximumPythonMatlabTimestampDifferenceSeconds": 4.9737991503207013E-13,
+  "staleMapRejected": true,
+  "staleMotionRejected": true,
+  "undeclaredLidarCallsRejected": true,
+  "coarsePipelinePassed": true,
+  "finePerceptionUsed": false,
+  "matching": {
+    "frames": 1170,
+    "accepted": 1170,
+    "directionalAccepted": 0,
+    "measurementEvents": 1170,
+    "acceptanceFraction": 1,
+    "allFramePositionRmseM": 0.18037213907553079,
+    "acceptedPositionRmseM": 0.18037213907553079,
+    "positionMedianM": 0.10630691896707437,
+    "positionP95M": 0.40614577498395105,
+    "positionMaximumM": 0.92799065471455555,
+    "yawRmseDeg": 0.60812377683559848,
+    "yawMaximumAbsDeg": 3.6643451209984392,
+    "deadReckoningPositionRmseM": 18.069907687211174,
+    "deadReckoningFinalErrorM": 28.821621905414268,
+    "totalMedianMs": 67.9945,
+    "totalP95Ms": 82.5801,
+    "totalP99Ms": 91.401799999999966,
+    "totalMaximumMs": 483.808,
+    "callsOver100ms": 3,
+    "perceptionMedianMs": 58.134,
+    "registrationMedianMs": 9.0900000000000016,
+    "reasons": {
+      "accepted": 1170
+    }
+  }
+}

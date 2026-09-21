@@ -1,0 +1,57 @@
+{
+  "cloudFrame": 307,
+  "cloudHeaderSeconds": 1717776599.6652036,
+  "packetCandidates": [
+    {
+      "hardwareFrameId": 10395,
+      "column": 100,
+      "rangeRingMatches": 2,
+      "columnSensorSeconds": 4882.150286,
+      "packetBagSeconds": 1717776599.4026675
+    },
+    {
+      "hardwareFrameId": 10396,
+      "column": 100,
+      "rangeRingMatches": 1,
+      "columnSensorSeconds": 4882.25028078,
+      "packetBagSeconds": 1717776599.4943123
+    },
+    {
+      "hardwareFrameId": 10397,
+      "column": 100,
+      "rangeRingMatches": 63,
+      "columnSensorSeconds": 4882.35027137,
+      "packetBagSeconds": 1717776599.5861456
+    },
+    {
+      "hardwareFrameId": 10398,
+      "column": 100,
+      "rangeRingMatches": 3,
+      "columnSensorSeconds": 4882.450241850001,
+      "packetBagSeconds": 1717776599.671925
+    },
+    {
+      "hardwareFrameId": 10399,
+      "column": 100,
+      "rangeRingMatches": 1,
+      "columnSensorSeconds": 4882.55021817,
+      "packetBagSeconds": 1717776599.7635753
+    },
+    {
+      "hardwareFrameId": 10400,
+      "column": 100,
+      "rangeRingMatches": 3,
+      "columnSensorSeconds": 4882.65019038,
+      "packetBagSeconds": 1717776599.858137
+    }
+  ],
+  "matchedHardwareFrame": 10397,
+  "pointRelativeTimeMinimumSeconds": 0.0,
+  "pointRelativeTimeMaximumSeconds": 0.09987217000000001,
+  "nativeTimeStatus": {
+    "clockStatus": 0,
+    "utcOffsetSeconds": -17.99999999951973,
+    "receiverOffsetSeconds": 7.334297796267663e-10
+  },
+  "conclusion": "Column range/ring data identify hardware scan 10397. Sensor timestamps are approximately 4882 s, not GPS/Unix epoch. No recoverable absolute clock mode/configuration is assumed. Point t spans one rotation; header-to-scan epoch and deskew remain uncalibrated."
+}

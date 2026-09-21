@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
+from receiverClock import ensure_clock, convert_time, native_seconds
 
 
 def main():
@@ -25,7 +26,10 @@ def main():
     ins = pd.read_csv(args.sensor_folder/'inspva.csv')
     imu = pd.read_csv(args.sensor_folder/'imu.csv')
     steering = pd.read_csv(args.sensor_folder/'steering.csv')
-    t = ins.gps_seconds.to_numpy()-ins.gps_seconds.iloc[0]
+    clock = ensure_clock(args.sensor_folder/'inspva.csv')
+    t = native_seconds(ins.gps_week, ins.gps_seconds)
+    imu_time = convert_time(clock, imu.stamp_sec)
+    steering_time = convert_time(clock, steering.stamp_sec)
     dt = float(np.median(np.diff(t)))
     assert np.max(np.abs(np.diff(t)-dt)) < 1e-6, 'Expected regular receiver-time INS samples.'
     yaw = np.unwrap(np.pi/2-np.deg2rad(ins.azimuth.to_numpy()))
@@ -42,7 +46,7 @@ def main():
             ('longitudinalAcceleration', 'acceleration_x_mps2', ax, 1),
             ('lateralAcceleration', 'acceleration_y_mps2', ay, -1),
             ('yawRate', 'angular_z_radps', yaw_rate, 1)]:
-        raw = np.interp(ins.stamp_sec, imu.stamp_sec, imu[field])
+        raw = np.interp(t, imu_time, imu[field])
         offset = float(np.median(truth[train]-sign*raw[train]))
         fit = np.linalg.lstsq(np.c_[raw[train], np.ones(sum(train))], truth[train], rcond=None)[0]
         residual = sign*raw+offset-truth
@@ -57,7 +61,7 @@ def main():
     wheelbase = vehicle_parameters['stock']['wheelbaseM']
     front_fraction = vehicle_parameters['stock']['frontStaticLoadFraction']
     lf, lr = wheelbase*(1-front_fraction), wheelbase*front_fraction
-    delta = (np.interp(ins.stamp_sec, steering.stamp_sec, steering.steering_wheel_angle_rad)
+    delta = (np.interp(t, steering_time, steering.steering_wheel_angle_rad)
              - interface['steeringWheelOffsetRad'])/vehicle_parameters['steeringRatio']
     design = np.c_[delta-(vy+lf*yaw_rate)/np.maximum(vx, 1),
                    -(vy-lr*yaw_rate)/np.maximum(vx, 1)]
@@ -67,6 +71,7 @@ def main():
     moment = lf*design[:, 0]*stiffness[0]-lr*design[:, 1]*stiffness[1]
     inertia = np.linalg.lstsq(yaw_acceleration[selected, None], moment[selected], rcond=None)[0][0]
     report = {
+        'clock': clock,
         'software': {name: version(name) for name in ['numpy', 'scipy', 'pandas']},
         'calibration_sequence': 'raw_data_2024-06-07-12-11-24_0',
         'evaluation_sequence': 'raw_data_2024-06-07-12-09-31_0',

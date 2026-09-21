@@ -70,7 +70,9 @@ function f=fixture(testCase)
     writetable(steering,fullfile(folder,'steering.csv'));correction=struct('sign',1,'offset',0);
     parameters=struct('steeringRatio',16.2,'steeringWheelOffsetRad',0,'input_correction', ...
         struct('longitudinalAcceleration',correction,'lateralAcceleration',correction,'yawRate',correction));
-    f=struct('folder',folder,'parameters',parameters,'clock',struct('rosTime',[0;2],'receiverTime',[0;2]));
+    f=struct('folder',folder,'parameters',parameters,'clock',struct('schemaVersion',1,'method',"robust_affine_receiver_clock", ...
+        'sourceOriginSeconds',0,'scale',1,'offsetSeconds',0,'sourceSpanSeconds',2, ...
+        'maximumExtrapolationSeconds',.05,'modelId',"synthetic_identity"));
 end
 
 function [h,w,m]=prepare(f)

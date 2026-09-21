@@ -18,18 +18,16 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     root=fileparts(fileparts(mfilename('fullpath')));
     folder=fullfile(root,'data','raw','Missisipi','gnss');
     stem="raw_data_2024-06-07-12-09-31_0";
-    ins=readtable(fullfile(folder,stem+"_inspva.csv"));
-    poses=readFramePoseTable(fullfile(folder,stem+"_front_lidar_pose_match_1_1170.csv"),1:1170);
+    clock=loadReceiverClock(fullfile(folder,stem+"_inspva.csv"));
+    frames=readtable(fullfile(folder,stem+"_front_lidar_points.csv"));
     parameters=jsondecode(fileread(parameterFile));
-    rosOrigin=ins.stamp_sec(1); receiver=ins.gps_seconds-ins.gps_seconds(1);
-    bridge=@(stamp) interp1(ins.stamp_sec-rosOrigin,receiver,stamp-rosOrigin,'linear','extrap');
-    start=bridge(poses.lidar_stamp_sec(1));
-    clock=struct('rosTime',ins.stamp_sec,'receiverTime',receiver);
+    bridge=@(stamp) receiverClockTime(clock,stamp);
+    start=bridge(frames.stamp_sec(1));
     % This recording starts stationary; initial prediction is declared and
     % marked separately until the first actual wheel packet arrives.
     [high,wheel,wheelMetadata]=prepareWheelMotionInputs(sensorFolder,parameters,clock, ...
-        start,bridge(poses.lidar_stamp_sec(end)),InitialSpeed=0);
-    time=high.time;sensorData=struct('highRate',high,'wheelVelocity',wheel);
+        start,bridge(frames.stamp_sec(end)),InitialSpeed=0);
+    time=high.time;sensorData=struct('highRate',high,'wheelVelocity',wheel,'clockModelId',string(clock.modelId));
     reference=table();sensorData.gps=struct();edgeExtrapolation=0;
     if options.IncludeOdom
     odom=readtable(fullfile(folder,stem+"_odom.csv"));
@@ -46,6 +44,9 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     end
     sensorData.lidar=struct();
     if ~isempty(calls)
+        assert(ismember('clockModelId',calls.Properties.VariableNames) && ...
+            all(string(calls.clockModelId)==string(clock.modelId)), ...
+            'VehicleLocalization:ClockMismatch','LiDAR calls must declare the shared receiver clock.');
         assert(all(ismember(calls.accepted,[0 1])),'Invalid recorded acceptance flag.');
         directional=false(height(calls),1);
         if ismember('directionalAccepted',calls.Properties.VariableNames)
@@ -72,7 +73,7 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
             'pose',[c.x,c.y,c.psi],'information',information);
     end
     metadata=struct('fixedLidarDelaySeconds',fixedLidarDelay, ...
-        'clock',"INSPVA receiver time bridged from ROS headers; no pose used to fit the clock", ...
+        'clock',clock, ...
         'inputInterpolation',"native wheel fusion; offline linear IMU/steering reconstruction", ...
         'longitudinalVelocity',wheelMetadata, ...
         'reference',"NovAtel odom body-origin XY and quaternion yaw; also mapping reference", ...

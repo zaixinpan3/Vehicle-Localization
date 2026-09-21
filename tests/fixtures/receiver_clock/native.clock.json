@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "method": "robust_affine_receiver_clock",
+  "sourceOriginSeconds": 1717776570.993578,
+  "scale": 1.0899999996556748,
+  "offsetSeconds": -2.331094009997884e-08,
+  "sourceSpanSeconds": 9.174311876296997,
+  "maximumExtrapolationSeconds": 0.05,
+  "offlineUsesFutureSamples": true,
+  "absoluteLatencyCalibrated": false,
+  "lidarEpoch": "recorded_pointcloud_header; scan start/end offset not calibrated",
+  "configuration": {
+    "minimumSamples": 20,
+    "minimumInlierFraction": 0.6,
+    "minimumTimeCoverage": 0.9,
+    "residualFloorSeconds": 0.0005,
+    "maximumInlierP95Seconds": 0.002,
+    "maximumExtrapolationSeconds": 0.05
+  },
+  "quality": {
+    "samples": 101,
+    "inliers": 94,
+    "inlierFraction": 0.9306930693069307,
+    "inlierTimeCoverage": 1.0,
+    "inlierResidualP95Seconds": 1.210336815216095e-07,
+    "rejectedSampleIndicesOneBased": [
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47
+    ],
+    "maximumAbsoluteResidualSeconds": 0.08719992309061642
+  },
+  "sourceSha256": "dda5182524e6aeeef022ad83f9a1efe24e6f75227a57c5374b3d3ca4cc4cb98b",
+  "receiverOriginGpsWeek": 2317,
+  "receiverOriginGpsSeconds": 604797.0,
+  "coefficientSha256": "7fb68887245338e50c17559dbdf5cd4cb8dcfe5e1dde6398faa060c39b97f80d",
+  "modelId": "d82129aeea0ff7931f52b7e655088ec148743bb0f6b937b65f2c232203f8b82e"
+}

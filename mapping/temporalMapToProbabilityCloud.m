@@ -6,7 +6,8 @@ function cloud = temporalMapToProbabilityCloud(map, batchIndex)
 % Scheduling windows refer to one canonical map. A supplied batchIndex validates
 % that schedule entry but does not select another statistical map.
     if nargin<2, batchIndex=1; end
-    calibration=[];
+    calibration=[];clockModelId="";
+    if isstruct(map) && isfield(map,'clockModelId'),clockModelId=string(map.clockModelId);end
     if isstruct(map) && isfield(map,'frameCalibration'), calibration=map.frameCalibration; end
     if isstruct(map) && isfield(map,'canonicalMap')
         assert(isscalar(batchIndex) && batchIndex==floor(batchIndex) && batchIndex>=1 && ...
@@ -53,5 +54,6 @@ function cloud = temporalMapToProbabilityCloud(map, batchIndex)
         'covarianceSemantics',"withinBlockPlusStableOffsetPlusReferenceMeanUncertainty");
     if isfield(map,'frameCalibration'), calibration=map.frameCalibration; end
     if ~isempty(calibration), cloud.frameCalibration=validateLidarFrameCalibration(calibration); end
+    if strlength(clockModelId)>0,cloud.clockModelId=clockModelId;end
     mappingSupport.validateSemanticProbabilityCloud(cloud);
 end

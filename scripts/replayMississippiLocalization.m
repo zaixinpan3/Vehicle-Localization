@@ -37,7 +37,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     n=numel(frameIndices);
     poses=readFramePoseTable(posePath,frameIndices);
     if ismember('pose_source',poses.Properties.VariableNames)
-        poseReferenceSource=strjoin(unique(string(poses.pose_source)),', ')+" interpolated pose at LiDAR acquisition time";
+        poseReferenceSource=strjoin(unique(string(poses.pose_source)),', ')+" interpolated pose at the declared LiDAR header epoch";
         referenceTimeOffset=0;
     else
         poseReferenceSource="nearest matched NovAtel ODOM pose";
@@ -48,25 +48,28 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         [poseReference(k,:),tilt(:,:,k)]=poseRowToPlanarPose(poses(k,:));
     end
     gnssFolder=fileparts(posePath); stem="raw_data_2024-06-07-12-09-31_0";
-    ins=readtable(fullfile(gnssFolder,stem+"_inspva.csv"));
-    % Receiver seconds are a clock source only, never a motion/pose input.
-    rosOrigin=ins.stamp_sec(1); receiverOrigin=ins.gps_seconds(1);
-    receiverTime=ins.gps_seconds-receiverOrigin;
-    assert(all(diff(receiverTime)>0) && all(diff(ins.stamp_sec)>0),'Invalid receiver clock.');
-    scanTime=interp1(ins.stamp_sec-rosOrigin,receiverTime,poses.lidar_stamp_sec-rosOrigin,'linear','extrap');
+    clock=loadReceiverClock(fullfile(gnssFolder,stem+"_inspva.csv"));
+    assert(ismember('clock_model_id',poses.Properties.VariableNames) && ...
+        all(string(poses.clock_model_id)==string(clock.modelId)), ...
+        'VehicleLocalization:ClockMismatch','Regenerate poses with the current receiver clock.');
+    scanTime=receiverClockTime(clock,poses.lidar_stamp_sec);
+    assert(max(abs((scanTime-scanTime(1))-(poses.receiver_time_sec-poses.receiver_time_sec(1))))<1e-7, ...
+        'VehicleLocalization:ClockMismatch','Pose table receiver epochs differ from the shared clock.');
     supplied=options.MotionInputs;
     if isempty(fieldnames(supplied))
         [prepared,~,~]=prepareMncavObserverReplay(sensorFolder,options.ParameterFile);
         lateralCfg=lateralObserverConfig("mncav");lateralDesign=designLateralObserverGains(lateralCfg);
         lateral=runLateralVelocityObserver(prepared.highRate,lateralDesign,lateralCfg);
         firstPose=readFramePoseTable(posePath,1);
-        firstTime=interp1(ins.stamp_sec-rosOrigin,receiverTime,firstPose.lidar_stamp_sec-rosOrigin,'linear','extrap');
+        firstTime=receiverClockTime(clock,firstPose.lidar_stamp_sec);
         supplied=struct('time',prepared.highRate.time+firstTime-scanTime(1), ...
             'longitudinalSpeed',prepared.highRate.longitudinalSpeed,'lateralVelocity',lateral.lateralVelocity, ...
-            'yawRate',prepared.highRate.yawRate,'longitudinalVelocitySource',"four_wheel");
+            'yawRate',prepared.highRate.yawRate,'longitudinalVelocitySource',"four_wheel",'clockModelId',string(clock.modelId));
     end
     assert(isfield(supplied,'longitudinalVelocitySource') && string(supplied.longitudinalVelocitySource)=="four_wheel", ...
         'VehicleLocalization:WheelSpeedSourceRequired','Supplied replay motion must come from four-wheel estimation.');
+    assert(isfield(supplied,'clockModelId') && string(supplied.clockModelId)==string(clock.modelId), ...
+        'VehicleLocalization:ClockMismatch','Motion inputs use a different or undeclared receiver clock.');
     suppliedTime=supplied.time+scanTime(1);
     suppliedValues=[supplied.longitudinalSpeed,supplied.lateralVelocity,supplied.yawRate];
     motionSource="four-wheel speed and corrected gyro with actual lateral-observer velocity; causal zero-order hold";
@@ -85,6 +88,8 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     else
         fullCloud=temporalMapToProbabilityCloud(loaded.probabilityCloudMap);
     end
+    assert(isfield(fullCloud,'clockModelId') && string(fullCloud.clockModelId)==string(clock.modelId), ...
+        'VehicleLocalization:ClockMismatch','Rebuild the map with synchronized poses before replay.');
     mapOverlap="same sequence used for mapping and query; includes query observations";
     if isfield(loaded,'probabilityCloudMap') && isfield(loaded.probabilityCloudMap,'evaluationTrainingFrames')
         assert(isempty(intersect(frameIndices,loaded.probabilityCloudMap.evaluationTrainingFrames)), ...
@@ -155,6 +160,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         end
     end
     report.calls=callTable(rows);
+    report.calls.clockModelId=repmat(string(clock.modelId),n,1);
     report.candidatePoses=array2table([frameIndices(:),candidatePoses],VariableNames={'frame','x','y','psi'});
     report.sourceWindows=array2table([frameIndices(:),windowDetails],VariableNames={'frame','scans','spanSeconds','components'});
     report.diskBlocks=array2table(diskBlocks,'VariableNames',{'firstQuery','lastQuery','seconds'});
@@ -169,7 +175,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         'sourceWindowMotion',"Causal relative wheel/gyro/lateral odometry; no matching pose is reused in source geometry", ...
         'poseState',"X,Y,psi",'motionSource',motionSource, ...
         'motionEndHoldSeconds',motionEndHoldSeconds, ...
-        'clockSource',"INSPVA receiver GPS seconds interpolated on ROS stamp; edge extrapolation only", ...
+        'clock',clock,'clockModelId',string(clock.modelId), ...
         'rosDurationSeconds',poses.lidar_stamp_sec(end)-poses.lidar_stamp_sec(1), ...
         'receiverDurationSeconds',scanTime(end)-scanTime(1), ...
         'reference',poseReferenceSource, ...

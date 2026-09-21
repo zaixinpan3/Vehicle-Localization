@@ -6,8 +6,8 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
 % coarse-perception replay. Frame alignment interpolates real GNSS samples and reports the
 % required future-endpoint wait, without motion extrapolation.
     arguments
-        outputFolder (1,1) string="output/mncav_coarse_localization_20260918/observer"
-        options.MatchingFolder (1,1) string="output/mncav_coarse_localization_20260918/matching"
+        outputFolder (1,1) string="output/mncav_coarse_localization/observer"
+        options.MatchingFolder (1,1) string="output/mncav_coarse_localization/matching"
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
@@ -26,7 +26,13 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     end
     lidar=struct('time',calls.time,'pose',[calls.measurementX,calls.measurementY,calls.measurementPsi], ...
         'information',information,'valid',logical(calls.fullPose),'delay',0);
-    bestpos=readtable('output/mncav_synchronous_bestpos_20260917/bestpos.csv');
+    bestMetadata=jsondecode(fileread('output/receiver_synchronized_inputs/bestpos_metadata.json'));
+    referenceMetadata=jsondecode(fileread('output/receiver_synchronized_inputs/reference_metadata.json'));
+    assert(string(bestMetadata.clock.modelId)==prepared.clockModelId && ...
+        string(referenceMetadata.clock.modelId)==prepared.clockModelId && ...
+        string(matching.replay.clockModelId)==prepared.clockModelId, ...
+        'VehicleLocalization:ClockMismatch','BESTPOS, reference, motion and matching clocks must agree.');
+    bestpos=readtable('output/receiver_synchronized_inputs/bestpos.csv');
     time=bestpos.time;valid=logical(bestpos.valid);
     information=nan(2,2,numel(time));
     for k=find(valid).'
@@ -44,7 +50,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     velocity=rotation*[h.longitudinalSpeed(1);lateral.lateralVelocity(1)];
     acceleration=rotation*[h.longitudinalAcceleration(1);h.lateralAcceleration(1)];
     cfg.initialState=[pose(1);velocity(1);acceleration(1);pose(2);velocity(2);acceleration(2);pose(3)];
-    native=readtable('output/mncav_inspva_observer_20260915/native_reference.csv');
+    native=readtable('output/receiver_synchronized_inputs/native_reference.csv');
     reference=interp1(native.time,[native.x,native.y,native.psi],t,'linear');
     scenarios=["both","lidar_only","gnss_only","gnss_outage","lidar_outage","both_outage","alternating"];
     runs=cell(numel(scenarios),1);rows=cell(0,12);
@@ -86,22 +92,8 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'initialization',"Common first LiDAR pose plus wheel/lateral velocity and IMU acceleration; not a cold-start GNSS-only test", ...
         'limitations',matching.limitations+"; shared receiver reference; empirical planar output-point alignment is not a hardware survey; upstream motion preparation offline"), ...
         'design',runs{1}.estimate.observer,'metrics',metrics);
-    old=load('output/mncav_wheel_only_20260916/calibration/experiment.mat','atNative');
-    [found,index]=ismembertol(t,old.atNative.time,1e-10,DataScale=1);
-    assert(all(found) && numel(unique(index))==numel(t),'Historical comparison needs the same frame timestamps.');
-    accepted=lidar.valid;paired=cell(0,9);
-    baseline=load('output/mncav_synchronous_bestpos_20260917/experiment.mat','runs');
-    assert(isequal(size(baseline.runs{1}.estimate.time),size(t)) && ...
-        max(abs(baseline.runs{1}.estimate.time-t))<1e-10,'Unaligned comparison needs the same frame times.');
-    report.metadata.historicalClockToleranceSeconds=1e-10;
-    labels=["aligned_bestpos_10hz","unaligned_bestpos_10hz","historical_transport_100hz","raw_lidar"];
-    posesToCompare={runs{1}.estimate.pose,baseline.runs{1}.estimate.pose,old.atNative.pose(index,:),lidar.pose};
-    for k=1:numel(labels)
-        paired(end+1,:)=[{labels(k),"accepted_lidar_frames",nnz(accepted)},num2cell(score(posesToCompare{k}(accepted,:),reference(accepted,:)))]; %#ok<AGROW>
-    end
-    report.pairedComparison=cell2table(paired,VariableNames={'method','population','samples','positionRmseM', ...
-        'positionMedianM','positionP95M','positionMaximumM','fractionAtMost10cm','headingRmseDeg'});
-    writetable(report.pairedComparison,fullfile(outputFolder,'paired_comparison.csv'));
+    accepted=lidar.valid;
+    % Old timestamp-warped trajectories are not paired with corrected epochs.
     % Isolate geometry/uncertainty at the old gain before testing matched gains.
     controlRows=cell(0,8);controlNames=["unaligned","uncertainty_only","geometry_only","aligned_gain1","aligned_gain4"];
     for k=1:numel(controlNames)

@@ -4,11 +4,14 @@ from pathlib import Path
 import csv
 import importlib.util
 import io
+import sys
 import tempfile
 import unittest
 
 import numpy as np
 from pyproj import Proj
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 
 SPEC = importlib.util.spec_from_file_location(
     "prepare_poses", Path(__file__).resolve().parents[1] / "scripts/prepareInspvaMappingPoses.py")
@@ -43,10 +46,12 @@ class InspvaPosePreparationTest(unittest.TestCase):
             root = Path(folder)
             lidar, pva, output = root / "lidar.csv", root / "pva.csv", root / "poses.csv"
             lidar.write_text("frame_index,stamp_sec\n1,100.25\n2,100.75\n")
-            pva.write_text("index,stamp_sec,gps_seconds,longitude_deg,latitude_deg,height_m,"
-                           "roll_deg,pitch_deg,azimuth_deg,ins_status\n"
-                           "1,100,200,-93,45,100,0,0,359,3\n"
-                           "2,101,201,-93,45,104,0,0,1,6\n")
+            with pva.open('w', newline='') as stream:
+                writer = csv.writer(stream)
+                writer.writerow(['index','stamp_sec','gps_week','gps_seconds','longitude_deg','latitude_deg',
+                                 'height_m','roll_deg','pitch_deg','azimuth_deg','ins_status'])
+                for k, t in enumerate(np.linspace(0, 1, 21)):
+                    writer.writerow([k+1,100+t,2317,200+t,-93,45,100+4*t,0,0,359+2*t,6])
             with redirect_stdout(io.StringIO()):
                 POSES.prepare(lidar, pva, output)
             with output.open(newline="") as stream:

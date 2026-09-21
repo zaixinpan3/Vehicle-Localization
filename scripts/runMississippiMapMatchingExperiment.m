@@ -5,13 +5,13 @@ function report=runMississippiMapMatchingExperiment(outputFolder,options)
 % A separate reference-seeded control diagnoses local matching convergence.
 % Rejected frames have no full-pose measurement and are counted separately.
     arguments
-        outputFolder (1,1) string="output/mississippi_matching_only_20260919"
+        outputFolder (1,1) string="output/mississippi_matching_only"
         options.RegistrationConfig (1,1) struct=distributionRegistrationConfig()
         options.SourceWindowConfig (1,1) struct=localizationSourceWindowConfig()
     end
     setupVehicleLocalization();
     if ~isfolder(outputFolder),mkdir(outputFolder);end
-    mapFile="output/mississippi_mapping_inspva_20260915/probability_cloud.mat";
+    mapFile="output/mississippi_mapping_synchronized/probability_cloud.mat";
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
     parameterFile="output/mncav_interface_audit_20260916/vehicle_parameters.json";
     [prepared,~,~]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
@@ -20,7 +20,7 @@ function report=runMississippiMapMatchingExperiment(outputFolder,options)
     h=prepared.highRate;
     motion=struct('time',h.time,'longitudinalSpeed',h.longitudinalSpeed, ...
         'lateralVelocity',lateral.lateralVelocity,'yawRate',h.yawRate, ...
-        'longitudinalVelocitySource',"four_wheel");
+        'longitudinalVelocitySource',"four_wheel",'clockModelId',prepared.clockModelId);
     modes=["recursive","referenceSeed"];runs=cell(2,1);rows=cell(0,10);
     for k=1:numel(modes)
         result=replayMississippiLocalization(mapFile,sensorFolder,fullfile(outputFolder,modes(k)), ...

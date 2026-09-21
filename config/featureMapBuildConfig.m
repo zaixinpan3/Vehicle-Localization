@@ -14,8 +14,8 @@ function cfg = featureMapBuildConfig()
 
     % Dataset: organized point-cloud frames and the LiDAR-to-GNSS/INS pose table
     cfg.pointCloudMatPath = fullfile("raw", "MissisipiPointClouds.mat");
-    cfg.poseMatchCsvPath = fullfile("raw", "Missisipi", "gnss", "raw_data_2024-06-07-12-09-31_0_front_lidar_inspva_pose_1_1170.csv");
-    cfg.mapOutputPath = "missisipiInspvaTemporalStabilityProbabilityCloudMap.mat";
+    cfg.poseMatchCsvPath = fullfile("raw", "Missisipi", "gnss", "raw_data_2024-06-07-12-09-31_0_front_lidar_synchronized_pose_1_1170.csv");
+    cfg.mapOutputPath = "missisipiSynchronizedTemporalStabilityProbabilityCloudMap.mat";
     cfg.frameCalibration = lidarFrameCalibrationConfig();
 
     % Covered frames: empty frameIndices means every frame of the MAT file
