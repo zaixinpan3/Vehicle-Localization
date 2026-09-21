@@ -1,0 +1,102 @@
+[
+  {
+    "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+    "bytes": 1376462,
+    "sha256": "2c3abb303f16b7ba5f75f34e96daad3f83aeac3aed22fb8fad7fa4ce133dccdb"
+  },
+  {
+    "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_points.csv",
+    "bytes": 74366,
+    "sha256": "b056f457aca22a4f03dd074ef5b84ec2432b851f0f0630286ac3217eb6a1b3d7"
+  },
+  {
+    "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_inspva_pose_1_1170.csv",
+    "bytes": 310523,
+    "sha256": "0b85599f701cfeeb55b285afc0bb161faaeba7d85b8ab6c18ee307a6054d1512"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/experiment.mat",
+    "bytes": 348390498,
+    "sha256": "7d8f2007c4376fc6064e75249b6202b96feb1380c7c8606714879d1f35c0e08e"
+  },
+  {
+    "path": "output/saved_perception_inspva_20260915/calls.csv",
+    "bytes": 2154661,
+    "sha256": "096f2a4d8d392caf3bdddece9117fc30ac0359124c79613be4604cb9f45961c0"
+  },
+  {
+    "path": "output/mississippi_mapping_inspva_20260915/probability_cloud.mat",
+    "bytes": 269784,
+    "sha256": "ad2a55e0b8a0a222432a3a4bd3a8b70f0a92ecd686b19c81b5237ef2657baffd"
+  },
+  {
+    "path": "output/mississippi_mapping_inspva_20260915/feature_observations.mat",
+    "bytes": 11080646,
+    "sha256": "3a4a0d06a8c0f43a9af766714af37899835b3a3c08f3cf08a4bdd437bd575533"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/ablation_clock_comparison.csv",
+    "bytes": 491,
+    "sha256": "ab06609b93e379c1651d7a0e52791cf1071212f373ec53de0ed45780688921af"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/classes.csv",
+    "bytes": 554,
+    "sha256": "d2da66e0a67792f77559dec861acaff5b4ede5fea5e9370bdc0ebb8d3f0cdc03"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/clock_controls.csv",
+    "bytes": 2095,
+    "sha256": "f682aa076932113d03397ca6b9749022bab17be19c1fdff5a1fb6f4aa05946cb"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/controls.csv",
+    "bytes": 1464,
+    "sha256": "0c9d4a6c12f16ad5af30049b42fec133a6a8078f43370c44268b764373e11e93"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/landmark_observations.csv",
+    "bytes": 3875,
+    "sha256": "99ea8942f5e6e59c3c0feef24219e015338eb1097d53e6fc50bb46be54a43c2f"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/native_clock_neighborhood.csv",
+    "bytes": 3332,
+    "sha256": "846dbdf711295f48327026e8fc3f6bc85bd62db5682d2e3c6781c98c958eb1e7"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/pairs.csv",
+    "bytes": 13807,
+    "sha256": "4ccdf1fcf59c020a985d0a40961a99e194ba06eb59da9d2ef971b6c2dd29097c"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/pose_neighborhood.csv",
+    "bytes": 5533,
+    "sha256": "8e7fc68b8e9c99221670156ff1f217dca4b2537c1f8c3b1ee12d1764bd36048d"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/scan_clock_neighborhood.csv",
+    "bytes": 1327,
+    "sha256": "a602ff08e85a6f3da8ef29c96ba6e512e07876305e4bee0462fc1dfed39f754a"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/clock_audit.json",
+    "bytes": 1445,
+    "sha256": "4624193d3b1f1899804053ec0dd8e6c7635c27e9afdbb6e95a22af50231c89aa"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/validation.json",
+    "bytes": 1178,
+    "sha256": "cf84c1368731e5400c32affe31cc1fafbb3108a8ca62a8b7e2538fc2ec26d5b6"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/verification.json",
+    "bytes": 845,
+    "sha256": "796883ce4e37782ce5c407a21c2d740229a8e3b40737fc67df90159518346aa8"
+  },
+  {
+    "path": "output/frame307_matching_diagnosis_20260921/diagnosis.png",
+    "bytes": 290298,
+    "sha256": "4aa976dc0382b4d7733f207d669cb038fd9c29717ab7ff5946414d89f447c071"
+  }
+]

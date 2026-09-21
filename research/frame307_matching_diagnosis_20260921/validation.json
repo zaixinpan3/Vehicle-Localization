@@ -1,0 +1,34 @@
+{
+  "historicalFrameAndMaximumVerified": true,
+  "maximumPoseReproductionDifference": 2.7939677238464355e-09,
+  "matlabFactoryCodeAnalyzerIssues": 0,
+  "matlabFeatureAblations": 8,
+  "independentClockControls": 7,
+  "allClockControlErrorCmRange": [
+    7.705506068133719,
+    7.806676207434095
+  ],
+  "nativePoseReproductionToleranceM": 1e-08,
+  "all1170ReceiverClockReproductionToleranceSeconds": 1e-10,
+  "pythonSyntaxPassed": true,
+  "artifactHashesVerified": true,
+  "runtimeFiles": [
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "historicalRuntimeSha256": "d6f09cdb51a8d24e5a13e10e642e7621444b4cece7394d305c81f1388626c347",
+      "equalsGitRevision": true
+    },
+    {
+      "path": "config/distributionRegistrationConfig.m",
+      "historicalRuntimeSha256": "9f2bf61e09ffde1b683ed0bea6ee37bf3256901120050d1e16b8ac97b28de32d",
+      "equalsGitRevision": true
+    },
+    {
+      "path": "scripts/prepareInspvaMappingPoses.py",
+      "historicalRuntimeSha256": "913fd5685b573aca496bc6307628514b6ac0e79e9fa8abd08e3d8890a9494f88",
+      "equalsGitRevision": true
+    }
+  ],
+  "productionUnitSuiteRun": false,
+  "productionFilesChanged": false
+}

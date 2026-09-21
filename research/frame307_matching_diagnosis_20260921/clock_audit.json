@@ -1,0 +1,38 @@
+{
+  "frame": 307,
+  "originalPositionErrorM": 0.575064925868327,
+  "originalForwardErrorM": 0.5719196407507087,
+  "originalLeftErrorM": -0.06006324572918544,
+  "nativeHorizontalSpeedMps": 14.559296515674403,
+  "neighborClockTimeShiftMs": 38.500414061239496,
+  "referenceDisplacementM": 0.560006169491852,
+  "unchangedMatchingErrorAgainstNeighborClockM": 0.07714972492173591,
+  "robustClockFits": {
+    "robust_native_halfwidth_0.3": {
+      "nativeSamples": 33,
+      "retainedSamples": 24,
+      "receiverSecondsPerRosSecond": 1.0904446151525473
+    },
+    "robust_native_halfwidth_0.5": {
+      "nativeSamples": 55,
+      "retainedSamples": 42,
+      "receiverSecondsPerRosSecond": 1.091056594756848
+    },
+    "robust_native_halfwidth_1.0": {
+      "nativeSamples": 109,
+      "retainedSamples": 87,
+      "receiverSecondsPerRosSecond": 1.0907361230161108
+    },
+    "robust_native_halfwidth_2.0": {
+      "nativeSamples": 218,
+      "retainedSamples": 174,
+      "receiverSecondsPerRosSecond": 1.0908515757724262
+    }
+  },
+  "limitations": [
+    "Timestamp-only alternate bridges are sensitivity controls, not certified timing calibration.",
+    "The existing map and matching output are fixed; no corrected-map experiment was run.",
+    "INSPVA is a recorded reference, not independent ground truth; same-drive map remains in use.",
+    "No point-time deskew, extrinsic calibration, perception, or production algorithm was changed."
+  ]
+}
