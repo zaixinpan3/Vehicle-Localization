@@ -1,0 +1,18 @@
+{
+  "matlabCodeAnalyzerIssues": [],
+  "baselineObserverExactReproduction": true,
+  "rawMatchingReproductionWithin1eMinus7": true,
+  "signedDecompositionWithin1eMinus7M": true,
+  "diagnosticScriptCompleted": true,
+  "csvRows": {
+    "observer_controls.csv": 4,
+    "matching_controls.csv": 16,
+    "class_diagnostics.csv": 3,
+    "accepted_correspondences.csv": 138,
+    "neighborhood.csv": 51,
+    "class_residuals.csv": 3
+  },
+  "productionCodeChanged": false,
+  "productionTestsRerun": false,
+  "reason": "Only a research diagnostic script and factual result artifacts were added; all numerical assertions and MATLAB Code Analyzer passed."
+}

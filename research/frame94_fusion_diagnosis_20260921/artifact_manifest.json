@@ -1,0 +1,52 @@
+{
+  "productionRevision": "8990d6c9c507f25fe9f8050f736afa702db00432",
+  "clockModelId": "10d901c3326ba355f1cceeb0ec824996a54645f65eea8b644a14d69490d91dcc",
+  "files": [
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/observer/experiment.mat",
+      "bytes": 4413204,
+      "sha256": "a92816d5f20c9cddd97f530a6c2a0320e7ef74f48e32697113bc5fae6166ef20"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/matching/report.mat",
+      "bytes": 268565,
+      "sha256": "afa2520669ae3918491d8d155bed9078c64ca9fa2cfa2afdca5515572fe5c0ec"
+    },
+    {
+      "path": "output/mississippi_mapping_synchronized/probability_cloud.mat",
+      "bytes": 270288,
+      "sha256": "26a0d16d9cd07c268cbe1a122396ac5fd08ca6e8ec2c725cf9cc1c48a6c2c168"
+    },
+    {
+      "path": "output/mississippi_mapping_synchronized/feature_observations.mat",
+      "bytes": 11086190,
+      "sha256": "7bb00faaf9c554b1a5be90c3006892805dfe7eb2560bcccc0ed639c03938252d"
+    },
+    {
+      "path": "output/saved_perception_inspva_20260915/experiment.mat",
+      "bytes": 348390498,
+      "sha256": "7d8f2007c4376fc6064e75249b6202b96feb1380c7c8606714879d1f35c0e08e"
+    },
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_synchronized_pose_1_1170.csv",
+      "bytes": 386537,
+      "sha256": "c0998dee5ba1c33b0890e943347c0eacbce937a500f5947fa2c13bcb08b012a4"
+    },
+    {
+      "path": "output/frame94_fusion_diagnosis_20260921/diagnostic.mat",
+      "bytes": 3566021,
+      "sha256": "2fb310eb753af44990f3fd4c2e6b475594604b95bfe14af7c2f461d1bc1b1b20"
+    },
+    {
+      "path": "output/frame94_fusion_diagnosis_20260921/diagnosis.png",
+      "bytes": 184274,
+      "sha256": "6a7e1e24f2ab95072787ed1818fbec705bdb699a22fe9b9cf0f6e3f34f7baede"
+    }
+  ],
+  "rawScanPath": "data/raw/MissisipiPointClouds.mat",
+  "rawScansUsed": [
+    92,
+    93,
+    94
+  ]
+}

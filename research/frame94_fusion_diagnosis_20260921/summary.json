@@ -1,0 +1,93 @@
+{
+  "frame": 94,
+  "timeSeconds": 9.2995590332866662,
+  "fusionMaximumM": 0.37566487323683717,
+  "fusionErrorXY": [
+    0.37530733674066141,
+    -0.016385968774557114
+  ],
+  "fusionErrorForwardLeftM": [
+    0.024760699672236743,
+    0.37484797549912191
+  ],
+  "rawLidarErrorM": 0.92799065471455555,
+  "rawLidarErrorForwardLeftM": [
+    0.099190018140199634,
+    0.92267437134608654
+  ],
+  "gnssMeasurementErrorM": 0.059619893820319736,
+  "gnssOnlyObserverErrorM": 0.22513761084036962,
+  "lidarOnlyObserverErrorM": 0.93776518135781928,
+  "signedErrorContributionsXYM": [
+    [
+      0.21991777118626463,
+      0.052388075718685714,
+      0.10300148980104959,
+      -1.607675168562135E-18
+    ],
+    [
+      -0.015546727491470019,
+      0.0040009541227001106,
+      -0.0048401950521354533,
+      1.5627938255949593E-19
+    ]
+  ],
+  "contributionOrder": [
+    "lidar_position",
+    "gnss_position",
+    "realized_motion",
+    "initial"
+  ],
+  "speedMps": 5.1529624059676937,
+  "yawRateRadPerSecond": 0.29902206436280004,
+  "lateralVelocityMps": 0.39375121995208717,
+  "referenceDerivedBodyVelocityMps": [
+    5.1915521191757534,
+    -0.1926493065907158
+  ],
+  "observerVelocityMps": [
+    0.36522239989026811,
+    -5.1380232635954846
+  ],
+  "referenceDerivedVelocityMps": [
+    -0.076698573935818748,
+    -5.1945591237567363
+  ],
+  "lidarLearnedLateralBiasMps": 0,
+  "positionCorrections": [
+    -1.1759360099063492,
+    0.071896426062909233,
+    0.67968198623195886,
+    -0.066987841921743424
+  ],
+  "minimumInformationWeights": [
+    0.93066200075524164,
+    0.30682813283237104
+  ],
+  "coarseWindow": {
+    "frameCount": 3,
+    "oldestTimestamp": 9.0996868833363056,
+    "newestTimestamp": 9.2995590332866662,
+    "spanSeconds": 0.19987214995036062,
+    "componentCount": 221,
+    "currentComponentCount": 57,
+    "motionSource": "separately supplied cumulative wheel/gyro odometry",
+    "informationCalibrated": false,
+    "dimension": 2
+  },
+  "coarseInitialPoseErrorM": 0.94494022020538138,
+  "matchingSimilarity": 0.31080992806954916,
+  "matchingAcceptanceThreshold": 0.15,
+  "scaledInformationEigenvalues": [
+    7.0550134787475889,
+    7.10597980646929,
+    15.431797163437311
+  ],
+  "observerReproductionMaxAbs": 0,
+  "registrationReproductionMaxAbs": 9.3132257461547852E-10,
+  "decompositionMaxResidualM": 3.1195209287373657E-9,
+  "clockModelId": "10d901c3326ba355f1cceeb0ec824996a54645f65eea8b644a14d69490d91dcc",
+  "scope": "Same-drive map and INS reference; reference substitutions are offline diagnostics only. Fine labels are saved data, not production localization input.",
+  "biasWindowMinimumSpeedMps": 2.8618518554835628,
+  "biasWindowRequiredMinimumSpeedMps": 5
+}

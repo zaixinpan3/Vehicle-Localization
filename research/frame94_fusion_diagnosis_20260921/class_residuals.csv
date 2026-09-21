@@ -1,0 +1,4 @@
+semanticName,sourcePairs,uniqueMapTargets,medianResidualAtCandidateM,medianResidualAtReferenceSamePairsM
+curb,78,5,0.875869096649651,0.667148505130444
+pole,21,9,0.26781420394584,1.1194086621818
+trafficSign,39,9,0.387414504347889,1.11773624386451
