@@ -1,0 +1,28 @@
+{
+  "trainingFrames": [
+    60,
+    65,
+    70,
+    75,
+    80,
+    85,
+    90,
+    100,
+    105,
+    110
+  ],
+  "trainingPairs": 28,
+  "usedTrainingPairs": 26,
+  "query94ExcludedFromFit": true,
+  "effectiveStoredToReferenceTranslationXYM": [
+    2.2681473085890995,
+    0.1541085889268394
+  ],
+  "fitSingularValues": [
+    1.7647381120882244,
+    1.7647381120882244
+  ],
+  "unadjustedTrainingRmseM": 0.78702548044178045,
+  "adjustedTrainingRmseM": 0.11021751749283518,
+  "qualification": "Same-drive reference-assisted planar consistency fit with no query 94 pair in fitting; not surveyed extrinsics or independent-drive validation."
+}

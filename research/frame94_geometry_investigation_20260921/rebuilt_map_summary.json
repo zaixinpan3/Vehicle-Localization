@@ -1,0 +1,23 @@
+{
+  "sourceObservationCount": 74883,
+  "roiRadiusM": 65,
+  "rebuildSeconds": [
+    28.543797,
+    26.358516
+  ],
+  "baselinePoseReproductionMaxAbs": 0,
+  "offsetXYM": [
+    2.2681473085890995,
+    0.1541085889268394
+  ],
+  "sourceFrames": [
+    92,
+    93,
+    94
+  ],
+  "labelsChanged": false,
+  "perceptionThresholdsChanged": false,
+  "registrationConfigChanged": false,
+  "mapInferenceConfigChanged": false,
+  "limitation": "Diagnostic same-drive effective translation, fitted without frame 94; physical mounting and constant latency are not jointly calibrated."
+}

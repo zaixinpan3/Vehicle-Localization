@@ -1,0 +1,126 @@
+{
+  "productionRevision": "8990d6c9c507f25fe9f8050f736afa702db00432",
+  "clockModelId": "10d901c3326ba355f1cceeb0ec824996a54645f65eea8b644a14d69490d91dcc",
+  "files": [
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/observer/experiment.mat",
+      "bytes": 4413204,
+      "sha256": "a92816d5f20c9cddd97f530a6c2a0320e7ef74f48e32697113bc5fae6166ef20"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/matching/report.mat",
+      "bytes": 268565,
+      "sha256": "afa2520669ae3918491d8d155bed9078c64ca9fa2cfa2afdca5515572fe5c0ec"
+    },
+    {
+      "path": "output/mississippi_mapping_synchronized/probability_cloud.mat",
+      "bytes": 270288,
+      "sha256": "26a0d16d9cd07c268cbe1a122396ac5fd08ca6e8ec2c725cf9cc1c48a6c2c168"
+    },
+    {
+      "path": "output/mississippi_mapping_synchronized/feature_observations.mat",
+      "bytes": 11086190,
+      "sha256": "7bb00faaf9c554b1a5be90c3006892805dfe7eb2560bcccc0ed639c03938252d"
+    },
+    {
+      "path": "output/saved_perception_inspva_20260915/experiment.mat",
+      "bytes": 348390498,
+      "sha256": "7d8f2007c4376fc6064e75249b6202b96feb1380c7c8606714879d1f35c0e08e"
+    },
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_synchronized_pose_1_1170.csv",
+      "bytes": 386537,
+      "sha256": "c0998dee5ba1c33b0890e943347c0eacbce937a500f5947fa2c13bcb08b012a4"
+    },
+    {
+      "path": "output/frame94_fusion_diagnosis_20260921/diagnostic.mat",
+      "bytes": 3566021,
+      "sha256": "2fb310eb753af44990f3fd4c2e6b475594604b95bfe14af7c2f461d1bc1b1b20"
+    },
+    {
+      "path": "output/mississippi_mapping_synchronized/probability_cloud_map.mat",
+      "bytes": 493922931,
+      "sha256": "86e08290a782051ff981294d3c57f11c35319052cee0031993af49b27e5f5326"
+    },
+    {
+      "path": "output/receiver_synchronized_inputs/native_reference.csv",
+      "bytes": 567625,
+      "sha256": "7167bf6469969bf3839027d03707188637144d1819b7aec60aacd9b09d383603"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/matching/calls.csv",
+      "bytes": 552128,
+      "sha256": "439704edfa7af411cadc0b35a9b2b0f5e6391cd414afca5b2d2b14e7084a5ebf"
+    },
+    {
+      "path": "output/frame94_geometry_investigation_20260921/geometry.mat",
+      "bytes": 9082168,
+      "sha256": "badd7b1cf550299851025a39a4860663f1f6b037d514382cfe0d1119deaf630e"
+    },
+    {
+      "path": "output/frame94_geometry_investigation_20260921/map_control.mat",
+      "bytes": 145332812,
+      "sha256": "edf1330f4766d6daf3eb8937a93cbb0f227835e4cd37cb8419ca8bf6b80084ff"
+    },
+    {
+      "path": "output/frame94_geometry_investigation_20260921/heldout_queries.mat",
+      "bytes": 185643,
+      "sha256": "5ce4767875345b1f4817146a5c632b71631a0b1cf70591bc807cda8dd61a5d62"
+    },
+    {
+      "path": "output/frame94_geometry_investigation_20260921/geometry_diagnosis.png",
+      "bytes": 163155,
+      "sha256": "d84e0241dd9e6ee8132ae26ccc7ed94d37dbde19fe13cd5b6bef5eeb16ec414b"
+    },
+    {
+      "path": "research/frame94_geometry_investigation_20260921/investigate_geometry.m",
+      "bytes": 5619,
+      "sha256": "edc875bb0f27f8452cc776ef7bea78036e323835aaf0b8d4342c166dacb7e1b4"
+    },
+    {
+      "path": "research/frame94_geometry_investigation_20260921/rebuild_control.m",
+      "bytes": 5045,
+      "sha256": "d2e7b859f7f60a03b258bd7a4a6ce66a98f455b4e9cec32da8caa5e8d8c31e67"
+    },
+    {
+      "path": "research/frame94_geometry_investigation_20260921/validate_candidate.m",
+      "bytes": 7607,
+      "sha256": "de1c984bf18a3f0ddad9ad7ac72972a76c0289721c4eea4ee3f7b59ab5b7ae33"
+    },
+    {
+      "path": "research/frame94_geometry_investigation_20260921/fit_motion_models.py",
+      "bytes": 4682,
+      "sha256": "7ac8fb19e2ae2b28bf91a91f5c18e7d4926c8b9e8afe9d9556bb8f1205630624"
+    },
+    {
+      "path": "research/frame94_geometry_investigation_20260921/validate_artifacts.py",
+      "bytes": 4839,
+      "sha256": "58f3ab6c5a9b5b7c66e9ecd6d95635144ca307f58e63ee2f6c93a27e2766b6ce"
+    }
+  ],
+  "rawScanPath": "data/raw/MissisipiPointClouds.mat",
+  "rawSourceFrames": [
+    74,
+    75,
+    76,
+    85,
+    86,
+    87,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    101,
+    102,
+    103,
+    110,
+    111,
+    112
+  ],
+  "scope": "Technical artifacts only; no weekly or monthly report hashes."
+}

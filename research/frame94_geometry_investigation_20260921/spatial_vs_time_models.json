@@ -1,0 +1,86 @@
+{
+  "trainingPairs": 26,
+  "frame94Excluded": true,
+  "models": [
+    {
+      "model": "identity",
+      "translationXYM": [
+        0.0,
+        0.0
+      ],
+      "mountingYawDeg": 0.0,
+      "epochShiftSeconds": 0.0,
+      "translationResidualRmseM": 0.7870254713155144,
+      "yawResidualRmseDeg": 0.44532649329570095,
+      "jacobianSingularValues": []
+    },
+    {
+      "model": "translation",
+      "translationXYM": [
+        2.2615874199969475,
+        0.16515665255915718
+      ],
+      "mountingYawDeg": 0.0,
+      "epochShiftSeconds": 0.0,
+      "translationResidualRmseM": 0.10983628614638044,
+      "yawResidualRmseDeg": 0.44532649329570095,
+      "jacobianSingularValues": [
+        1.4784517172822118,
+        1.4277499653399908
+      ]
+    },
+    {
+      "model": "time_only",
+      "translationXYM": [
+        0.0,
+        0.0
+      ],
+      "mountingYawDeg": 0.0,
+      "epochShiftSeconds": -0.056681027441001605,
+      "translationResidualRmseM": 0.8009333776382681,
+      "yawResidualRmseDeg": 0.3100242099453763,
+      "jacobianSingularValues": [
+        7.932702751719122
+      ]
+    },
+    {
+      "model": "translation_and_time",
+      "translationXYM": [
+        2.3333418606131273,
+        -0.03899515711829982
+      ],
+      "mountingYawDeg": 0.0,
+      "epochShiftSeconds": -0.052381549433910914,
+      "translationResidualRmseM": 0.07931339961995212,
+      "yawResidualRmseDeg": 0.2933909383428679,
+      "jacobianSingularValues": [
+        10.40469445610345,
+        1.5695641480230922,
+        1.2093679719697412
+      ]
+    },
+    {
+      "model": "translation_yaw_and_time",
+      "translationXYM": [
+        2.8639937580852437,
+        0.026279167663686202
+      ],
+      "mountingYawDeg": 1.651141498363031,
+      "epochShiftSeconds": -0.05108073485038414,
+      "translationResidualRmseM": 0.07372897680625069,
+      "yawResidualRmseDeg": 0.28915034836675607,
+      "jacobianSingularValues": [
+        30.34613771659557,
+        10.332822479490105,
+        1.2317619916983857,
+        0.22892037575952615
+      ]
+    }
+  ],
+  "residual": "Relative planar transform disagreement; 10 m angular lever for fitting, robust soft-L1 0.1 m scale.",
+  "epochShiftBoundsSeconds": [
+    -0.25,
+    0.25
+  ],
+  "limitations": "Same-drive paired features and recorded INS; gravity-aligned planar approximation. Fitted increments conflate physical mounting, pose convention, residual time and scan distortion. Not an absolute time or extrinsic calibration."
+}

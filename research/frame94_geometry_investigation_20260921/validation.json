@@ -1,0 +1,28 @@
+{
+  "trainingQualityAcceptedPairs": 26,
+  "queryFramesExcludedFromFit": true,
+  "frame94SourceWindowExcludedFromFit": true,
+  "allQueriesAccepted": true,
+  "selectedPillarAndHitCountsIdentical": true,
+  "baselineMaximumReproductionError": 9.31322574615479e-10,
+  "improvedQueries": [
+    87,
+    91,
+    94,
+    97,
+    103,
+    112
+  ],
+  "regressedQueries": [
+    76
+  ],
+  "xyNormAndCrossTableChecksPassed": true,
+  "previousInputHashesVerified": true,
+  "pythonSourceCompilationPassed": true,
+  "matlabCodeAnalyzerIssues": [],
+  "matlabExecution": "All three scripts completed, including numerical assertions.",
+  "pythonMotionModelExecution": "Completed with offline numpy and scipy.",
+  "productionCodeChanged": false,
+  "fullSequenceReplayPerformed": false,
+  "qualification": "Query exclusion is not independent-drive or map holdout; some auxiliary window frames overlap fitting."
+}
