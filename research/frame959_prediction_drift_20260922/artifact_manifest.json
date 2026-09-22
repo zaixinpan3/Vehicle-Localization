@@ -1,0 +1,86 @@
+{
+  "parentRevision": "f60ccb612f26de621c260a27e02bcdf5474c4de4",
+  "scope": "Technical artifacts and input provenance; no weekly/monthly documents.",
+  "files": [
+    {
+      "path": "output/frame959_prediction_drift_20260922/motion_audit.mat",
+      "sha256": "9dfdd14b56ecde25bfec1f454d26139b57c5f86a6bf958ebecfd6d3aa5d1cdbf"
+    },
+    {
+      "path": "output/frame959_prediction_drift_20260922/replay.mat",
+      "sha256": "814e605b4f66bb4293fc3b647f3fb95e20e11c72970db0f155d27c9c1868c338"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    {
+      "path": "output/mncav_inspva_observer_20260915/experiment.mat",
+      "sha256": "e0da6da81c4f7ae45a50567f20ec70d2389e54d39dc63553f70762018b8aede9"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/report.mat",
+      "sha256": "a724606b8562f7ec7f24fed2ec2a89e814f1cf1e454f42a325aba5e2df436f61"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/README.md",
+      "sha256": "be4441eb5abfaa1a7195e8bfd9374f25dfaf7024be0088debd83c33a1316049d"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/code_analysis.csv",
+      "sha256": "05116616bff806795a739272533ef8fc7e47e1b4a01db73ce05d490fdf80c6a9"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/controls.csv",
+      "sha256": "b2e0de52f3300a7e26f3bad20b1934f334a6c2ba712e817af5a0571eb9c51416"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/decompose_drift.m",
+      "sha256": "1523f1a4710c18c53e360870641c5f80f9aef9083a9ef76819da72e7cffe41d4"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/drift.png",
+      "sha256": "449b81d15bc17595972cda9696effcf5b47d159347cbe37f429d3a77e8e7b49f"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/error_budget.csv",
+      "sha256": "8cb613e5f98b7b056db14c05d3570c47ca0f83378040581ef1538488c8e81c16"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/motion_inputs.csv",
+      "sha256": "2e1dbb5110f0d80cbcc4c32425b9196a4c9d46775887b0858c9351622f5eaf60"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/observer_balance.json",
+      "sha256": "b108df3a12091a5a0fc9284ef48ce3921db743ae0172abe608616ddba058e8eb"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/plot_drift.m",
+      "sha256": "af57249a91fa892d5b9979336231413c03f13cca60e3a087935f667fc515193c"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/replay_drift_controls.m",
+      "sha256": "1e7d86de9bd2bbe770a0af0db9b8a7d64a87af638d765c44bc97bce7c7ae40f1"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/replay_validation.json",
+      "sha256": "3b2b391f612c044e6c12f3994e20d6708c851682583a8b5519146dd6075734bc"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/sign_associations.csv",
+      "sha256": "e36f2c24df1077be0957b4f836836eec6d926ee8080782680d76ef87ee2a0418"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/steps.csv",
+      "sha256": "e1b8e7308bb37b59a7bba7b58170b8d3673d2d861c317c5425471138b5daff73"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/summary.json",
+      "sha256": "07a4ed2e936e7b6891a52d459683646d56f1516da685fbb002b862f2b832076f"
+    },
+    {
+      "path": "research/frame959_prediction_drift_20260922/validation.json",
+      "sha256": "0be60c2c8c2fbb68b00c68dcc599641c2eb3b17c0e1f4612466d5ee84ebaba49"
+    }
+  ]
+}

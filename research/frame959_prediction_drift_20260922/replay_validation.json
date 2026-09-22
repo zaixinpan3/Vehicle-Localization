@@ -1,0 +1,31 @@
+{
+  "firstStateFrame": 949,
+  "queryFrames": [
+    950,
+    951,
+    952,
+    953,
+    954,
+    955,
+    956,
+    957,
+    958,
+    959
+  ],
+  "warmupFrames": [
+    945,
+    946,
+    947,
+    948,
+    949
+  ],
+  "variants": [
+    "recorded_motion",
+    "reference_lateral_increment",
+    "reference_full_increment",
+    "exclude_sign_target1300"
+  ],
+  "maximumReproductionDifference": 9.3132257461547852E-10,
+  "sourceHistoryMotionUnchanged": true,
+  "productionChanged": false
+}

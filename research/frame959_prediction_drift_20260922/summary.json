@@ -1,0 +1,53 @@
+{
+  "startingFrame": 949,
+  "predictionFrame": 959,
+  "durationSeconds": 1.0005051532400131,
+  "basis": "forward/left axes of reference frame 959; signed vector accounting",
+  "startingErrorM": 0.15173391201259195,
+  "predictionErrorM": 0.41513148886675016,
+  "terms": [
+    {
+      "term": "frame949_after_matching",
+      "forwardLeftM": [
+        0.094874349452282417,
+        -0.11841468604295328
+      ]
+    },
+    {
+      "term": "motion_increment_mismatch",
+      "forwardLeftM": [
+        0.080678918023133761,
+        -0.21502096123338219
+      ]
+    },
+    {
+      "term": "prior_heading_mismatch",
+      "forwardLeftM": [
+        -8.161992764443496E-5,
+        -0.039296653523445087
+      ]
+    },
+    {
+      "term": "matching_corrections_950_958",
+      "forwardLeftM": [
+        -0.020737035884125878,
+        -0.012483681713181019
+      ]
+    },
+    {
+      "term": "frame959_prediction",
+      "forwardLeftM": [
+        0.15473461168147939,
+        -0.38521598227034465
+      ]
+    }
+  ],
+  "maximumDecompositionResidualM": 1.1370160280143612E-9,
+  "motionReproductionMaxAbsM": 6.438679242548595E-10,
+  "meanWheelForwardMps": 11.977411335953816,
+  "meanObserverLeftMps": 0.010783306891512528,
+  "meanInspvaForwardMps": 11.897750458964806,
+  "meanInspvaLeftMps": 0.22887912736032709,
+  "meanDynamicParticipation": 1,
+  "productionChanged": false
+}
