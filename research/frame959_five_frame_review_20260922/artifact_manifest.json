@@ -1,0 +1,77 @@
+{
+  "scope": "Technical results and input records only; no weekly or monthly documents.",
+  "files": [
+    {
+      "path": "output/frame959_five_frame_review_20260922/review.mat",
+      "sha256": "4cf84e493b8fb2597f54cb970c74a997b380bc4b6d45cc80c6e552324a513f4d"
+    },
+    {
+      "path": "output/frame959_matching_diagnosis_20260922/diagnostic.mat",
+      "sha256": "dc3e4a42d7dc871bfa3141c2399bea0ad96f3fec39b3f3096b7199bf982b0e34"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/report.mat",
+      "sha256": "a724606b8562f7ec7f24fed2ec2a89e814f1cf1e454f42a325aba5e2df436f61"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/README.md",
+      "sha256": "6764d7685ae728e77c923130493bc36265fa2ba78eaab5e6470b49c3a314c426"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/class_diagnostics.csv",
+      "sha256": "bb053a3844984540f1ddc64e2dd6b4a23f117b22da96db5faa89079e732e989d"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/code_analysis.csv",
+      "sha256": "05116616bff806795a739272533ef8fc7e47e1b4a01db73ce05d490fdf80c6a9"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/controls.csv",
+      "sha256": "249156b1de55002e579d0b1a9b5a5e43d6324a217fef2f345a39db302a491c59"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/correspondences.csv",
+      "sha256": "6cc78a8aa3991f5551d66ee21e5b483d50ae444cb31afd3f6a7378d7a39d0c7c"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/neighborhood.csv",
+      "sha256": "1a90c029b9ccb5cb497589f7aea08ecd4e4c7304cff6839c6182922de8d5d8b8"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/old_suspects.csv",
+      "sha256": "d6edb287920726728c6c2406aead94d6c0b94b826d75d2e77b1a6042d16515df"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/plot_review.m",
+      "sha256": "706f6a5e39c2aad99d8039f5798dabaf1093058801e55cdddd89145757533587"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/review.png",
+      "sha256": "a0bdacf54b15cd78a7eb68adae8f65bf837ee6c4acbf5331c10b6f965aeac1ea"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/review_frame959.m",
+      "sha256": "e85ffa25497bbaa87aa38428a93fcb7f8a029a755ad75f8b1b7338a897cf0a42"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/sign_targets.csv",
+      "sha256": "338d94f028ed1e6296b937c2a1bec9866f8da6475c84ab4cc15f64f6a42ace08"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/sources.csv",
+      "sha256": "4c7768a07d3696cb4840b641ee2604f73c9d2cd8d0e3ce4b6eaaece18437fdfd"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/summary.json",
+      "sha256": "57d324649a0cfc262127bf6d54c8ec7be4a378de5b4cfe3489b73e6ad601bf62"
+    },
+    {
+      "path": "research/frame959_five_frame_review_20260922/validation.json",
+      "sha256": "51a554298d8d25a0ab1632fe3f0106b2e2731f2690e519cfd86647b2c4aa54db"
+    }
+  ]
+}

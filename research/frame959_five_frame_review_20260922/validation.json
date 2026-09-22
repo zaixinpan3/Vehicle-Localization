@@ -1,0 +1,19 @@
+{
+  "productionSourceCommit": "22e203c7912de6ca07a5f31fd8f3bf9b966cfc89",
+  "productionUnchanged": true,
+  "rawFramesRerun": [
+    955,
+    956,
+    957,
+    958,
+    959
+  ],
+  "registrationVariants": 13,
+  "oldAndCurrentResultReproductionPassed": true,
+  "temporalSupportAssertionsPassed": true,
+  "originalSuspectsExcluded": true,
+  "competingSignTargetsVerified": true,
+  "signTargetExclusionControlPassed": true,
+  "codeAnalyzerIssues": 0,
+  "fullSequenceRerun": false
+}

@@ -1,0 +1,36 @@
+{
+  "frame": 959,
+  "sourceFrames": [
+    955,
+    956,
+    957,
+    958,
+    959
+  ],
+  "window": {
+    "frameCount": 5,
+    "oldestTimestamp": 95.3988067072056,
+    "newestTimestamp": 95.800175539876179,
+    "spanSeconds": 0.40136883267058465,
+    "componentCount": 61,
+    "currentComponentCount": 35,
+    "unfilteredComponentCount": 249,
+    "trackCount": 108,
+    "rejectedSingletons": 47,
+    "rejectedTracks": 47,
+    "minimumDetectionFrames": 2,
+    "minimumSupport": 2,
+    "meanStability": 0.6622950819672131,
+    "motionSource": "separately supplied cumulative wheel/gyro odometry",
+    "informationCalibrated": false,
+    "dimension": 2
+  },
+  "reproductionMaxAbs": 5.8207660913467407E-11,
+  "oldErrorM": 0.69282205153668475,
+  "oldSeedErrorM": 0.15316613184589783,
+  "currentErrorM": 0.357553729188549,
+  "currentSeedErrorM": 0.41513148886675011,
+  "oldSuspectsExcluded": true,
+  "productionChanged": false,
+  "fullSequenceRerun": false
+}
