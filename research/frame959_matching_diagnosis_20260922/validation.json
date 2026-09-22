@@ -1,0 +1,14 @@
+{
+  "savedMatchReproduced": true,
+  "instrumentationPreservesResult": true,
+  "fullPoseAndDirectionalResultsDistinguished": true,
+  "poleAblationRemovesMostOfPeak": true,
+  "referenceMotionAndUniformPriorsDoNotRemovePeak": true,
+  "activeCalibrationUnchanged": true,
+  "diagnosticVariants": 22,
+  "matlabFilesChecked": 6,
+  "codeAnalyzerIssues": 0,
+  "productionAlgorithmModified": false,
+  "completeSequenceRerun": false,
+  "independentGroundTruthClaimed": false
+}

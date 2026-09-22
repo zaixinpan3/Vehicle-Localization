@@ -1,0 +1,52 @@
+{
+  "frame": 959,
+  "positionErrorM": 0.69282205153668475,
+  "initialErrorM": 0.15316613184589783,
+  "initialYawErrorDeg": 0.6546902825086629,
+  "yawErrorDeg": 3.5327144269646289,
+  "reproductionMaxAbs": 9.3132257461547852E-10,
+  "sourceWindow": {
+    "frameCount": 3,
+    "oldestTimestamp": 95.598961056652485,
+    "newestTimestamp": 95.800175539876179,
+    "spanSeconds": 0.20121448322369417,
+    "componentCount": 143,
+    "currentComponentCount": 35,
+    "motionSource": "separately supplied cumulative wheel/gyro odometry",
+    "informationCalibrated": false,
+    "dimension": 2
+  },
+  "informationEigenvaluesScaled": [
+    1.0679277069275641,
+    9.374901942463211,
+    25.962985555687048
+  ],
+  "maximumClassCorrection": 0.5,
+  "minimumSimilarity": 0.15,
+  "calibration": {
+    "rotation": [
+      [
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        1
+      ]
+    ],
+    "translation": [
+      2.2681473085890995,
+      0.1541085889268394,
+      0
+    ],
+    "identifier": "mississippi-effective-origin-20260921-v1"
+  },
+  "productionChanged": false
+}

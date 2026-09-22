@@ -1,0 +1,222 @@
+{
+  "prepared_at": "2026-09-22T02:36:35.876043-05:00",
+  "source_revision": "cbb2016b6c122eaafafde06319a7bc7c26e95fc0",
+  "scope": "Frame 959 diagnostic inputs, scripts and results; generated MAT files remain local and are not committed. No weekly or monthly report is hashed.",
+  "files": [
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "bytes": 19195,
+      "sha256": "6e65a5f71c5a73a3148ff7a830ce8ae382710abadf85908ea01748af6b1531e4"
+    },
+    {
+      "path": "localization/updateLocalizationSourceWindow.m",
+      "bytes": 4109,
+      "sha256": "9e6efa8b16b85a1c25a755842a0dc6cedc252235dc034d4f6e83191a458b5d25"
+    },
+    {
+      "path": "config/distributionRegistrationConfig.m",
+      "bytes": 1712,
+      "sha256": "346b22677ea46ab5f391c97d6b017d1133f5f375a40873e9b2498c690b2be566"
+    },
+    {
+      "path": "config/localizationSourceWindowConfig.m",
+      "bytes": 331,
+      "sha256": "b3c702c8ef533b9f5699420d558d1cb140fc891cc2b0e951eeee96708789b2c8"
+    },
+    {
+      "path": "config/perceptionConfig.m",
+      "bytes": 1614,
+      "sha256": "80e3f73149ff51790dfb64d2396af5be8493b3e16d6bac32bcedece19bd94c14"
+    },
+    {
+      "path": "config/coarseSemanticProbabilityCloudConfig.m",
+      "bytes": 2175,
+      "sha256": "bf6bc3abcf37c12bb0790e14b685ce11e109b664cc1647aa468762f9197d2d97"
+    },
+    {
+      "path": "config/finePerceptionConfig.m",
+      "bytes": 4615,
+      "sha256": "cae640ad48c8a9e7205c66b19b3113abc90d14487d81909f3bc5c4e47fb8a597"
+    },
+    {
+      "path": "config/mississippiLidarFrameCalibration.json",
+      "bytes": 2049,
+      "sha256": "aeaef1d1dddb6d084f5b281f1e9c6547377968432005ecf0bfedc7bfb2106b44"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/matching/report.mat",
+      "bytes": 268764,
+      "sha256": "8a5ba3dde683afc457040cb4bb9cade5612f73981fa8ea02f87fdd975ca813c7"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/matching/calls.csv",
+      "bytes": 552225,
+      "sha256": "8d47808d3dcf081d551ac4dab811bd192a52faa7c2ee5c202f035a173d2c9185"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "bytes": 270306,
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud_map.mat",
+      "bytes": 491523320,
+      "sha256": "1f43c3d860b982cefe28f5b6d904d8303dcedfd2a233aac050960394de1ae187"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/feature_observations.mat",
+      "bytes": 11091945,
+      "sha256": "0c5fc38d0ff0079c8e40f81f9d96758c93f238006e306440e53cc2f5c474efce"
+    },
+    {
+      "path": "output/saved_perception_inspva_20260915/experiment.mat",
+      "bytes": 348390498,
+      "sha256": "7d8f2007c4376fc6064e75249b6202b96feb1380c7c8606714879d1f35c0e08e"
+    },
+    {
+      "path": "output/frame959_matching_diagnosis_20260922/diagnostic.mat",
+      "bytes": 1853725,
+      "sha256": "dc3e4a42d7dc871bfa3141c2399bea0ad96f3fec39b3f3096b7199bf982b0e34"
+    },
+    {
+      "path": "output/frame959_matching_diagnosis_20260922/height_control.mat",
+      "bytes": 5345,
+      "sha256": "38014a70b402906f787164a0626394cf9c0b6ba8f39d2b97efe3b55bf8c29c32"
+    },
+    {
+      "path": "output/frame959_matching_diagnosis_20260922/iteration_trace.mat",
+      "bytes": 152149,
+      "sha256": "7bdee8660431d4d647feccd2b9c8d3e774e3bc9c446de4ed06a6840748af1197"
+    },
+    {
+      "path": "output/frame959_matching_diagnosis_20260922/pole_audit.mat",
+      "bytes": 37733,
+      "sha256": "640d2f61cae5e93fc8f72ef28f849f0d0f2fe355d13cbdb69ce5ec12524b9383"
+    },
+    {
+      "path": "output/frame959_matching_diagnosis_20260922/tracedRegistration959.m",
+      "bytes": 19274,
+      "sha256": "f430279fada790d41b62adf028bc543ed0ebc0bbeab082be65bfe4dd37b5b602"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/README.md",
+      "bytes": 10778,
+      "sha256": "104f14e6bd1551a87b0f2b7173297fa5749a88ccf1f4bf8f064df3ed09ca7111"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/class_diagnostics.csv",
+      "bytes": 241,
+      "sha256": "4a6021c868f05d3867640e37077d16474987544134e52ec2fc3085d933cf9c13"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/class_summary.csv",
+      "bytes": 221,
+      "sha256": "a41787c0585bed66dfdf104e8b8715b23a4d0a392b5ec25844735150fb5f6df0"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/code_analysis.csv",
+      "bytes": 18,
+      "sha256": "05116616bff806795a739272533ef8fc7e47e1b4a01db73ce05d490fdf80c6a9"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/controls.csv",
+      "bytes": 2646,
+      "sha256": "39e978c76a074e7e03afec2ecbfeaa3467a5e88ef3995090769b66b9d3d2c15d"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/correspondences.csv",
+      "bytes": 40850,
+      "sha256": "871acb70a8249d05720249f16fc80f2ea68bd06d195fa8272024bb8c276dcab6"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/diagnose_frame.m",
+      "bytes": 7939,
+      "sha256": "397a8e17e8b215464da1ddb6a8d34975b9c9e4f3aa4c11630c6e2cc4dc2b3f7c"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/diagnosis.png",
+      "bytes": 178482,
+      "sha256": "476aabad123c7065d6ef20dd5de0ca132f2d5b3e2e525ad4e4207455ec31a2de"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/first_step_contributions.csv",
+      "bytes": 20881,
+      "sha256": "706cc61a21fff9533d5c37364663fcf5fac2b909b11a1ee425e18c446c29d22d"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/height_control.json",
+      "bytes": 330,
+      "sha256": "db342e91c093b27efe01b2030c1e20c5a595781cfdb5ca3b99f9b1cdd7981407"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/inspect_map.m",
+      "bytes": 2980,
+      "sha256": "e092c85fe6e747adf8d199c8cbd9b045833a33b42fac7aeca6f3d412ed27d802"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/inspect_poles.m",
+      "bytes": 4259,
+      "sha256": "88082b42a3484762fb825b8796184afec5624064495323733ee3671bb211b80d"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/iteration_pairs.csv",
+      "bytes": 140560,
+      "sha256": "7606f8022852cf2e7cdabdbe1d574257f8e28bc162627f572b83c026310652ff"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/iterations.csv",
+      "bytes": 1386,
+      "sha256": "bcc9922b64cc40ee760b0e7993a9c46b80921783ec5f813cc287b4782e298f9b"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/map_frame_support.csv",
+      "bytes": 2260,
+      "sha256": "dbcf9dac9ad072796bd24194a3dcbccb6957693bf13ba3d9c2700622d65e55ff"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/map_targets.csv",
+      "bytes": 471,
+      "sha256": "0dcce17728b7c2a36c08cd5736f119c66b24907171e3a99cba74462ffe727e29"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/neighborhood.csv",
+      "bytes": 10275,
+      "sha256": "51cc17a1bbf56085b659ce92f221cbf7dbada885e51b2c58c370eddc143533a9"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/plot_diagnosis.m",
+      "bytes": 2745,
+      "sha256": "1ddea93bbd6f221a676b8cf152a43833859294aee367ed04f69de065145147af"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/pole_ablation.csv",
+      "bytes": 415,
+      "sha256": "71d370f4396892126fcb085fb020880b253adc2da21e94271d5cd57823d4dc3f"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/pole_source_audit.csv",
+      "bytes": 727,
+      "sha256": "89d4c0c06d59f230c6baf79ceea4c4e9d62d3b731ca10db3a783999cccfb784c"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/summary.json",
+      "bytes": 1137,
+      "sha256": "ffe5d3aaba62270a897dd4709f6def7d3c484aad9f2dd5e6c0beedc88561ae7e"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/trace_solver.m",
+      "bytes": 2277,
+      "sha256": "2b859e45e2c1e40b93996d208fc7b7b6852e6f21c273915343b2b5c74ef2f837"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/validate_diagnosis.m",
+      "bytes": 2188,
+      "sha256": "d8cdbdd6097a187613ad164f31f8b9595c580852b2816ebb1919d00aca7c1ee7"
+    },
+    {
+      "path": "research/frame959_matching_diagnosis_20260922/validation.json",
+      "bytes": 466,
+      "sha256": "6e570de068fc5e9e2a699b46dc0d07783dc0d8bdec385efebcbe205780e6baab"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "accepted": false,
+  "reason": "acceptedDirectional",
+  "errorM": 0.20700937553274459,
+  "rank": 2,
+  "referenceHeightUsed": true,
+  "excludedMapComponentsWithoutHeight": 1,
+  "sourceFrames": 1,
+  "productionHeightUsed": false,
+  "limitation": "Diagnostic only; a directional pose is not a validated full-pose localization"
+}
