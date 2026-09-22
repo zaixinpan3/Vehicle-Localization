@@ -11,7 +11,7 @@ function report=runMississippiMapMatchingExperiment(outputFolder,options)
     end
     setupVehicleLocalization();
     if ~isfolder(outputFolder),mkdir(outputFolder);end
-    mapFile="output/mississippi_mapping_synchronized/probability_cloud.mat";
+    mapCfg=featureMapBuildConfig();mapFile=mapCfg.probabilityCloudPath;
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
     parameterFile="output/mncav_interface_audit_20260916/vehicle_parameters.json";
     [prepared,~,~]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);

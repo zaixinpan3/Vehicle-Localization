@@ -1,4 +1,4 @@
-function report=runMncavCoarseLocalizationExperiment(outputFolder)
+function report=runMncavCoarseLocalizationExperiment(outputFolder,options)
 % runMncavCoarseLocalizationExperiment Replay raw scans and fuse coarse poses.
 % The existing offline semantic map is fixed. Every online scan is classified
 % only as whole XY pillars, then matched by geometric D2D. Recursive matching
@@ -7,10 +7,13 @@ function report=runMncavCoarseLocalizationExperiment(outputFolder)
 % rejected or directional-only matches do not become full-pose measurements.
     arguments
         outputFolder (1,1) string="output/mncav_coarse_localization"
+        options.MapFile (1,1) string=""
+        options.FrameCalibration (1,1) struct=struct()
     end
     setupVehicleLocalization();
     if ~isfolder(outputFolder),mkdir(outputFolder);end
-    mapFile="output/mississippi_mapping_synchronized/probability_cloud.mat";
+    mapCfg=featureMapBuildConfig();mapFile=mapCfg.probabilityCloudPath;
+    if strlength(options.MapFile)>0,mapFile=options.MapFile;end
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
     parameterFile="output/mncav_interface_audit_20260916/vehicle_parameters.json";
     [prepared,~,~]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
@@ -28,6 +31,7 @@ function report=runMncavCoarseLocalizationExperiment(outputFolder)
     poses=readFramePoseTable(fullfile(root,'data',mapCfg.poseMatchCsvPath),1);
     [pose,tilt]=poseRowToPlanarPose(poses(1,:));
     cfg=struct('perception',perceptionConfig("Mississippi"),'registration',distributionRegistrationConfig());
+    if ~isempty(fieldnames(options.FrameCalibration)),cfg.perception.frameCalibration=validateLidarFrameCalibration(options.FrameCalibration);end
     cfg.perception.coarseProbabilityCloud.projectionRotation=tilt;
     profile clear;profile on;
     profileCleanup=onCleanup(@()profile('off'));
@@ -45,7 +49,8 @@ function report=runMncavCoarseLocalizationExperiment(outputFolder)
     writeJson(fullfile(outputFolder,'call_path_audit.json'),audit);
     profile clear;clear trace map frame;
     matchingFolder=fullfile(outputFolder,'matching');
-    matching=replayMississippiLocalization(mapFile,sensorFolder,matchingFolder,"recursive",[],MotionInputs=motion);
+    matching=replayMississippiLocalization(mapFile,sensorFolder,matchingFolder,"recursive",[],MotionInputs=motion, ...
+        FrameCalibration=cfg.perception.frameCalibration);
     observer=runMncavFullObserverExperiment(fullfile(outputFolder,'observer'),MatchingFolder=matchingFolder);
     report=struct('matching',matching.summary,'observer',observer,'callPathAudit',rmfield(audit,'functionNames'));
     writeJson(fullfile(outputFolder,'summary.json'),report);

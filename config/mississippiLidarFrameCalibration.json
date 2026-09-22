@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "calibration": {
+    "rotation": [
+      [
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        1
+      ]
+    ],
+    "translation": [
+      2.2681473085890995,
+      0.1541085889268394,
+      0
+    ],
+    "identifier": "mississippi-effective-origin-20260921-v1"
+  },
+  "sourceFrame": "stored_front_lidar_axes",
+  "targetFrame": "recorded_INS_output_point",
+  "coordinateConvention": "p_reference = rotation * p_stored + translation; metres, forward/left/up",
+  "physicalSurvey": false,
+  "rotationEstimated": false,
+  "verticalTranslationEstimated": false,
+  "evaluationDriveUsed": true,
+  "calibrationBag": "raw_data_2024-06-07-12-09-31_0.bag",
+  "fit": {
+    "trainingFrames": [
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90,
+      100,
+      105,
+      110
+    ],
+    "trainingPairs": 28,
+    "usedTrainingPairs": 26,
+    "query94ExcludedFromFit": true,
+    "effectiveStoredToReferenceTranslationXYM": [
+      2.2681473085890995,
+      0.1541085889268394
+    ],
+    "fitSingularValues": [
+      1.7647381120882244,
+      1.7647381120882244
+    ],
+    "unadjustedTrainingRmseM": 0.7870254804417804,
+    "adjustedTrainingRmseM": 0.11021751749283518,
+    "qualification": "Same-drive reference-assisted planar consistency fit with no query 94 pair in fitting; not surveyed extrinsics or independent-drive validation."
+  },
+  "selection": "Selected after two complete 1170-frame comparisons for lower raw-matching and fused RMSE on this sequence; not an independent test-set result.",
+  "independentDriveCrossCheck": "Other-drive semantic fit differs: [3.292343297806425,-0.2122027441284905] m. Both candidates reduce held-out pair residual there; physical mounting position remains unverified.",
+  "validationReport": "research/lidar_origin_correction_20260922/README.md",
+  "scope": "Sequence-specific empirical planar reference correction; do not assume a measured sensor installation or generalize without calibration."
+}

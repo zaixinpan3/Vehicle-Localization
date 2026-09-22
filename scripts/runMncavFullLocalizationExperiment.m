@@ -6,12 +6,13 @@ function report=runMncavFullLocalizationExperiment(outputFolder,options)
 % matching poses and their actual information. No real-time claim follows.
     arguments
         outputFolder (1,1) string="output/mncav_full_localization"
-        options.MapFile (1,1) string="output/mississippi_mapping_synchronized/probability_cloud_map.mat"
+        options.MapFile (1,1) string=""
         options.MatchingFolder (1,1) string=""
         options.InformationScale (1,1) double {mustBeFinite,mustBePositive}=.001
         options.MaximumOfflineGap (1,1) double {mustBeFinite,mustBePositive}=1
     end
     root=setupVehicleLocalization();
+    if strlength(options.MapFile)==0,mapCfg=featureMapBuildConfig();options.MapFile=mapCfg.probabilityCloudPath;end
     if ~isfolder(outputFolder),mkdir(outputFolder);end
     sensorFolder=fullfile(root,'output','mississippi_20240607_120931_20260907','sensors');
     parameterFile=fullfile(fileparts(sensorFolder),'vehicle_parameters.json');

@@ -14,7 +14,7 @@ function [measurement, result, history] = localizeLidarFrame(frame, localMapClou
 % condition correspondence compatibility. Validated rank-deficient geometry
 % emits a directionalPose event; result.accepted still denotes full pose only.
 % Set cfg.perception.frameCalibration consistently with the
-% offline map; its default is identity and it never changes point selection.
+% offline map; the dataset profile supplies it without changing point selection.
 % The returned timestamped record is a registration product, not the input
 % contract of the continuous observer. An offline reconstruction must explicitly
 % provide continuous, uniformly informative pose output before using it there.

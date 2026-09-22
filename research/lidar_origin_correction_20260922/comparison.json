@@ -1,0 +1,53 @@
+[
+  {
+    "experiment": "identity_baseline",
+    "folder": "output/receiver_clock_20260921/coarse_pipeline",
+    "frames": 1170,
+    "accepted": 1170,
+    "rawRmseM": 0.1803721390755308,
+    "rawAcceptedRmseM": 0.1803721390755308,
+    "rawP95M": 0.40614577498395105,
+    "rawMaximumM": 0.9279906547145556,
+    "rawPeakFrame": 94,
+    "rawFrame94M": 0.927990654714556,
+    "fusedSamples": 1169,
+    "fusedRmseM": 0.0876837828203157,
+    "fusedP95M": 0.168976151681044,
+    "fusedMaximumM": 0.375664873236837,
+    "finePerceptionUsed": false
+  },
+  {
+    "experiment": "selected_sequence_fit",
+    "folder": "output/lidar_origin_20260922/coarse_pipeline",
+    "frames": 1170,
+    "accepted": 1170,
+    "rawRmseM": 0.15172527882625406,
+    "rawAcceptedRmseM": 0.15172527882625406,
+    "rawP95M": 0.28824378571924764,
+    "rawMaximumM": 0.6928220515366847,
+    "rawPeakFrame": 959,
+    "rawFrame94M": 0.139881116114151,
+    "fusedSamples": 1169,
+    "fusedRmseM": 0.0851841976658304,
+    "fusedP95M": 0.172571605575333,
+    "fusedMaximumM": 0.316256070143538,
+    "finePerceptionUsed": false
+  },
+  {
+    "experiment": "independent_drive_fit",
+    "folder": "output/lidar_origin_20260922/independent_pipeline",
+    "frames": 1170,
+    "accepted": 1169,
+    "rawRmseM": 0.17155038565071007,
+    "rawAcceptedRmseM": 0.17161599587461182,
+    "rawP95M": 0.3352702078796218,
+    "rawMaximumM": 0.8632943011654207,
+    "rawPeakFrame": 959,
+    "rawFrame94M": 0.43388714372622,
+    "fusedSamples": 1169,
+    "fusedRmseM": 0.0876386044449998,
+    "fusedP95M": 0.160447896588764,
+    "fusedMaximumM": 0.264153216348651,
+    "finePerceptionUsed": false
+  }
+]

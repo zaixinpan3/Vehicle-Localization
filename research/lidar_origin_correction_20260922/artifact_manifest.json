@@ -1,0 +1,275 @@
+{
+  "description": "Actual technical artifacts only; no weekly/monthly reports included or hashed.",
+  "files": [
+    {
+      "path": "config/mississippiLidarFrameCalibration.json",
+      "bytes": 2049,
+      "sha256": "aeaef1d1dddb6d084f5b281f1e9c6547377968432005ecf0bfedc7bfb2106b44"
+    },
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_synchronized_pose_1_1170.csv",
+      "bytes": 386537,
+      "sha256": "c0998dee5ba1c33b0890e943347c0eacbce937a500f5947fa2c13bcb08b012a4"
+    },
+    {
+      "path": "output/lidar_origin_20260922/calibration_inputs/manifest.json",
+      "bytes": 8708,
+      "sha256": "f1c9e95a04653117a22c7cb4e900f0822963a36b61778b0d042b33b9121c3d88"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/call_path_audit.json",
+      "bytes": 10822,
+      "sha256": "310ba32b285c8e1f201404eb894a1e56dd52c9198bf68ea34c76db89e405343c"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/matching/calls.csv",
+      "bytes": 552225,
+      "sha256": "8d47808d3dcf081d551ac4dab811bd192a52faa7c2ee5c202f035a173d2c9185"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/matching/metadata.json",
+      "bytes": 23547,
+      "sha256": "9ece8602e540e2be32ea8cc3f56f8480f51f6875f77e8b879e87c18025e5575c"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/matching/report.mat",
+      "bytes": 268764,
+      "sha256": "8a5ba3dde683afc457040cb4bb9cade5612f73981fa8ea02f87fdd975ca813c7"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/matching/summary.json",
+      "bytes": 784,
+      "sha256": "07b69840212baa6685dda5f72801f7e30964973a679c3d24abc555b415ce3d30"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/observer/experiment.mat",
+      "bytes": 4418094,
+      "sha256": "f5d05e61df19979ba9d57983d2d15f18c9e4fc33349aa7d635cf0a9590378e08"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/observer/metrics.csv",
+      "bytes": 3164,
+      "sha256": "1dcf0ca25f6c3844be356bdb93104cf34685358a2c24ae52edc3bf89960b6202"
+    },
+    {
+      "path": "output/lidar_origin_20260922/independent_pipeline/call_path_audit.json",
+      "bytes": 10822,
+      "sha256": "9754e6f7f530b6e51ca40138e9646ddc45570d5c7a24615bdf29a673ccd948e4"
+    },
+    {
+      "path": "output/lidar_origin_20260922/independent_pipeline/matching/calls.csv",
+      "bytes": 552141,
+      "sha256": "ac8b88af5ba141ed170b7cd6cabf50c3451a209a095f9f1a2bb48794ba9ae173"
+    },
+    {
+      "path": "output/lidar_origin_20260922/independent_pipeline/matching/metadata.json",
+      "bytes": 23567,
+      "sha256": "e4333e317e2d2e2fb43722056ba72a010b7e833efe87c32926dcd49a35e0be2e"
+    },
+    {
+      "path": "output/lidar_origin_20260922/independent_pipeline/matching/report.mat",
+      "bytes": 268903,
+      "sha256": "1ad1d93aa46ad88ac8a860528ee9b7a6f1316f6f807eb76ec3be62f9c9038a73"
+    },
+    {
+      "path": "output/lidar_origin_20260922/independent_pipeline/matching/summary.json",
+      "bytes": 815,
+      "sha256": "51d068a78228e9ddf0992dde4ce894d8b92b8052f5acb5aee2635a002eaa8f39"
+    },
+    {
+      "path": "output/lidar_origin_20260922/independent_pipeline/observer/experiment.mat",
+      "bytes": 4417874,
+      "sha256": "608971cd603d3d5a143d0fa582a0b9c767e2c9bea9e613c1d2e97ef6b59d74ef"
+    },
+    {
+      "path": "output/lidar_origin_20260922/independent_pipeline/observer/metrics.csv",
+      "bytes": 3161,
+      "sha256": "48277579b1731cac823e4216e175c770eb7079ac4e7502d8465d4097f5be0f37"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/feature_observations.mat",
+      "bytes": 11091945,
+      "sha256": "0c5fc38d0ff0079c8e40f81f9d96758c93f238006e306440e53cc2f5c474efce"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/map_layer_summary.csv",
+      "bytes": 158,
+      "sha256": "a76b033e14d90b5fb74c7c711966d7ebfa98bf45a50b6fd451ccf6f47c87bcce"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/mapping_configuration.mat",
+      "bytes": 5196,
+      "sha256": "8da73644e87662a6927e7930cee6d54bf0a44060fced568eef2c611cbdd22b64"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "bytes": 270306,
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud_map.mat",
+      "bytes": 491523320,
+      "sha256": "1f43c3d860b982cefe28f5b6d904d8303dcedfd2a233aac050960394de1ae187"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/publication.json",
+      "bytes": 335,
+      "sha256": "584a59006369d7ba5788caf52e3f0e27535c73a856cb49d7c39bdfc95430c2be"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/validation.json",
+      "bytes": 23200,
+      "sha256": "1d84b8f8076870fd922e3e3165ebb420c53085e9a970b5bc8b3274c172f42311"
+    },
+    {
+      "path": "output/mississippi_mapping_synchronized/feature_observations.mat",
+      "bytes": 11086190,
+      "sha256": "7bb00faaf9c554b1a5be90c3006892805dfe7eb2560bcccc0ed639c03938252d"
+    },
+    {
+      "path": "output/mncav_interface_audit_20260916/12-09-31/insconfig.json",
+      "bytes": 1526,
+      "sha256": "2531f3e99bd4a84772433e9f9f58cb92f9203454cd33843dfc056f756704ef9f"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/call_path_audit.json",
+      "bytes": 10836,
+      "sha256": "65a1e4106455f5a1b4dc584d59d144776c22ddb2d56b40a6574e6ff69e537873"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/matching/calls.csv",
+      "bytes": 552128,
+      "sha256": "439704edfa7af411cadc0b35a9b2b0f5e6391cd414afca5b2d2b14e7084a5ebf"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/matching/metadata.json",
+      "bytes": 23050,
+      "sha256": "b4bcd0951cbfd593867e94e964122e8d8d29549f0d54f76c30c683784174c7e7"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/matching/report.mat",
+      "bytes": 268565,
+      "sha256": "afa2520669ae3918491d8d155bed9078c64ca9fa2cfa2afdca5515572fe5c0ec"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/matching/summary.json",
+      "bytes": 786,
+      "sha256": "76ec33de4099f0c6f050ed544f36e27405f3d766558a6b765ca3e6aa94f0f2cd"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/observer/experiment.mat",
+      "bytes": 4413204,
+      "sha256": "a92816d5f20c9cddd97f530a6c2a0320e7ef74f48e32697113bc5fae6166ef20"
+    },
+    {
+      "path": "output/receiver_clock_20260921/coarse_pipeline/observer/metrics.csv",
+      "bytes": 3163,
+      "sha256": "4ac68c868288905f63896c4b8eb91badc9bb15934eb4269aaa868a9b93891a0c"
+    },
+    {
+      "path": "output/receiver_synchronized_inputs/reference_metadata.json",
+      "bytes": 21927,
+      "sha256": "6254794568a41d19e0bacf4401ddf604a2441200a39f0aa58059e8b2a4155cf2"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/README.md",
+      "bytes": 9479,
+      "sha256": "a3e235851734c9a6ab9e0ff356c3a881163e0db18ae837a174d7e4f54dd13376"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/calibration_relative_poses.csv",
+      "bytes": 49650,
+      "sha256": "766ce8d898a1161f842deb915a93ab2eff54284656e36d30890d285cc1400e47"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/calibration_summary.json",
+      "bytes": 4395,
+      "sha256": "47981d766b4a2e6f7e07510af24e9f676c203efced57b45dad1db003adadcb02"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/code_analysis.csv",
+      "bytes": 18,
+      "sha256": "05116616bff806795a739272533ef8fc7e47e1b4a01db73ce05d490fdf80c6a9"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/comparison.csv",
+      "bytes": 902,
+      "sha256": "e3efebfeb1021a1a83cee948f45e2f22a3947c330619cce5e80c06e71e4a0cc2"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/comparison.json",
+      "bytes": 1645,
+      "sha256": "6a9cda24a0092e0b40027c32f116f996e46272209348307e64680d649408130c"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/comparison.png",
+      "bytes": 229477,
+      "sha256": "a2f40860daee37a5a3d5c1c52718db3c9c161d54a4b35596b43a557c156492a6"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/fused_error_curve.csv",
+      "bytes": 85379,
+      "sha256": "f1b0f5b029b1a1e929e5c30c14bf27a2bce921efe0f8468ec30d66227bb1a133"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/independent_validation.json",
+      "bytes": 185,
+      "sha256": "f0b7fb96fa1bbb48bbc989dbfc4d05280ef87f393fe690025d68151943ed4fb4"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/observer_scenarios.csv",
+      "bytes": 10449,
+      "sha256": "b615dd80b3bf0b093fea8bf1c676371a4da246996973347c8d7a4f3ceebb1b24"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/perception_checks.csv",
+      "bytes": 126,
+      "sha256": "b7c511d4fdda4033165e80dfee68cae1c04472e29ca75ef6e0cb5b81ea460d25"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/plot_results.m",
+      "bytes": 1905,
+      "sha256": "4d1bbc26a08ad32e4f18c16ecb01b359dfb2bceec6f808c7bd0f681a4240ec4a"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/publication.json",
+      "bytes": 335,
+      "sha256": "584a59006369d7ba5788caf52e3f0e27535c73a856cb49d7c39bdfc95430c2be"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/raw_calibration_relative_poses.csv",
+      "bytes": 30691,
+      "sha256": "0ec31d59fc70737419ffdd206b608d015601d44fd5f55d96d25eb503f537a9c6"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/raw_calibration_summary.json",
+      "bytes": 2087,
+      "sha256": "83c7c5cd4b1991e929cf6f76f156d128bccdca28c24f68122bf12a5f9de2e6b0"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/raw_error_curve.csv",
+      "bytes": 69271,
+      "sha256": "e428278d4d378194db159bcfe10ed8d9a16bb99fc94ca5473f8472ebe730800f"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/summarize_results.py",
+      "bytes": 2672,
+      "sha256": "3df21b7ff7dfc6b7d92a8fdb10818c9de2c999a61c26a28cfea7fd5a3cad3834"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/tests.csv",
+      "bytes": 6491,
+      "sha256": "31bbf5e81bdf8d5d184cf63c5b19aa1d12398e70c68d0d92fcb2bffcbe4c7dc3"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/validate_correction.m",
+      "bytes": 4692,
+      "sha256": "135fc3c40bfc069387bd9191d6f96d0e98b56ac2aef65e8beb77e6bcee0475fd"
+    },
+    {
+      "path": "research/lidar_origin_correction_20260922/validation.json",
+      "bytes": 737,
+      "sha256": "c4976f03f43574cd4f3e3c7938b29de656ff31a20e4c0f1ece2b1d70ec76dff0"
+    }
+  ]
+}

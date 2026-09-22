@@ -1,0 +1,8 @@
+{
+  "sourceBundle": "output/lidar_origin_20260922/map",
+  "publishedBundle": "output/mississippi_mapping_calibrated",
+  "calibrationIdentifier": "mississippi-effective-origin-20260921-v1",
+  "perceptionRerun": false,
+  "selectedPipeline": "output/lidar_origin_20260922/coarse_pipeline",
+  "mapAndOnlineUseIdenticalCalibration": true
+}

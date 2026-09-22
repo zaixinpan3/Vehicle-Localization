@@ -1,0 +1,9 @@
+{
+  "candidateXYM": [
+    2.2681473085890995,
+    0.1541085889268394
+  ],
+  "independentValidationPairs": 10,
+  "beforeRmseM": 0.45732319588425113,
+  "afterRmseM": 0.1666753346102736
+}

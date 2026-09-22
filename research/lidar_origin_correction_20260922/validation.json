@@ -1,0 +1,37 @@
+{
+  "testsPassed": 78,
+  "testsFailed": 0,
+  "codeAnalyzerIssues": 0,
+  "mapOnlineCalibrationIdentical": true,
+  "coarseOnlyFrames": 1170,
+  "fineMasksPreserved": true,
+  "pillarSelectionsPreserved": true,
+  "staleIdentityMapRejected": true,
+  "selectedExperiment": "output/lidar_origin_20260922/coarse_pipeline",
+  "activeMap": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+  "calibration": {
+    "rotation": [
+      [
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        1
+      ]
+    ],
+    "translation": [
+      2.2681473085890995,
+      0.1541085889268394,
+      0
+    ],
+    "identifier": "mississippi-effective-origin-20260921-v1"
+  }
+}

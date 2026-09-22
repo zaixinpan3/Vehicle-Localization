@@ -1,0 +1,86 @@
+{
+  "calibration": {
+    "rotation": [
+      [
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        1
+      ]
+    ],
+    "translation": [
+      3.9663636176346673,
+      -0.18294750498138737,
+      0
+    ],
+    "identifier": "mncav-front-lidar-reference-12-11-24-raw-planar-v1"
+  },
+  "fit": {
+    "pairs": 32,
+    "translationXYM": [
+      3.9663636176346673,
+      -0.18294750498138737
+    ],
+    "rotationEstimated": false,
+    "verticalTranslationEstimated": false,
+    "normalizedSingularValues": [
+      0.19867796094217305,
+      0.19867796094217302
+    ],
+    "huberScaleM": 0.1,
+    "beforeRmseM": 1.001110083591256,
+    "afterRmseM": 0.37896505826541843,
+    "pairResidualM": [
+      0.19085281254696346,
+      0.20676339211256292,
+      0.2220627429143577,
+      0.2066342628559671,
+      0.17542089103161865,
+      0.1356986542983713,
+      0.07482073569745934,
+      0.43150161398704234,
+      0.4952219824080129,
+      0.7352338456797675,
+      0.801233811905242,
+      0.7217011287803078,
+      0.7776605849766274,
+      0.6995075537005809,
+      0.27533152017060303,
+      0.6841582400990982,
+      0.26056074626389264,
+      0.0465090511174852,
+      0.21655379544808517,
+      0.08683802806719518,
+      0.07893196106329878,
+      0.12938780259043123,
+      0.11907441109233875,
+      0.09751663812504527,
+      0.19478067885981906,
+      0.17737920261264323,
+      0.1212344386574503,
+      0.2418363417904842,
+      0.18580459598790994,
+      0.3263480269339543,
+      0.2500032083711238,
+      0.2822190129328026
+    ],
+    "interpretation": "Effective stored-axis to recorded-INS-reference translation; not a surveyed mounting position"
+  },
+  "validationPairs": 0,
+  "validationBeforeRmseM": null,
+  "validationAfterRmseM": null,
+  "evaluationDriveUsed": false,
+  "referencePoint": "recorded_INS_output_point",
+  "hasValidationEvidence": false,
+  "deployed": false,
+  "limitations": "Diagnostic only; zero qualified validation pairs. Inconclusive, not a validated mounting calibration."
+}

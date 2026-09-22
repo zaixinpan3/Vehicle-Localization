@@ -143,6 +143,10 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
         % against the unchanged full perception result.
             matPath = fullfile(dataRoot, "raw", "MissisipiPointClouds.mat");
             cfg = perceptionConfig();
+            % Stored baseline scores use the sensor-origin NDT lattice.
+            % Hold its bin boundaries fixed when comparing perception fidelity;
+            % reference-point changes are tested by lidarOriginCalibrationTest.
+            cfg.frameCalibration = lidarFrameCalibrationConfig();
             semanticNames = "curb";
             sourceCounts = repmat(struct("tp", 0, "fp", 0, "fn", 0), 1, 1);
             ndtCounts = sourceCounts;

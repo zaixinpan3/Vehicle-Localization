@@ -1,10 +1,27 @@
-function [featureData,metadata] = reprojectSavedFeatureObservations(original,newPoses)
-% reprojectSavedFeatureObservations Undo cached poses and apply new SE(3) poses.
-% Feature selection and the already applied LiDAR calibration are preserved.
-% Updating only the pose table would leave cached global points inconsistent.
+function [featureData,metadata] = reprojectSavedFeatureObservations(original,newPoses,options)
+% reprojectSavedFeatureObservations Reproject unchanged raw feature selections.
+% Undo both the cached world pose and its stored-to-reference calibration,
+% then apply the requested calibration and new world pose exactly once.
+% With no requested calibration, preserve the original calibration.
+    arguments
+        original (1,1) struct
+        newPoses table
+        options.FrameCalibration (1,1) struct=struct()
+    end
     assert(isequal(double(original.frameIndices(:)),double(newPoses.frame_index(:))), ...
         'VehicleLocalization:FrameMismatch','New poses must cover the same ordered frames.');
-    featureData=original;featureData.framePoseTable=newPoses;
+    oldCalibration=lidarFrameCalibrationConfig();
+    if isfield(original,'frameCalibration')
+        oldCalibration=validateLidarFrameCalibration(original.frameCalibration);
+    else
+        assert(isempty(fieldnames(options.FrameCalibration)), ...
+            'VehicleLocalization:MissingCalibration','An explicit source calibration is required to change calibration.');
+    end
+    newCalibration=oldCalibration;
+    if ~isempty(fieldnames(options.FrameCalibration))
+        newCalibration=validateLidarFrameCalibration(options.FrameCalibration);
+    end
+    featureData=original;featureData.framePoseTable=newPoses;featureData.frameCalibration=newCalibration;
     maximumRoundTrip=0;maximumLocalDifference=0;
     for k=1:height(newPoses)
         [oldR,oldT]=poseRowToRigidTransform(original.framePoseTable(k,:));
@@ -13,9 +30,12 @@ function [featureData,metadata] = reprojectSavedFeatureObservations(original,new
             points=double(original.pointsByFeatureFrame{j,k});
             if isempty(points),continue;end
             local=(points-oldT)*oldR;
-            replacement=local*newR.'+newT;
+            stored=(local-oldCalibration.translation)*oldCalibration.rotation;
+            calibrated=stored*newCalibration.rotation.'+newCalibration.translation;
+            replacement=calibrated*newR.'+newT;
             maximumRoundTrip=max(maximumRoundTrip,max(abs(local*oldR.'+oldT-points),[],'all'));
-            maximumLocalDifference=max(maximumLocalDifference,max(abs((replacement-newT)*newR-local),[],'all'));
+            recovered=((replacement-newT)*newR-newCalibration.translation)*newCalibration.rotation;
+            maximumLocalDifference=max(maximumLocalDifference,max(abs(recovered-stored),[],'all'));
             featureData.pointsByFeatureFrame{j,k}=replacement;
         end
     end
@@ -23,6 +43,7 @@ function [featureData,metadata] = reprojectSavedFeatureObservations(original,new
         'Cached transform could not be reversed consistently.');
     metadata=struct('maximumOriginalRoundTripM',maximumRoundTrip,'maximumLocalPointDifferenceM',maximumLocalDifference, ...
         'frames',height(newPoses),'sourcePointCounts',sum(original.counts,1), ...
-        'method',"Full inverse old SE(3), followed by new SE(3); feature selection and LiDAR calibration unchanged");
+        'oldCalibration',oldCalibration,'newCalibration',newCalibration, ...
+        'method',"Inverse old world pose and old calibration; apply new calibration and new pose; raw feature selections preserved");
     featureData.reprojection=metadata;
 end

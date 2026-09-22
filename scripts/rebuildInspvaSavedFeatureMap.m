@@ -3,9 +3,10 @@ function report = rebuildInspvaSavedFeatureMap(outputFolder,options)
 % Cached global features are reprojected with INSPVA poses at LiDAR times.
 % Original perception/map artifacts remain the historical baseline.
     arguments
-        outputFolder (1,1) string="output/mississippi_mapping_synchronized"
+        outputFolder (1,1) string="output/mississippi_mapping_calibrated"
         options.ObservationFile (1,1) string="output/mississippi_perception_video_20260912/feature_observations.mat"
         options.PoseFile (1,1) string=""
+        options.FrameCalibration (1,1) struct=struct()
     end
     setupVehicleLocalization();
     if ~isfolder(outputFolder),mkdir(outputFolder);end
@@ -20,7 +21,9 @@ function report = rebuildInspvaSavedFeatureMap(outputFolder,options)
         all(string(poses.clock_model_id)==string(clock.modelId)), ...
         'VehicleLocalization:ClockMismatch','Rebuild requires synchronized pose epochs.');
     loaded=load(options.ObservationFile,'featureData');original=loaded.featureData;
-    [featureData,reprojection]=reprojectSavedFeatureObservations(original,poses);
+    calibration=cfg.frameCalibration;
+    if ~isempty(fieldnames(options.FrameCalibration)),calibration=validateLidarFrameCalibration(options.FrameCalibration);end
+    [featureData,reprojection]=reprojectSavedFeatureObservations(original,poses,FrameCalibration=calibration);
     assert(isequal(sum(featureData.counts,1),[133836,194300,70950]),'Unexpected perception point counts.');
     cfg.featureNames=featureData.featureNames;cfg.frameCalibration=featureData.frameCalibration;
     save(fullfile(outputFolder,'feature_observations.mat'),'featureData','-v7.3');
