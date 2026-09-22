@@ -11,12 +11,13 @@ function validation=validate_experiment()
     assert(~c.accepted(1) && ~c.directionalAccepted(1) && w.components(1)==0);
     assert(nnz(c.accepted)==1167 && nnz(c.directionalAccepted)==2);
     assert(~new.report.metadata.finePerceptionUsed && new.report.metadata.perceptionRerun);
-    assert(isequal(new.cfg.sourceWindow,localizationSourceWindowConfig()));
+    window=new.cfg.sourceWindow; % Reproduce this historical experiment explicitly.
+    assert(window.maximumFrames==3 && window.maximumAgeSeconds==.25);
     s=load('output/frame959_matching_diagnosis_20260922/diagnostic.mat');h=[];
     for k=1:2
-        [~,h]=updateLocalizationSourceWindow(s.history.clouds{k},s.history.time(k),s.history.motion(k,:),h);
+        [~,h]=updateLocalizationSourceWindow(s.history.clouds{k},s.history.time(k),s.history.motion(k,:),h,window);
     end
-    [cloud,~,details]=updateLocalizationSourceWindow(s.history.clouds{3},s.history.time(3),s.history.motion(3,:),h);
+    [cloud,~,details]=updateLocalizationSourceWindow(s.history.clouds{3},s.history.time(3),s.history.motion(3,:),h,window);
     result=registerSemanticProbabilityCloud(s.fixed,cloud,s.seed,s.cfg.registration);
     assert(result.directionalAccepted && ~result.accepted && result.observableRank==2);
     for id=[100,142]
@@ -26,7 +27,7 @@ function validation=validate_experiment()
     unchanged=registerSemanticProbabilityCloud(s.fixed,s.source,s.seed,s.cfg.registration);
     assert(max(abs(unchanged.poseXYTheta-s.results{1}.poseXYTheta))<1e-7);
     input=loadPointCloudFrame('data/raw/MissisipiPointClouds.mat',959);
-    cfg=s.cfg;cfg.sourceWindow=localizationSourceWindowConfig();
+    cfg=s.cfg;cfg.sourceWindow=window;
     profile clear;profile on;cleanup=onCleanup(@()profile('off'));
     [event,online]=localizeLidarFrame(input,s.fixed,s.seed,s.history.time(3),cfg,h,s.history.motion(3,:));
     profile off;trace=profile('info');clear cleanup;

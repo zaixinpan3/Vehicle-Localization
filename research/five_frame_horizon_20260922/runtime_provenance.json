@@ -1,0 +1,47 @@
+{
+  "priorImplementationCommit": "f152d0ce2794521f226d6c4fd9e352cf05ae73ad",
+  "priorManifest": "research/temporal_perception_20260922/artifact_manifest.json",
+  "scope": "Selected unchanged runtime and replay artifacts; config equality checked in MATLAB. Existing measurements reused.",
+  "files": [
+    {
+      "path": "config/mississippiLidarFrameCalibration.json",
+      "sha256": "aeaef1d1dddb6d084f5b281f1e9c6547377968432005ecf0bfedc7bfb2106b44",
+      "unchanged": true
+    },
+    {
+      "path": "localization/localizeLidarFrame.m",
+      "sha256": "65da9ac61aa304384f2a902bbf9c450b5e0c3a02e64681e7f3aff5f3798567b8",
+      "unchanged": true
+    },
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "sha256": "f4f9008b87641c2b5bb318ea6de2f56d37b19937d0ceb394668b19003a378ba5",
+      "unchanged": true
+    },
+    {
+      "path": "localization/registrationSupport.m",
+      "sha256": "d01bd238516c259f70174c4d37b0ec7cc9fbe11eaf9c80c5320c8d4f0110dac4",
+      "unchanged": true
+    },
+    {
+      "path": "localization/updateLocalizationSourceWindow.m",
+      "sha256": "3a9f5ab00b28acd6b425dc0b102c33742ce6e582d1f24c8c77ea45b98c034d17",
+      "unchanged": true
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee",
+      "unchanged": true
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/report.mat",
+      "sha256": "a724606b8562f7ec7f24fed2ec2a89e814f1cf1e454f42a325aba5e2df436f61",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/replayMississippiLocalization.m",
+      "sha256": "8c171a4202dfa2bb4224a14ccc5df8acc81146b2b2ea089e8141a07b1fe06ae5",
+      "unchanged": true
+    }
+  ]
+}

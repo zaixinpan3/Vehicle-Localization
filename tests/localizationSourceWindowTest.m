@@ -32,14 +32,16 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             testCase.verifyEqual(actual.components.mean,expected.components.mean,AbsTol=1e-8);
             testCase.verifyEqual(actual.components.covariance,expected.components.covariance,AbsTol=1e-12);
         end
-        function retainsOnlyThreeCausalScans(testCase)
+        function retainsFiveCausalScansByDefault(testCase)
             cloud=distributionRegistrationTest.exampleCloud();
             [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
             [~,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
-            [before,h]=updateLocalizationSourceWindow(cloud,.2,[0 0 0],h);
-            [after,h,d]=updateLocalizationSourceWindow(cloud,.3,[0 0 0],h);
-            testCase.verifyEqual(h.time,[.1;.2;.3],AbsTol=0);
-            testCase.verifyEqual(d.frameCount,3);
+            [~,h]=updateLocalizationSourceWindow(cloud,.2,[0 0 0],h);
+            [~,h]=updateLocalizationSourceWindow(cloud,.3,[0 0 0],h);
+            [before,h]=updateLocalizationSourceWindow(cloud,.4,[0 0 0],h);
+            [after,h,d]=updateLocalizationSourceWindow(cloud,.5,[0 0 0],h);
+            testCase.verifyEqual(h.time,[.1;.2;.3;.4;.5],AbsTol=0);
+            testCase.verifyEqual(d.frameCount,5);
             testCase.verifyEqual(d.oldestTimestamp,.1,AbsTol=0);
             testCase.verifyEqual(before.components.mean,after.components.mean,AbsTol=0);
         end
@@ -70,7 +72,9 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             single=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
             [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
             [~,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
-            [pooled,~]=updateLocalizationSourceWindow(cloud,.2,[0 0 0],h);
+            [~,h]=updateLocalizationSourceWindow(cloud,.2,[0 0 0],h);
+            [~,h]=updateLocalizationSourceWindow(cloud,.3,[0 0 0],h);
+            [pooled,~]=updateLocalizationSourceWindow(cloud,.4,[0 0 0],h);
             result=registerSemanticProbabilityCloud(cloud,pooled,[0 0 0]);
             testCase.verifyTrue(result.accepted,result.reason);
             testCase.verifyEqual(result.poseXYTheta,single.poseXYTheta,AbsTol=1e-12);
@@ -159,12 +163,14 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             testCase.verifyEqual(actual.components.mean,cloud.components.mean+[.1 0],AbsTol=1e-12);
             testCase.verifyEqual(actual.components.covariance,cloud.components.covariance+[.01 0;0 0],AbsTol=1e-12);
         end
-        function stableFeatureCanSurviveOneMissInsideHorizon(testCase)
+        function stableFeatureSurvivesMissesUntilItsSupportExpires(testCase)
             cloud=distributionRegistrationTest.exampleCloud();
             [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
             [~,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
-            [actual,h]=updateLocalizationSourceWindow(testCase.empty(cloud),.2,[0 0 0],h);
-            [expired,~]=updateLocalizationSourceWindow(testCase.empty(cloud),.3,[0 0 0],h);
+            [~,h]=updateLocalizationSourceWindow(testCase.empty(cloud),.2,[0 0 0],h);
+            [~,h]=updateLocalizationSourceWindow(testCase.empty(cloud),.3,[0 0 0],h);
+            [actual,h]=updateLocalizationSourceWindow(testCase.empty(cloud),.4,[0 0 0],h);
+            [expired,~]=updateLocalizationSourceWindow(testCase.empty(cloud),.5,[0 0 0],h);
             testCase.verifyEqual(actual.components.detectionFrameCount,2*ones(6,1),AbsTol=0);
             testCase.verifyEmpty(expired.components.mean);
         end
@@ -172,13 +178,18 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             cloud=distributionRegistrationTest.exampleCloud();
             [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
             [twice,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
-            [thrice,~]=updateLocalizationSourceWindow(cloud,.2,[0 0 0],h);
+            [thrice,h]=updateLocalizationSourceWindow(cloud,.2,[0 0 0],h);
+            [four,h]=updateLocalizationSourceWindow(cloud,.3,[0 0 0],h);
+            [five,~]=updateLocalizationSourceWindow(cloud,.4,[0 0 0],h);
             a=registerSemanticProbabilityCloud(cloud,twice,[0 0 0]);
             b=registerSemanticProbabilityCloud(cloud,thrice,[0 0 0]);
-            testCase.verifyEqual(twice.components.temporalStability,2/3*ones(6,1),AbsTol=1e-12);
-            testCase.verifyEqual(thrice.components.temporalStability,ones(6,1),AbsTol=1e-12);
+            testCase.verifyEqual(twice.components.temporalStability,2/5*ones(6,1),AbsTol=1e-12);
+            testCase.verifyEqual(thrice.components.temporalStability,3/5*ones(6,1),AbsTol=1e-12);
+            testCase.verifyEqual(four.components.temporalStability,4/5*ones(6,1),AbsTol=1e-12);
+            testCase.verifyEqual(five.components.temporalStability,ones(6,1),AbsTol=1e-12);
             testCase.verifyEqual(a.information,b.information*2/3,AbsTol=1e-10);
             testCase.verifyEqual(twice.components.covariance,thrice.components.covariance,AbsTol=1e-12);
+            testCase.verifyEqual(twice.components.covariance,five.components.covariance,AbsTol=1e-12);
         end
         function stabilitySurvivesClassNormalization(testCase)
             cloud=distributionRegistrationTest.exampleCloud();

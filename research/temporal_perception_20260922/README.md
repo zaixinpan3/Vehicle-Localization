@@ -1,5 +1,9 @@
 # Short-term stability in coarse perception
 
+Historical experiment record: the three-frame default described below was
+superseded by the requested [five-frame default](../five_frame_horizon_20260922/README.md).
+The measurements and original selection decision below remain unchanged.
+
 Implemented and evaluated September 22, 2026, against source revision
 `24f6cd34c91278cad65bfd7b628fbebeb93ee82e`. The online classifier remains based
 on whole-pillar point statistics; no ring, height subdivision, raw-point
@@ -160,8 +164,10 @@ Run from the repository root with the existing input assets:
 ```matlab
 setupVehicleLocalization();
 addpath('research/temporal_perception_20260922');
-run_experiment();
 window = localizationSourceWindowConfig();
+window.maximumFrames = 3;
+window.maximumAgeSeconds = .25;
+run_experiment('output/temporal_perception_20260922/matching', window);
 window.maximumFrames = 5;
 window.maximumAgeSeconds = .45;
 run_experiment('output/temporal_perception_20260922/five_frame_matching', window);

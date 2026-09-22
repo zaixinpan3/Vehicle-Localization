@@ -1,0 +1,31 @@
+{
+  "testsPassed": 39,
+  "defaultWindow": {
+    "maximumFrames": 5,
+    "maximumAgeSeconds": 0.45,
+    "minimumDetectionFrames": 2,
+    "maximumAssociationDistance": 0.75,
+    "maximumStandardizedDistance": 3,
+    "associationNoiseStandardDeviation": 0.1
+  },
+  "freshRealFrames": [
+    955,
+    956,
+    957,
+    958,
+    959
+  ],
+  "onlineDefaultUsed": true,
+  "retainedRealFrames": 5,
+  "confirmedComponents": 61,
+  "rejectedSingletons": 47,
+  "minimumSupport": 2,
+  "maximumSupport": 5,
+  "identicalToExistingFullSequenceConfiguration": true,
+  "fullSequenceRerunThisChange": false,
+  "existingReplayFrames": 1170,
+  "existingReplayFullPoses": 1169,
+  "existingReplayTrajectoryRmseM": 0.17285627160774075,
+  "existingReplayFullPoseRmseM": 0.17191312695027444,
+  "existingReplayMaximumM": 0.68281122157378
+}
