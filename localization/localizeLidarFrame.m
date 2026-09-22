@@ -6,22 +6,20 @@ function [measurement, result, history] = localizeLidarFrame(frame, localMapClou
 % IMU tilt in cfg.perception.coarseProbabilityCloud.projectionRotation when
 % required by the map convention. poseRowToPlanarPose supplies this rotation
 % for recorded mapping poses. This routine does not estimate extrinsics/tilt.
-% Set cfg.registration.heightTranslation to the sensor/vehicle origin in map
-% Z (third output of poseRowToPlanarPose for recorded data). Auto mode uses
-% XYZ only with a known vertical reference and height in both clouds;
-% result.height describes the chosen mode. The state and event pose are ALWAYS
-% [X Y psi]; Z/roll/pitch are not optimized. Geometric D2D uses height only to
-% condition correspondence compatibility. Validated rank-deficient geometry
+% The temporal source uses XY because its motion input is planar. The state
+% and event pose are [X Y psi]; Z/roll/pitch are not optimized.
+% Validated rank-deficient geometry
 % emits a directionalPose event; result.accepted still denotes full pose only.
 % Set cfg.perception.frameCalibration consistently with the
 % offline map; the dataset profile supplies it without changing point selection.
 % The returned timestamped record is a registration product, not the input
 % contract of the continuous observer. An offline reconstruction must explicitly
 % provide continuous, uniformly informative pose output before using it there.
-% Optional history and cumulative wheel/gyro motionPose enable a causal
-% three-scan XY source window. Pass returned history into the next call. Never
-% use previous registration poses as this odometry input. Without motionPose
-% the call uses the current scan. The window introduces no look-ahead delay.
+% History and cumulative wheel/gyro motionPose maintain a causal stable-source
+% horizon. Pass returned history into the next call; do not feed registration
+% corrections into this odometry. A fresh call without motion can collect its
+% first scan, but emits no measurement until a later scan confirms support.
+% Subsequent calls require motionPose. There is no look-ahead delay.
 % Empty measurement means rejection. Exported robust Gaussian information
 % uses physical map-frame [X,Y,psi] coordinates and is not empirically calibrated.
     if nargin < 5 || isempty(cfg)
@@ -37,20 +35,23 @@ function [measurement, result, history] = localizeLidarFrame(frame, localMapClou
     cloud = perceiveCoarseProbabilityCloud(frame,cfg.perception);
     perceptionSeconds = toc(startTime);
     registrationStart = tic;
-    matchingCloud=cloud;window=struct('frameCount',1,'spanSeconds',0,'dimension',2);
-    if ~isempty(motionPose)
-        assert(string(cfg.registration.heightMode)=="xy", ...
-            'VehicleLocalization:WindowRequiresXY','The source window requires XY registration.');
-        windowCfg=localizationSourceWindowConfig();
-        if isfield(cfg,'sourceWindow'),windowCfg=cfg.sourceWindow;end
-        [matchingCloud,history,window]=updateLocalizationSourceWindow(cloud,timestamp,motionPose,history,windowCfg);
-    else
-        history=[];
+    if isempty(motionPose)
+        assert(isempty(history),'VehicleLocalization:WindowMotionRequired', ...
+            'Supply cumulative odometry when continuing a perception horizon.');
+        motionPose=[0 0 0];
     end
+    assert(string(cfg.registration.heightMode)=="xy", ...
+        'VehicleLocalization:WindowRequiresXY','The source window requires XY registration.');
+    windowCfg=localizationSourceWindowConfig();
+    if isfield(cfg,'sourceWindow'),windowCfg=cfg.sourceWindow;end
+    [matchingCloud,history,window]=updateLocalizationSourceWindow(cloud,timestamp,motionPose,history,windowCfg);
+    windowSeconds=toc(registrationStart);
     result = registerSemanticProbabilityCloud(localMapCloud,matchingCloud,initialPose,cfg.registration);
     result.perceptionSeconds = perceptionSeconds;
     result.registrationSeconds = toc(registrationStart);
-    result.probabilityCloud = cloud;
+    result.probabilityCloud = matchingCloud;
+    result.currentProbabilityCloud = cloud;
+    result.sourceWindowSeconds = windowSeconds;
     result.sourceWindow=window;
     measurement = registrationSupport.registrationPoseMeasurement(result,timestamp);
 end

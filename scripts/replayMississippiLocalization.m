@@ -107,7 +107,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     cfg.registration.heightMode="xy";
     radius=100; rows=cell(n,32); maxTimestampDifference=0;
     store=matfile(matPath); frameBlock=[]; firstInBlock=0;sourceHistory=[];
-    diskBlocks=zeros(0,3);candidatePoses=zeros(n,3);windowDetails=zeros(n,3);
+    diskBlocks=zeros(0,3);candidatePoses=zeros(n,3);windowDetails=zeros(n,8);
     for k=1:n
         if isempty(frameBlock) || k>=firstInBlock+numel(frameBlock)
             firstInBlock=k; lastInBlock=min(n,k+options.FrameBlockSize-1);
@@ -132,7 +132,9 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         selectionSeconds=toc(selectionTimer);
         [event,result,sourceHistory]=localizeLidarFrame(frame,local,predicted,scanTime(k),cfg,sourceHistory,motion(k,:));
         candidatePoses(k,:)=result.poseXYTheta;
-        windowDetails(k,:)=[result.sourceWindow.frameCount,result.sourceWindow.spanSeconds,result.sourceWindow.componentCount];
+        windowDetails(k,:)=[result.sourceWindow.frameCount,result.sourceWindow.spanSeconds,result.sourceWindow.componentCount, ...
+            result.sourceWindow.unfilteredComponentCount,result.sourceWindow.rejectedSingletons, ...
+            result.sourceWindow.minimumSupport,result.sourceWindow.meanStability,1000*result.sourceWindowSeconds];
         elapsed=toc(timer);
         assert((result.accepted || result.directionalAccepted)==~isempty(event),'Acceptance/event mismatch.');
         state=predicted;
@@ -164,7 +166,8 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     report.calls=callTable(rows);
     report.calls.clockModelId=repmat(string(clock.modelId),n,1);
     report.candidatePoses=array2table([frameIndices(:),candidatePoses],VariableNames={'frame','x','y','psi'});
-    report.sourceWindows=array2table([frameIndices(:),windowDetails],VariableNames={'frame','scans','spanSeconds','components'});
+    report.sourceWindows=array2table([frameIndices(:),windowDetails],VariableNames={'frame','scans','spanSeconds','components', ...
+        'unfilteredComponents','rejectedSingletons','minimumSupport','meanStability','windowMs'});
     report.diskBlocks=array2table(diskBlocks,'VariableNames',{'firstQuery','lastQuery','seconds'});
     report.deadReckoning=array2table([frameIndices(:),scanTime-scanTime(1),deadReckoning], ...
         'VariableNames',{'frame','timeSeconds','x','y','psi'});

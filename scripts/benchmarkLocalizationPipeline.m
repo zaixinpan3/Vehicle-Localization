@@ -1,7 +1,8 @@
 function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFrameCount)
 % benchmarkLocalizationPipeline Time raw-frame coarse perception through pose.
 % Seven Mississippi scenes use current offline maps built from subsequent
-% frames, excluding the query. Every timed call repeats perception and D2D.
+% frames, excluding the query. Every timed call repeats perception, temporal
+% confirmation and D2D using an independently prepared preceding horizon.
 % Disk loading, offline mapping and map export are preparation, reported
 % separately. The map-pose differences are same-route consistency only.
 
@@ -19,8 +20,17 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
     cfg = struct('perception',pcfg,'registration',distributionRegistrationConfig());
     matPath = fullfile(root,'data',mapCfg.pointCloudMatPath);
     posePath = fullfile(root,'data',mapCfg.poseMatchCsvPath);
+    cfg.sourceWindow=localizationSourceWindowConfig();
+    allPoses=readFramePoseTable(posePath,1:max(frames));
+    [prepared,~,~]=prepareMncavObserverReplay('output/mncav_wheel_only_20260916/sensors', ...
+        'output/mncav_interface_audit_20260916/vehicle_parameters.json',table(),0,IncludeOdom=false);
+    saved=load('output/mncav_inspva_observer_20260915/experiment.mat','lateralDesign');
+    lateral=runLateralVelocityObserver(prepared.highRate,saved.lateralDesign,saved.lateralDesign.cfg);
+    h=prepared.highRate;
+    motion=integrateRecordedPlanarMotion(h.time, ...
+        [h.longitudinalSpeed,lateral.lateralVelocity,h.yawRate],allPoses.receiver_time_sec);
     inputs = cell(numel(frames),1);
-    preparation = zeros(numel(frames),5);
+    preparation = zeros(numel(frames),6);
     for index = 1:numel(frames)
         frameIndex = frames(index);
         timer = tic;
@@ -28,6 +38,17 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
         preparation(index,1) = 1000*toc(timer);
         row = readFramePoseTable(posePath,frameIndex);
         [item.pose,item.tilt] = poseRowToPlanarPose(row);
+        timer=tic;item.history=[];
+        for previous=frameIndex-cfg.sourceWindow.maximumFrames+1:frameIndex-1
+            priorFrame=loadPointCloudFrame(matPath,previous);
+            [~,priorTilt]=poseRowToPlanarPose(allPoses(previous,:));
+            priorCfg=pcfg;priorCfg.coarseProbabilityCloud.projectionRotation=priorTilt;
+            source=perceiveCoarseProbabilityCloud(priorFrame,priorCfg);
+            [~,item.history]=updateLocalizationSourceWindow(source,allPoses.receiver_time_sec(previous), ...
+                motion(previous,:),item.history,cfg.sourceWindow);
+        end
+        item.timestamp=allPoses.receiver_time_sec(frameIndex);item.motionPose=motion(frameIndex,:);
+        preparation(index,6)=toc(timer);
         mappingFrames = frameIndex+(1:mapFrameCount);
         poses = readFramePoseTable(posePath,mappingFrames);
         timer = tic;
@@ -49,7 +70,7 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
     save(fullfile(outputFolder,'inputs.mat'),'inputs','cfg','mapCfg','-v7.3');
     report.preparation = array2table([frames(:),preparation], ...
         'VariableNames',{'frame','loadFrameMs','offlinePerceptionSeconds', ...
-        'offlineMapSeconds','mapExportMs','mapComponents'});
+        'offlineMapSeconds','mapExportMs','mapComponents','precedingHorizonPreparationSeconds'});
     % Warm every scene and initial condition twice, recording those calls
     % separately. No timeit batching hides a slow invocation.
     count = numel(frames)*size(starts,1);
@@ -99,6 +120,7 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
         'starts',starts,'repetitions',repetitions,'seed',20260906, ...
         'featureNames',pcfg.featureNames,'mapSchema',2,'mapFrameCount',mapFrameCount, ...
         'nativeKernel',which('perceptionKernelsMex'), ...
+        'sourceWindow',cfg.sourceWindow,'horizonMotion',"independent wheel/gyro/lateral odometry", ...
         'timedScope',"Preloaded raw frame and cached exported local map to accepted [X,Y,psi] event or explicit rejection", ...
         'excluded',"Disk loading; offline mapping/export; sensor scan acquisition; transport; ROS/queue scheduling; visualization", ...
         'limitation',"Seven same-route scenes and three starts, repeated on one desktop; empirical latency, not a hard real-time bound or independent accuracy test");
@@ -118,7 +140,7 @@ function row = runCase(item,offset,start,repetition,index,cfg)
     cfg.perception.coarseProbabilityCloud.projectionRotation = item.tilt;
     timer = tic;
     [event,result] = localizeLidarFrame(item.frame,item.mapCloud,item.pose+offset, ...
-        double(item.frameIndex),cfg);
+        item.timestamp,cfg,item.history,item.motionPose);
     total = 1000*toc(timer);
     assert((result.accepted || result.directionalAccepted) == ~isempty(event),'Acceptance/event mismatch.');
     if ~isempty(event)

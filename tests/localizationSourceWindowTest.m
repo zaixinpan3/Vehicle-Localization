@@ -16,8 +16,8 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             current=distributionRegistrationTest.transform(old,[0 1 -pi/2]);
             [~,history]=updateLocalizationSourceWindow(old,0,[0 0 0],[]);
             [pooled,~,details]=updateLocalizationSourceWindow(current,.1,[1 0 pi/2],history);
-            testCase.verifyEqual(pooled.components.mean,repmat(current.components.mean,2,1),AbsTol=1e-12);
-            testCase.verifyEqual(pooled.components.covariance,repmat(current.components.covariance,1,1,2),AbsTol=1e-12);
+            testCase.verifyEqual(pooled.components.mean,current.components.mean,AbsTol=1e-12);
+            testCase.verifyEqual(pooled.components.covariance,current.components.covariance,AbsTol=1e-12);
             testCase.verifyEqual(sum(pooled.components.mixtureWeight),1,AbsTol=1e-12);
             testCase.verifyEqual(details.spanSeconds,.1,AbsTol=0);
             testCase.verifyEqual(details.dimension,2);
@@ -48,7 +48,8 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
             [after,h,d]=updateLocalizationSourceWindow(cloud,.5,[100 0 0],h);
             testCase.verifyEqual(h.time,.5,AbsTol=0);
-            testCase.verifyEqual(after.components.mean,cloud.components.mean,AbsTol=0);
+            testCase.verifyEmpty(after.components.mean);
+            testCase.verifyEqual(d.rejectedSingletons,cloud.components.numComponents);
             testCase.verifyEqual(d.frameCount,1);
         end
         function rejectsRepeatedOrReversedTime(testCase,nonmonotonicTime)
@@ -86,12 +87,120 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             testCase.verifyEqual(result.poseXYTheta(1),.8,AbsTol=1e-12);
             testCase.verifyEqual(result.directionalInformation*[1;0;0],zeros(3,1),AbsTol=1e-10);
         end
-        function oneFrameConfigurationPreservesTheCurrentProduct(testCase)
+        function rejectsOneFrameHorizon(testCase)
             cloud=distributionRegistrationTest.exampleCloud();cfg=localizationSourceWindowConfig();cfg.maximumFrames=1;
-            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[],cfg);
-            [actual,~,d]=updateLocalizationSourceWindow(cloud,.1,[1 0 0],h,cfg);
-            testCase.verifyEqual(actual.components.mean,cloud.components.mean,AbsTol=0);
-            testCase.verifyEqual(d.frameCount,1);
+            testCase.verifyError(@()updateLocalizationSourceWindow(cloud,0,[0 0 0],[],cfg), ...
+                'VehicleLocalization:InvalidWindowConfiguration');
+        end
+        function firstFrameCannotProvideTemporalEvidence(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            [pooled,~,details]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            result=registerSemanticProbabilityCloud(cloud,pooled,[0 0 0]);
+            testCase.verifyEqual(details.componentCount,0);
+            testCase.verifyFalse(result.accepted);
+            testCase.verifyEmpty(registrationSupport.registrationPoseMeasurement(result,0));
+        end
+        function singleScanFlashIsAbsentFromMatchingCloud(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            [~,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
+            flashed=distributionRegistrationTest.withZeroMassComponents(cloud);
+            flashed.components.mixtureWeight(end)=.1;
+            [actual,~,d]=updateLocalizationSourceWindow(flashed,.2,[0 0 0],h);
+            testCase.verifyEqual(actual.components.mean,cloud.components.mean,AbsTol=1e-12);
+            testCase.verifyEqual(actual.components.detectionFrameCount,3*ones(6,1),AbsTol=0);
+            testCase.verifyGreaterThanOrEqual(d.rejectedSingletons,1);
+        end
+        function duplicatePillarsInOneScanCannotCountAsTwoFrames(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();cloud=testCase.duplicate(cloud);
+            [actual,~,d]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            testCase.verifyEmpty(actual.components.mean);
+            testCase.verifyEqual(d.rejectedSingletons,12);
+        end
+        function oneObservationCannotConfirmTwoNearbyTracks(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            [~,h]=updateLocalizationSourceWindow(testCase.duplicate(cloud),0,[0 0 0],[]);
+            [actual,~,d]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
+            testCase.verifyEqual(actual.components.numComponents,6);
+            testCase.verifyEqual(actual.components.detectionFrameCount,2*ones(6,1),AbsTol=0);
+            testCase.verifyEqual(d.rejectedSingletons,6);
+        end
+        function classChangeDoesNotConfirmTheOldClass(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            changed=cloud;changed.components.semanticName(:)="trafficSign";
+            [actual,~,d]=updateLocalizationSourceWindow(changed,.1,[0 0 0],h);
+            testCase.verifyEmpty(actual.components.mean);
+            testCase.verifyEqual(d.rejectedSingletons,12);
+        end
+        function singletonTrackHandlesMultipleNewCandidates(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            c=cloud.components;
+            cloud.components=struct('mean',c.mean(2,:),'covariance',c.covariance(:,:,2), ...
+                'semanticName',"pole",'mixtureWeight',1,'numComponents',1);
+            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            [actual,~,d]=updateLocalizationSourceWindow(testCase.duplicate(cloud),.1,[0 0 0],h);
+            testCase.verifyEqual(actual.components.numComponents,1);
+            testCase.verifyEqual(actual.components.detectionFrameCount,2);
+            testCase.verifyEqual(d.rejectedSingletons,1);
+        end
+        function previousProductCannotBeRecountedAsANewScan(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            [pooled,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
+            testCase.verifyError(@()updateLocalizationSourceWindow(pooled,.2,[0 0 0],h), ...
+                'VehicleLocalization:AlreadyStackedSource');
+        end
+        function repeatedDistributionsRetainBetweenScanScatter(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            shifted=distributionRegistrationTest.transform(cloud,[.2 0 0]);
+            [actual,~]=updateLocalizationSourceWindow(shifted,.1,[0 0 0],h);
+            testCase.verifyEqual(actual.components.mean,cloud.components.mean+[.1 0],AbsTol=1e-12);
+            testCase.verifyEqual(actual.components.covariance,cloud.components.covariance+[.01 0;0 0],AbsTol=1e-12);
+        end
+        function stableFeatureCanSurviveOneMissInsideHorizon(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            [~,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
+            [actual,h]=updateLocalizationSourceWindow(testCase.empty(cloud),.2,[0 0 0],h);
+            [expired,~]=updateLocalizationSourceWindow(testCase.empty(cloud),.3,[0 0 0],h);
+            testCase.verifyEqual(actual.components.detectionFrameCount,2*ones(6,1),AbsTol=0);
+            testCase.verifyEmpty(expired.components.mean);
+        end
+        function repeatedSupportIncreasesWeightWithoutInflatingScatter(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            [twice,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
+            [thrice,~]=updateLocalizationSourceWindow(cloud,.2,[0 0 0],h);
+            a=registerSemanticProbabilityCloud(cloud,twice,[0 0 0]);
+            b=registerSemanticProbabilityCloud(cloud,thrice,[0 0 0]);
+            testCase.verifyEqual(twice.components.temporalStability,2/3*ones(6,1),AbsTol=1e-12);
+            testCase.verifyEqual(thrice.components.temporalStability,ones(6,1),AbsTol=1e-12);
+            testCase.verifyEqual(a.information,b.information*2/3,AbsTol=1e-10);
+            testCase.verifyEqual(twice.components.covariance,thrice.components.covariance,AbsTol=1e-12);
+        end
+        function stabilitySurvivesClassNormalization(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            weighted=cloud;weighted.components.temporalStability=ones(6,1);
+            weighted.components.temporalStability(weighted.components.semanticName=="pole")=2/3;
+            result=registerSemanticProbabilityCloud(cloud,weighted,[0 0 0]);
+            pairs=result.correspondences;
+            testCase.verifyEqual(sum(pairs.weight(pairs.semanticName=="pole")),2/9,AbsTol=1e-12);
+            testCase.verifyEqual(sum(pairs.weight(pairs.semanticName=="curb")),1/3,AbsTol=1e-12);
+        end
+
+    end
+    methods (Static)
+        function cloud=duplicate(cloud)
+            c=cloud.components;
+            cloud.components=struct('mean',[c.mean;c.mean],'covariance',cat(3,c.covariance,c.covariance), ...
+                'semanticName',[c.semanticName;c.semanticName],'mixtureWeight',[c.mixtureWeight;c.mixtureWeight]/2, ...
+                'numComponents',2*c.numComponents);
+        end
+        function cloud=empty(cloud)
+            cloud.components=struct('mean',zeros(0,2),'covariance',zeros(2,2,0), ...
+                'semanticName',strings(0,1),'mixtureWeight',zeros(0,1),'numComponents',0);
         end
     end
 end

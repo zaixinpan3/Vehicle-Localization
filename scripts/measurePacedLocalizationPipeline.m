@@ -20,8 +20,10 @@ function calls = measurePacedLocalizationPipeline(folder, period, repetitions)
     rows = cell(numel(order),11);
     % One untimed warm call prevents first-execution cost dominating the queue.
     item = loaded.inputs{1}; cfg = loaded.cfg;
+    assert(all(isfield(item,{'history','timestamp','motionPose'})), ...
+        'VehicleLocalization:BenchmarkHorizonRequired','Regenerate benchmark inputs with temporal source history.');
     cfg.perception.coarseProbabilityCloud.projectionRotation = item.tilt;
-    localizeLidarFrame(item.frame,item.mapCloud,item.pose,0,cfg);
+    localizeLidarFrame(item.frame,item.mapCloud,item.pose,item.timestamp,cfg,item.history,item.motionPose);
     clockStart = tic;
     for index = 1:numel(order)
         scene = floor((order(index)-1)/3)+1;
@@ -33,7 +35,7 @@ function calls = measurePacedLocalizationPipeline(folder, period, repetitions)
         if remaining > 0, pause(remaining); end
         began = toc(clockStart);
         [event,result] = localizeLidarFrame(item.frame,item.mapCloud, ...
-            item.pose+starts(start,:),double(item.frameIndex),cfg);
+            item.pose+starts(start,:),item.timestamp,cfg,item.history,item.motionPose);
         finished = toc(clockStart);
         assert((result.accepted || result.directionalAccepted) == ~isempty(event),'Acceptance/event mismatch.');
         rows(index,:) = {index,item.frameIndex,start,1000*available, ...

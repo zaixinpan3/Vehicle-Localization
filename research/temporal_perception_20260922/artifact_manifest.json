@@ -1,0 +1,302 @@
+{
+  "preparedAt": "2026-09-22T05:07:02.268922-05:00",
+  "parentRevision": "24f6cd34c91278cad65bfd7b628fbebeb93ee82e",
+  "scope": "Technical source and result artifacts. Large generated MAT data remain local. No weekly or monthly report is hashed.",
+  "files": [
+    {
+      "path": "config/localizationSourceWindowConfig.m",
+      "bytes": 639,
+      "sha256": "d2f4b8550661dcd8fc2ea670ab01a5b43d8f1f1ef016685169b25483fcfbdcb6"
+    },
+    {
+      "path": "config/mississippiLidarFrameCalibration.json",
+      "bytes": 2049,
+      "sha256": "aeaef1d1dddb6d084f5b281f1e9c6547377968432005ecf0bfedc7bfb2106b44"
+    },
+    {
+      "path": "localization/localizeLidarFrame.m",
+      "bytes": 3688,
+      "sha256": "65da9ac61aa304384f2a902bbf9c450b5e0c3a02e64681e7f3aff5f3798567b8"
+    },
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "bytes": 20122,
+      "sha256": "f4f9008b87641c2b5bb318ea6de2f56d37b19937d0ceb394668b19003a378ba5"
+    },
+    {
+      "path": "localization/registrationSupport.m",
+      "bytes": 17880,
+      "sha256": "d01bd238516c259f70174c4d37b0ec7cc9fbe11eaf9c80c5320c8d4f0110dac4"
+    },
+    {
+      "path": "localization/updateLocalizationSourceWindow.m",
+      "bytes": 8547,
+      "sha256": "3a9f5ab00b28acd6b425dc0b102c33742ce6e582d1f24c8c77ea45b98c034d17"
+    },
+    {
+      "path": "output/lidar_origin_20260922/coarse_pipeline/matching/report.mat",
+      "bytes": 268764,
+      "sha256": "8a5ba3dde683afc457040cb4bb9cade5612f73981fa8ea02f87fdd975ca813c7"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "bytes": 270306,
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    {
+      "path": "output/temporal_perception_20260922/benchmark_smoke/calls.csv",
+      "bytes": 3580,
+      "sha256": "9c36b5638029e524cda5ffecb336a40e6dc68c4387e662cfa6d783088f97adc7"
+    },
+    {
+      "path": "output/temporal_perception_20260922/benchmark_smoke/inputs.mat",
+      "bytes": 8603511,
+      "sha256": "be86d470f9c321e075fb5607d74621ff406045033dede25b83f390de2f71efec"
+    },
+    {
+      "path": "output/temporal_perception_20260922/benchmark_smoke/metadata.json",
+      "bytes": 1297,
+      "sha256": "8ce86fb6f905bcdcab808f18214680e69e7e86b50ca1e60bc86034b963965b9b"
+    },
+    {
+      "path": "output/temporal_perception_20260922/benchmark_smoke/paced_100.000ms.csv",
+      "bytes": 1595,
+      "sha256": "f8d4399bd277a75098db5cb66bd523e3487824309e017addbb4e0713af0873de"
+    },
+    {
+      "path": "output/temporal_perception_20260922/benchmark_smoke/preparation.csv",
+      "bytes": 450,
+      "sha256": "778e5f98888e4d5b28c64cda1618325a40c578e6cccca1eca152dca1f98b9e13"
+    },
+    {
+      "path": "output/temporal_perception_20260922/benchmark_smoke/report.mat",
+      "bytes": 8208,
+      "sha256": "07595669a2b23212f27babb5628f7d111e37a795f7366bf613a710775a2dd45d"
+    },
+    {
+      "path": "output/temporal_perception_20260922/benchmark_smoke/summary.csv",
+      "bytes": 291,
+      "sha256": "11a70e89a1012aa3bfae301d75d8a339e408d481836762d8591449a079f36c4a"
+    },
+    {
+      "path": "output/temporal_perception_20260922/benchmark_smoke/warmup.csv",
+      "bytes": 6958,
+      "sha256": "9fd2446bfa74ce6b3570c5f576212cb4988f2e6125bc9f0758296d2fcc66c761"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/calls.csv",
+      "bytes": 551546,
+      "sha256": "b7b1b1c32936084ce3bb72d722786234d1061081528e6c12cd4b8f8ffc3ac450"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/candidate_poses.csv",
+      "bytes": 65365,
+      "sha256": "0c9514cca2f7612c21abffb9d0458b0c3ce193154c001b37cba15906900765db"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/dead_reckoning.csv",
+      "bytes": 85141,
+      "sha256": "22fd6ec30d5575dfba32a3c41e453ac9a368f610a144d0272aa8b64c60f1bad4"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/disk_blocks.csv",
+      "bytes": 440,
+      "sha256": "c6ac1cf17b3ba6bf8b5e5c89185fdfafde477576136e4bb4c1d89cbcf14ef167"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/metadata.json",
+      "bytes": 23708,
+      "sha256": "112b1478483f6a940020efca6563ad38ab1f840484918e14c8ff5abaaa643d33"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/report.mat",
+      "bytes": 283105,
+      "sha256": "a724606b8562f7ec7f24fed2ec2a89e814f1cf1e454f42a325aba5e2df436f61"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/source_windows.csv",
+      "bytes": 69116,
+      "sha256": "02d6762acaf2edd6ca936fe8803775206ce7398f600c567adbfcd2cc1e0100c1"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/summary.json",
+      "bytes": 812,
+      "sha256": "63be3d242f891ff74a50f04ebbe39bee1c702f9809a12189f6707bcdb8b20a89"
+    },
+    {
+      "path": "output/temporal_perception_20260922/frame959_and_call_path.mat",
+      "bytes": 125872,
+      "sha256": "6f55f8228f037f41dd0e0f4e0c5ac66c825f0d834ae7f052e1c9c621a9b57ced"
+    },
+    {
+      "path": "output/temporal_perception_20260922/matching/calls.csv",
+      "bytes": 550833,
+      "sha256": "2794759a517e6b51c119d8689c1d0b440d29d87c0ba62882eabadf2e25731fdb"
+    },
+    {
+      "path": "output/temporal_perception_20260922/matching/candidate_poses.csv",
+      "bytes": 65340,
+      "sha256": "19ac95ce5b41232dc30894df839a40ccb00f74b3806b798bc8a4e08af99b9b77"
+    },
+    {
+      "path": "output/temporal_perception_20260922/matching/dead_reckoning.csv",
+      "bytes": 85141,
+      "sha256": "22fd6ec30d5575dfba32a3c41e453ac9a368f610a144d0272aa8b64c60f1bad4"
+    },
+    {
+      "path": "output/temporal_perception_20260922/matching/disk_blocks.csv",
+      "bytes": 441,
+      "sha256": "2ab7710965ce6e322c2c603b7ea8def2bc29c0b1fd11f1b5b847f1f1a217585a"
+    },
+    {
+      "path": "output/temporal_perception_20260922/matching/metadata.json",
+      "bytes": 23709,
+      "sha256": "e2cc82389c18f5159a69618baf86873234b2f232a4b5a2ad5792efc28bd1d1c5"
+    },
+    {
+      "path": "output/temporal_perception_20260922/matching/report.mat",
+      "bytes": 281985,
+      "sha256": "ee92d5937c53a1da6a015e37b0071854d9da58a920b4ad0a1ea1f75a4c0324fc"
+    },
+    {
+      "path": "output/temporal_perception_20260922/matching/source_windows.csv",
+      "bytes": 69490,
+      "sha256": "c3bb1f1c8c6e414f09f92a0092cedbd6d5bfc554d78512b0aae7349958cb8291"
+    },
+    {
+      "path": "output/temporal_perception_20260922/matching/summary.json",
+      "bytes": 870,
+      "sha256": "ddfaf0049a0be20944228b03583dc71365b9608acebc3bb31c5b96ce33069b28"
+    },
+    {
+      "path": "output/temporal_perception_20260922/observer/alignment_controls.csv",
+      "bytes": 787,
+      "sha256": "33c8745d85530a74bcb238f30c617b3586e039aa7f781763181daee706c0d48f"
+    },
+    {
+      "path": "output/temporal_perception_20260922/observer/experiment.mat",
+      "bytes": 4420338,
+      "sha256": "caecf24b85a533a14703de5edfff40807c14fa72f70b1be5e9353ac5a337512c"
+    },
+    {
+      "path": "output/temporal_perception_20260922/observer/metrics.csv",
+      "bytes": 3163,
+      "sha256": "19f1838fa7292b35b04114654714e52c85d8ec613ccb68391b58ce26102ff127"
+    },
+    {
+      "path": "output/temporal_perception_20260922/observer/summary.json",
+      "bytes": 119719,
+      "sha256": "c6d824add893dcef92e5e1d79dfd3f36d478e31251cf385be09c7da272bdbb13"
+    },
+    {
+      "path": "research/temporal_perception_20260922/README.md",
+      "bytes": 10240,
+      "sha256": "7b925f97714a095665670433ce6ac56f0c1c525684b2ca8fcc75487f37772d72"
+    },
+    {
+      "path": "research/temporal_perception_20260922/benchmark_smoke_calls.csv",
+      "bytes": 3580,
+      "sha256": "9c36b5638029e524cda5ffecb336a40e6dc68c4387e662cfa6d783088f97adc7"
+    },
+    {
+      "path": "research/temporal_perception_20260922/benchmark_smoke_summary.csv",
+      "bytes": 291,
+      "sha256": "11a70e89a1012aa3bfae301d75d8a339e408d481836762d8591449a079f36c4a"
+    },
+    {
+      "path": "research/temporal_perception_20260922/code_analysis.csv",
+      "bytes": 18,
+      "sha256": "05116616bff806795a739272533ef8fc7e47e1b4a01db73ce05d490fdf80c6a9"
+    },
+    {
+      "path": "research/temporal_perception_20260922/comparison.csv",
+      "bytes": 952,
+      "sha256": "bc1edd25424e098441e0c3ea585af4997b18df5d3ea388e441d7cc5ad734f530"
+    },
+    {
+      "path": "research/temporal_perception_20260922/comparison.png",
+      "bytes": 177423,
+      "sha256": "451ace8a5677ed306429bba0054ac4d50abf8b359014e232581d9949b03151f2"
+    },
+    {
+      "path": "research/temporal_perception_20260922/error_curves.csv",
+      "bytes": 101130,
+      "sha256": "747639a00f2c2414d1264dfb4372ba13eeaf4def3df4683e4af3a115a93a0a24"
+    },
+    {
+      "path": "research/temporal_perception_20260922/observer_smoke.csv",
+      "bytes": 3163,
+      "sha256": "19f1838fa7292b35b04114654714e52c85d8ec613ccb68391b58ce26102ff127"
+    },
+    {
+      "path": "research/temporal_perception_20260922/paced_smoke.csv",
+      "bytes": 1595,
+      "sha256": "f8d4399bd277a75098db5cb66bd523e3487824309e017addbb4e0713af0873de"
+    },
+    {
+      "path": "research/temporal_perception_20260922/plot_results.m",
+      "bytes": 1744,
+      "sha256": "5146c00c050dfb4b5ae7a6a46093c2b5cc5f4313023f2c094e0260d68b3e52c6"
+    },
+    {
+      "path": "research/temporal_perception_20260922/run_experiment.m",
+      "bytes": 1259,
+      "sha256": "2e3ed9463100fd0cc2d0d468fccc4d5a5f4ce5841efc79b43803e30b6d8d9e96"
+    },
+    {
+      "path": "research/temporal_perception_20260922/source_windows.csv",
+      "bytes": 69490,
+      "sha256": "c3bb1f1c8c6e414f09f92a0092cedbd6d5bfc554d78512b0aae7349958cb8291"
+    },
+    {
+      "path": "research/temporal_perception_20260922/summarize_results.py",
+      "bytes": 4314,
+      "sha256": "4298bf8568ed7c66726defaa61597cb4bde62750e5c4118bee6598bc95ce95cf"
+    },
+    {
+      "path": "research/temporal_perception_20260922/summary.json",
+      "bytes": 2813,
+      "sha256": "a90cf714ca20c01e0da2f8740c74cffcb24718986935a5fd4b9fb4be5157388b"
+    },
+    {
+      "path": "research/temporal_perception_20260922/tests.csv",
+      "bytes": 8124,
+      "sha256": "93592247c3fc82fee5cff919e441a9352f0429ab3fb56e13d95875f70751dc74"
+    },
+    {
+      "path": "research/temporal_perception_20260922/validate_experiment.m",
+      "bytes": 5100,
+      "sha256": "d8cb66f9d445b215a199e80c5fe093c4d73aa6d2f68606630ba64734d1b0c309"
+    },
+    {
+      "path": "research/temporal_perception_20260922/validation.json",
+      "bytes": 854,
+      "sha256": "ac16783f1a2c12868f9e6e1e6e3fb2be204346ef2cfa30665893199ad9f799d8"
+    },
+    {
+      "path": "scripts/benchmarkLocalizationPipeline.m",
+      "bytes": 9682,
+      "sha256": "573598fe09622898a29638a9d58b2ce40c1a6a82e57a7448fcd4895d0c78eaae"
+    },
+    {
+      "path": "scripts/measurePacedLocalizationPipeline.m",
+      "bytes": 2882,
+      "sha256": "ccaa2ec480cd194889eaf914856abc33144fc9f8e25f13dae502d3fc65c186da"
+    },
+    {
+      "path": "scripts/replayMississippiLocalization.m",
+      "bytes": 18628,
+      "sha256": "8c171a4202dfa2bb4224a14ccc5df8acc81146b2b2ea089e8141a07b1fe06ae5"
+    },
+    {
+      "path": "scripts/runMncavFullObserverExperiment.m",
+      "bytes": 12187,
+      "sha256": "282b70f35ee66914b7a5397faa13bc250ff988bef22bf4a90f793461f2e1b3fb"
+    },
+    {
+      "path": "tests/localizationSourceWindowTest.m",
+      "bytes": 13120,
+      "sha256": "e46c38bada6b414a1a76596def4b6d5f31ce5aa009ddcddbbc9ffb03e58a30a7"
+    }
+  ]
+}

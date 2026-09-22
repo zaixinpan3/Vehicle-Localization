@@ -35,7 +35,8 @@ classdef registrationSupport
             end
             components = struct('semanticName',source.semanticName,'mean',means, ...
                 'covariance',covariance,'mixtureWeight',source.mixtureWeight,'numComponents',source.numComponents);
-            for name=["semanticProbability","occupancyProbability","supportAmplitude","repeatability"]
+            for name=["semanticProbability","occupancyProbability","supportAmplitude","repeatability", ...
+                    "temporalStability","detectionFrameCount"]
                 if isfield(source,name), components.(name)=source.(name); end
             end
             projected = struct('components',components,'dimension',dimension);

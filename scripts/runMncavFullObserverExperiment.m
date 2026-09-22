@@ -1,8 +1,9 @@
 function report=runMncavFullObserverExperiment(outputFolder,options)
 % runMncavFullObserverExperiment Exercise simultaneous and missing sources.
 % Recorded BESTPOS XY supplies the receiver position channel, still INS aided.
-% Evaluation-drive INSPVA positions enter scoring only; a separate drive
-% calibrates the relative receiver output point. MatchingFolder consumes a raw
+% Trajectory scoring uses evaluation-drive INSPVA; initialization provenance
+% is reported separately. A separate drive calibrates the relative receiver
+% output point. MatchingFolder consumes a raw
 % coarse-perception replay. Frame alignment interpolates real GNSS samples and reports the
 % required future-endpoint wait, without motion extrapolation.
     arguments
@@ -45,8 +46,20 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     [data,lateral,synchronization]=synchronizeLocalizationInputs(data,lateral,cfg);
     h=data.highRate;t=h.time;gnss=data.gnss;lidar=data.lidar;time=gnss.time;valid=gnss.valid;
     % Identical initial state in every ablation, including GNSS-only replay.
-    assert(lidar.valid(1) && lidar.time(1)==t(1),'Initial LiDAR pose is required.');
-    pose=lidar.pose(1,:);rotation=[cos(pose(3)),-sin(pose(3));sin(pose(3)),cos(pose(3))];
+    assert(lidar.time(1)==t(1),'Initial acquisition clocks must agree.');
+    initialization="first accepted LiDAR pose";
+    if lidar.valid(1)
+        pose=lidar.pose(1,:);
+    else
+        % Temporal confirmation intentionally withholds the first scan. Use
+        % the replay's existing initial prediction, without inventing a LiDAR
+        % event or looking ahead to a later confirmed feature measurement.
+        first=find(abs(calls.time-t(1))<1e-7,1);
+        assert(~isempty(first),'Initial matching prediction is unavailable.');
+        pose=[calls.predictedX(first),calls.predictedY(first),calls.predictedPsi(first)];
+        initialization="matching prediction during temporal-confirmation startup";
+    end
+    rotation=[cos(pose(3)),-sin(pose(3));sin(pose(3)),cos(pose(3))];
     velocity=rotation*[h.longitudinalSpeed(1);lateral.lateralVelocity(1)];
     acceleration=rotation*[h.longitudinalAcceleration(1);h.lateralAcceleration(1)];
     cfg.initialState=[pose(1);velocity(1);acceleration(1);pose(2);velocity(2);acceleration(2);pose(3)];
@@ -89,7 +102,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'matchingRerun',matching.rerun,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
         'offlineSynchronization',true, ...
         'gnssOutputPointCalibration',cfg.gnss.outputPoint, ...
-        'initialization',"Common first LiDAR pose plus wheel/lateral velocity and IMU acceleration; not a cold-start GNSS-only test", ...
+        'initialization',"Common "+initialization+" plus wheel/lateral velocity and IMU acceleration; not a cold-start GNSS-only test", ...
         'limitations',matching.limitations+"; shared receiver reference; empirical planar output-point alignment is not a hardware survey; upstream motion preparation offline"), ...
         'design',runs{1}.estimate.observer,'metrics',metrics);
     accepted=lidar.valid;
