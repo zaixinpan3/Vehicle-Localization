@@ -1,0 +1,38 @@
+{
+  "date": "2026-09-23",
+  "type": "Targeted narrative research",
+  "research_question": "Which association mechanisms can reduce mismatch without replacing whole-pillar coarse perception or discarding the existing stability-weighted Gaussian map?",
+  "search_scope": "Local Zotero discovery followed by primary-source verification, plus a recorded web search pass. This log is not a reconstructed transcript of every exploratory query and provides no systematic-review retrieval counts.",
+  "recorded_web_queries": [
+    "semantic landmark localization sliding window max mixture null hypothesis Stannartz",
+    "CLIPPER geometric consistency data association Lusk Fathian How",
+    "Localization automotive laser scanners local pattern matching Schlichting Brenner 2014",
+    "Probabilistic Data Association Semantic SLAM Scale k-best assignment enumeration Michael"
+  ],
+  "local_library_retrievals": [
+    {"key": "Y9XF8L9Z", "method": "zotero_get_item_metadata and zotero_get_item_fulltext", "purpose": "Closest sliding-window semantic known-map localization formulation"},
+    {"key": "W3S52AN3", "method": "zotero_get_item_metadata and zotero_get_item_fulltext", "purpose": "Automotive feature-pattern mechanism and coverage limitations"},
+    {"key": "WQT2UZAE", "method": "zotero_get_item_metadata", "purpose": "Semantic pole identity motivation"}
+  ],
+  "inclusion": [
+    "Explicit landmark association, null hypotheses, joint compatibility or multiple discrete alternatives",
+    "Robust registration methods with a plausible adaptation to semantic Gaussian distributions",
+    "Primary metadata and clearly identified full-text or abstract-level inspection"
+  ],
+  "exclusion_or_limits": [
+    "Secondary paper summaries and ResearchGate citing-paper snippets are not used as primary experimental evidence",
+    "Unrelated multi-object-tracking search hits are omitted",
+    "JCBB linked author PDF returned HTTP 404; bibliographic record retained only",
+    "X-ICP PDF exceeded browser size limit; only primary abstract claims retained",
+    "A 2024 multi-hypothesis MCTS paper was screened, but inaccessible linked PDF and lack of necessary detail excluded it from the recommendation evidence",
+    "BPDA-GMM 2026 is abstract-only watchlist material, not a verified production recommendation",
+    "No quantitative performance from another dataset is treated as a project prediction"
+  ],
+  "project_evidence": {
+    "base_commit": "375f6fe7db8b85d13ebcc124d45c26a302d4ed76",
+    "prior_experiment": "research/robust_pose_graph_20260923/README.md",
+    "quantitative_source": "research/robust_pose_graph_20260923/guided_summary.json",
+    "new_localization_runs": 0,
+    "production_code_changed": false
+  }
+}
