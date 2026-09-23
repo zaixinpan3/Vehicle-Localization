@@ -224,6 +224,8 @@ classdef registrationSupport
                 'observableRank',rank,'observableProjector',projector, ...
                 'observableProjectorCoordinates',"additive map X,Y,psi; oblique projector", ...
                 'arrivalTimeIsPlaceholder',placeholder);
+            measurement.conditionedOnPositionAid=isfield(result,'positionAiding') && result.positionAiding.used;
+            measurement.positionAidInformationAdded=false;
         end
     end
 end

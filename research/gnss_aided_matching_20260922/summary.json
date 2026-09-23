@@ -1,0 +1,24 @@
+{
+  "rawScans": 1170,
+  "fusionScans": 1169,
+  "sourceWindow": {
+    "maximumFrames": 5,
+    "maximumAgeSeconds": 0.45,
+    "minimumDetectionFrames": 2,
+    "maximumAssociationDistance": 0.75,
+    "maximumStandardizedDistance": 3,
+    "associationNoiseStandardDeviation": 0.1
+  },
+  "perceptionChanged": false,
+  "mapChanged": false,
+  "gnssInformationAddedToLidar": false,
+  "gnssSelectionIndependent": false,
+  "sourcePreparationSeconds": 67.86024,
+  "frozenMatchingSeconds": 12.222219000000003,
+  "closedMatchingSeconds": 9.794271999999998,
+  "frame959OriginalM": 0.357553729188549,
+  "frame959AidedM": 0.1227458911721484,
+  "limitations": "Same-drive map; shared GNSS/INS reference; declared reference-offset startup and reference tilt; native offline bracket-aligned inputs; geometric information is uncalibrated; source window and GNSS selections are correlated",
+  "referencePositionOrYawUsedForCandidateSelection": false,
+  "referenceTiltUsed": true
+}

@@ -1,4 +1,4 @@
-function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initialPose,cfg)
+function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initialPose,cfg,positionAid)
 % registerSemanticProbabilityCloud: Semantic Gaussian geometry registration.
 % The default GICP-style residuals use both covariances. Elongated ground
 % components constrain their normal direction; poles constrain horizontal XY.
@@ -9,6 +9,13 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
 % Height conditions correspondence compatibility, not the planar pose force.
 % A partially observable solution is reported but never accepted as full SE(2).
     if nargin<4, cfg=distributionRegistrationConfig(); end
+    if nargin<5,positionAid=[];end
+    solve=@(pose) solveGeometry(fixedCloud,movingCloud,pose,cfg);
+    result=selectPositionAidedRegistration(solve,initialPose,positionAid,cfg);
+end
+
+function result=solveGeometry(fixedCloud,movingCloud,initialPose,cfg)
+% Each hypothesis is solved using exactly the same LiDAR-only objective.
     assert(string(cfg.method)=="geometricD2D",'VehicleLocalization:InvalidRegistrationMethod', ...
         'Use geometricD2D registration.');
     [f,m,height]=registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);

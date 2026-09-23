@@ -14,6 +14,24 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             testCase.verifyEqual(r.diagnostics.virtualPoseUpdates,0);
             testCase.verifyEqual(r.diagnostics.integrationSubsteps,0);
         end
+        function onlineMatcherReceivesCurrentAlignedAid(testCase)
+            f=fixture();f.data=rmfield(f.data,'lidar');
+            f.data.lidarMatcher=@onlineResult;
+            r=run(f);
+            testCase.verifyEqual(r.position,[8*r.time,zeros(size(r.time))],AbsTol=1e-10);
+            testCase.verifyTrue(r.diagnostics.matchingFeedback);
+            testCase.verifyEqual(r.matchingResults{11}.aidTimestamp,1,AbsTol=1e-12);
+            testCase.verifyEqual(r.matchingSeeds(:,1),8*r.time,AbsTol=1e-10);
+        end
+        function onlineMatcherDoesNotUseFutureGnss(testCase)
+            f=fixture();f.data=rmfield(f.data,'lidar');f.data.lidarMatcher=@onlineResult;
+            a=run(f);f.data.gnss.position(12:end,:)=100;b=run(f);
+            testCase.verifyEqual(a.z(1:11,:),b.z(1:11,:),AbsTol=0);
+        end
+        function onlineAndRecordedLidarCannotBeMixed(testCase)
+            f=fixture();f.data.lidarMatcher=@onlineResult;
+            testCase.verifyError(@()run(f),'VehicleLocalization:AmbiguousLidarInput');
+        end
         function asynchronousSourceIsRejected(testCase)
             f=fixture();f.data.gnss.time(2)=.11;
             testCase.verifyError(@()run(f),'VehicleLocalization:SynchronousInputsRequired');
@@ -108,6 +126,11 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             testCase.verifyError(@()run(f),'VehicleLocalization:AlignedLateralRequired');
         end
     end
+end
+
+function r=onlineResult(~,seed,aid)
+    r=struct('poseXYTheta',seed,'information',100*eye(3),'accepted',false,'aidTimestamp',aid.timestamp);
+    if aid.valid,r.poseXYTheta(1:2)=aid.position;r.accepted=true;end
 end
 
 function f=turning(step)

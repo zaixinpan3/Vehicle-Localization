@@ -4,6 +4,7 @@ function cfg = distributionRegistrationConfig()
 % Similarity/curvature gates are engineering checks, not calibrated confidence.
     cfg = struct();
     cfg.method = "geometricD2D";
+    cfg.localMapRadius = 100;
     cfg.maximumIterationsPerScale = 40;
     cfg.maximumPoseCorrection = [3 3 deg2rad(12)];
     cfg.yawLeverArm = 10;
@@ -17,6 +18,11 @@ function cfg = distributionRegistrationConfig()
     % geometric correspondence compatibility only, opt-in with a map Z reference.
     cfg.heightMode = "xy";
     cfg.heightTranslation = NaN; % Moving origin in map Z; never assume zero.
+    % Position aiding selects between LiDAR-only optima. It contributes no
+    % residual, pose force or information to the conditional LiDAR solution.
+    cfg.positionAid = struct('maximumStandardDeviation',2, ...
+        'standardDeviationFloor',0.10,'minimumSeedSeparation',0.05, ...
+        'hypothesisSeparation',0.02,'maximumSquaredInnovation',9.21);
     % Engineering uncertainty defaults, not calibrated sensor specifications.
     cfg.heightStandardDeviation = 0.20;
     cfg.tiltStandardDeviation = deg2rad(0.5);

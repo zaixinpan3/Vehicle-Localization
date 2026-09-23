@@ -1,0 +1,16 @@
+file,findings
+config/distributionRegistrationConfig.m,0
+localization/registerSemanticProbabilityCloud.m,0
+localization/localizeLidarFrame.m,0
+localization/selectPositionAidedRegistration.m,0
+localization/matchLocalProbabilityCloud.m,0
+localization/registrationSupport.m,0
+localization/runSynchronousLocalizationObserver.m,0
+scripts/runMncavFullObserverExperiment.m,0
+scripts/prepareMississippiLocalizationClouds.m,0
+tests/positionAidedRegistrationTest.m,0
+tests/synchronousLocalizationTest.m,0
+research/gnss_aided_matching_20260922/prepare_sources.m,0
+research/gnss_aided_matching_20260922/run_comparison.m,0
+research/gnss_aided_matching_20260922/analyze_aiding.m,0
+research/gnss_aided_matching_20260922/validate_results.m,0

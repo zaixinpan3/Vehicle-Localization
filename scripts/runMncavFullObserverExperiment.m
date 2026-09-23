@@ -6,9 +6,13 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
 % output point. MatchingFolder consumes a raw
 % coarse-perception replay. Frame alignment interpolates real GNSS samples and reports the
 % required future-endpoint wait, without motion extrapolation.
+% By default every scenario rematches coarse horizons using its own fused
+% state and available GNSS. Frozen matching is an explicit ablation only.
     arguments
         outputFolder (1,1) string="output/mncav_coarse_localization/observer"
         options.MatchingFolder (1,1) string="output/mncav_coarse_localization/matching"
+        options.RematchWithGnss (1,1) logical=true
+        options.CoarseSourceFile (1,1) string=""
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
@@ -65,6 +69,20 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     cfg.initialState=[pose(1);velocity(1);acceleration(1);pose(2);velocity(2);acceleration(2);pose(3)];
     native=readtable('output/receiver_synchronized_inputs/native_reference.csv');
     reference=interp1(native.time,[native.x,native.y,native.psi],t,'linear');
+    if options.RematchWithGnss
+        if strlength(options.CoarseSourceFile)>0
+            sourceCache=load(options.CoarseSourceFile);
+        else
+            sourceCache=prepareMississippiLocalizationClouds(options.MatchingFolder);
+        end
+        [covered,sourceIndex]=ismember(calls.frame,sourceCache.calls.frame);
+        assert(all(covered) && isequaln(sourceCache.cfg.sourceWindow,localizationSourceWindowConfig()) && ...
+            max(abs(sourceCache.calls.timeSeconds(sourceIndex)-calls.time))<1e-7 && ...
+            string(sourceCache.clockModelId)==string(matching.replay.clockModelId), ...
+            'VehicleLocalization:CoarseCacheMismatch','Coarse cache frames, clock and horizon must match.');
+        sourceClouds=sourceCache.sources(sourceIndex);registrationCfg=distributionRegistrationConfig();
+        matching.currentSourceWindow=sourceCache.cfg.sourceWindow;
+    end
     scenarios=["both","lidar_only","gnss_only","gnss_outage","lidar_outage","both_outage","alternating"];
     runs=cell(numel(scenarios),1);rows=cell(0,12);
     for k=1:numel(scenarios)
@@ -80,6 +98,16 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         if name=="alternating"
             current.gnss.valid=valid & mod(floor(time),2)==0;
             current.lidar.valid=lidar.valid & mod(floor(lidar.time),2)==1;
+        end
+        if options.RematchWithGnss && isfield(current,'lidar')
+            available=current.lidar.valid;
+            % Initial temporal confirmation remains a matcher decision, while
+            % the declared sensor withdrawals remain explicit input masks.
+            available(:)=true;
+            if ismember(name,["lidar_outage","both_outage"]),available(t>=40 & t<60)=false;end
+            if name=="alternating",available=mod(floor(t),2)==1;end
+            current=rmfield(current,'lidar');
+            current.lidarMatcher=@(i,seed,aid) onlineMatch(i,seed,aid,available,sourceCache.fixed,sourceClouds,registrationCfg);
         end
         timer=tic;estimate=runFullLocalizationObserver(current,lateralDesign,cfg,LateralInputs=lateral);seconds=toc(timer);
         runs{k}=struct('scenario',name,'estimate',estimate,'seconds',seconds);
@@ -99,12 +127,23 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'lidarSource',matching.source,'matching',matching, ...
         'inputMetadata',inputMetadata,'synchronization',synchronization, ...
         'evaluation',"INSPVA on native LiDAR frame timestamps, approximately 10 Hz", ...
-        'matchingRerun',matching.rerun,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
+        'matchingRerun',matching.rerun,'closedLoopRematching',options.RematchWithGnss, ...
+        'gnssInformationAddedToLidar',false,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
         'offlineSynchronization',true, ...
         'gnssOutputPointCalibration',cfg.gnss.outputPoint, ...
         'initialization',"Common "+initialization+" plus wheel/lateral velocity and IMU acceleration; not a cold-start GNSS-only test", ...
         'limitations',matching.limitations+"; shared receiver reference; empirical planar output-point alignment is not a hardware survey; upstream motion preparation offline"), ...
         'design',runs{1}.estimate.observer,'metrics',metrics);
+    if options.RematchWithGnss
+        actual=runs{1}.estimate.matchingResults;
+        data.lidar.pose=cell2mat(cellfun(@(r)r.poseXYTheta,actual,UniformOutput=false));
+        data.lidar.valid=cellfun(@(r)r.accepted,actual);
+        for k=1:numel(actual),data.lidar.information(:,:,k)=actual{k}.information;end
+        data.lidar.conditionedOnGnssSelection=true;
+        data.lidar.informationCalibrated=false;
+        lidar=data.lidar;
+        report.metadata.alignmentControlsReuseSelectedMatching=true;
+    end
     accepted=lidar.valid;
     % Old timestamp-warped trajectories are not paired with corrected epochs.
     % Isolate geometry/uncertainty at the old gain before testing matched gains.
@@ -144,6 +183,15 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     grid on;title('Declared channel withdrawals from 40 to 60 seconds');
     exportgraphics(fig,fullfile(outputFolder,'comparison.png'),Resolution=160);close(fig);
     disp(metrics(metrics.population=="full",:));
+end
+
+function r=onlineMatch(k,seed,aid,available,map,sources,cfg)
+    if available(k)
+        r=matchLocalProbabilityCloud(map,sources{k},seed,cfg,aid);
+    else
+        r=struct('poseXYTheta',seed,'information',zeros(3),'accepted',false, ...
+            'directionalAccepted',false,'reason',"declaredLidarOutage");
+    end
 end
 
 function [calls,metadata]=readMatchingInputs(folder)

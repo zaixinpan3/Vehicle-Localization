@@ -1,4 +1,4 @@
-function [measurement, result, history] = localizeLidarFrame(frame, localMapCloud, initialPose, timestamp, cfg, history, motionPose)
+function [measurement, result, history] = localizeLidarFrame(frame, localMapCloud, initialPose, timestamp, cfg, history, motionPose, positionAid)
 % localizeLidarFrame: Online pillar perception -> local D2D -> observer event.
 % localMapCloud is one selected/cached window from temporalMapToProbabilityCloud.
 % initialPose is [mapX mapY yaw] in meters/radians, timestamp is acquisition
@@ -22,12 +22,19 @@ function [measurement, result, history] = localizeLidarFrame(frame, localMapClou
 % Subsequent calls require motionPose. There is no look-ahead delay.
 % Empty measurement means rejection. Exported robust Gaussian information
 % uses physical map-frame [X,Y,psi] coordinates and is not empirically calibrated.
+% Optional positionAid provides current map-frame position and covariance at
+% the observer point for hypothesis selection only; GNSS is not added to H.
     if nargin < 5 || isempty(cfg)
         cfg = struct('perception',perceptionConfig(),'registration',distributionRegistrationConfig());
     end
     assert(isscalar(timestamp) && isfinite(timestamp), 'Expected finite acquisition time.');
     if nargin<6,history=[];end
     if nargin<7,motionPose=[];end
+    if nargin<8,positionAid=[];end
+    if ~isempty(positionAid) && isfield(positionAid,'timestamp')
+        assert(abs(positionAid.timestamp-timestamp)<1e-6, ...
+            'VehicleLocalization:PositionAidTimeMismatch','Align position aid to acquisition time.');
+    end
     assert(isfield(cfg.registration,'method') && string(cfg.registration.method)=="geometricD2D", ...
         'VehicleLocalization:RegistrationInformationUnavailable', ...
         'Online pose events require a registration method with explicit pose information.');
@@ -46,7 +53,7 @@ function [measurement, result, history] = localizeLidarFrame(frame, localMapClou
     if isfield(cfg,'sourceWindow'),windowCfg=cfg.sourceWindow;end
     [matchingCloud,history,window]=updateLocalizationSourceWindow(cloud,timestamp,motionPose,history,windowCfg);
     windowSeconds=toc(registrationStart);
-    result = registerSemanticProbabilityCloud(localMapCloud,matchingCloud,initialPose,cfg.registration);
+    result = registerSemanticProbabilityCloud(localMapCloud,matchingCloud,initialPose,cfg.registration,positionAid);
     result.perceptionSeconds = perceptionSeconds;
     result.registrationSeconds = toc(registrationStart);
     result.probabilityCloud = matchingCloud;

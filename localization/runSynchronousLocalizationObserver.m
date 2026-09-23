@@ -4,6 +4,10 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
 % No pose anchor is propagated, no inter-frame pose is generated, and absent
 % measurements withdraw their own correction. The continuous gain certificate
 % is retained as design context, not a proof of this sampled nonlinear system.
+% Optional data.lidarMatcher(k,seed,positionAid) runs before the current update.
+% It replaces data.lidar, receives the previous fused-state prediction and
+% current point-corrected GNSS, and returns a registration result. Candidate
+% selection may depend on GNSS; its information must exclude GNSS curvature.
     h=data.highRate;t=h.time(:);n=numel(t);
     assert(n>=2 && all(isfinite(t)) && all(diff(t)>0), ...
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
@@ -19,6 +23,13 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             'VehicleLocalization:InvalidFullInput','Invalid aligned lateral output.');
     end
     G=source(data,'gnss',t,2);L=source(data,'lidar',t,3);
+    onlineMatching=isfield(data,'lidarMatcher');
+    if onlineMatching
+        assert(isa(data.lidarMatcher,'function_handle') && ~isfield(data,'lidar'), ...
+            'VehicleLocalization:AmbiguousLidarInput','Supply a matcher or recorded LiDAR measurements, not both.');
+    end
+    matchingResults=cell(0,1);matchingSeeds=zeros(0,3);
+    if onlineMatching,matchingResults=cell(n,1);matchingSeeds=zeros(n,3);end
     alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     continuous=designFullObserverGains(cfg);
@@ -62,6 +73,25 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             end
         else
             gh=history();
+        end
+        if onlineMatching
+            midYaw=x(7)+rate*dt/2;
+            Rmid=[cos(midYaw),-sin(midYaw);sin(midYaw),cos(midYaw)];
+            seed=[(x([1,4])+dt*Rmid*[speed+part*real(bias);rawVy+part*imag(bias)]).',predYaw];
+            aid=struct('valid',G.valid(k),'timestamp',t(k));
+            if aid.valid
+                [aid.position,I]=correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),predYaw,alignment);
+                aid.covariance=I\eye(2);
+            end
+            matched=data.lidarMatcher(k,seed,aid);
+            matchingResults{k}=matched;matchingSeeds(k,:)=seed;
+            L.values(k,:)=matched.poseXYTheta;L.information(:,:,k)=matched.information;
+            % The existing observer requires full pose. Partial geometry is
+            % retained in diagnostics rather than filled with a GNSS prior.
+            L.valid(k)=matched.accepted;
+            assert(~L.valid(k) || (all(isfinite(L.values(k,:))) && ...
+                all(isfinite(L.information(:,:,k)),'all') && min(eig(L.information(:,:,k)))>0), ...
+                'VehicleLocalization:InvalidOnlineLidar','Accepted matcher output needs finite full-pose geometry.');
         end
         if L.valid(k)
             lh=append(lh,t(k),L.values(k,:),gyro,rawIntegral,rotationIntegral,speed);
@@ -146,6 +176,11 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'nominalOutputRateHz',1/median(diff(t)),'referenceUsed',false, ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
         'scope',"One implicit update per synchronized frame; no measurement transport. Input alignment is a separate offline operation.");
+    if onlineMatching
+        estimate.matchingResults=matchingResults;estimate.matchingSeeds=matchingSeeds;
+        estimate.diagnostics.matchingFeedback=true;
+        estimate.diagnostics.matchingSource="Per-frame callback with fused seed and optional current position aid";
+    end
 end
 
 function s=source(data,name,t,width)

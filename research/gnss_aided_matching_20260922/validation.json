@@ -1,0 +1,30 @@
+{
+  "testCount": 139,
+  "testsPassed": 139,
+  "factoryAnalyzerFindings": 0,
+  "analyzedFiles": 15,
+  "productionRegeneratedRawScans": 1170,
+  "fullObserverSamples": 1169,
+  "productionScenarios": 7,
+  "savedMeasurementsMatchActualResults": true,
+  "freshProductionPoseDifferenceMaximum": 0,
+  "informationAudit": {
+    "commonAcceptedFrames": 1167,
+    "baselineReproductionMaximum": 9.3132257461547852E-10,
+    "conditionalInformationIncreaseMaximum": 1.0920026814606923E-11,
+    "closedLoopRejectedFrames": [
+      1,
+      169
+    ],
+    "extraSeedEvaluations": 690,
+    "secondCandidateSelected": 445,
+    "frozenRejectedFrames": [
+      1,
+      169
+    ],
+    "remainingPeakFrame": 840,
+    "referenceUsedForSelection": false
+  },
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "limitations": "See README; this is aligned offline replay, not independent-drive ground truth."
+}

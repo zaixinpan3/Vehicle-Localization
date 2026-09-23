@@ -1,0 +1,186 @@
+{
+  "parentRevision": "9dad58c48cf28fbfc3488f0b69320cf3bebd2f36",
+  "scope": "Technical implementation, inputs and results only. Large MAT state remains local. No weekly or monthly report hashes.",
+  "files": [
+    {
+      "path": "config/distributionRegistrationConfig.m",
+      "sha256": "c81202966a5cf853580acdf6b68ba38f212eaaec7ebc4fa74107ffd26423cb77"
+    },
+    {
+      "path": "config/localizationSourceWindowConfig.m",
+      "sha256": "0ba73cdd52a428ad5603b41b564f1227ca6a689c5de9adfb58f49da97ca412cc"
+    },
+    {
+      "path": "config/mncavFullObserverConfig.m",
+      "sha256": "173a4b8372a1d9406fe86b753edcd7873374c24cf1bf941c58c5c87f5d734d41"
+    },
+    {
+      "path": "config/perceptionConfig.m",
+      "sha256": "80e3f73149ff51790dfb64d2396af5be8493b3e16d6bac32bcedece19bd94c14"
+    },
+    {
+      "path": "localization/localizeLidarFrame.m",
+      "sha256": "1e290c18e30bda10aa12b67e1f0074668340b1015acc2b0e3895f62f0791f809"
+    },
+    {
+      "path": "localization/matchLocalProbabilityCloud.m",
+      "sha256": "4a227a8d937c11c70ed528289588a2b44eb76293af01aae9f70921d5c6e20c51"
+    },
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "sha256": "b8cf45110ff5ca697f81f9a38509cceacb0466abc2993248ce4b019f8597e6a3"
+    },
+    {
+      "path": "localization/registrationSupport.m",
+      "sha256": "676bcc6868620b32f6ac9b6511181390d8b53a7f81efb5e4f395f40edbc5be8e"
+    },
+    {
+      "path": "localization/runSynchronousLocalizationObserver.m",
+      "sha256": "eaadc4664feba67d44f65cb96ff5e3fdf730cca0f366d2efd75e4929f7fcb854"
+    },
+    {
+      "path": "localization/selectPositionAidedRegistration.m",
+      "sha256": "b409a79f94ab6514abc5ca2b589a30f39c08a6ac2753b5d17edba39fb1963f3b"
+    },
+    {
+      "path": "output/gnss_aided_matching_20260922/analysis.mat",
+      "sha256": "4625f06d1e0f8e3dce46753a819886895fceab48ccae074238f604f414b8b56a"
+    },
+    {
+      "path": "output/gnss_aided_matching_20260922/closed_loop.mat",
+      "sha256": "2b0966db418a2d99fc50f1a26ec32160973e77d5e11070c3f29b2cb55a2bb852"
+    },
+    {
+      "path": "output/gnss_aided_matching_20260922/feedback.mat",
+      "sha256": "79e6f8323bf95d8bde5efaf3074d61494c2e385659c24d6f88d2ecf00f6f89e8"
+    },
+    {
+      "path": "output/gnss_aided_matching_20260922/frozen.mat",
+      "sha256": "2055aff77ff9256e0ead217a227db99836378e50259bc2ad61fc28459a116d7a"
+    },
+    {
+      "path": "output/gnss_aided_matching_20260922/production_fresh/experiment.mat",
+      "sha256": "50fd1efc64de2bcd9913f296e6cb1f1226af4779304aff29c02b50d0a657f952"
+    },
+    {
+      "path": "output/gnss_aided_matching_20260922/sources.mat",
+      "sha256": "f9f4ccc8fbfd1753e791f4b68fa444cf6a4204adb391338a97d6e616823bd12c"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    {
+      "path": "output/receiver_synchronized_inputs/bestpos.csv",
+      "sha256": "2fd9e12b5e7ad0c7df9e31f03f9000438fcffaf64b89673bf0afaece84c410a6"
+    },
+    {
+      "path": "output/receiver_synchronized_inputs/native_reference.csv",
+      "sha256": "7167bf6469969bf3839027d03707188637144d1819b7aec60aacd9b09d383603"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/report.mat",
+      "sha256": "a724606b8562f7ec7f24fed2ec2a89e814f1cf1e454f42a325aba5e2df436f61"
+    },
+    {
+      "path": "output/temporal_perception_20260922/observer/experiment.mat",
+      "sha256": "caecf24b85a533a14703de5edfff40807c14fa72f70b1be5e9353ac5a337512c"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/README.md",
+      "sha256": "82466279d8f25fbc6bb620dd4559c4b39d7f17d27c39dec168e3c6d46143a928"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/analyze_aiding.m",
+      "sha256": "b4b2d2af1cae1faf889032c357bbeba92b1e0fbb41a1969d57a761f23d1ce2b8"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/audit.json",
+      "sha256": "08cee281dceaf9f4002305cf25fdea1c0866fd51faec42981db7d8eb2c2cc67c"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/code_analysis.csv",
+      "sha256": "91cda8f7f5f1cc94357d911f767f6002960b8694f7fa93983a9aeff24c32b6f7"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/comparison.png",
+      "sha256": "497f12e7e8198ccab935e04899cacc3cce0990a7b6068276ed09c272720e2edb"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/frame_errors.csv",
+      "sha256": "e7de0726728a2b4170f92c8d3b0a82bf954600454085a1b4b811a383895eb9b8"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/hypothesis_diagnostics.csv",
+      "sha256": "6824ad872dfdb054dc18f78399f94cde79d05e033a30ad9d7f418a2c7257ff45"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/metrics.csv",
+      "sha256": "b069d890a9836aa06f1098f5756428814bd7efde20b6f2c42b4c305ee6d93fa7"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/paired_metrics.csv",
+      "sha256": "99148f199aea5220a1d0dd0962ec58a068fb6958ce43422e0f809a2a9bf57fb3"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/plot_results.py",
+      "sha256": "1ead914db586fbda8afefa83e43e7ca46b33806bee121bd1a4fe6c7cd14cfe27"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/prepare_sources.m",
+      "sha256": "17ca02d21cb5e6f7bb70704ca702cd72a9c6c374268e71fa55919bb112d71655"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/production_metrics.csv",
+      "sha256": "a4c3df716701d4730cee6891b4cae8c7da13836d3983ba79f3e11733db634a0f"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/rejected_frames.csv",
+      "sha256": "b5c5ca3be65c54f201765a11731baf2f9abe162833859b780b639ab41d2b01aa"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/run_comparison.m",
+      "sha256": "3c7da73358f9110e16a9745d5762820549a1c959fb4919fb35ae8c71f7fdad7e"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/sign_associations.csv",
+      "sha256": "cf22881a8dd3707e14677543a0a3c68d56f950aef7b74bad8c5f769ed186581f"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/source_preparation.csv",
+      "sha256": "ad0b9f9a59967c8786a8f80dbc7400875c4d9abc87111609d5c5263cbe96983b"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/summary.json",
+      "sha256": "b0e7671ca4b61ed7ca0b32821563aec57e4d6ef7a47028526388033d927d8dc8"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/tests.csv",
+      "sha256": "146a175deec2237fe53ebed022a34152141bcc40dbadec984bc9a042f262dc78"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/validate_results.m",
+      "sha256": "9c8602b96a92736a6c441b16b40a89e1ed5c7267e943459c653a45863d372238"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/validation.json",
+      "sha256": "f569efa17159b995abbd73f3a4c9fb4bef9ca03f0a12ed3c830976e0c6dc0f08"
+    },
+    {
+      "path": "scripts/prepareMississippiLocalizationClouds.m",
+      "sha256": "e92695b609576af97823235b0c696dfa3025ad054fb28874a52861da32cb8568"
+    },
+    {
+      "path": "scripts/runMncavFullObserverExperiment.m",
+      "sha256": "e4c41413046d62382d10b1d9c15c3c955cc9e0ea52d50583281e2718bdff886b"
+    },
+    {
+      "path": "tests/positionAidedRegistrationTest.m",
+      "sha256": "ebc00ec8daeb0c9caa3b91fdd0547ba82d988b539e12b0a4a6fcfb3e12ce18f8"
+    },
+    {
+      "path": "tests/synchronousLocalizationTest.m",
+      "sha256": "021550317f99086628f6e576665abacde89de8e04a27fb3a4fffff51c673aade"
+    }
+  ]
+}
