@@ -1,0 +1,15 @@
+{
+  "fusionRmseM": 0.0821769214971171,
+  "fusionMaxM": 0.64031242397600185,
+  "postStartupRmseM": 0.078776836155069377,
+  "postStartupMaxM": 0.23579953001508225,
+  "commonMatchingFrames": 1167,
+  "matchingRmseM": 0.11502079975215705,
+  "baselineMatchingRmseM": 0.11505995056330191,
+  "matchingMaxM": 0.33348509541101828,
+  "matchingAbove30cm": 1,
+  "acceptedFrames": 1167,
+  "totalSeconds": 50.306137000000014,
+  "medianSeconds": 0.042712,
+  "p95Seconds": 0.057494500000000004
+}

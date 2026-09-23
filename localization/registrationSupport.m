@@ -182,6 +182,8 @@ classdef registrationSupport
         % registrationPoseMeasurement Export full or explicitly accepted directional data.
         % partialPoseAvailable alone never authorizes export. Optional arrivalTime
         % uses the acquisition clock. Omission is marked as a delivery placeholder.
+            assert(~isfield(result,'independentLidarMeasurement') || result.independentLidarMeasurement, ...
+                'VehicleLocalization:FusedPoseIsNotLidar','Do not export a fused graph pose as independent LiDAR.');
             assert(isscalar(timestamp) && isfinite(timestamp),'Invalid acquisition time.');
             placeholder=nargin<3 || isempty(arrivalTime);
             if placeholder, arrivalTime=timestamp; end

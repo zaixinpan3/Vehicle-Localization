@@ -1,0 +1,210 @@
+{
+  "parentRevision": "2f2cd50faa4471953e8a682389a74a16531ec416",
+  "scope": "Current implementation, experiments and technical input/output artifacts. Large MAT files remain local. No weekly or monthly report hashes.",
+  "files": [
+    {
+      "path": "config/distributionRegistrationConfig.m",
+      "sha256": "c81202966a5cf853580acdf6b68ba38f212eaaec7ebc4fa74107ffd26423cb77"
+    },
+    {
+      "path": "config/localizationSourceWindowConfig.m",
+      "sha256": "0ba73cdd52a428ad5603b41b564f1227ca6a689c5de9adfb58f49da97ca412cc"
+    },
+    {
+      "path": "config/mncavFullObserverConfig.m",
+      "sha256": "173a4b8372a1d9406fe86b753edcd7873374c24cf1bf941c58c5c87f5d734d41"
+    },
+    {
+      "path": "config/perceptionConfig.m",
+      "sha256": "80e3f73149ff51790dfb64d2396af5be8493b3e16d6bac32bcedece19bd94c14"
+    },
+    {
+      "path": "config/robustPoseGraphConfig.m",
+      "sha256": "bfa549e66e5911232da69d0d12c883dc9c94cc57a1923575a34c9f1328d7878c"
+    },
+    {
+      "path": "localization/createRobustGraphMatcher.m",
+      "sha256": "8bb780d790b6cbdd28aca7189c097c3d20f6a44d8361fc625397c0d04cb6c80c"
+    },
+    {
+      "path": "localization/matchLocalProbabilityCloud.m",
+      "sha256": "944ca67bb2b7a96160b208cc8742351631bcdbf61d7d08735676fff868921ca3"
+    },
+    {
+      "path": "localization/prepareSemanticRegistrationGeometry.m",
+      "sha256": "d99382bdd37e36fe64e982e39d5bc1599e91267201906e5948e2ab14be5965bf"
+    },
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "sha256": "93e529f953ed342d81f54a486daf7a170a4cf45375d8658d23a9696bb7c52e84"
+    },
+    {
+      "path": "localization/registrationSupport.m",
+      "sha256": "49b21baa3f5be60978112ca885c45cdebb122a6e18c35558c038a95f71e00434"
+    },
+    {
+      "path": "localization/runRobustGraphLocalization.m",
+      "sha256": "af7c44630b4254b87f4aa95f29531831b791df9bd6164f063e49731acd2ab93f"
+    },
+    {
+      "path": "localization/selectLocalProbabilityCloud.m",
+      "sha256": "ac5f57d89f0b777695c187b7a1ee2e6442f2a851c33c64ca7653c777a59489ae"
+    },
+    {
+      "path": "localization/selectPositionAidedRegistration.m",
+      "sha256": "90de0c09d422248ef915a68fc71121561a72b7c114a5662db19d70d967062785"
+    },
+    {
+      "path": "localization/updateLocalizationSourceWindow.m",
+      "sha256": "3c11d845fb1f28158b3538b894b27c8b43477adb239756b858e8868d5b9abd14"
+    },
+    {
+      "path": "localization/updateRobustPoseGraph.m",
+      "sha256": "58b97e451d95db0ee24165b797915f252a7847636f6d8ca484ee6d03c15cec48"
+    },
+    {
+      "path": "output/gnss_aided_matching_20260922/closed_loop.mat",
+      "sha256": "2b0966db418a2d99fc50f1a26ec32160973e77d5e11070c3f29b2cb55a2bb852"
+    },
+    {
+      "path": "output/gnss_aided_matching_20260922/sources.mat",
+      "sha256": "f9f4ccc8fbfd1753e791f4b68fa444cf6a4204adb391338a97d6e616823bd12c"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    {
+      "path": "output/robust_pose_graph_20260923/comparison.pdf",
+      "sha256": "59e68ab03b8fbf045be8e56ecb2ab27b6d4d3c0e0b40d37408cb69a7d028519c"
+    },
+    {
+      "path": "output/robust_pose_graph_20260923/guided.mat",
+      "sha256": "d73ee3993c2fbf16d6f51e7b899b2af37d244176b9e88e995bd5d21a859df256"
+    },
+    {
+      "path": "output/robust_pose_graph_20260923/quadratic.mat",
+      "sha256": "9ea6e5aca56e5d6411d112c48dd473265e024e5b4dc93dceb89da9eb69a633f3"
+    },
+    {
+      "path": "output/robust_pose_graph_20260923/sources.mat",
+      "sha256": "d90dddf4eb7c41380b25883b5f1e1d691407f0cc6dc4abf0bea4228820505557"
+    },
+    {
+      "path": "output/robust_pose_graph_20260923/switchable.mat",
+      "sha256": "349a13ea835f8d78be0d545cbc396162095aa721944a932bf3faec28de5ca9b2"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/report.mat",
+      "sha256": "a724606b8562f7ec7f24fed2ec2a89e814f1cf1e454f42a325aba5e2df436f61"
+    },
+    {
+      "path": "output/temporal_perception_20260922/observer/experiment.mat",
+      "sha256": "caecf24b85a533a14703de5edfff40807c14fa72f70b1be5e9353ac5a337512c"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/README.md",
+      "sha256": "82466279d8f25fbc6bb620dd4559c4b39d7f17d27c39dec168e3c6d46143a928"
+    },
+    {
+      "path": "research/gnss_aided_matching_20260922/metrics.csv",
+      "sha256": "b069d890a9836aa06f1098f5756428814bd7efde20b6f2c42b4c305ee6d93fa7"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/README.md",
+      "sha256": "671e2b4d9b2abca34328a8bf4a3b0527abe93876051b40ecec4b315f1e011424"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/association_changes.csv",
+      "sha256": "8ab447f4208b3e49e6b23d2550e977cfb574c84ff20cfc127730efadcb487b04"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/code_analysis.csv",
+      "sha256": "7839093df181a566f8a126fef70e8116cf887179d3b09832a6ee4e2b86db3200"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/comparison.png",
+      "sha256": "811f6db038dccfd82fba02c4259a46c498caadcc80fbcb6defa2eb85c145d3f5"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/guided_frames.csv",
+      "sha256": "74f9d326a56c673f1dd7b65de56a557446232a212e30c333a2712a4459442f0a"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/guided_summary.json",
+      "sha256": "0bf0b60ec2e0101e28920c89f3cd8f1f223087da00f50a07f72ea36f1153e844"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/plot_graph_results.py",
+      "sha256": "e1d5294d6e390fc78cbc3d58d4e369491a77f6e99bf065b42a469f65d3ee5a5f"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/quadratic_associations.csv",
+      "sha256": "206299475dc6c22fe27c6c9021070183416d4c19c18b25cef62be684fa99364b"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/quadratic_frames.csv",
+      "sha256": "0ec62e37b8b72fb34db1d4e74b2936eb14841621008e5c4eaf4fdc03f9eeb325"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/quadratic_metrics.csv",
+      "sha256": "d03bf894c5e2b79a45b771c9c3efacbdb67ee50970fb96232e384f86e7a83d5a"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/quadratic_summary.json",
+      "sha256": "7ce0b52f02bf9737d12ca505ca737bcebbcb7bbd3fb1b5a6a937344814c42106"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/run_graph_experiment.m",
+      "sha256": "828da28dd1e3d0c2a55e09af770ab973b41b357cfe63ac01987966a01507d95a"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/run_guided_experiment.m",
+      "sha256": "afe64437964aca9b440bddcbff2c325e35ba7612aaee77473e96eff6109b233a"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/sign950_959.csv",
+      "sha256": "536db53e11aa947369b69aff346ae0e3a4f034afb7431b14fac37321cbbed7c8"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/switchable_associations.csv",
+      "sha256": "262dcf8e0b7ad03f37b31e5794099c701663368ac6ebbdc0e0aa3e065537fa14"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/switchable_frames.csv",
+      "sha256": "ec2b337d9575517e79a242733ca35f289e6200ee3ecbf59cf50de56b4c19a280"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/switchable_metrics.csv",
+      "sha256": "148bac8309db16cf305ed9a7f30a419a8a8156ae46a52bfff4bac38e9e139f41"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/switchable_summary.json",
+      "sha256": "b53964c1e22a32d579702a897cf2ddcdf20830908d70dd2bdb5ce27ff26a8c9e"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/tests.csv",
+      "sha256": "8f226f2ae5bc50df30d094c0bf156448b33aa95851ded610e082bcb55fe9a306"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/validate_graph_experiment.m",
+      "sha256": "6e4d1542fbfe8649057d08cd20eae4b6cb448c306d5719e94b8dab6cb575ffd2"
+    },
+    {
+      "path": "research/robust_pose_graph_20260923/validation.json",
+      "sha256": "0aec0c4797ada49db98a4c11cc4096f6ea9473cd5cb216afa23ddc61d0072e50"
+    },
+    {
+      "path": "scripts/prepareMississippiLocalizationClouds.m",
+      "sha256": "9f98b4bbdc6e7fe0b86a68ff9c79bb6716887dd52ff5a935cc4f29fbfc07b4b2"
+    },
+    {
+      "path": "tests/positionAidedRegistrationTest.m",
+      "sha256": "d1b4afe2a89fe7190c4ea9b09e1a7b210aafe7b04a356d923421ea29f7e05b39"
+    },
+    {
+      "path": "tests/robustPoseGraphTest.m",
+      "sha256": "4908455aba4e460d17f28af894d66ca5cc785a28e13bc1b84ee9ff2f05eec428"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "loss": "switchable",
+  "metrics": [
+    {
+      "population": "all",
+      "frames": 1169,
+      "graphRmseM": 0.10986154051339662,
+      "graphP95M": 0.21628943207639625,
+      "graphMaxM": 0.64031242397600185,
+      "above30cm": 1,
+      "baselineRmseM": 0.082155614863831036
+    },
+    {
+      "population": "after_2_seconds",
+      "frames": 1148,
+      "graphRmseM": 0.10883453462719228,
+      "graphP95M": 0.21633019235297762,
+      "graphMaxM": 0.27260695781823541,
+      "above30cm": 0,
+      "baselineRmseM": 0.078754199144630416
+    }
+  ],
+  "matchingAccepted": 1168,
+  "matchingRmseM": 0.12259801441300125,
+  "matchingMaxM": 0.39028576056274183,
+  "totalSeconds": 58.022988999999995,
+  "medianSeconds": 0.048663,
+  "p95Seconds": 0.06624954999999999,
+  "uniqueObservations": 73835,
+  "nonconvergedFrames": 1,
+  "containsGnss": true,
+  "informationCalibrated": false,
+  "marginalizedAcquisitions": 1159
+}

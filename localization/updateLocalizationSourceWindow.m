@@ -1,4 +1,4 @@
-function [cloud,history,details]=updateLocalizationSourceWindow(current,timestamp,motionPose,history,cfg)
+function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow(current,timestamp,motionPose,history,cfg)
 % updateLocalizationSourceWindow Confirm and merge recent coarse XY distributions.
 % motionPose is a cumulative planar wheel/gyro pose in any fixed odometry
 % frame. Only relative motion is used. Store Gaussian statistics, not points.
@@ -8,6 +8,8 @@ function [cloud,history,details]=updateLocalizationSourceWindow(current,timestam
 % Stability is detection count / configured horizon, with no startup exemption.
 % Covariance is spatial scatter, not covariance of an independent sample mean.
 % The pooled product is XY only: vertical ego motion is not supplied here.
+% confirmedCurrent contains only this acquisition's confirmed distributions.
+% It lets a pose graph consume each observation once without overlapping stacks.
     if nargin<4 || isempty(history),history=struct('clouds',{{}},'time',zeros(0,1),'motion',zeros(0,3));end
     if nargin<5,cfg=localizationSourceWindowConfig();end
     assert(isscalar(timestamp)&&isfinite(timestamp)&&isreal(timestamp), ...
@@ -47,8 +49,16 @@ function [cloud,history,details]=updateLocalizationSourceWindow(current,timestam
             'mixtureWeight',c.mixtureWeight,'semanticProbability',c.semanticProbability, ...
             'occupancyProbability',c.occupancyProbability);
     end
-    [c,statistics]=stableTracks(sets,cfg);
+    [c,statistics,currentIndices,stability]=stableTracks(sets,cfg);
     cloud.components=c;
+    confirmedCurrent=history.clouds{end};raw=sets{end};
+    confirmedCurrent.components=struct('mean',raw.mean(currentIndices,:), ...
+        'covariance',raw.covariance(:,:,currentIndices),'semanticName',raw.semanticName(currentIndices), ...
+        'mixtureWeight',raw.mixtureWeight(currentIndices),'semanticProbability',raw.semanticProbability(currentIndices), ...
+        'occupancyProbability',raw.occupancyProbability(currentIndices),'temporalStability',stability, ...
+        'numComponents',numel(currentIndices));
+    confirmedCurrent.acquisitionTime=timestamp;
+    confirmedCurrent.observationScope="confirmedCurrentAcquisition";
     details=struct('frameCount',numel(history.time),'oldestTimestamp',history.time(1), ...
         'newestTimestamp',timestamp,'spanSeconds',timestamp-history.time(1), ...
         'componentCount',c.numComponents,'currentComponentCount',current.components.numComponents, ...
@@ -65,7 +75,7 @@ function value=fieldOrUnit(c,name)
     if isfield(c,name),value=c.(name)(:);end
 end
 
-function [c,statistics]=stableTracks(sets,cfg)
+function [c,statistics,currentIndices,currentStability]=stableTracks(sets,cfg)
 % Associate temporally, with no map, ring, reference pose or raw-point access.
     total=sum(cellfun(@(s)size(s.mean,1),sets));horizon=numel(sets);
     meanXY=zeros(total,2);scatter=zeros(2,2,total);names=strings(total,1);
@@ -108,8 +118,12 @@ function [c,statistics]=stableTracks(sets,cfg)
             semantic(id)=semantic(id)+fraction*(observation.semanticProbability(j)-semantic(id));
             occupancy(id)=occupancy(id)+fraction*(observation.occupancyProbability(j)-occupancy(id));
             support(id,frame)=true;
+            assignment(j)=id;
         end
     end
+    currentIndices=find(assignment>0);
+    currentIndices=currentIndices(count(assignment(currentIndices))>=cfg.minimumDetectionFrames);
+    currentStability=count(assignment(currentIndices))/cfg.maximumFrames;
     keep=count>=cfg.minimumDetectionFrames;stability=count(keep)/cfg.maximumFrames;
     mass=semantic(keep).*occupancy(keep).*stability;
     c=struct('mean',meanXY(keep,:),'covariance',scatter(:,:,keep), ...

@@ -33,6 +33,22 @@ classdef positionAidedRegistrationTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(r.poseXYTheta(1),.4);
             testCase.verifyEqual(r.positionAiding.reason,"uncertainPosition");
         end
+        function additionalProposalIsOnlyAnotherLidarInitialization(testCase)
+            [fixed,moving,cfg,aid]=fixture();
+            r=registerSemanticProbabilityCloud(fixed,moving,[.48 0 0],cfg,aid,[.25 .2 0]);
+            testCase.verifyEqual(r.positionAiding.candidateCount,3);
+            testCase.verifyEqual(r.poseXYTheta,[0 0 0],AbsTol=1e-6);
+            testCase.verifyFalse(r.positionAiding.gnssInformationAdded);
+            testCase.verifyTrue(r.accepted);
+        end
+        function repeatedAlternativeOptimumIsNotCountedTwice(testCase)
+            cfg=distributionRegistrationConfig();aid=struct('position',[0 0],'covariance',.25*eye(2));
+            base=selectPositionAidedRegistration(@twoOptima,[.48 0 0],aid,cfg);
+            extra=selectPositionAidedRegistration(@twoOptima,[.48 0 0],aid,cfg,[.6 0 0]);
+            testCase.verifyEqual(extra.poseXYTheta,base.poseXYTheta,AbsTol=1e-6);
+            testCase.verifyEqual(extra.information,base.information,AbsTol=1e-7);
+            testCase.verifyEqual(nnz(extra.positionAiding.relativeSupport),2);
+        end
         function disagreementCannotIncreaseInformation(testCase)
             [fixed,moving,cfg,aid]=fixture();aid.covariance=.25*eye(2);
             r=registerSemanticProbabilityCloud(fixed,moving,[.48 0 0],cfg,aid);
@@ -76,6 +92,13 @@ classdef positionAidedRegistrationTest < matlab.unittest.TestCase
                 'VehicleLocalization:PositionAidTimeMismatch');
         end
     end
+end
+
+function result=twoOptima(seed)
+% Deterministic equal-geometry modes isolate duplicate hypothesis counting.
+    x=0;if seed(1)>.25,x=.5;end
+    result=struct('poseXYTheta',[x 0 0],'information',10*eye(3), ...
+        'directionalInformation',10*eye(3),'accepted',true,'directionalAccepted',false,'similarity',.8);
 end
 
 function [fixed,moving,cfg,aid]=fixture()

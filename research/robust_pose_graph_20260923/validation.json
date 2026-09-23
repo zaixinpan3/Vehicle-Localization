@@ -1,0 +1,13 @@
+{
+  "testsPassed": 152,
+  "testCount": 152,
+  "unchangedStackedSources": 1170,
+  "baselinePoseDifferenceMaximum": 0,
+  "correspondencesCompared": 105733,
+  "changedAssociations": 146,
+  "changedPointAssociations": 45,
+  "framesWithAdditionalCandidate": 802,
+  "codeAnalyzerFindings": 0,
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "defaultBackendChanged": false
+}
