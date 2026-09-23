@@ -26,6 +26,12 @@ function cfg = distributionRegistrationConfig()
     % Engineering uncertainty defaults, not calibrated sensor specifications.
     cfg.heightStandardDeviation = 0.20;
     cfg.tiltStandardDeviation = deg2rad(0.5);
+    % Optional relative-height evidence changes association, not XY residuals.
+    % A common Z offset is inferred from spatially separated curb matches.
+    cfg.relativeHeight = struct('enabled',false,'minimumAnchors',4, ...
+        'minimumAnchorSpan',3,'maximumAnchorDistance',0.75, ...
+        'noiseStandardDeviation',0.20,'tiltStandardDeviation',deg2rad(0.5), ...
+        'weight',1,'maximumPenalty',9,'candidateModel',"marginal",'semanticNames',["pole","trafficSign"]);
     % Geometry-based Gaussian correspondence solver. These specify spatial
     % tolerance and observation quality, not dataset-specific feature rules.
     % maximumClassCorrection gates the information-weighted correction norm;

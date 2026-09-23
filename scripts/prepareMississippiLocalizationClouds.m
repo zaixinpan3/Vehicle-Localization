@@ -22,7 +22,8 @@ function cache=prepareMississippiLocalizationClouds(matchingFolder)
         fprintf('Coarse source cache %d/%d\n',ids(end),n);
     end
     map=load(saved.report.metadata.sourceMap,'cloud');
-    fixed=registrationSupport.projectSemanticProbabilityCloud(map.cloud,2);
+    % Keep map XYZ side information while retaining its exact XY geometry.
+    fixed=map.cloud;
     cache=struct('sources',{sources},'currentSources',{currentSources},'fixed',fixed,'calls',calls,'cfg',cfg, ...
         'seconds',seconds,'counts',counts,'clockModelId',saved.report.metadata.clockModelId);
 end

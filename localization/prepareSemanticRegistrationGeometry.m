@@ -29,8 +29,16 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
     [f.normal,f.majorVariance,f.lineEligible]=normalGeometry(f,gcfg);
     if height.heightUsed, f=prepareConditionalHeight(f); end
     groups=correspondenceGroups(f,m);
+    relative=[];
+    if isfield(cfg,'relativeHeight') && cfg.relativeHeight.enabled
+        assert(~height.heightUsed,'VehicleLocalization:ConflictingHeightModes', ...
+            'Choose relative-height evidence or externally referenced XYZ compatibility.');
+        initial=linearize(f,m,[0 0 initialPose(3)],gcfg,[1;1;1/cfg.yawLeverArm],groups,[]);
+        relative=prepareRelativeHeightAssociation(fixedCloud,movingCloud,initialPose,initial.pairs,cfg.relativeHeight);
+        height.relativeAssociation=relative.details;
+    end
     model=struct('fixed',f,'moving',m,'height',height,'origin',initialPose(1:2));
-    model.linearize=@(pose,scale) linearize(f,m,pose,gcfg,scale,groups);
+    model.linearize=@(pose,scale) linearize(f,m,pose,gcfg,scale,groups,relative);
     model.squaredResidual=@(system,pose) squaredResidual(system,m,pose);
     model.frozenCost=@(system,pose) sum(system.weights.*gcfg.robustStandardizedDistance^2.* ...
         log1p(squaredResidual(system,m,pose)/gcfg.robustStandardizedDistance^2));
@@ -53,14 +61,14 @@ function groups=correspondenceGroups(f,m)
     end
 end
 
-function system=linearize(f,m,pose,cfg,scale,groups)
+function system=linearize(f,m,pose,cfg,scale,groups,relative)
 % Compare each semantic class in a matrix, preserving first-target tie order.
 % Workspace scales with one class rather than the full all-class product.
     r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
     means=m.mean(:,1:2)*r.'+pose(1:2);
     n=m.numComponents;
     rotated=pagemtimes(pagemtimes(r,m.planarCovariance),r.');
-    chosen=zeros(n,1); chosenZ=nan(n,1); lineSource=false(n,1);
+    chosen=zeros(n,1); chosenZ=nan(n,1); chosenHeightCost=zeros(n,1);lineSource=false(n,1);
     for group=groups.'
         source=group.source; targets=group.target;
         if isempty(source) || isempty(targets), continue; end
@@ -98,6 +106,11 @@ function system=linearize(f,m,pose,cfg,scale,groups)
                     valid(:,k)=valid(:,k) & abs(dz(:,k))<=cfg.heightCompatibilitySigma*sqrt(zVariance);
                 end
             end
+            heightCost=zeros(size(distance));
+            if ~isempty(relative) && relative.details.enabled
+                [heightCost,dz]=relative.cost(source,targets,pose);
+                distance=distance+heightCost;
+            end
             distance=distance+group.priorCost;
             distance(~valid)=Inf;
             [best,index]=min(distance,[],1);
@@ -105,6 +118,7 @@ function system=linearize(f,m,pose,cfg,scale,groups)
             chosen(selected)=targets(index(keep));
             linear=index(keep)+(find(keep)-1)*numel(targets);
             chosenZ(selected)=dz(linear);
+            chosenHeightCost(selected)=heightCost(linear);
             lineSource(selected)=group.line;
         end
     end
@@ -153,6 +167,7 @@ function system=linearize(f,m,pose,cfg,scale,groups)
     gradient=stacked.'*(residual(:).*rowWeights);
     pairs=struct('source',source,'target',target,'semanticName',names, ...
         'squaredStandardizedResidual',qvalue,'heightResidual',zResidual(1:rows), ...
+        'heightAssociationCost',chosenHeightCost(source), ...
         'mapMixtureWeight',f.mixtureWeight(target),'temporalStability',m.temporalStability(source), ...
         'weight',weights,'robustWeight',weights.*robust);
     system=struct('H',h,'gradient',gradient,'numPairs',rows,'pairs',pairs, ...

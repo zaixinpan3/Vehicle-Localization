@@ -1,0 +1,246 @@
+{
+  "parentRevision": "f1add3c81840872a2aba87d96d5c2d7a19c1419a",
+  "scope": "Current implementation, six full-sequence causal replays, fixed-seed diagnostics, validation and technical input/output artifacts. Large MAT files remain local. No weekly or monthly report hashes.",
+  "files": [
+    {
+      "path": "config/distributionRegistrationConfig.m",
+      "bytes": 2576,
+      "sha256": "63f95b095d5ab934a2df92f2267fa70aef1f4df5b828735c06de4fc465556467"
+    },
+    {
+      "path": "config/lidarFrameCalibrationConfig.m",
+      "bytes": 1165,
+      "sha256": "bd48b09be24d30b83ab6b15ab530b78de600b74ccd723708acd09328f41f6e90"
+    },
+    {
+      "path": "config/localizationSourceWindowConfig.m",
+      "bytes": 638,
+      "sha256": "0ba73cdd52a428ad5603b41b564f1227ca6a689c5de9adfb58f49da97ca412cc"
+    },
+    {
+      "path": "config/mncavFullObserverConfig.m",
+      "bytes": 751,
+      "sha256": "173a4b8372a1d9406fe86b753edcd7873374c24cf1bf941c58c5c87f5d734d41"
+    },
+    {
+      "path": "config/perceptionConfig.m",
+      "bytes": 1614,
+      "sha256": "80e3f73149ff51790dfb64d2396af5be8493b3e16d6bac32bcedece19bd94c14"
+    },
+    {
+      "path": "localization/matchLocalProbabilityCloud.m",
+      "bytes": 691,
+      "sha256": "944ca67bb2b7a96160b208cc8742351631bcdbf61d7d08735676fff868921ca3"
+    },
+    {
+      "path": "localization/prepareRelativeHeightAssociation.m",
+      "bytes": 5352,
+      "sha256": "8673c8738f6944b40990f61d2255be2f0bbbaedddfd90ea4e742718a12ec096a"
+    },
+    {
+      "path": "localization/prepareSemanticRegistrationGeometry.m",
+      "bytes": 13223,
+      "sha256": "ccce692d8b901756a2beb4b23934ab4ef35cc2eb3e5097b328cf53838b21e82e"
+    },
+    {
+      "path": "localization/registerSemanticProbabilityCloud.m",
+      "bytes": 9061,
+      "sha256": "93e529f953ed342d81f54a486daf7a170a4cf45375d8658d23a9696bb7c52e84"
+    },
+    {
+      "path": "localization/registrationSupport.m",
+      "bytes": 19902,
+      "sha256": "8bbe62628c0d1a86e120721c63c5bee47b1652e7b94e54aa48f821c1f5dd22d2"
+    },
+    {
+      "path": "localization/runSynchronousLocalizationObserver.m",
+      "bytes": 14392,
+      "sha256": "eaadc4664feba67d44f65cb96ff5e3fdf730cca0f366d2efd75e4929f7fcb854"
+    },
+    {
+      "path": "localization/selectLocalProbabilityCloud.m",
+      "bytes": 1348,
+      "sha256": "d3b45796d3d81c17af846ba88f1507c78dfd3535c0164fd3e64bbc81a23167ea"
+    },
+    {
+      "path": "localization/selectPositionAidedRegistration.m",
+      "bytes": 5344,
+      "sha256": "90de0c09d422248ef915a68fc71121561a72b7c114a5662db19d70d967062785"
+    },
+    {
+      "path": "localization/updateLocalizationSourceWindow.m",
+      "bytes": 10663,
+      "sha256": "dcb6ff362f8577158a044d165d3cff0b9982b75a6cdd428ff1c9f1154050cd4e"
+    },
+    {
+      "path": "output/gnss_aided_matching_20260922/closed_loop.mat",
+      "bytes": 188878363,
+      "sha256": "2b0966db418a2d99fc50f1a26ec32160973e77d5e11070c3f29b2cb55a2bb852"
+    },
+    {
+      "path": "output/height_association_20260923/marginal_z_objects.mat",
+      "bytes": 107863252,
+      "sha256": "7c799b319967e9889941770a128839d9630ffd3b5602d0cd4788bb38d6d31acd"
+    },
+    {
+      "path": "output/height_association_20260923/marginal_z_signs.mat",
+      "bytes": 107863233,
+      "sha256": "74a561762b25a9de5f0895551a7317acedea6e6c1e9b277a96729e0892b230f7"
+    },
+    {
+      "path": "output/height_association_20260923/relative_z_all.mat",
+      "bytes": 106711858,
+      "sha256": "bb1a37a64d2e3ca3425307ea91479d8362fe5e971f1e23f2d9e608992a55f3ce"
+    },
+    {
+      "path": "output/height_association_20260923/relative_z_objects.mat",
+      "bytes": 106712121,
+      "sha256": "4d3556550ec7a59354b522ea9b0aa3ba9f6f6792cd672772c59bafc8cf6a8617"
+    },
+    {
+      "path": "output/height_association_20260923/relative_z_signs.mat",
+      "bytes": 106712208,
+      "sha256": "bc75c1404ac295570582db9eab02b7a107c30fa2b5a2b8d49f145b94cf766431"
+    },
+    {
+      "path": "output/height_association_20260923/sources.mat",
+      "bytes": 71666703,
+      "sha256": "90b7c03044283a5fb03714d4cae29b9111923d83fa2f49171db3ac5ab8774fc0"
+    },
+    {
+      "path": "output/height_association_20260923/xy.mat",
+      "bytes": 97549290,
+      "sha256": "d467a7e5f6a32f430f22122562dd0e3d8141eae8622b1a09334a9d99106aa964"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "bytes": 270306,
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    {
+      "path": "output/robust_pose_graph_20260923/sources.mat",
+      "bytes": 46134426,
+      "sha256": "d90dddf4eb7c41380b25883b5f1e1d691407f0cc6dc4abf0bea4228820505557"
+    },
+    {
+      "path": "output/temporal_perception_20260922/five_frame_matching/report.mat",
+      "bytes": 283105,
+      "sha256": "a724606b8562f7ec7f24fed2ec2a89e814f1cf1e454f42a325aba5e2df436f61"
+    },
+    {
+      "path": "output/temporal_perception_20260922/observer/experiment.mat",
+      "bytes": 4420338,
+      "sha256": "caecf24b85a533a14703de5edfff40807c14fa72f70b1be5e9353ac5a337512c"
+    },
+    {
+      "path": "research/height_association_20260923/README.md",
+      "bytes": 13525,
+      "sha256": "2c67e8c206e56fed60f731f6f5d5169288cfae0df610804167deedf5d01bd506"
+    },
+    {
+      "path": "research/height_association_20260923/association_changes.csv",
+      "bytes": 776265,
+      "sha256": "c068b0650fbb15f543c0441be2b2654fec365f4628eca2d64119c79898df69b5"
+    },
+    {
+      "path": "research/height_association_20260923/code_analysis.csv",
+      "bytes": 18,
+      "sha256": "05116616bff806795a739272533ef8fc7e47e1b4a01db73ce05d490fdf80c6a9"
+    },
+    {
+      "path": "research/height_association_20260923/frame166_height_geometry.csv",
+      "bytes": 517,
+      "sha256": "a4d5e3bcb6dfae6dcdfb417edfe51a9c6dd96aaea929cb0bac3fab6816f79e66"
+    },
+    {
+      "path": "research/height_association_20260923/frames.csv",
+      "bytes": 700097,
+      "sha256": "76f6716f6c8678ac754dad1bfb258a007cae99846c41f0f9b710fdde44fcf3c4"
+    },
+    {
+      "path": "research/height_association_20260923/frozen_probe_pairs.csv",
+      "bytes": 30376,
+      "sha256": "e989f5cb49311bc7c65348c37c57da0b2d355763bda987e61e312906f7c0d930"
+    },
+    {
+      "path": "research/height_association_20260923/frozen_probes.csv",
+      "bytes": 4198,
+      "sha256": "12043bf963315d5bddbd25063bfdad08419490c9dcd5e5505859ceb10e228176"
+    },
+    {
+      "path": "research/height_association_20260923/height_comparison.pdf",
+      "bytes": 50264,
+      "sha256": "6aa4ca2a75aed51f8a29fc7909e057c29a7d6ced6247b8fb4a59cee1ae70ebab"
+    },
+    {
+      "path": "research/height_association_20260923/height_comparison.png",
+      "bytes": 438958,
+      "sha256": "04cb60b503598ec219d0ec47d9f31b796acad80a8d754d28c9a2cc0d4019066e"
+    },
+    {
+      "path": "research/height_association_20260923/metrics.csv",
+      "bytes": 3234,
+      "sha256": "ff546e4a6466d50a65afbd03063bb76561d993b7faee4363dc69e06692e89344"
+    },
+    {
+      "path": "research/height_association_20260923/peak_control.csv",
+      "bytes": 778,
+      "sha256": "aaf10c25f524d91fd7ad437ada7e49d203c49fc5e113a46b0972a336eb7b9d3a"
+    },
+    {
+      "path": "research/height_association_20260923/peak_pairs.csv",
+      "bytes": 5056,
+      "sha256": "c4d1366fe79600c51bc3d5aad7e0d0e90e64b2da99f5be6c99666956fecb930c"
+    },
+    {
+      "path": "research/height_association_20260923/plot_height_results.py",
+      "bytes": 2805,
+      "sha256": "d1df497beae157fcf212cd024e94039ece6746583f6730ea605ea805ee78112b"
+    },
+    {
+      "path": "research/height_association_20260923/probe_height_associations.m",
+      "bytes": 2603,
+      "sha256": "8bdd3ea16f8b66a78e8fcd7d4251f9d3aa8e8760d913e1069cd40ec90f6fd21e"
+    },
+    {
+      "path": "research/height_association_20260923/probe_height_peak.m",
+      "bytes": 2368,
+      "sha256": "764d049a83a739e4157ffaa9ececc7f3b268776bba3358536e569eb6c193b385"
+    },
+    {
+      "path": "research/height_association_20260923/run_height_experiment.m",
+      "bytes": 7651,
+      "sha256": "5d189ab69ac276a7496dbb4bfed6a1e09104058b0302020346748a5e4309e055"
+    },
+    {
+      "path": "research/height_association_20260923/summary.json",
+      "bytes": 2383,
+      "sha256": "76d570c76bebe626ba239ce43440cfdb38e95c533d9969cf41548137b0c5ceee"
+    },
+    {
+      "path": "research/height_association_20260923/tests.csv",
+      "bytes": 15778,
+      "sha256": "759fd0543780082d42691c4ecb94a3b221a03b10625f767a2607b8a0bcd665a0"
+    },
+    {
+      "path": "research/height_association_20260923/validate_height_experiment.m",
+      "bytes": 2165,
+      "sha256": "8a9a51c67f25dfa0ba53953f777e4b1948e01c5f9761cf68bc6c4ef60aeff7f9"
+    },
+    {
+      "path": "research/height_association_20260923/validation.json",
+      "bytes": 146,
+      "sha256": "3d155e01dab65df5ef7abc436c3182c699828bce24c461573db27b302e11f68d"
+    },
+    {
+      "path": "scripts/prepareMississippiLocalizationClouds.m",
+      "bytes": 1877,
+      "sha256": "519ca23806b00767a2299b0ad0f5a6e551747f1553698f7dd3bd3da2d2f100ab"
+    },
+    {
+      "path": "tests/relativeHeightAssociationTest.m",
+      "bytes": 10068,
+      "sha256": "8d1d687337fb90dd99273675aed99247c728aca8386a5891870ef9dff94da912"
+    }
+  ]
+}

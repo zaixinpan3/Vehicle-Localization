@@ -5,6 +5,32 @@ classdef registrationSupport
 % Example: cloud = registrationSupport.projectSemanticProbabilityCloud(cloud,3).
 
     methods (Static)
+        function evidence = getHeightEvidence(cloud)
+        % Current-acquisition XYZ evidence may accompany a pooled XY cloud.
+        % It is not asserted to be the joint distribution of that pooled cloud.
+            c=cloud.components;n=c.numComponents;
+            evidence=struct('mean',zeros(n,3),'covariance',zeros(3,3,n), ...
+                'available',false(n,1));
+            if isfield(cloud,'heightEvidence')
+                evidence=cloud.heightEvidence;
+            elseif size(c.mean,2)==3
+                evidence.mean=c.mean;evidence.covariance=c.covariance;
+                evidence.available=true(n,1);
+            elseif all(isfield(c,{'meanXYZ','covarianceXYZ','heightAvailable'}))
+                evidence.mean=c.meanXYZ;evidence.covariance=c.covarianceXYZ;
+                evidence.available=logical(c.heightAvailable(:));
+            end
+            assert(isequal(size(evidence.mean),[n 3]) && ...
+                size(evidence.covariance,1)==3 && size(evidence.covariance,2)==3 && ...
+                size(evidence.covariance,3)==n && numel(evidence.available)==n, ...
+                'VehicleLocalization:InvalidHeightEvidence','Height evidence must align with cloud components.');
+            use=logical(evidence.available(:));evidence.available=use;
+            assert(isreal(evidence.mean)&&isreal(evidence.covariance) && ...
+                all(isfinite(evidence.mean(use,:)),'all') && ...
+                all(isfinite(evidence.covariance(:,:,use)),'all'), ...
+                'VehicleLocalization:InvalidHeightEvidence','Available height evidence must be finite and real.');
+        end
+
         function status = validateRegistrationCalibration(fixedCloud,movingCloud)
         % Require matching explicit extrinsic provenance for map/source/history.
             assert(isfield(fixedCloud,'frameCalibration') && isfield(movingCloud,'frameCalibration'), ...

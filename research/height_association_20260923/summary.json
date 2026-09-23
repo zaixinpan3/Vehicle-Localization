@@ -1,0 +1,81 @@
+{
+  "rawScans": 1170,
+  "fusionScans": 1169,
+  "commonMatchingFrames": 1164,
+  "unchangedXyClouds": 1170,
+  "baselinePoseDifferenceMaximum": 0,
+  "variants": [
+    {
+      "name": "xy",
+      "heightEnabledFrames": 0,
+      "lostAcceptedFrames": 0,
+      "newAcceptedFrames": 0,
+      "matchingSeconds": 15.192735000000004,
+      "medianSeconds": 0.013805,
+      "p95Seconds": 0.01938825,
+      "comparedCorrespondences": [],
+      "changedTargetGaussians": []
+    },
+    {
+      "name": "relative_z_all",
+      "heightEnabledFrames": 1061,
+      "lostAcceptedFrames": 3,
+      "newAcceptedFrames": 0,
+      "matchingSeconds": 24.240297000000005,
+      "medianSeconds": 0.021572,
+      "p95Seconds": 0.03278765,
+      "comparedCorrespondences": 105732,
+      "changedTargetGaussians": 3917
+    },
+    {
+      "name": "relative_z_objects",
+      "heightEnabledFrames": 1062,
+      "lostAcceptedFrames": 3,
+      "newAcceptedFrames": 0,
+      "matchingSeconds": 19.591114000000008,
+      "medianSeconds": 0.018619,
+      "p95Seconds": 0.025168649999999994,
+      "comparedCorrespondences": 105732,
+      "changedTargetGaussians": 992
+    },
+    {
+      "name": "relative_z_signs",
+      "heightEnabledFrames": 1062,
+      "lostAcceptedFrames": 0,
+      "newAcceptedFrames": 0,
+      "matchingSeconds": 19.714822,
+      "medianSeconds": 0.01807,
+      "p95Seconds": 0.026652899999999997,
+      "comparedCorrespondences": 105734,
+      "changedTargetGaussians": 746
+    },
+    {
+      "name": "marginal_z_objects",
+      "heightEnabledFrames": 1062,
+      "lostAcceptedFrames": 0,
+      "newAcceptedFrames": 0,
+      "matchingSeconds": 77.24657900000004,
+      "medianSeconds": 0.056679,
+      "p95Seconds": 0.13994534999999994,
+      "comparedCorrespondences": 105731,
+      "changedTargetGaussians": 1035
+    },
+    {
+      "name": "marginal_z_signs",
+      "heightEnabledFrames": 1062,
+      "lostAcceptedFrames": 0,
+      "newAcceptedFrames": 0,
+      "matchingSeconds": 20.948686999999996,
+      "medianSeconds": 0.01925,
+      "p95Seconds": 0.028091599999999998,
+      "comparedCorrespondences": 105732,
+      "changedTargetGaussians": 958
+    }
+  ],
+  "referenceAltitudeUsed": false,
+  "referenceTiltRetained": true,
+  "mapWeightsChanged": false,
+  "heightForceAdded": false,
+  "heightEvidence": "current scan belonging to confirmed five-scan tracks",
+  "defaultEnabled": false
+}
