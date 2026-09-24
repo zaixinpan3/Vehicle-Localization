@@ -95,6 +95,38 @@ median per call including GNSS hypothesis selection (before 11.2 ms); the
 coarse solution was retained in no fused-run frame. Per scan, the whole
 online chain moves from 66.9 to 75.8 ms median, within the 100 ms frame.
 
+## LiDAR-only map matching over the whole drive
+
+`evaluateMatchingOnly.m` (`matching_only.csv`, `matching_only_traces.png`)
+scores every accepted match of the 1,170-scan drive against INSPVA. The
+recursive population is pure map matching: odometry seed, no GNSS, no
+observer. The reference-seeded population is an evaluation-only ceiling.
+
+| Chain | Population | Accepted | RMSE (cm) | Median | P90 | P95 | P99 | Max (frame) | >20 cm | >30 cm | >50 cm | Yaw RMSE (deg) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| before | recursive (odometry seed) | 1169 | 16.84 | 10.83 | 24.51 | 34.72 | 57.36 | 68.48 (851) | 205 | 77 | 14 | 0.530 |
+| before | GNSS-aided, inside the fused run | 1168 | 11.25 | 8.55 | 17.93 | 20.07 | 25.46 | 36.79 (169) | 62 | 1 | 0 | 0.412 |
+| after | recursive (odometry seed) | 1169 | **12.65** | 9.13 | 19.93 | 22.97 | 31.70 | 39.34 (182) | 114 | 18 | 0 | 0.440 |
+| after | GNSS-aided, inside the fused run | 1168 | 11.22 | 8.41 | 17.66 | 20.61 | 26.33 | 38.11 (1030) | 66 | 4 | 0 | 0.410 |
+| after | reference-seeded ceiling | 1169 | 12.65 | 9.13 | 19.93 | 22.97 | 31.70 | 39.34 (182) | 114 | 18 | 0 | 0.440 |
+
+The recursive result and the reference-seeded ceiling are identical to the
+last digit: with the canonical level the matcher's answer no longer depends on
+where it starts. Body-frame decomposition of the recursive errors (mean / RMS):
+longitudinal −0.1 / 7.2 cm, lateral −6.4 / 10.4 cm (before: 1.4 / 9.8 and
+−9.2 / 13.7 cm). The lateral component carries a systematic −6 cm offset that
+also appears in the GNSS-aided population (−5.3 cm); it is not a matching-mode
+effect and remains open (LiDAR origin lateral calibration or map bias).
+
+Per segment (max / median, cm), before → after: 158–214: 59.8 / 37.8 →
+39.3 / 19.5; 421–426: 34.0 / 31.5 → 23.4 / 21.1; 841–853: 68.5 / 62.4 →
+37.1 / 18.3; 875–879: 33.0 / 32.0 → 33.0 / 31.7; 955–959: 38.8 / 34.7 →
+15.7 / 13.0. The 18 frames still above 30 cm are 164–169, 174, 180–184,
+841–842 and 875–879: the first group is the segment where the map's pole and
+sign components disagree with the reference by about 0.3 m (see the
+mode-ambiguity study, section 3), 841–842 is the start of the frame-851
+stretch, and 875–879 is unchanged at 32 cm.
+
 ## Limits
 
 - Radii (1.5 / 0.5 / 0.15 m) were chosen from this map's alias structure and
