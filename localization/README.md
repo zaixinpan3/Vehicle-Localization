@@ -73,10 +73,11 @@ still enter the global observer at the IMU location; their lever-arm terms
 `prepareWheelMotionInputs` reads wheel rates, steering and IMU with no alternate
 speed fallback. Missing/expired wheel aiding is an error, except the declared
 short stationary startup. The latest output directory is
-`output/mncav_coarse_localization_20260924`. On 1170 raw scans, the 1169
-observer outputs have fused position RMSE 6.05 cm (5.53 cm after the 2 s
+`output/mncav_coarse_localization_20260924b`. On 1170 raw scans, the 1169
+observer outputs have fused position RMSE 5.96 cm (5.42 cm after the 2 s
 initialization transient) and heading RMSE 0.39 degrees; GNSS-only is 6.33 cm
-and LiDAR-only 18.78 cm. See
+and LiDAR-only 14.83 cm (14.24 cm after the transient). See
+[the canonical map pyramid record](../research/canonical_pyramid_20260924/README.md),
 [the output-point transport record](../research/output_point_transport_20260924/README.md)
 and, for the earlier 10.3445 cm result without GNSS aiding or the transport,
 the [coarse-only replay report](../research/mncav_coarse_localization_20260918/README.md).

@@ -314,7 +314,7 @@ are explicit:
 | `pillarGridConfig` | fixed pillar lattice (`gridDims`, `voxelSize`, `latticeOffset`) shared by pillarization, ground segmentation, the coarse cloud and the NDT map extent |
 | `structuralPillarConfig` | whole-pillar pole/facade/sign detection |
 | `finePerceptionConfig` | `refinePerceptionCandidates` (offline only) |
-| `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` |
+| `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` (`.pyramid` canonical coarse-to-fine levels) |
 | `groundSegmentationConfig` | `segmentGround` |
 | `groundFeatureConfig` (`.curb`, `.road`) | `extractGroundFeatures` |
 | `offGroundFeatureConfig` | `extractOffGroundFeatures` (historical facade switch; modern calls use `featureNames`) |
@@ -341,15 +341,17 @@ with steering/IMU compensation. No vehicle-speed or Twist alternative is
 available. Export `wheel_speed_report.csv`, `imu.csv` and `steering.csv` using
 `scripts/extractVehicleReplaySensors.py`; the current full experiment reads
 `output/mncav_wheel_only_20260916/sensors` and writes
-`output/mncav_coarse_localization_20260924`. All 1170 scans use fresh whole-pillar
-coarse perception and recursive D2D; online localization never runs point-level
-fine refinement. The offline map remains fixed. Missing or expired wheel input is an explicit
+`output/mncav_coarse_localization_20260924b`. All 1170 scans use fresh whole-pillar
+coarse perception and recursive D2D on the canonical map pyramid; online
+localization never runs point-level fine refinement. The offline map remains
+fixed. Missing or expired wheel input is an explicit
 preparation error. Use `validateFullLocalizationObserver` for the associated
-checks. The [current production record](research/output_point_transport_20260924/README.md)
-gives fused position RMSE 6.05 cm over 1169 outputs (5.53 cm after the
+checks. The [current production record](research/canonical_pyramid_20260924/README.md)
+gives fused position RMSE 5.96 cm over 1169 outputs (5.42 cm after the
 initialization transient, heading 0.39 deg), GNSS-only 6.33 cm and LiDAR-only
-18.78 cm, with closed-loop GNSS-aided hypothesis selection and the lateral
-velocity transported to the INSPVA output point. The earlier
+14.83 cm (14.24 cm after the transient), with closed-loop GNSS-aided hypothesis
+selection and the lateral velocity transported to the INSPVA output point
+([record](research/output_point_transport_20260924/README.md)). The earlier
 [coarse localization report](research/mncav_coarse_localization_20260918/README.md)
 (10.3445 cm fused, 8.8252 cm GNSS-only) predates GNSS aiding and the output-point
 transport. The [aligned BESTPOS report](research/mncav_bestpos_alignment_20260917/README.md)
@@ -433,6 +435,20 @@ consistency. A rejected result produces no observer event; partial geometry
 is available only as a diagnostic. Its normal matrix is not calibrated sensor
 information. The separate `scoreSemanticProbabilityCloudAlignment` function
 evaluates a Gaussian-overlap diagnostic; it does not select another pose solver.
+
+Registration is coarse to fine on a **canonical map pyramid**
+(`cfg.pyramid`). `canonicalizeSemanticCloud` merges same-class point
+components closer than `mapMergeRadius` (1.5 m) in the local map and
+`sourceMergeRadius` (0.5 m) in the source window into one moment-matched
+Gaussian each, which removes the sub-metre association aliases of split or
+tile-duplicated landmarks; the same solver runs on those canonical clouds
+first and its pose seeds the solve on the original clouds. Position aid and
+additional seeds act on the fine level. Without aid or relative-height
+association, a refinement that moves more than `trustRadius` (0.15 m) from
+the coarse pose is a new search rather than a refinement, and the coarse pose
+is kept (`reason="coarseRetainedByTrustRadius"`). Every result carries a
+`pyramid` diagnostic. See [the mode-ambiguity study](research/alias_hypotheses_20260924/README.md)
+and [the production record](research/canonical_pyramid_20260924/README.md).
 
 Full XYZ means/covariances, including xz and yz, remain in every supported
 probability-cloud component. The default `heightMode="xy"` uses the XY

@@ -13,7 +13,10 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
             baseline=cfg;baseline.relativeHeight.enabled=false;
             before=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],baseline);
             after=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
-            testCase.verifyEqual(before.poseXYTheta,[-.4 0 0],AbsTol=1e-8);
+            % Planar geometry cannot tell the aliases apart: the pyramid keeps
+            % their canonical midpoint instead of whichever alias the seed favours.
+            testCase.verifyEqual(before.poseXYTheta,[-.2 0 0],AbsTol=1e-6);
+            testCase.verifyTrue(before.pyramid.coarseRetained);
             testCase.verifyTrue(after.accepted,after.reason);
             testCase.verifyEqual(after.poseXYTheta,[0 0 0],AbsTol=1e-5);
             testCase.verifyTrue(after.height.relativeAssociation.enabled);
@@ -29,7 +32,10 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
             testCase.verifyEqual(after.height.relativeAssociation.offset,1620,AbsTol=1e-9);
         end
         function correctPairsKeepPlanarInformation(testCase)
-            [fixed,moving,cfg]=scene();
+            % Without aliases the planar refinement is not gated, so height
+            % evidence that confirms the correct pairs must leave the planar
+            % pose and information untouched.
+            [fixed,moving,cfg]=scene();fixed=subsetScene(fixed,[1:4 7 8]);
             baseline=cfg;baseline.relativeHeight.enabled=false;
             before=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],baseline);
             after=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
@@ -101,7 +107,9 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
         function unselectedClassKeepsPlanarAssociation(testCase)
             [fixed,moving,cfg]=scene();cfg.relativeHeight.semanticNames="trafficSign";
             result=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
-            testCase.verifyEqual(result.poseXYTheta,[-.4 0 0],AbsTol=1e-8);
+            % Without pole height the planar refinement settles on one alias.
+            testCase.verifyLessThan(min(abs(result.poseXYTheta(1)-[0 -.4])),1e-6);
+            testCase.verifyEqual(result.poseXYTheta(2:3),[0 0],AbsTol=1e-6);
             testCase.verifyTrue(result.height.relativeAssociation.enabled);
             testCase.verifyEqual(result.correspondences.heightAssociationCost,zeros(6,1),AbsTol=0);
         end

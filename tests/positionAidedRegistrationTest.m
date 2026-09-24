@@ -8,17 +8,17 @@ classdef positionAidedRegistrationTest < matlab.unittest.TestCase
     methods (Test)
         function missingAidPreservesGeometry(testCase)
             [fixed,moving,cfg,aid]=fixture();aid.valid=false;
-            a=registerSemanticProbabilityCloud(fixed,moving,[.48 0 0],cfg);
-            b=registerSemanticProbabilityCloud(fixed,moving,[.48 0 0],cfg,aid);
+            a=registerSemanticProbabilityCloud(fixed,moving,[1.9 0 0],cfg);
+            b=registerSemanticProbabilityCloud(fixed,moving,[1.9 0 0],cfg,aid);
             testCase.verifyEqual(b.poseXYTheta,a.poseXYTheta,AbsTol=0);
             testCase.verifyEqual(b.information,a.information,AbsTol=0);
             testCase.verifyFalse(b.positionAiding.used);
         end
         function positionSelectsCorrectRepeatedStructure(testCase)
             [fixed,moving,cfg,aid]=fixture();
-            before=registerSemanticProbabilityCloud(fixed,moving,[.48 0 0],cfg);
-            after=registerSemanticProbabilityCloud(fixed,moving,[.48 0 0],cfg,aid);
-            testCase.verifyGreaterThan(before.poseXYTheta(1),.4);
+            before=registerSemanticProbabilityCloud(fixed,moving,[1.9 0 0],cfg);
+            after=registerSemanticProbabilityCloud(fixed,moving,[1.9 0 0],cfg,aid);
+            testCase.verifyGreaterThan(before.poseXYTheta(1),1.5);
             testCase.verifyEqual(after.poseXYTheta,[0 0 0],AbsTol=1e-6);
             testCase.verifyTrue(after.accepted);
             testCase.verifyEqual(after.positionAiding.selected,2);
@@ -29,13 +29,13 @@ classdef positionAidedRegistrationTest < matlab.unittest.TestCase
         end
         function uncertainAidDoesNotRedirectMatching(testCase)
             [fixed,moving,cfg,aid]=fixture();aid.covariance=100*eye(2);
-            r=registerSemanticProbabilityCloud(fixed,moving,[.48 0 0],cfg,aid);
-            testCase.verifyGreaterThan(r.poseXYTheta(1),.4);
+            r=registerSemanticProbabilityCloud(fixed,moving,[1.9 0 0],cfg,aid);
+            testCase.verifyGreaterThan(r.poseXYTheta(1),1.5);
             testCase.verifyEqual(r.positionAiding.reason,"uncertainPosition");
         end
         function additionalProposalIsOnlyAnotherLidarInitialization(testCase)
             [fixed,moving,cfg,aid]=fixture();
-            r=registerSemanticProbabilityCloud(fixed,moving,[.48 0 0],cfg,aid,[.25 .2 0]);
+            r=registerSemanticProbabilityCloud(fixed,moving,[1.9 0 0],cfg,aid,[.25 .2 0]);
             testCase.verifyEqual(r.positionAiding.candidateCount,3);
             testCase.verifyEqual(r.poseXYTheta,[0 0 0],AbsTol=1e-6);
             testCase.verifyFalse(r.positionAiding.gnssInformationAdded);
@@ -50,8 +50,8 @@ classdef positionAidedRegistrationTest < matlab.unittest.TestCase
             testCase.verifyEqual(nnz(extra.positionAiding.relativeSupport),2);
         end
         function disagreementCannotIncreaseInformation(testCase)
-            [fixed,moving,cfg,aid]=fixture();aid.covariance=.25*eye(2);
-            r=registerSemanticProbabilityCloud(fixed,moving,[.48 0 0],cfg,aid);
+            [fixed,moving,cfg,aid]=fixture();aid.covariance=4*eye(2);
+            r=registerSemanticProbabilityCloud(fixed,moving,[1.9 0 0],cfg,aid);
             conditional=registerSemanticProbabilityCloud(fixed,moving,r.poseXYTheta,cfg);
             testCase.verifyGreaterThan(r.positionAiding.betweenHypothesisSecondMoment(1,1),.01);
             testCase.verifyLessThanOrEqual(max(eig(r.information-conditional.information)),1e-8);
@@ -103,7 +103,9 @@ end
 
 function [fixed,moving,cfg,aid]=fixture()
     moving=distributionRegistrationTest.exampleCloud();fixed=moving;c=moving.components;
-    fixed.components.mean=[c.mean;c.mean+[.5 0]];
+    % The repeat lies beyond the pyramid merge radius, so the coarse level
+    % keeps both copies and the seed near the wrong copy locks onto it.
+    fixed.components.mean=[c.mean;c.mean+[2 0]];
     fixed.components.covariance=cat(3,c.covariance,c.covariance);
     fixed.components.semanticName=[c.semanticName;c.semanticName];
     fixed.components.mixtureWeight=[c.mixtureWeight;c.mixtureWeight]/2;

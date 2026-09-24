@@ -1,0 +1,3 @@
+label,fusedRunMatchingRmseCm,fusedRunMatchingMaxCm,fusedRunMatchingMsMedian,fusedRunMatchingMsP95,fusedRunCoarseRetained,recursiveAccepted,recursiveRmseCm,recursiveP95Cm,recursiveMaxCm,recursiveAbove30cm,recursiveAbove50cm,recursiveFrame851Cm,recursiveTotalMsMedian,recursiveRegistrationMsMedian
+before (single level),11.2519493205923,36.788519719929,11.23,15.2844,0,1169,16.8370683283494,34.7193356454569,68.4814530338394,77,14,68.4814530338394,66.9215,8.779
+after (canonical pyramid),11.2196967566573,38.1050127381776,21.943,26.1013,0,1169,12.6529091226755,22.9660818098187,39.3367952946684,18,0,4.89819696258216,75.7835,16.859

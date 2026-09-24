@@ -5,6 +5,15 @@ function cfg = distributionRegistrationConfig()
     cfg = struct();
     cfg.method = "geometricD2D";
     cfg.localMapRadius = 100;
+    % Canonical map pyramid. Same-class point components closer than the merge
+    % radii are moment-matched into one Gaussian for a first, seed-independent
+    % solve; the original clouds then refine that pose. Without position aid a
+    % refinement that leaves the coarse pose by more than trustRadius is a new
+    % search rather than a refinement and the coarse pose is kept. The map
+    % radius is the smallest that leaves no same-class structure at the
+    % association-ambiguity scale of the Mississippi map.
+    cfg.pyramid = struct('mapMergeRadius',1.5,'sourceMergeRadius',0.5, ...
+        'trustRadius',0.15,'pointClasses',["pole","trafficSign"]);
     cfg.maximumIterationsPerScale = 40;
     cfg.maximumPoseCorrection = [3 3 deg2rad(12)];
     cfg.yawLeverArm = 10;

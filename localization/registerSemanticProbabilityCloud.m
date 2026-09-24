@@ -8,11 +8,52 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
 % Ground-line tangents bound association but do not create pose information.
 % Height conditions correspondence compatibility, not the planar pose force.
 % A partially observable solution is reported but never accepted as full SE(2).
+% Registration is coarse to fine: the same solver first runs on canonical
+% clouds whose same-class point components within the merge radii are one
+% Gaussian each, which removes the sub-metre association aliases of split or
+% duplicated landmarks, and its pose seeds the solve on the original clouds.
+% Position aid and additional seeds act on the fine level only.
     if nargin<4, cfg=distributionRegistrationConfig(); end
     if nargin<5,positionAid=[];end
     if nargin<6,additionalSeeds=zeros(0,3);end
+    initialPose=double(initialPose(:).');pyramid=validatePyramid(cfg);
+    [coarseFixed,groups]=canonicalizeSemanticCloud(fixedCloud,pyramid.mapMergeRadius,pyramid.pointClasses);
+    coarseMoving=canonicalizeSemanticCloud(movingCloud,pyramid.sourceMergeRadius,pyramid.pointClasses);
+    coarse=solveGeometry(coarseFixed,coarseMoving,initialPose,cfg);
+    fineSeed=initialPose;
+    if coarse.accepted || coarse.directionalAccepted,fineSeed=coarse.poseXYTheta;end
     solve=@(pose) solveGeometry(fixedCloud,movingCloud,pose,cfg);
-    result=selectPositionAidedRegistration(solve,initialPose,positionAid,cfg,additionalSeeds);
+    result=selectPositionAidedRegistration(solve,fineSeed,positionAid,cfg,additionalSeeds);
+    % A refinement informed by evidence beyond planar geometry, position aid
+    % or relative-height association, may legitimately move to another
+    % sub-component; planar-only refinement may not leave the coarse basin.
+    heightInformed=isfield(result.height,'relativeAssociation') && result.height.relativeAssociation.enabled;
+    planarOnly=~result.positionAiding.used && ~heightInformed;
+    shift=norm(result.poseXYTheta(1:2)-coarse.poseXYTheta(1:2));
+    retained=planarOnly && coarse.accepted && result.accepted && shift>pyramid.trustRadius;
+    if retained
+        % Report the coarse solution in original component indices so callers
+        % resolve the same global targets as for a fine solution.
+        representative=cellfun(@(g)g(1),groups);
+        retainedResult=coarse;retainedResult.positionAiding=result.positionAiding;
+        retainedResult.correspondences.target=representative(coarse.correspondences.target);
+        retainedResult.reason="coarseRetainedByTrustRadius";result=retainedResult;
+    end
+    result.initialPoseXYTheta=initialPose;
+    result.pyramid=struct('coarsePoseXYTheta',coarse.poseXYTheta,'coarseAccepted',coarse.accepted, ...
+        'coarseSimilarity',coarse.similarity,'coarseReason',coarse.reason, ...
+        'coarseComponents',coarseFixed.components.numComponents,'fineSeedXYTheta',fineSeed, ...
+        'refinementShiftM',shift,'coarseRetained',retained,'mapMergeRadius',pyramid.mapMergeRadius, ...
+        'sourceMergeRadius',pyramid.sourceMergeRadius,'trustRadius',pyramid.trustRadius,'planarOnlyRefinement',planarOnly, ...
+        'semantics',"coarse solve on moment-matched canonical clouds seeds the fine solve; trust radius applies to planar-only refinement");
+end
+
+function pyramid=validatePyramid(cfg)
+    assert(isfield(cfg,'pyramid') && all(isfield(cfg.pyramid,{'mapMergeRadius','sourceMergeRadius','trustRadius','pointClasses'})), ...
+        'VehicleLocalization:MissingPyramidConfiguration','Use the current distributionRegistrationConfig with a pyramid group.');
+    pyramid=cfg.pyramid;radii=[pyramid.mapMergeRadius,pyramid.sourceMergeRadius,pyramid.trustRadius];
+    assert(isreal(radii) && all(isfinite(radii)) && all(radii>=0) && pyramid.trustRadius>0 && isstring(pyramid.pointClasses), ...
+        'VehicleLocalization:InvalidPyramidConfiguration','Pyramid radii must be finite and nonnegative with a positive trust radius.');
 end
 
 function result=solveGeometry(fixedCloud,movingCloud,initialPose,cfg)

@@ -169,6 +169,17 @@ Matching time per call (median): 13.0 ms with GNSS hypothesis selection,
 map is built once at load; canonicalizing a source window costs well under
 a millisecond.
 
+## Adoption
+
+Route C was adopted into production on 2026-09-24
+([record](../canonical_pyramid_20260924/README.md)): `canonicalizeSemanticCloud`
+moved to `localization/` and `registerSemanticProbabilityCloud` now runs the
+canonical level before the original level with the trust radius on
+planar-only refinement. The scripts in this folder evaluated the pyramid on
+top of the then single-level driver (revision `1a0075a`); on the current
+driver they would nest a second pyramid and are kept as the record of that
+evaluation, not as runnable tools.
+
 ## 7. Recommended route
 
 1. **Canonical map pyramid in the registration driver** (Route C, gated):
