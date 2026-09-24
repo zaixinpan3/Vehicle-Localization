@@ -24,7 +24,7 @@ classdef curbBoundaryNormalTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,384);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,384);cfg=perceptionConfig("Mississippi","offline");
             % Isolate boundary-normal consensus from independent tip trimming.
             cfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
             cfg.fine.curbCompetingEdgeScoreWeight=0; % Isolate the earlier boundary-validation gate.
@@ -56,7 +56,7 @@ classdef curbBoundaryNormalTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity855.json')));
-            frame=loadPointCloudFrame(file,855);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,855);cfg=perceptionConfig("Mississippi","offline");
             actual=perceiveFrame(frame,cfg);xyz=double([frame.x(:),frame.y(:),frame.z(:)]);
             picks=xyz(annotation.leftVicinityIndices,1:2);curb=xyz(actual.featureMasks.curb,1:2);
             distance=min(hypot(picks(:,1)-curb(:,1).',picks(:,2)-curb(:,2).'),[],2);
@@ -73,7 +73,7 @@ classdef curbBoundaryNormalTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curb855Continuation.json')));
-            frame=loadPointCloudFrame(file,annotation.frameIndex);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,annotation.frameIndex);cfg=perceptionConfig("Mississippi","offline");
             actual=perceiveFrame(frame,cfg);
             testCase.verifyGreaterThanOrEqual(nnz(actual.featureMasks.curb(annotation.reportedIndices)),21);
             testCase.verifyEqual(nnz(actual.featureMasks.pole),23);

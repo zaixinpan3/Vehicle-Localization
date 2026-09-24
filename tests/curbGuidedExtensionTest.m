@@ -10,7 +10,7 @@ classdef curbGuidedExtensionTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,1137);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,1137);cfg=perceptionConfig("Mississippi","offline");
             actual=perceiveFrame(frame,cfg);
             left=[27818 28203 28139 28075 28011 27947 27883 28268 27819 28204 28140 ...
                 28076 28012 27948 26861 26797 26733 26669 26605 26990 26926 26862 ...
@@ -35,7 +35,7 @@ classdef curbGuidedExtensionTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,214);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,214);cfg=perceptionConfig("Mississippi","offline");
             beforeCfg=cfg;beforeCfg.fine.curbContinuationLengthMeters=0;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             picks=[22962 22898 22834 22770 23219 23155 23091 23027 22963 22899 ...
@@ -63,7 +63,7 @@ classdef curbGuidedExtensionTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,963);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,963);cfg=perceptionConfig("Mississippi","offline");
             cfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
             cfg.fine.curbCompetingEdgeScoreWeight=0; % Isolate the earlier boundary-validation gate.
             cfg.fine.curbMaximumRoadSurfaceResidualMeters=Inf;
@@ -94,7 +94,7 @@ classdef curbGuidedExtensionTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,538);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,538);cfg=perceptionConfig("Mississippi","offline");
             beforeCfg=cfg;beforeCfg.fine.curbContinuationLengthMeters=0;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             testCase.verifyEqual(nnz(before.featureMasks.curb),131);

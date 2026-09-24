@@ -33,11 +33,12 @@ function validation=validate_correction(selectedFolder)
     frames=[28,94,260,425,600,855,1137];checks=false(numel(frames),3);
     for k=1:numel(frames)
         input=loadPointCloudFrame('data/raw/MissisipiPointClouds.mat',frames(k));
-        original=perceptionConfig("Mississippi");original.executionMode="offline";original.frameCalibration=lidarFrameCalibrationConfig();
+        original=perceptionConfig("Mississippi","offline");original.frameCalibration=lidarFrameCalibrationConfig();
         calibrated=original;calibrated.frameCalibration=profile;
         a=perceiveFrame(input,original);b=perceiveFrame(input,calibrated);
         checks(k,1)=isequal(a.featureMasks,b.featureMasks);
-        original.executionMode="coarseProbabilityCloud";calibrated.executionMode="coarseProbabilityCloud";
+        original=perceptionConfig("Mississippi");original.frameCalibration=lidarFrameCalibrationConfig();
+        calibrated=original;calibrated.frameCalibration=profile;
         a=perceiveCoarseProbabilityCloud(input,original);b=perceiveCoarseProbabilityCloud(input,calibrated);
         checks(k,2)=isequal(a.sourceSummary.selectedHitCount,b.sourceSummary.selectedHitCount);
         checks(k,3)=isequal(a.sourceSummary.selectedSourceCellCount,b.sourceSummary.selectedSourceCellCount);

@@ -31,7 +31,7 @@ function report = evaluateHeightPerceptionRegression(referenceRoot, outputFolder
                 output{k,implementation}=perceiveFrame(frame,cfg);
                 timings(k,implementation,repeat)=1e3*timeit(@() perceiveCoarseProbabilityCloud(frame,cfg));
                 if repeat==1
-                    offlineCfg=cfg; offlineCfg.executionMode="offline";
+                    offlineCfg=perceptionConfig("Mississippi","offline"); offlineCfg.executionBackend="native";
                     fine{k,implementation}=perceiveFrame(frame,offlineCfg);
                 end
             end

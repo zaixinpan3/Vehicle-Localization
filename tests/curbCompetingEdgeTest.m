@@ -21,7 +21,7 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity600.json')));
-            frame=loadPointCloudFrame(file,600);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,600);cfg=perceptionConfig("Mississippi","offline");
             previous=cfg;previous.fine.curbCompetingEdgeScoreWeight=0;
             before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);
             xyz=double([frame.x(:),frame.y(:),frame.z(:)]);near=annotation.rightBoundaryVicinityIndices;
@@ -67,7 +67,7 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity276.json')));
-            frame=loadPointCloudFrame(file,276);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,276);cfg=perceptionConfig("Mississippi","offline");
             % Isolate the gradient-ratio correction from later validation gates.
             cfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
             cfg.fine.curbCompetingEdgeScoreWeight=0;
@@ -92,7 +92,7 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
         function rejectsRaisedBoundaryAfterStrongReconstruction(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
-            frame=loadPointCloudFrame(file,615);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,615);cfg=perceptionConfig("Mississippi","offline");
             % Isolate local edge competition from subsequent road validation.
             cfg.fine.curbMaximumRoadSurfaceResidualMeters=Inf;
             cfg.fine.curbCompetingBoundaryRoadResidualRatio=Inf;
@@ -143,7 +143,7 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity832.json')));
-            frame=loadPointCloudFrame(file,832);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,832);cfg=perceptionConfig("Mississippi","offline");
             actual=perceiveFrame(frame,cfg);xyz=double([frame.x(:),frame.y(:),frame.z(:)]);
             testCase.verifyFalse(any(actual.featureMasks.curb(annotation.falsePositiveIndices)));
             for picks={annotation.followupBoundaryVicinityIndices,annotation.nearEndBoundaryVicinityIndices}
@@ -160,7 +160,7 @@ classdef curbCompetingEdgeTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity832.json')));
-            frame=loadPointCloudFrame(file,832);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,832);cfg=perceptionConfig("Mississippi","offline");
             actual=perceiveFrame(frame,cfg);ids=find(actual.featureMasks.curb);
             testCase.verifyFalse(any(actual.featureMasks.curb(annotation.falsePositiveIndices)));
             near=annotation.rightBoundaryVicinityIndices;

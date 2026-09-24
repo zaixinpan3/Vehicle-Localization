@@ -1,4 +1,4 @@
-function cfg = groundSegmentationConfig()
+function cfg = groundSegmentationConfig(spacing)
 % groundSegmentationConfig: Parameters of slope-grid ground segmentation.
 % The segmentation rasterizes the robust low height of every XY cell,
 % seeds the ground height from flat cells near the vehicle that agree with
@@ -11,13 +11,14 @@ function cfg = groundSegmentationConfig()
 %
 % Output:
 %   cfg: struct consumed by segmentGround
+    if nargin < 1, spacing = pillarGridConfig().voxelSize(1); end
     cfg = struct();
 
     % Sensor-height prior: the LiDAR sits about 1.44 m above the road
     cfg.groundSeedMaxZ = -1.44;
     cfg.slopeGridPriorHeight = -1.44;
     cfg.slopeGridPriorTolerance = 0.35;
-    cfg.slopeGridPriorMinSeedCells = 20;
+    cfg.slopeGridPriorMinSeedCells = latticeTunedValue(spacing, 20, 5);
 
     % Per-cell robust low height on the pillar lattice
     cfg.slopeGridLowOutlierThreshold = 0.35;
@@ -43,9 +44,9 @@ function cfg = groundSegmentationConfig()
     % Smooth flat-component promotion and distance-transform bridging
     cfg.slopeGridSmoothComponentPromotionEnabled = true;
     cfg.slopeGridSmoothComponentBridgeMinCells = 1;
-    cfg.slopeGridSmoothComponentBridgeMaxCells = 300;
+    cfg.slopeGridSmoothComponentBridgeMaxCells = latticeTunedValue(spacing, 300, 75);
     cfg.slopeGridSmoothComponentBridgeMaxHeightRange = 0.45;
-    cfg.slopeGridSmoothComponentBridgeRadiusCells = 8;
+    cfg.slopeGridSmoothComponentBridgeRadiusCells = latticeTunedValue(spacing, 8, 4);
     cfg.slopeGridSmoothComponentBridgeMaxIterations = 4;
     cfg.slopeGridHoleFillWindowSize = 3;
 

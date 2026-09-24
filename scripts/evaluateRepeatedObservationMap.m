@@ -9,7 +9,7 @@ function report = evaluateRepeatedObservationMap(dataRoot, outputFolder, frameIn
     cfg=featureMapBuildConfig(); cfg.logEnabled=false;
     cfg.featureNames=["curb","pole","trafficSign"];
     poses=readFramePoseTable(fullfile(dataRoot,cfg.poseMatchCsvPath),frameIndices);
-    perception=perceptionConfig(); perception.executionMode="offline";
+    perception=perceptionConfig("Mississippi","offline");
     perception.featureNames=cfg.featureNames;
     timer=tic;
     observations=collectFeatureObservations(fullfile(dataRoot,cfg.pointCloudMatPath),frameIndices,poses,perception,cfg);

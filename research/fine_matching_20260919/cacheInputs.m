@@ -6,7 +6,7 @@ function cacheInputs(worker,workers)
     mapCfg=featureMapBuildConfig();posePath=fullfile('data',mapCfg.poseMatchCsvPath);
     n=height(baseline.report.calls);
     frames=(floor(n*(worker-1)/workers)+1):floor(n*worker/workers);
-    poses=readFramePoseTable(posePath,frames);cfg=perceptionConfig('Mississippi');cfg.executionMode="offline";
+    poses=readFramePoseTable(posePath,frames);cfg=perceptionConfig('Mississippi',"offline");
     store=matfile('data/raw/MissisipiPointClouds.mat');
     fineClouds=cell(numel(frames),1);coarseClouds=fineClouds;selectedIndices=cell(numel(frames),3);
     perceptionSeconds=zeros(numel(frames),1);conversionSeconds=perceptionSeconds;counts=zeros(numel(frames),3);

@@ -29,6 +29,10 @@ function perception = perceiveFrame(frame, cfg)
     cfg.offGroundFeatures.useNativeKernels = useNative;
     assert(any(mode == ["coarseProbabilityCloud", "offline"]), ...
         "perception:InvalidExecutionMode", "Use coarseProbabilityCloud or offline.");
+    assert(isfield(cfg.voxel, "executionMode") && string(cfg.voxel.executionMode) == mode, ...
+        "perception:LatticeModeMismatch", ...
+        "cfg.voxel serves %s; build the configuration with perceptionConfig(dataset, ""%s"").", ...
+        string(cfg.voxel.executionMode), mode);
     voxelGrid = pillarizePointCloud(frame, cfg.voxel);
     groundPointIdx = segmentGround(voxelGrid, cfg.groundSegmentation);
     [groundContext, offGroundVoxelGrid] = buildBranchInputs( ...
@@ -237,7 +241,7 @@ function coarseCfg = resolveCoarseProbabilityCloudConfig(cfg)
     if isfield(cfg, "coarseProbabilityCloud") && isstruct(cfg.coarseProbabilityCloud)
         coarseCfg = cfg.coarseProbabilityCloud;
     else
-        coarseCfg = coarseSemanticProbabilityCloudConfig();
+        coarseCfg = coarseSemanticProbabilityCloudConfig(cfg.voxel);
     end
     coarseCfg.semanticNames = validatePerceptionFeatureNames(cfg.featureNames);
     calibration=lidarFrameCalibrationConfig();

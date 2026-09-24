@@ -12,7 +12,7 @@ function captureCoarsePerceptionBaseline(referenceRoot, snapshotFolder, referenc
     cleanup=onCleanup(@() path(originalPath));
     run(fullfile(referenceRoot,'setupVehicleLocalization.m'));
     assert(startsWith(which('perceiveFrame'),char(referenceRoot)),'Wrong reference code on path.');
-    cfg=perceptionConfig(); offlineCfg=cfg; offlineCfg.executionMode="offline";
+    cfg=perceptionConfig(); offlineCfg=perceptionConfig("Mississippi","offline");
     for k=1:numel(indices)
         snapshot=struct('frameIndex',indices(k),'dataset',"mississippi",'split',"development");
         filename='MissisipiPointClouds.mat';

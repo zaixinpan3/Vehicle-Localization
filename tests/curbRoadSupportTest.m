@@ -40,7 +40,7 @@ classdef curbRoadSupportTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbFalsePositive458.json')));
-            frame=loadPointCloudFrame(file,458);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,458);cfg=perceptionConfig("Mississippi","offline");
             actual=perceiveFrame(frame,cfg);
             testCase.verifyFalse(any(actual.featureMasks.curb(annotation.falsePositiveIndices)));
             testCase.verifyEqual(nnz(actual.featureMasks.curb),183);
@@ -58,7 +58,7 @@ classdef curbRoadSupportTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity943.json')));
-            frame=loadPointCloudFrame(file,943);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,943);cfg=perceptionConfig("Mississippi","offline");
             previous=cfg;previous.fine.curbMaximumRoadSurfaceResidualMeters=Inf;
             previous.fine.curbCompetingBoundaryRoadResidualRatio=Inf;
             before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);

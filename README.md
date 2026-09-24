@@ -32,13 +32,19 @@ LiDAR XYZ points, optionally organized (vehicle coordinates)
 ### Perception (`perception/`)
 
 `perceiveFrame(frame, perceptionConfig())` returns `probabilityCloud`,
-`candidates`, and compact source counts. The analysis unit is a 0.3 m XY pillar
-on a fixed lattice: `pillarGridConfig().gridDims` = 334 x 334 pillars with center
-`latticeOffset = [0.1, 0.1]` m, covering [-50, 50.2) m in x and y. This retains
-the cell boundaries used to tune the detector. There is no separate ROI or data
-fit: `pillarizePointCloud` has one lattice, returns outside
-it are ignored, ground segmentation rasters on the same lattice, and the 0.9 m
-coarse output grid shares its origin.
+`candidates`, and compact source counts. The analysis unit is a whole XY pillar
+on a fixed lattice owned by the execution mode
+(`pillarGridConfig(executionMode)`): the online coarse product runs on
+100 x 100 pillars of 0.6 m covering [-29.9, 30.1) m, and the offline product
+keeps 334 x 334 pillars of 0.3 m covering [-50, 50.2) m. Both share the
+`latticeOffset = [0.1, 0.1]` m phase, so cell boundaries stay at -50 + k*0.3 m
+and every coarse pillar is the union of four offline pillars. There is no
+separate ROI or data fit: `pillarizePointCloud` has one lattice per mode,
+returns outside it are ignored, ground segmentation rasters on the same
+lattice, and the coarse output grid (1.2 m online, 0.9 m offline) shares its
+origin. Build a configuration with `perceptionConfig(dataset, executionMode)`;
+every pillar-stage parameter is derived for that lattice (`latticeTunedValue`),
+and `perceiveFrame` rejects a mode switched after construction.
 Every pillar stores its point count, XYZ mean, full XYZ covariance, bounds,
 and available intensity/reflectivity maxima with finite sample counts.
 The coarse path has no Z index, height bins, occupancy runs or finer cells.
@@ -119,7 +125,8 @@ sign Gaussians contribute XY landmark constraints. The estimated pose remains
 and [the invocation-selection validation](research/perception_feature_selection.md).
 
 The coarse product contains normalized mixture weights and empirical XYZ
-means/covariances, aggregated into 0.9 m XY output cells with covariance safeguards.
+means/covariances, aggregated into whole-pillar XY output cells (1.2 m on the
+online 0.6 m lattice, 0.9 m on the offline 0.3 m lattice) with covariance safeguards.
 `components.meanXYZ`, `covarianceXYZ`, and `heightAvailable` retain height and
 its xz/yz coupling. Existing `mean` and `covariance` fields remain the exact XY
 marginal. `registrationSupport.projectSemanticProbabilityCloud(cloud,3)` returns
@@ -311,7 +318,8 @@ are explicit:
 | --- | --- |
 | `perceptionConfig` | `perceiveFrame` (aggregates the four below) |
 | `coarseSemanticProbabilityCloudConfig` | `perceiveCoarseProbabilityCloud`, `buildCoarseSemanticProbabilityCloud` |
-| `pillarGridConfig` | fixed pillar lattice (`gridDims`, `voxelSize`, `latticeOffset`) shared by pillarization, ground segmentation, the coarse cloud and the NDT map extent |
+| `pillarGridConfig(executionMode)` | fixed pillar lattice per execution mode (`gridDims`, `voxelSize`, `latticeOffset`) shared by pillarization, ground segmentation, the coarse cloud and the NDT map extent |
+| `latticeTunedValue` | selects the 0.3 m or 0.6 m value of a pillar-stage parameter inside the stage configs |
 | `structuralPillarConfig` | whole-pillar pole/facade/sign detection |
 | `finePerceptionConfig` | `refinePerceptionCandidates` (offline only) |
 | `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` (`.pyramid` canonical coarse-to-fine levels) |
@@ -378,10 +386,8 @@ Use `designMncavMotionAidedGains` to reproduce the training-only gain search.
 setupVehicleLocalization();                       % add modules to the path
 buildPerceptionKernels();                         % optional; requires a C++ compiler
 frame = loadPointCloudFrame("data/raw/MissisipiPointClouds.mat", 260);
-cfg = perceptionConfig();
-coarse = perceiveFrame(frame, cfg);               % no point feature masks
-cfg.executionMode = "offline";
-fine = perceiveFrame(frame, cfg);
+coarse = perceiveFrame(frame, perceptionConfig());               % 0.6 m pillars, no point masks
+fine = perceiveFrame(frame, perceptionConfig("Mississippi", "offline")); % 0.3 m pillars
 nnz(fine.featureMasks.curb)                       % accepted offline curb points
 
 localCloud = perceiveCoarseProbabilityCloud(frame, perceptionConfig());

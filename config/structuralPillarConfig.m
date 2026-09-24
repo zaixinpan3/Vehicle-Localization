@@ -1,6 +1,7 @@
-function cfg = structuralPillarConfig()
+function cfg = structuralPillarConfig(spacing)
 % structuralPillarConfig: Whole-pillar structural semantics in metric units.
 % XYZ moments, total support and XY neighbors replace all subpillar gates.
+    if nargin < 1, spacing = pillarGridConfig().voxelSize(1); end
     cfg = struct();
 
     % Whole-pillar point-versus-line shape scores (XY spacing comes from pillarGridConfig)
@@ -34,7 +35,7 @@ function cfg = structuralPillarConfig()
     cfg.facadeLineFillGapVoxels = 15;
     cfg.facadeLineMinLengthVoxels = 18;
     cfg.splitValidationEnabled = false;
-    cfg.minAssignedPixels = 10;
+    cfg.minAssignedPixels = latticeTunedValue(spacing, 10, 5);
     cfg.minPeakLengthMeters = 0.0;
     cfg.mergeThetaTolDeg = 2.0;
     cfg.mergeRhoTolMeters = 1.0;
@@ -47,10 +48,10 @@ function cfg = structuralPillarConfig()
 
 
     cfg.facadeRefineEnabled = false;
-    cfg.facadeSupportRadiusCells = 2;
+    cfg.facadeSupportRadiusCells = latticeTunedValue(spacing, 2, 1);
     cfg.pole = struct('minimumPoints',12,'minimumHeight',1.5, ...
         'minimumHeightStd',0.30,'maximumTiltDegrees',20, ...
-        'maximumRadialStd',0.15,'minimumPointScore',0.70, ...
+        'maximumRadialStd',latticeTunedValue(spacing,0.15,0.18),'minimumPointScore',0.70, ...
         'maximumLineScore',0.90,'minimumContextFraction',0.58, ...
         'maximumFootprintSpanCells',2);
 end

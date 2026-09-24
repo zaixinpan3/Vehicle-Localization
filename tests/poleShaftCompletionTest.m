@@ -34,7 +34,7 @@ classdef poleShaftCompletionTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,1047);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,1047);cfg=perceptionConfig("Mississippi","offline");
             cfg.fine.poleWideSurfaceMinimumAxisStd=Inf;
             cfg.fine.poleShortSupportWideSurfaceMinimumAxisStd=Inf;
             excludedBoundary=cfg;excludedBoundary.fine.poleShortSupportHeight=2-eps(2);
@@ -48,7 +48,7 @@ classdef poleShaftCompletionTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,1047);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,1047);cfg=perceptionConfig("Mississippi","offline");
             beforeCfg=cfg;beforeCfg.fine.poleWideSurfaceMinimumAxisStd=Inf;
             beforeCfg.fine.poleShortSupportWideSurfaceMinimumAxisStd=Inf;
             beforeCfg.fine.poleRecoveryMaximumTiltDegrees=2;

@@ -17,7 +17,7 @@ function [probabilityCloud, diagnostics] = perceiveCoarseProbabilityCloud(frame,
     end
     if ~isfield(cfg, "coarseProbabilityCloud") || ...
             ~isstruct(cfg.coarseProbabilityCloud)
-        cfg.coarseProbabilityCloud = coarseSemanticProbabilityCloudConfig();
+        cfg.coarseProbabilityCloud = coarseSemanticProbabilityCloudConfig(cfg.voxel);
     end
     cfg.executionMode = "coarseProbabilityCloud";
     cfg.coarseProbabilityCloud.storeDiagnostics = nargout > 1;

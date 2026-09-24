@@ -42,7 +42,7 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
                     frame = loadPointCloudFrame(matPath, frameEntry.frameIdx);
                     profile="Mississippi";
                     if frameEntry.facadeDetectionEnabled, profile="Downtown"; end
-                    cfg = perceptionConfig(profile); cfg.executionMode = "offline";
+                    cfg=perceptionConfig(profile,"offline");
                     perception = perceiveFrame(frame, cfg);
                     expected=expectedFinePerception(profile,frameEntry.frameIdx);
                     for name = string(fieldnames(expected.featureMasks)).'
@@ -63,8 +63,7 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
             cfg.featureNames = ["curb", "pole", "trafficSign"];
             cfg.logEnabled = false;
             cfg.frameIndices = reference.frameIndices;
-            perceptionCfg = perceptionConfig();
-            perceptionCfg.executionMode = "offline";
+            perceptionCfg=perceptionConfig("Mississippi","offline");
             perceptionCfg.featureNames = cfg.featureNames;
             featureData = collectFeatureObservations(matPath, reference.frameIndices, reference.poseTable, perceptionCfg, cfg);
             probabilityCloudMap = buildSlidingWindowMap(featureData, cfg);

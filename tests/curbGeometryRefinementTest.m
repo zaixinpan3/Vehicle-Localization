@@ -9,7 +9,7 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
         function rejectsReportedNearlyPlanarPoints(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             path=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(path));
-            frame=loadPointCloudFrame(path,91);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(path,91);cfg=perceptionConfig("Mississippi","offline");
             cfg.fine.curbContinuationLengthMeters=0;
             cfg.fine.curbMinimumOutputSupportCells=0;
             cfg.fine.curbMinimumBoundaryNormalFraction=0;
@@ -80,7 +80,7 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
         function recordedContinuationRecoversVicinityWithoutReplacingPoints(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             path=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(path));
-            frame=loadPointCloudFrame(path,91);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(path,91);cfg=perceptionConfig("Mississippi","offline");
             baselineCfg=cfg;baselineCfg.fine.curbContinuationLengthMeters=0;
             baseline=perceiveFrame(frame,baselineCfg);actual=perceiveFrame(frame,cfg);
             testCase.verifyTrue(all(actual.featureMasks.curb(baseline.featureMasks.curb)));
@@ -114,7 +114,7 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
         function recordedFrameWithExhaustedAnchorsCompletes(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             path=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(path));
-            frame=loadPointCloudFrame(path,1012);cfg=perceptionConfig('Mississippi');cfg.executionMode="offline";
+            frame=loadPointCloudFrame(path,1012);cfg=perceptionConfig('Mississippi',"offline");
             actual=perceiveFrame(frame,cfg);
             testCase.verifySize(actual.featureMasks.curb,[numel(frame.x),1]);
             testCase.verifyGreaterThan(nnz(actual.featureMasks.curb),0);
@@ -184,7 +184,7 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
         function recordedCloudAcceptsFlatteningAndPermutation(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             path=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(path));
-            frame=loadPointCloudFrame(path,425);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(path,425);cfg=perceptionConfig("Mississippi","offline");
             reference=perceiveFrame(frame,cfg);count=numel(frame.x);
             stream=RandStream('mt19937ar','Seed',425);permutation=randperm(stream,count);
             unordered=frame;
@@ -201,7 +201,7 @@ classdef curbGeometryRefinementTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             matPath=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(matPath));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','curbBoundaryVicinity.json')));
-            frame=loadPointCloudFrame(matPath,425);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(matPath,425);cfg=perceptionConfig("Mississippi","offline");
             actual=perceiveFrame(frame,cfg);ids=find(actual.featureMasks.curb);
             testCase.verifyFalse(any(actual.featureMasks.curb(annotation.falsePositiveIndices)));
             for side=[1 -1]

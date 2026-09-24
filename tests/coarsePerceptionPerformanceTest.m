@@ -106,7 +106,7 @@ classdef coarsePerceptionPerformanceTest < matlab.unittest.TestCase
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,frameIndex);
-            cfg=perceptionConfig(); cfg.executionMode="offline"; cfg.executionBackend="matlab";
+            cfg=perceptionConfig("Mississippi","offline"); cfg.executionBackend="matlab";
             reference=perceiveFrame(frame,cfg);
             cfg.executionBackend="native"; native=perceiveFrame(frame,cfg);
             testCase.verifyEqual(native.featureMasks,reference.featureMasks);
@@ -119,7 +119,7 @@ classdef coarsePerceptionPerformanceTest < matlab.unittest.TestCase
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,frameIndex);
-            cfg=perceptionConfig(); cfg.executionMode="offline"; cfg.executionBackend="matlab";
+            cfg=perceptionConfig("Mississippi","offline"); cfg.executionBackend="matlab";
             cfg.compactGroundRaster=false; full=perceiveFrame(frame,cfg);
             cfg.compactGroundRaster=true; compact=perceiveFrame(frame,cfg);
             testCase.verifyEqual(compact.candidates,full.candidates);

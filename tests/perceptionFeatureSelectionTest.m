@@ -27,14 +27,15 @@ classdef perceptionFeatureSelectionTest < matlab.unittest.TestCase
         function everySubsetControlsCandidatesCloudAndFineDecisions(testCase,channels)
             cfg=perceptionConfig("Downtown"); cfg.featureNames=channels;
             online=perceiveFrame(testCase.Frame,cfg);
-            cfg.executionMode="offline"; offline=perceiveFrame(testCase.Frame,cfg);
+            offlineCfg=perceptionConfig("Downtown","offline"); offlineCfg.featureNames=channels;
+            offline=perceiveFrame(testCase.Frame,offlineCfg);
             testCase.verifyEqual(online.featureNames,channels);
             testCase.verifyEqual(online.candidates.semanticNames,channels(:));
             testCase.verifyEqual(online.probabilityCloud.semanticNames,channels(:));
             testCase.verifyTrue(all(ismember(online.probabilityCloud.components.semanticName,channels)));
             testCase.verifyEqual(sort(string(fieldnames(offline.refinement))),sort(channels(:)));
-            testCase.verifyEqual(offline.candidates,online.candidates);
-            testCase.verifyEqual(offline.probabilityCloud,online.probabilityCloud);
+            testCase.verifyEqual(offline.candidates.semanticNames,online.candidates.semanticNames);
+            testCase.verifyEqual(offline.probabilityCloud.semanticNames,online.probabilityCloud.semanticNames);
             testCase.verifyTrue(unrequestedMasksAreEmpty(offline,channels));
         end
         function signOnlyDoesNotReadUnrelatedDetectorParameters(testCase)
@@ -54,7 +55,7 @@ classdef perceptionFeatureSelectionTest < matlab.unittest.TestCase
             testCase.verifyTrue(all(ismember(p.probabilityCloud.components.semanticName,cfg.featureNames)));
         end
         function curbOnlyPreservesCurbPoints(testCase)
-            cfg=perceptionConfig(); cfg.executionMode="offline";
+            cfg=perceptionConfig("Mississippi","offline");
             reference=perceiveFrame(testCase.Frame,cfg);
             cfg.featureNames="curb";
             actual=perceiveFrame(testCase.Frame,cfg);
@@ -62,7 +63,7 @@ classdef perceptionFeatureSelectionTest < matlab.unittest.TestCase
             testCase.verifyFalse(isfield(actual.refinement,'roadMarking'));
         end
         function defaultOutputsContainOnlyRetainedChannels(testCase)
-            cfg=perceptionConfig();cfg.executionMode="offline";
+            cfg=perceptionConfig("Mississippi","offline");
             cfg.coarseProbabilityCloud.storeDiagnostics=true;
             actual=perceiveFrame(testCase.Frame,cfg);
             testCase.verifyFalse(isfield(actual.featureMasks,'roadMarking'));

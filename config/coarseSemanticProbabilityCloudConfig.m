@@ -1,26 +1,29 @@
-function cfg = coarseSemanticProbabilityCloudConfig()
+function cfg = coarseSemanticProbabilityCloudConfig(voxelCfg)
 % coarseSemanticProbabilityCloudConfig: Parameters for the fast, strictly
 % pillar-classified 2D semantic probability cloud. Feature decisions stay on
 % the ground-cell and vertical-column rasters; selected cell geometry is
 % accumulated into regularized XYZ components with an XY marginal for distribution-to-
-% distribution matching.
+% distribution matching. Output cells are whole multiples of the pillar
+% lattice: three 0.3 m offline pillars (0.9 m) or two 0.6 m coarse pillars (1.2 m).
 %
 % Input:
-%   none
+%   voxelCfg: pillar lattice from pillarGridConfig; defaults to the coarse lattice
 %
 % Output:
 %   cfg: struct consumed by perceiveCoarseProbabilityCloud and
 %       buildCoarseSemanticProbabilityCloud
-    extent = pillarGridExtent(pillarGridConfig());
+    if nargin < 1, voxelCfg = pillarGridConfig(); end
+    extent = pillarGridExtent(voxelCfg);
+    spacing = double(voxelCfg.voxelSize(1));
     cfg = struct();
     cfg.frameCalibration = lidarFrameCalibrationConfig();
     cfg.xMin = extent(1);
     cfg.xMax = extent(2);
     cfg.yMin = extent(3);
     cfg.yMax = extent(4);
-    % Three source cells per output cell preserve exact 0.3 m boundaries from
+    % Whole source cells per output cell preserve exact pillar boundaries from
     % the shared lattice origin; the last output column/row may be partial.
-    cfg.resolution = 0.9;
+    cfg.resolution = latticeTunedValue(spacing, 0.9, 1.2);
     cfg.coordinateFrame = "sensorLocalXY";
     % Optional known IMU tilt: transform sufficient statistics before BEV
     % projection, while classifying in the original vehicle XY pillars.

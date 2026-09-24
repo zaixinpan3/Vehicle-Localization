@@ -35,7 +35,9 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
     calibration=lidarFrameCalibrationConfig();
     if isfield(perceptionCfg,'frameCalibration'), calibration=validateLidarFrameCalibration(perceptionCfg.frameCalibration); end
 
-    perceptionCfg.executionMode = "offline";
+    assert(string(perceptionCfg.executionMode) == "offline", ...
+        "VehicleLocalization:OfflinePerceptionRequired", ...
+        "Mapping consumes offline point masks; build perceptionCfg with perceptionConfig(dataset, ""offline"").");
     perceptionCfg.featureNames = featureNames;
     mappingSupport.logStep(cfg, "feature.collect", "frameCount=%d | featureCount=%d", numRequestedFrames, numFeatures);
     for frameListIdx = 1:numRequestedFrames

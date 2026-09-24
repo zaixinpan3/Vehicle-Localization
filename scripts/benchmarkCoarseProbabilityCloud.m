@@ -7,7 +7,7 @@ function results = benchmarkCoarseProbabilityCloud(dataRoot, frameIndices)
     frameIndices=frameIndices(:);
     coarseSeconds=zeros(size(frameIndices)); fineSeconds=coarseSeconds;
     coarseBytes=coarseSeconds; fineBytes=coarseSeconds; components=coarseSeconds;
-    cfg=perceptionConfig(); fineCfg=cfg; fineCfg.executionMode="offline";
+    cfg=perceptionConfig(); fineCfg=perceptionConfig("Mississippi","offline");
     for k=1:numel(frameIndices)
         frame=loadPointCloudFrame(fullfile(dataRoot,'raw','MissisipiPointClouds.mat'),frameIndices(k));
         coarse=perceiveFrame(frame,cfg); fine=perceiveFrame(frame,fineCfg); %#ok<NASGU>

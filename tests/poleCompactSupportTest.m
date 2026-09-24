@@ -31,7 +31,7 @@ classdef poleCompactSupportTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,384);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,384);cfg=perceptionConfig("Mississippi","offline");
             beforeCfg=cfg;beforeCfg.fine.poleIndependentMaximumNeighborAxisRms=0;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             picks=[63136 62049 62053 62374 62759 63144 62378 62763 63148 62382 62767];
@@ -69,5 +69,5 @@ function [frame,cfg]=scene(testCase)
     root=fileparts(fileparts(mfilename('fullpath')));
     file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
     testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-    frame=loadPointCloudFrame(file,1137);cfg=perceptionConfig();cfg.executionMode="offline";
+    frame=loadPointCloudFrame(file,1137);cfg=perceptionConfig("Mississippi","offline");
 end

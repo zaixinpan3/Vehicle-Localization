@@ -23,12 +23,16 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             testCase.verifyTrue(any(mapCfg.featureNames=="trafficSign"));
         end
         function signGaussianRetainsNonreflectivePillarHeight(testCase)
-            [frame,cfg,expected]=signScene();
+            [frame,cfg,expected,fineCfg]=signScene();
             coarse=perceiveFrame(frame,cfg);
-            cfg.executionMode="offline"; fine=perceiveFrame(frame,cfg);
+            fine=perceiveFrame(frame,fineCfg);
             c=coarse.probabilityCloud.components;
             testCase.verifyFalse(isfield(coarse,'refinement'));
-            testCase.verifyEqual(fine.candidates,coarse.candidates);
+            % Each product labels the one sign pillar of its own lattice.
+            testCase.verifyNumElements(coarse.candidates.pillarIndices{1},1);
+            testCase.verifyNumElements(fine.candidates.pillarIndices{1},1);
+            testCase.verifyEqual(coarse.candidates.geometry.cellSize,[0.6 0.6]);
+            testCase.verifyEqual(fine.candidates.geometry.cellSize,[0.3 0.3]);
             testCase.verifyEqual(c.semanticName,"trafficSign");
             testCase.verifyEqual(double(c.count),size(expected,1));
             testCase.verifyEqual(c.meanXYZ,mean(expected,1),'AbsTol',1e-10);
@@ -37,10 +41,9 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(fine.refinement.trafficSign.numEvaluated,1);
         end
         function fineSignCandidatesHonorConfiguredIntensity(testCase)
-            [frame,cfg,~]=signScene();
+            [frame,~,~,cfg]=signScene();
             frame.intensity(end)=1300;
             cfg.offGroundFeatures.trafficSignIntensityThreshold=1200;
-            cfg.executionMode="offline";
             result=perceiveFrame(frame,cfg);
             testCase.verifyEqual(nnz(result.featureMasks.trafficSign),1);
             testCase.verifyTrue(result.featureMasks.trafficSign(end));
@@ -57,9 +60,8 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(fine.refinement.trafficSign.evaluatedPointIndices,[1;2]);
         end
         function defaultSignThresholdRejectsBoundaryInBothStages(testCase)
-            [frame,cfg,~]=signScene();
+            [frame,~,~,cfg]=signScene();
             frame.intensity(end)=1800;
-            cfg.executionMode="offline";
             result=perceiveFrame(frame,cfg);
             testCase.verifyEqual(cfg.offGroundFeatures.trafficSignIntensityThreshold,1800);
             testCase.verifyFalse(any(result.featureMasks.trafficSign));
@@ -81,7 +83,7 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             file=fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','raw',dataset+'PointClouds.mat');
             testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,frameIndex);
-            cfg=perceptionConfig(dataset); cfg.executionMode="offline";
+            cfg=perceptionConfig(dataset,"offline");
             fine=perceiveFrame(frame,cfg);
             reference=expectedFinePerception(dataset,frameIndex);
             audit=fine.refinement.trafficSign;
@@ -93,8 +95,7 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
                 sort(facadeAudit(fine).candidatePointIndices(facadeAudit(fine).accepted)));
         end
         function disabledChannelsStayEmptyInBothProducts(testCase)
-            [frame,cfg,~]=signScene(); cfg.featureNames=["curb","pole"];
-            cfg.executionMode="offline";
+            [frame,~,~,cfg]=signScene(); cfg.featureNames=["curb","pole"];
             p=perceiveFrame(frame,cfg);
             testCase.verifyFalse(any(p.featureMasks.trafficSign|p.featureMasks.facade));
             testCase.verifyFalse(any(ismember(p.probabilityCloud.components.semanticName,["facade","trafficSign"])));
@@ -105,7 +106,7 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             file=fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','raw','downTownPointClouds.mat');
             testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,200);
-            cfg=perceptionConfig("Downtown"); cfg.executionMode="offline"; cfg.executionBackend="matlab";
+            cfg=perceptionConfig("Downtown","offline"); cfg.executionBackend="matlab";
             reference=perceiveFrame(frame,cfg); cfg.executionBackend="native";
             actual=perceiveFrame(frame,cfg);
             testCase.verifyEqual(actual.candidates,reference.candidates);
@@ -154,15 +155,18 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
     end
 end
 
-function [frame,cfg,expected]=signScene()
+function [frame,cfg,expected,fineCfg]=signScene()
     [x,y]=meshgrid(-15:0.3:15,-10:0.3:10);
     ground=[x(:),y(:),-1.44*ones(numel(x),1)];
-    % One pillar of the configured lattice: x in [10,10.3), y in [4.9,5.2).
+    % One pillar of both lattices: x in [10,10.3) and y in [4.9,5.2) on the
+    % offline lattice, inside x in [9.7,10.3) and y in [4.9,5.5) on the coarse one.
     expected=[10.06 4.96 0.5;10.08 4.98 1.5;10.09 4.99 3.5;10.1 5.0 4.5];
     xyz=[ground;expected]; intensity=zeros(size(xyz,1),1); intensity(end)=1900;
     frame=struct('x',xyz(:,1),'y',xyz(:,2),'z',xyz(:,3),'intensity',intensity);
     cfg=perceptionConfig(); cfg.featureNames="trafficSign";
     cfg.frameCalibration.rotation=eye(3); cfg.frameCalibration.translation=[0 0 0];
+    fineCfg=perceptionConfig("Mississippi","offline"); fineCfg.featureNames="trafficSign";
+    fineCfg.frameCalibration=cfg.frameCalibration;
 end
 
 function [points,offGround,n]=facadeScene()

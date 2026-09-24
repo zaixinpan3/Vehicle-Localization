@@ -19,8 +19,8 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyFalse(any(contains(string(fieldnames(grid)),["Voxel","voxelStatistics"])));
             testCase.verifySize(grid.pointPillarSub,[3 2]);
         end
-        function defaultLatticePreservesTunedCellBoundaries(testCase)
-            cfg=pillarGridConfig();
+        function offlineLatticePreservesTunedCellBoundaries(testCase)
+            cfg=pillarGridConfig("offline");
             testCase.verifyFalse(isfield(cfg,'roiLimits'));
             testCase.verifyEqual(cfg.gridDims,[334 334]);
             testCase.verifyEqual(pillarGridExtent(cfg),[-50 50.2 -50 50.2],'AbsTol',1e-12);
@@ -33,6 +33,23 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(grid.pointIndices,int32([1;2;5]));
             testCase.verifyEqual(grid.pointPillarSub,int32([1 1;334 1;207 184]));
             testCase.verifyEqual(grid.numFilteredPoints,3);
+        end
+        function coarseLatticeNestsInsideTheOfflineLattice(testCase)
+            cfg=pillarGridConfig();
+            testCase.verifyEqual(cfg.executionMode,"coarseProbabilityCloud");
+            testCase.verifyEqual(cfg.voxelSize,[0.6 0.6]);
+            testCase.verifyEqual(cfg.gridDims,[100 100]);
+            testCase.verifyEqual(pillarGridExtent(cfg),[-29.9 30.1 -29.9 30.1],'AbsTol',1e-12);
+            % Every coarse boundary -29.9 + 0.6 k is an offline boundary -50 + 0.3 j.
+            offline=pillarGridExtent(pillarGridConfig("offline"));
+            k=0:100; j=(-29.9+0.6*k-offline(1))/0.3;
+            testCase.verifyEqual(j,round(j),'AbsTol',1e-9);
+            p=[-29.9 -29.9 0;30.09 -29.89 1;30.11 0 2;0 -29.91 3;12 5 4];
+            grid=pillarizePointCloud(p,cfg);
+            testCase.verifyEqual(grid.gridConfig.dims,[100 100]);
+            testCase.verifyEqual(grid.pointIndices,int32([1;2;5]));
+            testCase.verifyEqual(grid.pointPillarSub,int32([1 1;100 1;70 59]));
+            testCase.verifyError(@() pillarGridConfig("legacyFull"),'perception:InvalidExecutionMode');
         end
         function obsoleteRoiLimitsAreRejected(testCase)
             cfg=pillarGridConfig(); cfg.roiLimits=[0 1 0 1];
@@ -81,7 +98,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             file=fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,260);
-            cfg=perceptionConfig(); cfg.executionMode="offline";
+            cfg=perceptionConfig("Mississippi","offline");
             result=perceiveFrame(frame,cfg);
             grid=pillarizePointCloud(frame,cfg.voxel);
             row=find(grid.pointIndices==63010);

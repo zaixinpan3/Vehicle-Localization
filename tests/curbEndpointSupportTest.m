@@ -44,7 +44,7 @@ classdef curbEndpointSupportTest < matlab.unittest.TestCase
         function reportedFrame28TipIsRejectedWithoutScanOrder(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
-            frame=loadPointCloudFrame(file,28);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,28);cfg=perceptionConfig("Mississippi","offline");
             beforeCfg=cfg;beforeCfg.fine.curbMaximumEndpointNormalAngleDegrees=90;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             reported=[36671 36735 37180 37116 36474 36410];

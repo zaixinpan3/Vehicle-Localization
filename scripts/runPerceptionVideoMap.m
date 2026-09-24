@@ -59,7 +59,7 @@ function result = runPerceptionVideoMap(outputFolder, fig, cfg)
     assert(isscalar(frameCounter),'Figure must contain at most one frame counter.');
     frameCounter.Visible='on';
     if isfield(cfg,'videoFrameCounter') && ~cfg.videoFrameCounter,frameCounter.Visible='off';end
-    perceptionCfg=perceptionConfig('Mississippi');perceptionCfg.executionMode="offline";
+    perceptionCfg=perceptionConfig('Mississippi',"offline");
     perceptionCfg.featureNames=cfg.featureNames;
     if isfield(cfg,'frameCalibration'),perceptionCfg.frameCalibration=cfg.frameCalibration;end
     save(fullfile(outputFolder,'run_configuration.mat'),'viewState','cfg','perceptionCfg','frameRate','imageSize','frames');

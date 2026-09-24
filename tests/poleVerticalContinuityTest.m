@@ -31,7 +31,7 @@ classdef poleVerticalContinuityTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,1137);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,1137);cfg=perceptionConfig("Mississippi","offline");
             % Isolate point-run trimming from the candidate-level continuity gate.
             cfg.fine.poleShortSupportHeight=0;
             beforeCfg=cfg;beforeCfg.fine.poleMaximumVerticalGapMeters=Inf;
@@ -46,7 +46,7 @@ classdef poleVerticalContinuityTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');testCase.assumeTrue(isfile(file));
             annotation=jsondecode(fileread(fullfile(root,'tests','reference','poleOutputContinuity615.json')));
-            frame=loadPointCloudFrame(file,annotation.frameIndex);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,annotation.frameIndex);cfg=perceptionConfig("Mississippi","offline");
             actual=perceiveFrame(frame,cfg);
             expected=false(numel(frame.x),1);expected(annotation.baselinePoleIndices)=true;
             expected(annotation.detachedFragmentIndices)=false;

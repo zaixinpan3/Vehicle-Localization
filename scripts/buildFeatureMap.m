@@ -30,7 +30,7 @@ function [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg)
     end
     framePoseTable = readFramePoseTable(poseMatchCsvPath, frameIndices);
 
-    perceptionCfg = perceptionConfig();
+    perceptionCfg = perceptionConfig("Mississippi", "offline");
     if isfield(cfg,'frameCalibration'), perceptionCfg.frameCalibration=validateLidarFrameCalibration(cfg.frameCalibration); end
     perceptionCfg.featureNames = cfg.featureNames;
     featureData = collectFeatureObservations(matPath, frameIndices, framePoseTable, perceptionCfg, cfg);

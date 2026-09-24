@@ -12,7 +12,7 @@ function report=evaluateWholePillarPerception(snapshotFolder)
         item=load(fullfile(files(k).folder,files(k).name));
         dataset="Mississippi";
         if startsWith(files(k).name,'downtown'), dataset="Downtown"; end
-        cfg=perceptionConfig(dataset); cfg.executionMode="offline";
+        cfg=perceptionConfig(dataset,"offline");
         fine=perceiveFrame(item.frame,cfg);
         for name=cfg.featureNames
             a=fine.featureMasks.(name); b=item.baseline.featureMasks.(name);
@@ -23,7 +23,7 @@ function report=evaluateWholePillarPerception(snapshotFolder)
             candidateRows(end+1,:)={dataset,item.frameIndex,name, ...
                 numel(intersect(a,b)),numel(setdiff(a,b)),numel(setdiff(b,a))}; %#ok<AGROW>
         end
-        cfg.executionMode="coarseProbabilityCloud"; perceiveFrame(item.frame,cfg);
+        cfg=perceptionConfig(dataset); perceiveFrame(item.frame,cfg);
         seconds=zeros(1,5);
         for repeat=1:5
             timer=tic; perceiveFrame(item.frame,cfg); seconds(repeat)=toc(timer);

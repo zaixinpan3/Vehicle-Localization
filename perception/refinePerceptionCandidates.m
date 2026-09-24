@@ -225,7 +225,7 @@ function [context,candidates]=prepareFineStructuralCandidates(frame,context,cand
     for k=1:numel(common), fineCfg.(common{k})=cfg.offGroundFeatures.(common{k}); end
     fineCfg.useNativeKernels=isfield(cfg.offGroundFeatures,'useNativeKernels') && cfg.offGroundFeatures.useNativeKernels;
     fineCfg.poleOccupiedLayerMinPoints=cfg.fine.poleSupportMinimumPoints;
-    cloudCfg=coarseSemanticProbabilityCloudConfig();
+    cloudCfg=coarseSemanticProbabilityCloudConfig(cfg.voxel);
     cloudCfg.semanticNames=candidates.semanticNames;
     offGround=analyzeFineStructuralCandidates(fineGrid,fineCfg,cloudCfg);
     fineCandidates=buildPerceptionCandidates(context.voxelGrid,context.ground,offGround,candidates.semanticNames);

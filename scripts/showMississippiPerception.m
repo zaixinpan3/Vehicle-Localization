@@ -31,9 +31,9 @@ function result = showMississippiPerception(frameIndex, matPath, mode, cfg)
     if isempty(fieldnames(cfg))
         dataset="Mississippi";
         if contains(lower(datasetName),"downtown"), dataset="Downtown"; end
-        cfg=perceptionConfig(dataset);
+        cfg=perceptionConfig(dataset, mode);
     end
-    cfg.executionMode = mode;
+    assert(string(cfg.executionMode) == mode, "cfg must be built by perceptionConfig(dataset, mode).");
     timer = tic;
     perception = perceiveFrame(frame, cfg);
     elapsedSeconds = toc(timer);

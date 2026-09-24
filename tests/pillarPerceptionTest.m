@@ -16,7 +16,7 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(pillars.statistics.count,[2;1]);
         end
         function fineLayersFollowTheSuppliedHeightReference(testCase)
-            cfg=pillarGridConfig();
+            cfg=pillarGridConfig("offline");
             points=[10 2 -0.8;10.1 2.1 4;10.1 2.1 -0.3;11 3 0.5;NaN 0 0];
             pillars=pillarizePointCloud(points,cfg);
             grid=voxelizePillars(pillars,0.5,-1);
@@ -66,7 +66,7 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(fine.refinement.trafficSign.evaluatedPointIndices,[1;2]);
             testCase.verifyEqual(fine.refinement.trafficSign.accepted,false(2,1));
         end
-        function onlineAndOfflineShareCandidates(testCase)
+        function onlineAndOfflineUseTheirOwnLattices(testCase)
             dataRoot=string(getenv('VEHICLE_LOCALIZATION_DATA_ROOT'));
             testCase.assumeTrue(isfile(fullfile(dataRoot,'raw','MissisipiPointClouds.mat')));
             frame=loadPointCloudFrame(fullfile(dataRoot,'raw','MissisipiPointClouds.mat'),260);
@@ -76,10 +76,16 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyFalse(isfield(online,'featureMasks'));
             testCase.verifyFalse(isfield(online,'voxelGrid'));
             testCase.verifyEqual(online.candidates.productType,"sparseSemanticPillarCandidates");
+            testCase.verifyEqual(online.candidates.geometry.cellSize,[0.6 0.6]);
+            testCase.verifyEqual(online.candidates.geometry.mapSize,[100 100]);
+            testCase.verifyEqual(online.probabilityCloud.geometry.resolution,1.2);
+            % Switching the mode after construction leaves the lattice behind.
             cfg.executionMode="offline";
-            offline=perceiveFrame(frame,cfg);
-            testCase.verifyEqual(offline.candidates,online.candidates);
-            testCase.verifyEqual(offline.probabilityCloud.components,online.probabilityCloud.components);
+            testCase.verifyError(@() perceiveFrame(frame,cfg),'perception:LatticeModeMismatch');
+            offline=perceiveFrame(frame,perceptionConfig("Mississippi","offline"));
+            testCase.verifyEqual(offline.candidates.geometry.cellSize,[0.3 0.3]);
+            testCase.verifyEqual(offline.candidates.geometry.mapSize,[334 334]);
+            testCase.verifyEqual(offline.probabilityCloud.geometry.resolution,0.9);
             for name=["curb","pole"]
                 audit=offline.refinement.(name);
                 testCase.verifyEqual(audit.evaluatedPointIndices,audit.candidatePointIndices);
@@ -92,7 +98,7 @@ classdef pillarPerceptionTest < matlab.unittest.TestCase
             dataRoot=string(getenv('VEHICLE_LOCALIZATION_DATA_ROOT'));
             matPath=fullfile(dataRoot,'raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(matPath));
-            cfg=perceptionConfig(); cfg.executionMode="offline";
+            cfg=perceptionConfig("Mississippi","offline");
             for frameIndex=[260 300 326 370 450 550 700 850 1000 1150 150 600 900 1100 200 500 800 1050]
                 frame=loadPointCloudFrame(matPath,frameIndex);
                 actual=perceiveFrame(frame,cfg);

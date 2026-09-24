@@ -30,7 +30,7 @@ function inspect_poles()
         row=readFramePoseTable(fullfile(pwd,'data',mapCfg.poseMatchCsvPath),frame);[~,tilt]=poseRowToPlanarPose(row);
         cfg.coarseProbabilityCloud.projectionRotation=tilt;
         [current,~]=perceiveCoarseProbabilityCloud(input,cfg);
-        cfg.executionMode="offline";fine=perceiveFrame(input,cfg);
+        fineCfg=perceptionConfig("Mississippi","offline");fineCfg.coarseProbabilityCloud.projectionRotation=tilt;fine=perceiveFrame(input,fineCfg);
         raw=[double(input.x(:)),double(input.y(:)),double(input.z(:))];
         calibrated=raw*current.projectionRotation.'+current.projectionTranslation;
         for k=find(queries>boundaries(frameSlot)&queries<=boundaries(frameSlot+1))

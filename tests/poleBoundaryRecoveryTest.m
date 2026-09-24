@@ -73,7 +73,7 @@ function [frame,cfg]=recordedScene(testCase,index)
     root=fileparts(fileparts(mfilename('fullpath')));
     file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
     testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-    frame=loadPointCloudFrame(file,index);cfg=perceptionConfig();cfg.executionMode="offline";
+    frame=loadPointCloudFrame(file,index);cfg=perceptionConfig("Mississippi","offline");
 end
 
 function verifyPermutation(testCase,frame,cfg,actual,seed)

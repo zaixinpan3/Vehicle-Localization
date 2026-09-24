@@ -10,7 +10,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,28);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,28);cfg=perceptionConfig("Mississippi","offline");
             beforeCfg=cfg;beforeCfg.fine.poleShortSupportWideSurfaceMinimumAxisStd=0.12;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             testCase.verifyTrue(before.featureMasks.pole(37328));
@@ -31,7 +31,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
         end
         function rejectsReportedFalsePositive(testCase)
             frame=recordedFrame(testCase);
-            cfg=perceptionConfig(); cfg.executionMode="offline";
+            cfg=perceptionConfig("Mississippi","offline");
             baselineCfg=cfg; baselineCfg.fine.poleShortSupportMaximumRadialRms=Inf;
             baselineCfg.fine.poleLowContrastMaximumRadius=Inf;
             baselineCfg.fine.poleIsolationMinimumCoreFraction=0;
@@ -68,7 +68,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
             frame=loadPointCloudFrame(file,687);
-            cfg=perceptionConfig();cfg.executionMode="offline";
+            cfg=perceptionConfig("Mississippi","offline");
             previous=cfg;previous.fine.poleIsolationMinimumCoreFraction=0.75;
             before=perceiveFrame(frame,previous);actual=perceiveFrame(frame,cfg);
             testCase.verifyTrue(before.featureMasks.pole(47135));
@@ -87,7 +87,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','MissisipiPointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
-            frame=loadPointCloudFrame(file,901);cfg=perceptionConfig();cfg.executionMode="offline";
+            frame=loadPointCloudFrame(file,901);cfg=perceptionConfig("Mississippi","offline");
             beforeCfg=cfg;beforeCfg.fine.poleShortSupportMaximumRadialRms=Inf;
             before=perceiveFrame(frame,beforeCfg);actual=perceiveFrame(frame,cfg);
             testCase.verifyTrue(before.featureMasks.pole(17708));
@@ -108,7 +108,7 @@ classdef finePoleRejectionTest < matlab.unittest.TestCase
         end
         function pointOrderDoesNotChangePoleDecisions(testCase)
             frame=recordedFrame(testCase);
-            cfg=perceptionConfig(); cfg.executionMode="offline"; cfg.featureNames="pole";
+            cfg=perceptionConfig("Mississippi","offline"); cfg.featureNames="pole";
             actual=perceiveFrame(frame,cfg);
             state=rng; cleanup=onCleanup(@() rng(state));
             rng(91047906,'twister'); order=randperm(numel(frame.x));

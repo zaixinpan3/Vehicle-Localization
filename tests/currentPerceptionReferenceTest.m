@@ -14,7 +14,7 @@ classdef currentPerceptionReferenceTest < matlab.unittest.TestCase
             file=fullfile(root,'data','raw',frameCase.dataset+'PointClouds.mat');
             testCase.assumeTrue(isfile(file),'Recorded source data are required.');
             frame=loadPointCloudFrame(file,frameCase.frameIndex);
-            cfg=perceptionConfig(frameCase.dataset); cfg.executionMode="offline";
+            cfg=perceptionConfig(frameCase.dataset,"offline");
             expected=expectedFinePerception(frameCase.dataset,frameCase.frameIndex);
             actual=perceiveFrame(frame,cfg);
             testCase.verifyEqual(actual.featureMasks,expected.featureMasks);
