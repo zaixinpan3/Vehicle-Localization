@@ -96,6 +96,10 @@ two solutions in the body frame of the reference pose.
    run by ranking the two attractors (the GNSS-aided match is 29 cm at frame 840 and
    under 16 cm from frame 842 on; the fused output stays under 14 cm).
 
+Follow-up (2026-09-24): [the mode-ambiguity study](../alias_hypotheses_20260924/README.md)
+evaluates map-alias hypotheses, cloud canonicalization and a canonical map
+pyramid against this failure.
+
 Remedies, in order of expected value: merge tile-duplicate and split pole/sign
 components at map publication; in LiDAR-only operation, solve from a second
 seed displaced along the road when a class has several map components within
