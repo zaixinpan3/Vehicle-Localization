@@ -21,7 +21,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     h=prepared.highRate;t=h.time;
     prior=load('output/mncav_inspva_observer_20260915/experiment.mat','lateralDesign');
     lateralDesign=prior.lateralDesign;
-    lateral=runLateralVelocityObserver(h,lateralDesign,lateralDesign.cfg);
+    lateral=runLateralVelocityObserver(h,lateralDesign,lateralObserverConfig("mncav"));
     [calls,matching]=readMatchingInputs(options.MatchingFolder);
     calls=calls(calls.time>=t(1) & calls.time<=t(end),:);
     n=height(calls);information=zeros(3,3,n);

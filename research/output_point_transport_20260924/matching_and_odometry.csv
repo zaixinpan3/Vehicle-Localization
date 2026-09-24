@@ -1,0 +1,3 @@
+label,acceptedMatches,matchingRmseCm,matchingMaxCm,matchingAbove30cm,halfSecondOdometryDriftRmsCm,lateralVelocityRmseMps
+before (observer point),1167,11.5059950563134,33.3491352834659,1,15.1779317474857,0.313079940102072
+after (output point),1168,11.2519493205923,36.788519719929,1,13.3731641498038,0.257417880494023

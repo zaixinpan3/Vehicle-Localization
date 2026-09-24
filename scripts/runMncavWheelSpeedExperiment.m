@@ -30,7 +30,7 @@ function report=runMncavWheelSpeedExperiment(outputFolder)
     wheel=estimateWheelLongitudinalSpeed(d,selectedCfg);
     assert(all(wheel.valid(h.time>=native.time(1))),'Unexpected unbridged wheel outage.');
     data=stored.data;data.highRate.longitudinalSpeed=max(0,wheel.longitudinalSpeed);
-    lateral=runLateralVelocityObserver(data.highRate,stored.lateralDesign,stored.lateralDesign.cfg);
+    lateral=runLateralVelocityObserver(data.highRate,stored.lateralDesign,lateralObserverConfig("mncav"));
     estimate=runFullLocalizationObserver(data,stored.lateralDesign,stored.cfg,LateralInputs=lateral);
     ref=readtable(fullfile(outputFolder,'12-09-31','reference.csv'));
     referenceVx=interp1(ref.time,ref.referenceVx,h.time,'linear');assert(all(isfinite(referenceVx)));

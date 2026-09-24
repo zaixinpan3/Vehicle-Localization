@@ -16,7 +16,7 @@ function report=runMississippiMapMatchingExperiment(outputFolder,options)
     parameterFile="output/mncav_interface_audit_20260916/vehicle_parameters.json";
     [prepared,~,~]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
     saved=load('output/mncav_inspva_observer_20260915/experiment.mat','lateralDesign');
-    lateral=runLateralVelocityObserver(prepared.highRate,saved.lateralDesign,saved.lateralDesign.cfg);
+    lateral=runLateralVelocityObserver(prepared.highRate,saved.lateralDesign,lateralObserverConfig("mncav"));
     h=prepared.highRate;
     motion=struct('time',h.time,'longitudinalSpeed',h.longitudinalSpeed, ...
         'lateralVelocity',lateral.lateralVelocity,'yawRate',h.yawRate, ...

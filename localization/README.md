@@ -61,15 +61,25 @@ sampled nonlinear implementation. See the
 [current calibration, gain and accuracy report](../research/mncav_bestpos_alignment_20260917/README.md)
 and the [discrete equations](../research/mncav_synchronous_bestpos_20260917/README.md).
 
-Longitudinal speed remains exclusively wheel derived.
+Longitudinal speed remains exclusively wheel derived. The lateral observer
+exports its velocity and side slip at the INSPVA output point that the pose
+state, map and GNSS correction share: its master state belongs to the IMU
+location, and `lateralObserverConfig("mncav").outputPoint.forwardOffsetM`
+(2.36 m, `config/mncavMotionOutputPoint.json`, fitted on the separate
+12-11-24 drive) transports it by `vyOutput = vyObserver - d*r`. The same
+transported velocity drives the source-window odometry. The IMU accelerations
+still enter the global observer at the IMU location; their lever-arm terms
+(`rDot*d`, `r^2*d`) are not compensated.
 `prepareWheelMotionInputs` reads wheel rates, steering and IMU with no alternate
 speed fallback. Missing/expired wheel aiding is an error, except the declared
 short stationary startup. The latest output directory is
-`output/mncav_coarse_localization_20260918`. On 1170 raw scans, recursive D2D
-accepts 1072 full poses. The 1169 motion-covered observer outputs have fused
-position RMSE 10.3445 cm and heading RMSE 0.7062 degrees. GNSS-only position
-RMSE is 8.8252 cm, so fusion does not improve position error on this replay;
-it does improve heading. See the [coarse-only replay report](../research/mncav_coarse_localization_20260918/README.md).
+`output/mncav_coarse_localization_20260924`. On 1170 raw scans, the 1169
+observer outputs have fused position RMSE 6.05 cm (5.53 cm after the 2 s
+initialization transient) and heading RMSE 0.39 degrees; GNSS-only is 6.33 cm
+and LiDAR-only 18.78 cm. See
+[the output-point transport record](../research/output_point_transport_20260924/README.md)
+and, for the earlier 10.3445 cm result without GNSS aiding or the transport,
+the [coarse-only replay report](../research/mncav_coarse_localization_20260918/README.md).
 The earlier 7.8474 cm experiment used stored fine features and per-frame
 reference matching seeds. It is a historical comparison, not an isolated
 coarse-versus-fine test. Both experiments use a same-drive map and shared

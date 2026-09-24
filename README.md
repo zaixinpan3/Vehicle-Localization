@@ -249,9 +249,16 @@ hands over the side-slip angle and its rate as exogenous known signals through
 the track-angle rate `q = r_m + betaDot`, so the two stages cascade without a
 loop. `runLateralVelocityObserver` supplies exactly this interface:
 
-* `sideSlipAngle` and `sideSlipAngleRate`, supplied by one persistent
-  second-order interface state whose command blends smoothly between zero and
-  the valid `atan2(vy,vx)` value;
+* `lateralVelocity`, `sideSlipAngle` and `sideSlipAngleRate` **at the declared
+  output point**. The observer integrates the vehicle IMU, so its master state
+  is the lateral velocity at the IMU location. `cfg.outputPoint.forwardOffsetM`
+  transports it by rigid-body kinematics, `vyOutput = vyObserver - d*r`, to the
+  point that the pose state, map and GNSS correction use. The MnCAV profile
+  loads `config/mncavMotionOutputPoint.json` (2.36 m, fitted on seconds 1--40
+  of the separate 12-11-24 drive by `calibrateMncavMotionOutputPoint`); the
+  reference profile exports at the observer point. The persistent second-order
+  side-slip interface tracks the direction of that output-point velocity.
+  `observerPointLateralVelocity` retains the untransported state;
 * `longitudinalSpeedRate`, rebuilt as `ax + vy*r` because the IMU reports a
   specific force and not the speed derivative;
 * `mode`, correction-channel histories, and `dynamicModelEvaluated`, which make
@@ -314,7 +321,7 @@ are explicit:
 | `temporalStabilityMapConfig` | `buildTemporalStabilityGmmMap` |
 | `featureMapBuildConfig` | `buildFeatureMap` |
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |
-| `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` |
+| `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` (`.outputPoint` from `mncavMotionOutputPoint.json` for MnCAV) |
 | `wheelSpeedObserverConfig` | `estimateWheelLongitudinalSpeed`, `prepareWheelMotionInputs` |
 | `improvedObserverConfig` | `designImprovedObserverGains`, `runImprovedVehicleObserver` |
 | `fullObserverConfig` | `designFullObserverGains`, `runFullLocalizationObserver` |
@@ -334,14 +341,18 @@ with steering/IMU compensation. No vehicle-speed or Twist alternative is
 available. Export `wheel_speed_report.csv`, `imu.csv` and `steering.csv` using
 `scripts/extractVehicleReplaySensors.py`; the current full experiment reads
 `output/mncav_wheel_only_20260916/sensors` and writes
-`output/mncav_coarse_localization_20260918`. All 1170 scans use fresh whole-pillar
+`output/mncav_coarse_localization_20260924`. All 1170 scans use fresh whole-pillar
 coarse perception and recursive D2D; online localization never runs point-level
 fine refinement. The offline map remains fixed. Missing or expired wheel input is an explicit
 preparation error. Use `validateFullLocalizationObserver` for the associated
-checks. The [coarse localization report](research/mncav_coarse_localization_20260918/README.md)
-records 1072 accepted poses and fused position RMSE 10.3445 cm over 1169
-motion-covered outputs. GNSS-only position RMSE is 8.8252 cm; fusion improves
-heading but not position in this run. The [aligned BESTPOS report](research/mncav_bestpos_alignment_20260917/README.md)
+checks. The [current production record](research/output_point_transport_20260924/README.md)
+gives fused position RMSE 6.05 cm over 1169 outputs (5.53 cm after the
+initialization transient, heading 0.39 deg), GNSS-only 6.33 cm and LiDAR-only
+18.78 cm, with closed-loop GNSS-aided hypothesis selection and the lateral
+velocity transported to the INSPVA output point. The earlier
+[coarse localization report](research/mncav_coarse_localization_20260918/README.md)
+(10.3445 cm fused, 8.8252 cm GNSS-only) predates GNSS aiding and the output-point
+transport. The [aligned BESTPOS report](research/mncav_bestpos_alignment_20260917/README.md)
 documents the retained independent-drive point correction and gains. Its
 historical 7.8474 cm result used fine features and per-frame reference seeds,
 so this is not an isolated comparison of perception modes. The same-drive map

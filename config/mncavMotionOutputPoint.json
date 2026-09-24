@@ -1,0 +1,38 @@
+{
+  "identifier": "mncav-motion-output-point-12-11-24-seconds-1-40-v1",
+  "forwardOffsetM": 2.3597988944583816,
+  "model": "vyOutput = vyObserver - forwardOffsetM*yawRate; the lateral observer/IMU point lies forwardOffsetM metres ahead of the INSPVA output point",
+  "residualOffsetMps": 0.0040525102735783462,
+  "fitDrive": "raw_data_2024-06-07-12-11-24_0",
+  "fitReceiverIntervalSeconds": [
+    1,
+    40
+  ],
+  "fitSamples": 3901,
+  "evaluationDriveUsed": false,
+  "runtimeReferenceUsed": false,
+  "heldOut": [
+    {
+      "population": "12-11-24 fit (1-40 s)",
+      "samples": 3901,
+      "rawRmseMps": 0.24696812442595531,
+      "transportedRmseMps": 0.053801480590109307,
+      "locallyFittedOffsetM": 2.3597988944583816
+    },
+    {
+      "population": "12-11-24 held out (>40 s)",
+      "samples": 3692,
+      "rawRmseMps": 0.0945084126635568,
+      "transportedRmseMps": 0.059160026669956428,
+      "locallyFittedOffsetM": 1.6613065367463842
+    },
+    {
+      "population": "12-09-31 evaluation drive (held out)",
+      "samples": 11403,
+      "rawRmseMps": 0.27466691929506537,
+      "transportedRmseMps": 0.25385156386869023,
+      "locallyFittedOffsetM": 2.3245549906487724
+    }
+  ],
+  "interpretation": "Empirical effective lever arm absorbing installation geometry and lateral-model error; not a surveyed IMU position. The 12-09-31 drive carries an additional constant lateral offset left to the online bias learner."
+}

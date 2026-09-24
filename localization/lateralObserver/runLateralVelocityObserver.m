@@ -32,6 +32,11 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     end
     assert(isfield(cfg,"hybrid"),"VehicleLocalization:MissingHybridConfiguration", ...
         "Use the current lateralObserverConfig.");
+    assert(isfield(cfg,"outputPoint") && isfield(cfg.outputPoint,"forwardOffsetM") && ...
+        isscalar(cfg.outputPoint.forwardOffsetM) && isfinite(double(cfg.outputPoint.forwardOffsetM)), ...
+        "VehicleLocalization:MissingOutputPointConfiguration", ...
+        "Use the current lateralObserverConfig with an outputPoint.forwardOffsetM entry.");
+    forwardOffset = double(cfg.outputPoint.forwardOffsetM);
     measurements = normalizeMeasurements(measurements);
     settings = validateRuntimeConfiguration(cfg, design);
     layout = stateLayout();
@@ -131,7 +136,11 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     estimate.stateNames = ["lateralVelocity", "lateralAccelerationBias"];
     estimate.dynamicState = dynamicHistory;
     estimate.dynamicStateNames = ["lateralVelocity", "yawRate"];
-    estimate.lateralVelocity = masterHistory(:, 1);
+    % The master state is the lateral velocity at the observer (IMU) point.
+    % Rigid-body transport exports it at the declared output point.
+    estimate.observerPointLateralVelocity = masterHistory(:, 1);
+    estimate.lateralVelocity = masterHistory(:, 1) - forwardOffset .* measurements.yawRate;
+    estimate.outputPoint = cfg.outputPoint;
     estimate.lateralAccelerationBias = masterHistory(:, 2);
     estimate.yawRate = dynamicHistory(:, 2);
     estimate.lateralVelocityRate = lateralVelocityRate;
@@ -226,11 +235,11 @@ function [derivative, diagnostics] = hybridDerivative(augmentedState, sample, ..
 
     masterDerivative = masterPrediction + sum(correctionState, 2);
     betaDerivative = sideSlipDerivative(masterState, ...
-        augmentedState(layout.sideSlip), sample, cfg.hybrid.sideSlip);
+        augmentedState(layout.sideSlip), sample, cfg.hybrid.sideSlip, cfg.outputPoint);
     derivative = [masterDerivative; dynamicDerivative; correctionDerivative(:); betaDerivative];
 
     if nargout > 1
-        [betaCommand, betaCommandValid] = sideSlipCommandAt(masterState, sample, cfg.hybrid.sideSlip);
+        [betaCommand, betaCommandValid] = sideSlipCommandAt(masterState, sample, cfg.hybrid.sideSlip, cfg.outputPoint);
         diagnostics = struct();
         diagnostics.dynamicInnovation = dynamicInnovation;
         diagnostics.gainNorm = norm(dynamicGain);
@@ -263,9 +272,9 @@ function [derivative, innovation, gain] = dynamicObserverDerivative( ...
         nonlinearTerm + (gain * innovation);
 end
 
-function derivative = sideSlipDerivative(masterState, sideSlipState, sample, sideSlipCfg)
+function derivative = sideSlipDerivative(masterState, sideSlipState, sample, sideSlipCfg, outputPoint)
 % sideSlipDerivative Evaluate the persistent second-order interface filter.
-    [command, ~] = sideSlipCommandAt(masterState, sample, sideSlipCfg);
+    [command, ~] = sideSlipCommandAt(masterState, sample, sideSlipCfg, outputPoint);
     naturalFrequency = double(sideSlipCfg.naturalFrequency);
     dampingRatio = double(sideSlipCfg.dampingRatio);
     angleError = wrapAngleDifference(command - sideSlipState(1));
@@ -274,14 +283,16 @@ function derivative = sideSlipDerivative(masterState, sideSlipState, sample, sid
         (2.0 .* dampingRatio .* naturalFrequency .* sideSlipState(2))];
 end
 
-function [command, valid] = sideSlipCommandAt(masterState, sample, sideSlipCfg)
-% sideSlipCommandAt Form atan2 only where the velocity direction is valid.
+function [command, valid] = sideSlipCommandAt(masterState, sample, sideSlipCfg, outputPoint)
+% sideSlipCommandAt Form atan2 of the output-point velocity where its direction is valid.
     valid = sample.longitudinalSpeed >= double(sideSlipCfg.validSpeed);
     if valid
         participation = quinticStep(sample.longitudinalSpeed, ...
             double(sideSlipCfg.validSpeed), ...
             double(sideSlipCfg.fullParticipationSpeed));
-        command = participation .* atan2(masterState(1), sample.longitudinalSpeed);
+        outputPointLateralVelocity = masterState(1) - ...
+            double(outputPoint.forwardOffsetM) .* sample.yawRate;
+        command = participation .* atan2(outputPointLateralVelocity, sample.longitudinalSpeed);
     else
         command = 0.0;
     end
@@ -356,7 +367,7 @@ function augmentedState = initialAugmentedState(measurements, cfg, settings, lay
     firstSample = sampleAt(measurements, 1, 0.0);
     sideSlipState = double(cfg.hybrid.sideSlip.initialState(:));
     if isempty(sideSlipState)
-        [initialCommand, ~] = sideSlipCommandAt(masterState, firstSample, cfg.hybrid.sideSlip);
+        [initialCommand, ~] = sideSlipCommandAt(masterState, firstSample, cfg.hybrid.sideSlip, cfg.outputPoint);
         sideSlipState = [initialCommand; 0.0];
     end
     augmentedState = zeros(layout.stateCount, 1);

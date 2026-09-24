@@ -23,6 +23,17 @@ classdef mncavVehicleConfigTest < matlab.unittest.TestCase
             testCase.verifyEqual(model.B(1),p.vehicle.frontCorneringStiffness/p.vehicle.mass,AbsTol=1e-12);
             testCase.verifyEqual(model.B(2),p.vehicle.lf*p.vehicle.frontCorneringStiffness/p.vehicle.yawInertia,AbsTol=1e-12);
         end
+        function mncavProfileLoadsTheCalibratedOutputPoint(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            stored=jsondecode(fileread(fullfile(root,'config','mncavMotionOutputPoint.json')));
+            cfg=lateralObserverConfig("mncav");
+            testCase.verifyEqual(cfg.outputPoint.forwardOffsetM,stored.forwardOffsetM);
+            testCase.verifyGreaterThan(cfg.outputPoint.forwardOffsetM,1);
+            testCase.verifyLessThan(cfg.outputPoint.forwardOffsetM,4);
+            testCase.verifyFalse(stored.evaluationDriveUsed);
+            testCase.verifyFalse(stored.runtimeReferenceUsed);
+            testCase.verifyEqual(lateralObserverConfig("reference").outputPoint.forwardOffsetM,0);
+        end
         function archivedReferenceRemainsExplicitlySeparate(testCase)
             old=lateralObserverConfig("reference");current=lateralObserverConfig("mncav");
             testCase.verifyEqual(old.vehicle.mass,1575,AbsTol=1e-12);

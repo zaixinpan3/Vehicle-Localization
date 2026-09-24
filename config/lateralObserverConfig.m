@@ -42,6 +42,18 @@ function cfg = lateralObserverConfig(profile)
         cfg.vehicleParameterProvenance=parameters;
     end
 
+    % Exported lateral velocity and side slip refer to the output point that
+    % the pose state, map and GNSS correction use. The observer integrates the
+    % IMU, so its own point is forwardOffsetM ahead of the output point:
+    % vyOutput = vyObserver - forwardOffsetM*yawRate. The reference profile
+    % exports at the observer point; the MnCAV offset was calibrated on the
+    % separate 12-11-24 drive by calibrateMncavMotionOutputPoint.
+    cfg.outputPoint = struct("forwardOffsetM", 0.0, "identifier", "observer-point");
+    if profile=="mncav"
+        cfg.outputPoint = jsondecode(fileread(fullfile(fileparts(mfilename("fullpath")), ...
+            "mncavMotionOutputPoint.json")));
+    end
+
     % Scheduling parameter rho = [Vx; 1/Vx] and the design grid over it.
     % The LMI is affine in the longitudinal acceleration through Pdot, so
     % the two extreme accelerations already cover the whole interval.

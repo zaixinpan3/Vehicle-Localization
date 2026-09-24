@@ -43,8 +43,9 @@ CG sees \(v_y - r|d|\). The observer applied the CG value directly. Its online
 LiDAR velocity-bias learner cannot represent this yaw-rate-dependent term, and
 it is inactive below 5 m/s.
 
-`calibrateLateralLeverArm.m` fits the lever arm **on the separate 12-11-24
-drive only** (seconds 1–40, INSPVA velocity), using the production lateral
+`scripts/calibrateMncavMotionOutputPoint.m` (originally
+`calibrateLateralLeverArm.m` in this folder) fits the lever arm **on the
+separate 12-11-24 drive only** (seconds 1–40, INSPVA velocity), using the production lateral
 observer design:
 
 | Population | Raw vy RMSE | Lever arm removed | Locally fitted lever arm |
@@ -102,6 +103,16 @@ in the production GNSS-aided closed loop:
 The remedies also improve the normal fused mode. They are not a LiDAR-only
 trade-off.
 
+## Adoption
+
+The lever-arm transport was adopted into production on 2026-09-24: the
+lateral observer now exports at the configured output point
+(`lateralObserverConfig("mncav").outputPoint`), so the global observer and the
+source-window odometry both receive the transported velocity. See
+[the production update](../output_point_transport_20260924/README.md). The
+gain scale, bias threshold and relative-height settings tested here were not
+adopted.
+
 ## Answer and remaining limit
 
 Without any GNSS, position RMSE improves from 24.1 cm to **16.5 cm**, and the
@@ -130,7 +141,7 @@ produced its source cache and observer inputs:
 ```matlab
 addpath(pwd); setupVehicleLocalization; addpath('research/lidar_only_20260923');
 diagnoseLidarOnly;          % seed/matching separation, reference-seeded ceiling
-calibrateLateralLeverArm;   % separate-drive lever arm -> lever_arm_calibration.json
+calibrateMncavMotionOutputPoint;  % separate-drive lever arm -> config/mncavMotionOutputPoint.json
 runLidarOnlyVariants;       % no-GNSS observer variants
 runLidarOnlyGraph;          % no-GNSS switchable pose graph
 checkFusedMode;             % remedies with GNSS available

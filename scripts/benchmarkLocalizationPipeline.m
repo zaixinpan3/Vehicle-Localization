@@ -25,7 +25,7 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
     [prepared,~,~]=prepareMncavObserverReplay('output/mncav_wheel_only_20260916/sensors', ...
         'output/mncav_interface_audit_20260916/vehicle_parameters.json',table(),0,IncludeOdom=false);
     saved=load('output/mncav_inspva_observer_20260915/experiment.mat','lateralDesign');
-    lateral=runLateralVelocityObserver(prepared.highRate,saved.lateralDesign,saved.lateralDesign.cfg);
+    lateral=runLateralVelocityObserver(prepared.highRate,saved.lateralDesign,lateralObserverConfig("mncav"));
     h=prepared.highRate;
     motion=integrateRecordedPlanarMotion(h.time, ...
         [h.longitudinalSpeed,lateral.lateralVelocity,h.yawRate],allPoses.receiver_time_sec);
