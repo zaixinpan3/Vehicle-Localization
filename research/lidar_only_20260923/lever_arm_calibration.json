@@ -1,0 +1,11 @@
+{
+  "leverArmM": -2.3597988944583816,
+  "offsetMps": 0.0040525102735783462,
+  "fitDrive": "raw_data_2024-06-07-12-11-24_0",
+  "fitSeconds": [
+    1,
+    40
+  ],
+  "evaluationDriveUsed": false,
+  "model": "vyPoint = vyObserver + leverArmM*yawRate; leverArmM is the output point's forward offset from the observer point"
+}
