@@ -26,6 +26,12 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
             buildPillarShapeScores(maps.supportEvidence,maps.occupiedMask,cfg,maps.dx,maps.dy);
     end
     maps.moments=projectStatistics(stats,prod(mapSize),cloudCfg);
+    % Pole evidence: the pillar's XY density peak and the height it spans.
+    maps.coreFraction=zeros(mapSize); maps.coreHeight=zeros(mapSize);
+    if any(cloudCfg.semanticNames=="pole")
+        [maps.coreFraction(ids),maps.coreHeight(ids)]=computePillarDensityCore( ...
+            pillars.points,pillars.pointPillarLinIdx,geometry,cfg.pole.densityPeakBinMeters,cfg.pole.coreRadius);
+    end
     facade=struct('mask',false(mapSize));
     if any(cloudCfg.semanticNames=="facade")
         facadeCfg=cfg;

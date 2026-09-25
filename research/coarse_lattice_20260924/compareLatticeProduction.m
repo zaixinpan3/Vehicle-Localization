@@ -1,14 +1,15 @@
 function results=compareLatticeProduction()
-% compareLatticeProduction Production chain on the 0.3 m and the 0.6 m coarse lattice.
+% compareLatticeProduction Production chain on the 0.3 m lattice and two 0.6 m pole gatings.
 % Both chains use fresh coarse perception, the same map, matcher, gains and
 % calibration; only the coarse pillar lattice and its stage parameters differ.
 % Reference poses are used for evaluation only. RMSE after the common 2 s
 % initialization transient, as in comparePyramidProduction.
     setupVehicleLocalization;dest=fileparts(mfilename('fullpath'));
     runs={"0.3 m lattice",'output/mncav_coarse_localization_20260924b'; ...
-        "0.6 m lattice",'output/mncav_coarse_localization_20260924c'};
-    rows=cell(0,10);stage=cell(2,1);
-    for j=1:2
+        "0.6 m lattice, radial-std pole gate",'output/mncav_coarse_localization_20260924c'; ...
+        "0.6 m lattice, density-core pole gate",'output/mncav_coarse_localization_20260924d'};
+    rows=cell(0,10);stage=cell(size(runs,1),1);
+    for j=1:size(runs,1)
         E=load(fullfile(runs{j,2},'observer','experiment.mat'),'runs','reference');ref=E.reference;t=E.runs{1}.estimate.time;post=t>=t(1)+2;
         for k=1:numel(E.runs)
             est=E.runs{k}.estimate;e=vecnorm(est.position-ref(:,1:2),2,2);

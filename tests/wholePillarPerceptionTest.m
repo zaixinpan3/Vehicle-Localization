@@ -86,6 +86,41 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(sum(result.columnMaps.statistics.count),24);
             testCase.verifyFalse(isfield(result.columnMaps,'voxelStatistics'));
         end
+        function densityCoreLocatesTheShaftInsideAWidePillar(testCase)
+            % 30 shaft returns on a 0.12 m circle plus 12 returns spread over
+            % the 0.6 m pillar: the peak holds the shaft, not the clutter.
+            angle=linspace(0,2*pi,31).'; angle(end)=[];
+            shaft=[1.6+0.06*cos(angle),1.6+0.06*sin(angle),linspace(-1,3,30).'];
+            clutter=[1.3+0.6*rand(12,1),1.3+0.6*rand(12,1),0.5+0.2*randn(12,1)];
+            geometry=struct('origin',[1.3 1.3],'cellSize',[0.6 0.6],'mapSize',[1 1]);
+            [fraction,height]=computePillarDensityCore([shaft;clutter],ones(42,1),geometry,0.10,0.15);
+            testCase.verifyGreaterThanOrEqual(fraction,30/42);
+            testCase.verifyEqual(height,4,'AbsTol',0.5);
+            [fraction,height]=computePillarDensityCore(clutter,ones(12,1),geometry,0.10,0.15);
+            testCase.verifyLessThan(fraction,0.6);
+            testCase.verifyLessThan(height,1.5);
+            testCase.verifyError(@() computePillarDensityCore(shaft,ones(30,1),geometry,0,0.15), ...
+                'perception:InvalidDensityCore');
+        end
+        function shaftSharingItsPillarWithClutterStaysAPole(testCase)
+            rng(7);
+            cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
+            angle=linspace(0,2*pi,41).'; angle(end)=[];
+            shaft=[1.6+0.05*cos(angle),1.6+0.05*sin(angle),linspace(-1,3,40).'];
+            clutter=[1.3+0.6*rand(16,1),1.3+0.6*rand(16,1),0.3+0.3*randn(16,1)];
+            grid=pillarizePointCloud([shaft;clutter],cfg);
+            cloudCfg=coarseSemanticProbabilityCloudConfig(); cloudCfg.semanticNames="pole";
+            structural=structuralPillarConfig(cfg.voxelSize(1));
+            result=analyzeStructuralPillars(grid,structural,cloudCfg);
+            testCase.verifyEqual(nnz(result.poleCellMask),1);
+            % The total scatter alone would have rejected the shared pillar.
+            radial=sqrt(sum(var([shaft;clutter],1)));
+            testCase.verifyGreaterThan(radial,0.18);
+            % Without the shaft the same clutter is not a pole.
+            clutterOnly=pillarizePointCloud([clutter;clutter+[0.01 0.01 2]],cfg);
+            result=analyzeStructuralPillars(clutterOnly,structural,cloudCfg);
+            testCase.verifyFalse(any(result.poleCellMask,'all'));
+        end
         function horizontalDistributionIsNotAPole(testCase)
             cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
             x=linspace(1.21,1.49,20).'; y=ones(size(x))*1.35;

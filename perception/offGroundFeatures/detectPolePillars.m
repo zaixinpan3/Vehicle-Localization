@@ -1,6 +1,9 @@
 function candidates=detectPolePillars(maps,facadeMask,cfg)
 % detectPolePillars: Whole-pillar XYZ extent and compact XY context.
 % Metric height and raw point support replace all subpillar occupancy gates.
+% A core pillar also concentrates its returns at one XY density peak that
+% spans a pole-like height (computePillarDensityCore), so a shaft sharing a
+% wide pillar with foliage or brackets is not rejected by its total scatter.
 % Candidate footprints join whole neighbors without subdividing any pillar.
     stats=maps.statistics; ids=double(stats.pillarIndices);
     covariance=stats.covarianceXYZ;
@@ -13,7 +16,9 @@ function candidates=detectPolePillars(maps,facadeMask,cfg)
         stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.minimumHeight & ...
         covariance(:,6)>=cfg.minimumHeightStd^2 & ...
         vecnorm(slope,2,2)<=tand(cfg.maximumTiltDegrees) & ...
-        radialVariance<=cfg.maximumRadialStd^2;
+        radialVariance<=cfg.maximumRadialStd^2 & ...
+        maps.coreFraction(ids)>=cfg.minimumCoreFraction & ...
+        maps.coreHeight(ids)>=cfg.minimumCoreHeight;
     core=core & eligible & maps.lineScore<=cfg.maximumLineScore;
     support=eligible & maps.pillarCounts>=3 & maps.pillarZRange>=0.5;
     [footprint,context,mask,ratio,componentSum,contextSum]=selectPillarFootprints( ...
