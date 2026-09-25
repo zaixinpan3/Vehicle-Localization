@@ -1,8 +1,9 @@
 % runLateralObserverDesign: Synthesize the LPV lateral-velocity observer and
 % exercise it on the synthetic scenario. The synthesis solves the gridded
-% H2 LMI over the configured speed and longitudinal acceleration ranges,
-% re-checks the recovered gains against the original certificate, and the
-% scenario then reports the estimation error under measurement noise.
+% H2 LMI over the configured speed range for the three vertex gains of the
+% scheduling triangle, re-checks their barycentric blend against the
+% original certificate, and the scenario then reports the estimation error
+% under measurement noise.
 % Requires YALMIP and an SDP solver (SeDuMi by default) on the MATLAB path.
 %
 % Input:
@@ -20,7 +21,7 @@ else
 end
 
 design = designLateralObserverGains(cfg);
-fprintf("tau = %.4g | eta = %.4g | H2 bound mu = %.5g\n", design.tau, design.eta, design.h2Bound);
+fprintf("tau = %.4g | H2 bound mu = %.5g\n", design.tau, design.h2Bound);
 fprintf("worst certificate eigenvalue = %.3e (negative definite required)\n", design.maxCertificateMargin);
 fprintf("slowest error mode = %.3f 1/s\n", design.maxErrorEigenvalueRealPart);
 

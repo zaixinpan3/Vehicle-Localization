@@ -1,8 +1,8 @@
 function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
 % The vehicle group defines the 2-DOF lateral bicycle model; the scheduling
-% group defines the speed range covered by the polytope and the design grid
-% over speed and longitudinal acceleration; the synthesis group holds the
+% group defines the speed range covered by the polytope and the speed grid
+% on which the synthesis LMIs are imposed; the synthesis group holds the
 % Lipschitz bound, the error weighting, and the LMI solver settings; the
 % observer group configures the online integration; the hybrid group defines
 % the division-free master estimator and its bumpless correction channels;
@@ -54,14 +54,14 @@ function cfg = lateralObserverConfig(profile)
             "mncavMotionOutputPoint.json")));
     end
 
-    % Scheduling parameter rho = [Vx; 1/Vx] and the design grid over it.
-    % The LMI is affine in the longitudinal acceleration through Pdot, so
-    % the two extreme accelerations already cover the whole interval.
+    % Scheduling parameter rho = [Vx; 1/Vx] and the speed grid over it. The
+    % gain is affine in the barycentric coordinates of rho on the triangle
+    % over speedRange, so the synthesis returns three vertex gains and the
+    % grid only fixes where the LMIs are imposed. The Lyapunov matrix is
+    % constant, so the certificate holds for any longitudinal acceleration.
     cfg.scheduling = struct();
     cfg.scheduling.speedRange = [5.0, 30.0];
-    cfg.scheduling.longitudinalAccelerationRange = [-3.0, 3.0];
     cfg.scheduling.speedGridCount = 9;
-    cfg.scheduling.accelerationGridCount = 2;
 
     % H2 synthesis: Lipschitz bound of the unmodeled nonlinearity, the
     % error weighting Q of the performance output z = Q^(1/2) e, and the
@@ -72,7 +72,6 @@ function cfg = lateralObserverConfig(profile)
     cfg.synthesis.tauCandidates = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0];
     cfg.synthesis.pFloor = 1.0e-4;
     cfg.synthesis.pCeiling = 1.0e6;
-    cfg.synthesis.etaFloor = 1.0e-6;
     % Minimizing mu pushes the solution onto the constraint boundary, so
     % strictnessEpsilon is what buys a real margin in the certificate that
     % designLateralObserverGains re-checks afterwards.

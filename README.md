@@ -237,9 +237,11 @@ division-free master state `[v_y, b_ay]`. It propagates
 body-frame bicycle state `[v_y, r]`, with steering as input and `[a_y, r]` from
 the IMU as output, but is evaluated only inside its certified positive-speed
 interval. Both LPV matrices are affine in `rho = [Vx; 1/Vx]` and are represented
-exactly on a triangle around the scheduling arc. Its gain is synthesized from a
-parameter-dependent Lyapunov function by `designLateralObserverGains`, which
-also re-checks the recovered gains against the original certificate.
+exactly on a triangle around the scheduling arc. `designLateralObserverGains`
+synthesizes one gain per triangle vertex from a quadratic Lyapunov function,
+`scheduleLateralObserverGain` blends the three with the barycentric coordinates
+of the current speed, and the synthesis re-checks that blend against the
+original certificate at every design speed.
 
 Stationary zero-velocity information, a soft crawl-speed kinematic constraint,
 and the hidden LPV lateral-velocity estimate enter the master through separate

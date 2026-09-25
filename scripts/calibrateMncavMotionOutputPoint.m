@@ -7,10 +7,10 @@ function calibration=calibrateMncavMotionOutputPoint()
 % the offset; the rest of that drive and the 12-09-31 evaluation drive are
 % reported as held-out checks only. Writes config/mncavMotionOutputPoint.json.
     root=setupVehicleLocalization();
-    prior=load(fullfile(root,'output','mncav_inspva_observer_20260915','experiment.mat'),'lateralDesign');
+    prior=load(fullfile(root,'tests','reference','mncavLateralObserverDesign.mat'),'design');
     % Run the stored design at its own point; the calibrated output point is
     % the product of this script, so it cannot be an input here.
-    design=prior.lateralDesign;lateralCfg=design.cfg;
+    design=prior.design;lateralCfg=design.cfg;
     lateralCfg.outputPoint=struct('forwardOffsetM',0,'identifier',"observer-point");
     parameters=jsondecode(fileread(fullfile(root,'output','mncav_interface_audit_20260916','vehicle_parameters.json')));
     drives={"raw_data_2024-06-07-12-11-24_0","output/mncav_wheel_only_20260916/calibration_sensors", ...

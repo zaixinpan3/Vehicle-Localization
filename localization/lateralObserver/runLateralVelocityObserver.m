@@ -259,8 +259,7 @@ function [derivative, innovation, gain] = dynamicObserverDerivative( ...
 % dynamicObserverDerivative Evaluate the certified reciprocal-speed branch.
     rho = [sample.longitudinalSpeed; 1.0 ./ sample.longitudinalSpeed];
     [A, C] = evaluateLateralModel(design.model, rho);
-    speedRate = sample.longitudinalAcceleration + (state(1) .* sample.yawRate);
-    gain = scheduleLateralObserverGain(design, sample.longitudinalSpeed, speedRate);
+    gain = scheduleLateralObserverGain(design, sample.longitudinalSpeed);
     measuredOutput = [sample.lateralAcceleration; sample.yawRate];
     predictedOutput = (C * state) + (design.model.D .* sample.steeringAngle);
     innovation = measuredOutput - predictedOutput;
@@ -443,12 +442,13 @@ end
 
 function settings = validateRuntimeConfiguration(cfg, design)
 % validateRuntimeConfiguration Check dimensions and smooth-transition bounds.
-    assert(isstruct(design) && isfield(design, "model") && ...
-        isfield(design, "speedGrid"), ...
-        "design must come from designLateralObserverGains and include model and speedGrid.");
-    speedRange = [min(double(design.speedGrid(:))), max(double(design.speedGrid(:)))];
-    assert(all(isfinite(speedRange)) && speedRange(1) > 0.0 && speedRange(2) > speedRange(1), ...
-        "design.speedGrid must define a positive nonempty speed interval.");
+    assert(isstruct(design) && isfield(design, "model") && isfield(design, "polytope") && ...
+        isfield(design, "vertexGains"), ...
+        "design must come from designLateralObserverGains and include model, polytope, and vertexGains.");
+    speedRange = double(design.polytope.speedRange(:).');
+    assert(numel(speedRange) == 2 && all(isfinite(speedRange)) && speedRange(1) > 0.0 && ...
+        speedRange(2) > speedRange(1), ...
+        "design.polytope.speedRange must define a positive nonempty speed interval.");
     integrationMethod = lower(strtrim(string(cfg.observer.integrationMethod)));
     assert(integrationMethod == "rk4" || integrationMethod == "euler", ...
         "cfg.observer.integrationMethod must be rk4 or euler.");

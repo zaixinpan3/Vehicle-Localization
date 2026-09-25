@@ -66,7 +66,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
             speeds = linspace(cfg.scheduling.speedRange(1), cfg.scheduling.speedRange(2), 401);
             for speed = speeds
-                alpha = schedulingCoordinates(polytope, speed, 0.0);
+                alpha = schedulingCoordinates(polytope, speed);
                 testCase.verifyGreaterThanOrEqual(alpha, -1.0e-12 .* ones(3, 1));
                 testCase.verifyEqual(sum(alpha), 1.0, AbsTol=1.0e-12);
                 testCase.verifyEqual(polytope.vertices * alpha, [speed; 1.0 ./ speed], AbsTol=1.0e-10);
@@ -88,7 +88,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             end
 
             for speed = linspace(cfg.scheduling.speedRange(1), cfg.scheduling.speedRange(2), 51)
-                alpha = schedulingCoordinates(polytope, speed, 0.0);
+                alpha = schedulingCoordinates(polytope, speed);
                 [A, C] = evaluateLateralModel(model, [speed; 1.0 ./ speed]);
                 blendedA = (alpha(1) .* vertexA(:, :, 1)) + (alpha(2) .* vertexA(:, :, 2)) + (alpha(3) .* vertexA(:, :, 3));
                 blendedC = (alpha(1) .* vertexC(:, :, 1)) + (alpha(2) .* vertexC(:, :, 2)) + (alpha(3) .* vertexC(:, :, 3));
@@ -97,54 +97,75 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             end
         end
 
-        function schedulingRateMatchesNumericalDerivative(testCase)
-        % schedulingRateMatchesNumericalDerivative: The analytic alphaRate used
-        % by the Pdot term agrees with a finite difference of alpha along a
-        % speed trajectory of the given longitudinal acceleration.
-            cfg = lateralObserverConfig();
-            polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
-            speed = 12.0;
-            acceleration = 2.5;
-            stepTime = 1.0e-6;
-
-            [~, alphaRate] = schedulingCoordinates(polytope, speed, acceleration);
-            alphaBefore = schedulingCoordinates(polytope, speed - (acceleration .* stepTime), 0.0);
-            alphaAfter = schedulingCoordinates(polytope, speed + (acceleration .* stepTime), 0.0);
-            numericalRate = (alphaAfter - alphaBefore) ./ (2.0 .* stepTime);
-
-            testCase.verifyEqual(alphaRate, numericalRate, AbsTol=1.0e-6);
-        end
-
         function storedDesignSatisfiesTheOriginalCertificate(testCase)
-        % storedDesignSatisfiesTheOriginalCertificate: The stored gains satisfy
-        % the pre-convexification conditions of the proposition at every grid
-        % point: negative definite Lyapunov derivative, H2 quantity below mu,
-        % and a stable error matrix.
+        % storedDesignSatisfiesTheOriginalCertificate: The stored vertex gains
+        % satisfy the pre-convexification conditions of the proposition at
+        % every grid speed: negative definite Lyapunov derivative, H2 quantity
+        % below mu, and a stable error matrix. The check is repeated here with
+        % the blended gain so the stored margins are not taken on trust.
             design = testCase.StoredDesign;
             testCase.verifyTrue(design.certified);
             testCase.verifyLessThan(design.maxCertificateMargin, 0);
             testCase.verifyLessThan(design.maxErrorEigenvalueRealPart, 0);
             testCase.verifyLessThan(max(design.h2Values), design.h2Bound);
-            testCase.verifyTrue(all(isfinite(design.gains(:))));
+            testCase.verifyEqual(size(design.vertexGains), [2, 2, 3]);
+            testCase.verifyTrue(all(isfinite(design.vertexGains(:))));
+
+            P = design.lyapunovMatrix;
+            testCase.verifyGreaterThan(min(eig((P + P.') ./ 2.0)), 0);
+            for point = design.grid.points.'
+                L = scheduleLateralObserverGain(design, point.speed);
+                closedLoop = point.A - (L * point.C);
+                certificate = (P * closedLoop) + (closedLoop.' * P) + design.errorWeight + ...
+                    (design.tau .* (P * P)) + ((design.lipschitzConstant.^2 ./ design.tau) .* eye(2));
+                testCase.verifyLessThan(max(eig((certificate + certificate.') ./ 2.0)), 0);
+                testCase.verifyLessThan(trace(L.' * P * L), design.h2Bound);
+            end
         end
 
-        function scheduledGainInterpolatesAndClampsToTheGrid(testCase)
-        % scheduledGainInterpolatesAndClampsToTheGrid: The lookup returns the
-        % designed gain exactly at grid nodes, interpolates in between, and
-        % clamps outside the designed speed range.
+        function scheduledGainIsTheBarycentricBlendOfTheVertexGains(testCase)
+        % scheduledGainIsTheBarycentricBlendOfTheVertexGains: The online gain
+        % is the vertex gain itself at the two speed vertices, the barycentric
+        % blend of the three vertex gains at an interior speed, and the nearer
+        % vertex gain when the speed leaves the designed range.
             design = testCase.StoredDesign;
-            nodeSpeed = design.speedGrid(3);
-            nodeAcceleration = design.accelerationGrid(1);
-            nodeGain = scheduleLateralObserverGain(design, nodeSpeed, nodeAcceleration);
-            testCase.verifyEqual(nodeGain, design.gains(:, :, 3, 1), AbsTol=1.0e-12);
+            polytope = design.polytope;
+            vertexGains = design.vertexGains;
 
-            midSpeed = 0.5 .* (design.speedGrid(3) + design.speedGrid(4));
-            midGain = scheduleLateralObserverGain(design, midSpeed, nodeAcceleration);
-            expectedMid = 0.5 .* (design.gains(:, :, 3, 1) + design.gains(:, :, 4, 1));
-            testCase.verifyEqual(midGain, expectedMid, AbsTol=1.0e-12);
+            atMinimum = scheduleLateralObserverGain(design, polytope.speedRange(1));
+            testCase.verifyEqual(atMinimum, vertexGains(:, :, 1), AbsTol=1.0e-10);
+            atMaximum = scheduleLateralObserverGain(design, polytope.speedRange(2));
+            testCase.verifyEqual(atMaximum, vertexGains(:, :, 2), AbsTol=1.0e-10);
 
-            belowRange = scheduleLateralObserverGain(design, design.speedGrid(1) - 5.0, nodeAcceleration);
-            testCase.verifyEqual(belowRange, design.gains(:, :, 1, 1), AbsTol=1.0e-12);
+            interiorSpeed = 12.3;
+            alpha = schedulingCoordinates(polytope, interiorSpeed);
+            expected = (alpha(1) .* vertexGains(:, :, 1)) + (alpha(2) .* vertexGains(:, :, 2)) + ...
+                (alpha(3) .* vertexGains(:, :, 3));
+            testCase.verifyEqual(scheduleLateralObserverGain(design, interiorSpeed), expected, AbsTol=1.0e-12);
+            testCase.verifyGreaterThan(min(alpha), 0, "The interior speed should use all three vertices.");
+
+            belowRange = scheduleLateralObserverGain(design, polytope.speedRange(1) - 5.0);
+            testCase.verifyEqual(belowRange, atMinimum, AbsTol=1.0e-12);
+            aboveRange = scheduleLateralObserverGain(design, polytope.speedRange(2) + 5.0);
+            testCase.verifyEqual(aboveRange, atMaximum, AbsTol=1.0e-12);
+        end
+
+        function scheduledGainIsAffineInTheSchedulingParameter(testCase)
+        % scheduledGainIsAffineInTheSchedulingParameter: Because the blend uses
+        % the barycentric coordinates of rho = [Vx; 1/Vx], the gain is affine
+        % in rho: the blended gain along the speed range equals the least
+        % squares affine fit L0 + rho1 L1 + rho2 L2 to numerical precision.
+            design = testCase.StoredDesign;
+            speeds = linspace(design.polytope.speedRange(1), design.polytope.speedRange(2), 41);
+            regressors = [ones(numel(speeds), 1), speeds(:), 1.0 ./ speeds(:)];
+            gains = zeros(numel(speeds), 4);
+            for speedIdx = 1:numel(speeds)
+                L = scheduleLateralObserverGain(design, speeds(speedIdx));
+                gains(speedIdx, :) = L(:).';
+            end
+            coefficients = regressors \ gains;
+            residual = gains - (regressors * coefficients);
+            testCase.verifyLessThan(max(abs(residual(:))), 1.0e-10);
         end
 
         function observerConvergesFromAWrongInitialState(testCase)
@@ -200,8 +221,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function speedRateIsReconstructedFromTheSpecificForce(testCase)
         % speedRateIsReconstructedFromTheSpecificForce: The observer treats the
         % longitudinal measurement as the inertial specific force and rebuilds
-        % the speed derivative as ax + vy r, which is the quantity that
-        % schedules the gain and enters the side-slip rate.
+        % the speed derivative as ax + vy r, which enters the side-slip rate.
             design = testCase.StoredDesign;
             result = simulateLateralObserverScenario(design, design.cfg);
 
@@ -347,7 +367,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
 
         function synthesisReproducesTheStoredDesign(testCase)
         % synthesisReproducesTheStoredDesign: Re-running the LMI synthesis
-        % reproduces the stored gain schedule. Needs YALMIP and an SDP solver.
+        % reproduces the stored vertex gains. Needs YALMIP and an SDP solver.
             testCase.assumeTrue(exist("sdpvar", "file") == 2, ...
                 "The lateral observer synthesis test needs YALMIP and an SDP solver on the MATLAB path.");
             design = testCase.StoredDesign;
@@ -355,7 +375,8 @@ classdef lateralObserverTest < matlab.unittest.TestCase
 
             testCase.verifyEqual(resolved.tau, design.tau);
             testCase.verifyEqual(resolved.h2Bound, design.h2Bound, RelTol=1.0e-4);
-            testCase.verifyEqual(resolved.gains, design.gains, AbsTol=1.0e-4);
+            testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
+            testCase.verifyEqual(resolved.lyapunovMatrix, design.lyapunovMatrix, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.certified);
         end
     end

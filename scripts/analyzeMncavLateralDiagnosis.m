@@ -94,7 +94,7 @@ function report=analyzeMncavLateralDiagnosis(outputFolder)
     eigenMax=NaN(n,1);gainEntries=NaN(n,4);masterDifference=z.lateral.lateralVelocity-z.lateral.dynamicState(:,1);
     for i=find(moving).'
         [A,C]=evaluateLateralModel(design.model,[h.longitudinalSpeed(i);1/h.longitudinalSpeed(i)]);
-        L=scheduleLateralObserverGain(design,h.longitudinalSpeed(i),h.longitudinalAcceleration(i)+reference(i,2)*r(i));
+        L=scheduleLateralObserverGain(design,h.longitudinalSpeed(i));
         x=reference(i,[2,5]).';y=[ay(i);r(i)];
         f=A*x+design.model.B*delta(i);pred=C*x+design.model.D*delta(i);
         referenceFlow(i,:)=(f+L*(y-pred)).';referenceInnovation(i,:)=(y-pred).';
