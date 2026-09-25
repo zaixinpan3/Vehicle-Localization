@@ -74,4 +74,12 @@ function cfg = structuralPillarConfig(spacing)
         'minimumPointScore',latticeTunedValue(spacing,0.70,0), ...
         'maximumLineScore',latticeTunedValue(spacing,0.90,1),'minimumContextFraction',latticeTunedValue(spacing,0.58,0), ...
         'maximumFootprintSpanCells',2);
+    % Confidence ranks accepted pillars by continuous raw-point concentration
+    % and height continuity. Detection and all-point output moments stay
+    % separate: a high density peak alone cannot saturate pole confidence.
+    cfg.pole.probabilityEvidence="shape";
+    if spacing>0.3, cfg.pole.probabilityEvidence="distribution"; end
+    cfg.pole.distribution=struct('coreRadius',0.25,'contextRadius',0.75, ...
+        'minimumRobustHeight',1.5,'minimumCorePoints',12);
+
 end

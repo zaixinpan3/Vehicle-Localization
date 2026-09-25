@@ -1,0 +1,29 @@
+{
+  "candidate_cells": 869,
+  "fine_confirmed_cells": 260,
+  "frames": 117,
+  "reference": "Existing offline fine detector; not manual physical ground truth",
+  "scope": "Exploratory same-drive ranking; score chosen after inspecting these distributions",
+  "scores": {
+    "oldProbability": {
+      "roc_auc": 0.7113111026904131,
+      "average_precision": 0.5077971664353038,
+      "top_twenty_percent_count": 174,
+      "fine_fraction_in_top_twenty_percent": 0.594017094017094,
+      "top_twenty_percent_tie_policy": "Expected precision under uniform selection within cutoff ties",
+      "cutoff_tied_cells": 234,
+      "median_confirmed": 1.0,
+      "median_unconfirmed": 0.725933492183685
+    },
+    "distributionScore": {
+      "roc_auc": 0.8543135025893647,
+      "average_precision": 0.7656055547970538,
+      "top_twenty_percent_count": 174,
+      "fine_fraction_in_top_twenty_percent": 0.8390804597701149,
+      "top_twenty_percent_tie_policy": "Expected precision under uniform selection within cutoff ties",
+      "cutoff_tied_cells": 1,
+      "median_confirmed": 0.869845961274291,
+      "median_unconfirmed": 0.446567465596269
+    }
+  }
+}

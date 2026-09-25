@@ -67,6 +67,13 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     maps.trafficSignMoments=maps.moments;
     floorProbability=cloudCfg.minimumSemanticProbability;
     poleEvidence=double(maps.pointScore).*(1-double(maps.lineScore));
+    if isfield(cfg.pole,'probabilityEvidence') && cfg.pole.probabilityEvidence=="distribution" && any(poleMask(:))
+        peak=[maps.corePeakX(ids),maps.corePeakY(ids)];
+        maps.poleDistribution=scorePolePillarDistributions(pillars.points,pillars.pointPillarLinIdx, ...
+            geometry,peak,poleMask(ids),cfg.pole.distribution);
+        poleEvidence=zeros(mapSize); poleEvidence(ids)=maps.poleDistribution.score;
+    end
+    maps.poleEvidence=single(poleEvidence);
     facadeEvidence=zeros(mapSize);
     if isfield(maps,'facadeLineScore'), facadeEvidence=double(maps.facadeLineScore); end
     result=struct('columnMaps',maps,'facade',facade,'facadeCellMask',facade.mask, ...

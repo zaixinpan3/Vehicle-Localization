@@ -1,0 +1,13 @@
+{
+  "frames": 1170,
+  "unchangedCandidateMasks": true,
+  "unchangedGaussianGeometry": true,
+  "changedPoleProbabilities": 8909,
+  "meanL1MixtureWeightChange": 0.028708777446744174,
+  "meanPoleMassBefore": 0.17353818748037872,
+  "meanPoleMassAfter": 0.17081987829390283,
+  "pairedTimingFrames": 117,
+  "oldMedianMs": 27.396,
+  "newMedianMs": 29.528,
+  "medianPairedDifferenceMs": 2.262
+}

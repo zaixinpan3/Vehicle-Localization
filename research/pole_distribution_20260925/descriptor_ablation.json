@@ -1,0 +1,397 @@
+[
+  {
+    "name": "whole_only",
+    "threshold": 0.7249999999999999,
+    "features": [
+      "range",
+      "n",
+      "h",
+      "hStd",
+      "tilt",
+      "rStd",
+      "line",
+      "point",
+      "coreFrac",
+      "coreHeight",
+      "isoAll60",
+      "coreAllCount",
+      "meanLocalX",
+      "meanLocalY",
+      "peakLocalX",
+      "peakLocalY",
+      "minimumLocalX",
+      "minimumLocalY",
+      "maximumLocalX",
+      "maximumLocalY",
+      "meanZ",
+      "minimumZ",
+      "maximumZ",
+      "cxx",
+      "cxy",
+      "cyy",
+      "cxz",
+      "cyz",
+      "czz",
+      "maximumIntensity",
+      "maximumReflectivity"
+    ],
+    "train": {
+      "exact": {
+        "precision": 0.896168108776267,
+        "recall": 0.9539473684210527,
+        "f1": 0.9241555130656469,
+        "detected_cells": 2427,
+        "reference_cells": 2280
+      },
+      "one_cell": {
+        "precision": 0.9068809229501442,
+        "recall": 0.987719298245614,
+        "f1": 0.9455755138076689,
+        "detected_cells": 2427,
+        "reference_cells": 2280
+      }
+    },
+    "validation": {
+      "exact": {
+        "precision": 0.7064403394907639,
+        "recall": 0.625552608311229,
+        "f1": 0.6635404454865182,
+        "detected_cells": 2003,
+        "reference_cells": 2262
+      },
+      "one_cell": {
+        "precision": 0.72790813779331,
+        "recall": 0.7343059239610964,
+        "f1": 0.731093034408109,
+        "detected_cells": 2003,
+        "reference_cells": 2262
+      }
+    },
+    "test": {
+      "exact": {
+        "precision": 0.7255148166750377,
+        "recall": 0.6298234139960759,
+        "f1": 0.6742910491305871,
+        "detected_cells": 3982,
+        "reference_cells": 4587
+      },
+      "one_cell": {
+        "precision": 0.7503766951280764,
+        "recall": 0.735993023762808,
+        "f1": 0.7431152637051244,
+        "detected_cells": 3982,
+        "reference_cells": 4587
+      }
+    }
+  },
+  {
+    "name": "whole_and_height",
+    "threshold": 0.7,
+    "features": [
+      "range",
+      "n",
+      "h",
+      "hStd",
+      "tilt",
+      "rStd",
+      "line",
+      "point",
+      "coreFrac",
+      "coreHeight",
+      "isoAll60",
+      "coreAllCount",
+      "meanLocalX",
+      "meanLocalY",
+      "peakLocalX",
+      "peakLocalY",
+      "minimumLocalX",
+      "minimumLocalY",
+      "maximumLocalX",
+      "maximumLocalY",
+      "meanZ",
+      "minimumZ",
+      "maximumZ",
+      "cxx",
+      "cxy",
+      "cyy",
+      "cxz",
+      "cyz",
+      "czz",
+      "maximumIntensity",
+      "maximumReflectivity",
+      "wholeGapRatio",
+      "wholeInterquartileRatio",
+      "wholeSkewness",
+      "wholeKurtosis",
+      "wholeLowerHalfHeight",
+      "wholeUpperHalfHeight"
+    ],
+    "train": {
+      "exact": {
+        "precision": 0.9015522875816994,
+        "recall": 0.9679824561403508,
+        "f1": 0.9335871404399323,
+        "detected_cells": 2448,
+        "reference_cells": 2280
+      },
+      "one_cell": {
+        "precision": 0.9101307189542484,
+        "recall": 0.9956140350877193,
+        "f1": 0.9509551744885679,
+        "detected_cells": 2448,
+        "reference_cells": 2280
+      }
+    },
+    "validation": {
+      "exact": {
+        "precision": 0.6957163958641064,
+        "recall": 0.6246684350132626,
+        "f1": 0.658280922431866,
+        "detected_cells": 2031,
+        "reference_cells": 2262
+      },
+      "one_cell": {
+        "precision": 0.724766125061546,
+        "recall": 0.7259062776304156,
+        "f1": 0.7253357532958636,
+        "detected_cells": 2031,
+        "reference_cells": 2262
+      }
+    },
+    "test": {
+      "exact": {
+        "precision": 0.7138326421078312,
+        "recall": 0.6378896882494005,
+        "f1": 0.6737278379000691,
+        "detected_cells": 4099,
+        "reference_cells": 4587
+      },
+      "one_cell": {
+        "precision": 0.7409124176628445,
+        "recall": 0.7444953128406366,
+        "f1": 0.7426995441695248,
+        "detected_cells": 4099,
+        "reference_cells": 4587
+      }
+    }
+  },
+  {
+    "name": "whole_and_axis",
+    "threshold": 0.7,
+    "features": [
+      "range",
+      "n",
+      "h",
+      "hStd",
+      "tilt",
+      "rStd",
+      "line",
+      "point",
+      "coreFrac",
+      "coreHeight",
+      "isoAll60",
+      "coreAllCount",
+      "meanLocalX",
+      "meanLocalY",
+      "peakLocalX",
+      "peakLocalY",
+      "minimumLocalX",
+      "minimumLocalY",
+      "maximumLocalX",
+      "maximumLocalY",
+      "meanZ",
+      "minimumZ",
+      "maximumZ",
+      "cxx",
+      "cxy",
+      "cyy",
+      "cxz",
+      "cyz",
+      "czz",
+      "maximumIntensity",
+      "maximumReflectivity",
+      "height",
+      "robustHeight",
+      "count",
+      "ownCount",
+      "ownFraction",
+      "isolation",
+      "radialStd",
+      "tilt",
+      "maximumGap",
+      "gapRatio",
+      "ownHeight",
+      "envelopeIsolation",
+      "interquartileRatio",
+      "residualLinearity",
+      "envelopeFraction",
+      "medianGap",
+      "lowerIsolation",
+      "upperIsolation",
+      "wholeGapRatio",
+      "wholeInterquartileRatio",
+      "wholeSkewness",
+      "wholeKurtosis",
+      "wholeLowerHalfHeight",
+      "wholeUpperHalfHeight"
+    ],
+    "train": {
+      "exact": {
+        "precision": 0.9276507276507276,
+        "recall": 0.9785087719298246,
+        "f1": 0.952401280683031,
+        "detected_cells": 2405,
+        "reference_cells": 2280
+      },
+      "one_cell": {
+        "precision": 0.9334719334719335,
+        "recall": 0.9969298245614036,
+        "f1": 0.9641578567740796,
+        "detected_cells": 2405,
+        "reference_cells": 2280
+      }
+    },
+    "validation": {
+      "exact": {
+        "precision": 0.7155963302752294,
+        "recall": 0.6206896551724138,
+        "f1": 0.6647727272727273,
+        "detected_cells": 1962,
+        "reference_cells": 2262
+      },
+      "one_cell": {
+        "precision": 0.737512742099898,
+        "recall": 0.7241379310344828,
+        "f1": 0.7307641435700114,
+        "detected_cells": 1962,
+        "reference_cells": 2262
+      }
+    },
+    "test": {
+      "exact": {
+        "precision": 0.7200998751560549,
+        "recall": 0.6287333769348158,
+        "f1": 0.6713221601489757,
+        "detected_cells": 4005,
+        "reference_cells": 4587
+      },
+      "one_cell": {
+        "precision": 0.746816479400749,
+        "recall": 0.7296708088074995,
+        "f1": 0.7381440922751176,
+        "detected_cells": 4005,
+        "reference_cells": 4587
+      }
+    }
+  },
+  {
+    "name": "axis_with_seed",
+    "threshold": 0.7,
+    "features": [
+      "range",
+      "n",
+      "h",
+      "hStd",
+      "tilt",
+      "rStd",
+      "line",
+      "point",
+      "coreFrac",
+      "coreHeight",
+      "isoAll60",
+      "coreAllCount",
+      "meanLocalX",
+      "meanLocalY",
+      "peakLocalX",
+      "peakLocalY",
+      "minimumLocalX",
+      "minimumLocalY",
+      "maximumLocalX",
+      "maximumLocalY",
+      "meanZ",
+      "minimumZ",
+      "maximumZ",
+      "cxx",
+      "cxy",
+      "cyy",
+      "cxz",
+      "cyz",
+      "czz",
+      "maximumIntensity",
+      "maximumReflectivity",
+      "height",
+      "robustHeight",
+      "count",
+      "ownCount",
+      "ownFraction",
+      "isolation",
+      "radialStd",
+      "tilt",
+      "maximumGap",
+      "gapRatio",
+      "ownHeight",
+      "envelopeIsolation",
+      "interquartileRatio",
+      "residualLinearity",
+      "envelopeFraction",
+      "medianGap",
+      "lowerIsolation",
+      "upperIsolation",
+      "wholeGapRatio",
+      "wholeInterquartileRatio",
+      "wholeSkewness",
+      "wholeKurtosis",
+      "wholeLowerHalfHeight",
+      "wholeUpperHalfHeight",
+      "previousDetectorSeed"
+    ],
+    "train": {
+      "exact": {
+        "precision": 0.9203137902559868,
+        "recall": 0.9776315789473684,
+        "f1": 0.9481071884304552,
+        "detected_cells": 2422,
+        "reference_cells": 2280
+      },
+      "one_cell": {
+        "precision": 0.9277456647398844,
+        "recall": 0.9982456140350877,
+        "f1": 0.9617053316624719,
+        "detected_cells": 2422,
+        "reference_cells": 2280
+      }
+    },
+    "validation": {
+      "exact": {
+        "precision": 0.7093718843469591,
+        "recall": 0.6290893015030946,
+        "f1": 0.6668228678537956,
+        "detected_cells": 2006,
+        "reference_cells": 2262
+      },
+      "one_cell": {
+        "precision": 0.7313060817547358,
+        "recall": 0.7360742705570292,
+        "f1": 0.7336824291445441,
+        "detected_cells": 2006,
+        "reference_cells": 2262
+      }
+    },
+    "test": {
+      "exact": {
+        "precision": 0.7206717708076068,
+        "recall": 0.6361456289513844,
+        "f1": 0.6757758221398795,
+        "detected_cells": 4049,
+        "reference_cells": 4587
+      },
+      "one_cell": {
+        "precision": 0.7485798962706841,
+        "recall": 0.7381730978853281,
+        "f1": 0.7433400749375904,
+        "detected_cells": 4049,
+        "reference_cells": 4587
+      }
+    }
+  }
+]
