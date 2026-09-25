@@ -2,8 +2,10 @@ function candidates=detectPolePillars(maps,facadeMask,cfg)
 % detectPolePillars: Whole-pillar XYZ extent and compact XY context.
 % Metric height and raw point support replace all subpillar occupancy gates.
 % A core pillar also concentrates its returns at one XY density peak that
-% spans a pole-like height (computePillarDensityCore), so a shaft sharing a
-% wide pillar with foliage or brackets is not rejected by its total scatter.
+% spans a pole-like height and stands free of its neighbourhood
+% (computePillarDensityCore), so a shaft sharing a wide pillar with foliage
+% or brackets is not rejected by its total scatter, while the point-level
+% isolation replaces the coarse pillar-ring context on wide pillars.
 % Candidate footprints join whole neighbors without subdividing any pillar.
     stats=maps.statistics; ids=double(stats.pillarIndices);
     covariance=stats.covarianceXYZ;
@@ -18,7 +20,9 @@ function candidates=detectPolePillars(maps,facadeMask,cfg)
         vecnorm(slope,2,2)<=tand(cfg.maximumTiltDegrees) & ...
         radialVariance<=cfg.maximumRadialStd^2 & ...
         maps.coreFraction(ids)>=cfg.minimumCoreFraction & ...
-        maps.coreHeight(ids)>=cfg.minimumCoreHeight;
+        maps.coreHeight(ids)>=cfg.minimumCoreHeight & ...
+        maps.coreIsolation(ids)>=cfg.minimumCoreIsolation & ...
+        maps.corePointCount(ids)>=cfg.minimumCorePoints;
     core=core & eligible & maps.lineScore<=cfg.maximumLineScore;
     support=eligible & maps.pillarCounts>=3 & maps.pillarZRange>=0.5;
     [footprint,context,mask,ratio,componentSum,contextSum]=selectPillarFootprints( ...
@@ -29,7 +33,36 @@ function candidates=detectPolePillars(maps,facadeMask,cfg)
             mask(cells{1})=false;
         end
     end
+    mask=completeSplitShafts(mask,core,maps,cfg);
     candidates=struct('eligibleMask',eligible,'coreMask',core,'supportMask',support, ...
         'footprintCandidateMask',footprint,'contextCandidateMask',context, ...
         'contextFraction',ratio,'componentEvidence',componentSum,'contextEvidence',contextSum,'candidateMask',mask);
+end
+
+function mask=completeSplitShafts(mask,core,maps,cfg)
+% completeSplitShafts: Rejoin a shaft split over a cell boundary.
+% A lone accepted pillar adopts the edge-adjacent core pillar whose density
+% peak lies within shaftCompletionDistance of its own peak: both pillars hold
+% the same shaft, and the footprint stays an edge pair. A distance of zero
+% leaves footprints as selected.
+    distance=double(cfg.shaftCompletionDistance);
+    if distance<=0 || ~any(mask(:)), return; end
+    mapSize=size(mask); components=bwconncomp(mask,8);
+    single=components.PixelIdxList(cellfun(@numel,components.PixelIdxList)==1);
+    if isempty(single), return; end
+    ids=[single{:}].'; [rows,cols]=ind2sub(mapSize,ids);
+    rowOffset=[-1 1 0 0]; colOffset=[0 0 -1 1];
+    best=zeros(size(ids)); bestDistance=inf(size(ids));
+    for direction=1:4
+        nr=rows+rowOffset(direction); nc=cols+colOffset(direction);
+        valid=nr>=1 & nr<=mapSize(1) & nc>=1 & nc<=mapSize(2);
+        neighbour=zeros(size(ids)); neighbour(valid)=sub2ind(mapSize,nr(valid),nc(valid));
+        candidate=valid; candidate(valid)=core(neighbour(valid)) & ~mask(neighbour(valid));
+        gap=inf(size(ids));
+        gap(candidate)=hypot(maps.corePeakX(ids(candidate))-maps.corePeakX(neighbour(candidate)), ...
+            maps.corePeakY(ids(candidate))-maps.corePeakY(neighbour(candidate)));
+        closer=candidate & gap<=distance & gap<bestDistance;
+        best(closer)=neighbour(closer); bestDistance(closer)=gap(closer);
+    end
+    mask(best(best>0))=true;
 end

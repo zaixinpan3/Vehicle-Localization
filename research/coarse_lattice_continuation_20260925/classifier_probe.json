@@ -1,0 +1,56 @@
+{
+  "rows": 1097054,
+  "positives": 8996,
+  "features": [
+    "range",
+    "n",
+    "h",
+    "hStd",
+    "tilt",
+    "rStd",
+    "line",
+    "point",
+    "coreFrac",
+    "coreHeight",
+    "isoAll60",
+    "coreAllCount",
+    "meanLocalX",
+    "meanLocalY",
+    "peakLocalX",
+    "peakLocalY",
+    "minimumLocalX",
+    "minimumLocalY",
+    "maximumLocalX",
+    "maximumLocalY",
+    "meanZ",
+    "minimumZ",
+    "maximumZ",
+    "cxx",
+    "cxy",
+    "cyy",
+    "cxz",
+    "cyz",
+    "czz",
+    "maximumIntensity",
+    "maximumReflectivity"
+  ],
+  "threshold": 0.7249999999999999,
+  "train": [
+    0.9461066149708564,
+    0.9068809229501442,
+    0.9888790035587188,
+    2427
+  ],
+  "validation": [
+    0.732955726300908,
+    0.72790813779331,
+    0.738073807380738,
+    2003
+  ],
+  "test": [
+    0.7450132978723403,
+    0.7503766951280764,
+    0.7397260273972602,
+    3982
+  ]
+}

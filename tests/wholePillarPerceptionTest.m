@@ -121,6 +121,33 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             result=analyzeStructuralPillars(clutterOnly,structural,cloudCfg);
             testCase.verifyFalse(any(result.poleCellMask,'all'));
         end
+        function hedgeBesideTheShaftLowersItsIsolation(testCase)
+            % The shaft's own pillar is clean, but a hedge fills the next
+            % pillar within 0.6 m of the peak: isolation drops below the gate.
+            angle=linspace(0,2*pi,41).'; angle(end)=[];
+            shaft=[1.6+0.05*cos(angle),1.6+0.05*sin(angle),linspace(-1,3,40).'];
+            % A dense 1.3 m hedge 0.35 m from the shaft, too low to be a pole.
+            [hx,hz]=meshgrid(1.95:0.05:2.15,-1:0.05:0.3);
+            hedge=[hx(:),1.6+0.02*randn(numel(hx),1),hz(:)];
+            geometry=struct('origin',[1.3 1.3],'cellSize',[0.6 0.6],'mapSize',[2 2]);
+            ids=@(p) sub2ind([2 2],floor((p(:,2)-1.3)/0.6)+1,floor((p(:,1)-1.3)/0.6)+1);
+            [fraction,~,isolation]=computePillarDensityCore(shaft,ids(shaft),geometry,0.10,0.15,0.60);
+            testCase.verifyEqual(fraction,1);
+            testCase.verifyEqual(isolation,1);
+            both=[shaft;hedge];
+            [~,~,isolation]=computePillarDensityCore(both,ids(both),geometry,0.10,0.15,0.60);
+            shaftRow=unique(ids(both))==ids(shaft(1,:));
+            testCase.verifyLessThan(isolation(shaftRow),0.30);
+            testCase.verifyError(@() computePillarDensityCore(shaft,ids(shaft),geometry,0.10,0.15,0.10), ...
+                'perception:InvalidDensityCore');
+            cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
+            cloudCfg=coarseSemanticProbabilityCloudConfig(); cloudCfg.semanticNames="pole";
+            structural=structuralPillarConfig(cfg.voxelSize(1));
+            result=analyzeStructuralPillars(pillarizePointCloud(shaft,cfg),structural,cloudCfg);
+            testCase.verifyEqual(nnz(result.poleCellMask),1);
+            result=analyzeStructuralPillars(pillarizePointCloud(both,cfg),structural,cloudCfg);
+            testCase.verifyFalse(any(result.poleCellMask,'all'));
+        end
         function horizontalDistributionIsNotAPole(testCase)
             cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
             x=linspace(1.21,1.49,20).'; y=ones(size(x))*1.35;

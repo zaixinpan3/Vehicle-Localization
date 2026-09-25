@@ -27,10 +27,15 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     end
     maps.moments=projectStatistics(stats,prod(mapSize),cloudCfg);
     % Pole evidence: the pillar's XY density peak and the height it spans.
-    maps.coreFraction=zeros(mapSize); maps.coreHeight=zeros(mapSize);
+    maps.coreFraction=zeros(mapSize); maps.coreHeight=zeros(mapSize); maps.coreIsolation=zeros(mapSize);
+    maps.corePeakX=nan(mapSize); maps.corePeakY=nan(mapSize);
+    maps.corePointCount=zeros(mapSize);
     if any(cloudCfg.semanticNames=="pole")
-        [maps.coreFraction(ids),maps.coreHeight(ids)]=computePillarDensityCore( ...
-            pillars.points,pillars.pointPillarLinIdx,geometry,cfg.pole.densityPeakBinMeters,cfg.pole.coreRadius);
+        % The core is measured only where the cheap whole-pillar gates can pass.
+        tall=stats.count>=cfg.pole.minimumPoints & stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.pole.minimumHeight;
+        [maps.coreFraction(ids),maps.coreHeight(ids),maps.coreIsolation(ids),peak,maps.corePointCount(ids)]=computePillarDensityCore( ...
+            pillars.points,pillars.pointPillarLinIdx,geometry,cfg.pole.densityPeakBinMeters,cfg.pole.coreRadius,cfg.pole.isolationRadius,tall);
+        maps.corePeakX(ids)=peak(:,1); maps.corePeakY(ids)=peak(:,2);
     end
     facade=struct('mask',false(mapSize));
     if any(cloudCfg.semanticNames=="facade")
