@@ -9,6 +9,10 @@
 #include <limits>
 #include <vector>
 #include <utility>
+#include <thread>
+#include <atomic>
+#include <exception>
+#include <system_error>
 
 namespace {
 void require(bool condition, const char* message) {
@@ -452,7 +456,7 @@ void mexFunction(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
     try {
         if (!std::strcmp(command,"version")) {
             require(nrhs==1 && nlhs==1,"Version needs no data and one output.");
-            out[0]=mxCreateDoubleScalar(5);
+            out[0]=mxCreateDoubleScalar(6);
         }
         else if (!std::strcmp(command, "propagateGround")) propagate(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "growRoad")) roadGrowth(nlhs, out, nrhs, in);
@@ -470,5 +474,7 @@ void mexFunction(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
         mexErrMsgIdAndTxt("perception:native:AllocationFailure","%s",error.what());
     } catch (const std::length_error& error) {
         mexErrMsgIdAndTxt("perception:native:AllocationFailure","%s",error.what());
+    } catch (const std::system_error& error) {
+        mexErrMsgIdAndTxt("perception:native:ExecutionFailure","%s",error.what());
     }
 }

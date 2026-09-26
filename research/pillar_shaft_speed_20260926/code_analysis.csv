@@ -1,0 +1,17 @@
+file,line,id,message
+config/pillarShaftConfig.m,0,,clean
+perception/offGroundFeatures/assignPillarShaftSupport.m,0,,clean
+perception/offGroundFeatures/findPillarShaftModes.m,0,,clean
+perception/perceptionNativeAvailable.m,0,,clean
+scripts/buildPerceptionKernels.m,0,,clean
+tests/pillarShaftExecutionTest.m,0,,clean
+research/pillar_shaft_speed_20260926/benchmarkShaftSpeed.m,0,,clean
+research/pillar_shaft_speed_20260926/benchmarkShaftSpeedBlocks.m,0,,clean
+research/pillar_shaft_speed_20260926/captureShaftSpeedBatch.m,0,,clean
+research/pillar_shaft_speed_20260926/prepareShaftSpeedBaseline.m,0,,clean
+research/pillar_shaft_speed_20260926/profileShaftSpeed.m,0,,clean
+research/pillar_shaft_speed_20260926/shaftSpeedLoadFrames.m,0,,clean
+research/pillar_shaft_speed_20260926/shaftSpeedMetrics.m,0,,clean
+research/pillar_shaft_speed_20260926/shaftSpeedRecord.m,0,,clean
+research/pillar_shaft_speed_20260926/shaftSpeedUseBackend.m,0,,clean
+research/pillar_shaft_speed_20260926/validateShaftSpeed.m,0,,clean

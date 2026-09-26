@@ -24,8 +24,10 @@ function evidence=findPillarShaftModes(points,pillarIds,geometry,cfg,evaluate)
             'saturatedHeight','saturatedPoints','axisMergeDistance','axisMergeSlope','minimumFitScales','minimumSingleScaleScore','verticalHypotheses', ...
             'minimumRadialSignificance','maximumRelativeRadialRms','minimumHalfRadialSignificance','minimumHalfPeakContrast'};
         parameters=cellfun(@(name)double(cfg.(name)),fields);
+        nativeThreads=1;
+        if isfield(cfg,'nativeThreads'),nativeThreads=double(cfg.nativeThreads);end
         measured=perceptionKernelsMex('shaftModes',double(points),double(group),ids, ...
-            double(geometry.mapSize),double(geometry.cellSize),parameters,cfg.radii,cfg.fitRadii,logical(evaluate(:)),thresholds);
+            double(geometry.mapSize),double(geometry.cellSize),parameters,cfg.radii,cfg.fitRadii,logical(evaluate(:)),thresholds,nativeThreads);
         columns=[1:14 19:23];
         for k=1:numel(names),evidence.(names{k})=measured(:,columns(k));end
         evidence.found=evidence.supportCount>0;evidence.axisXY=measured(:,15:16);evidence.slopeXY=measured(:,17:18);

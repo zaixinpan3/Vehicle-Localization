@@ -1,0 +1,26 @@
+{
+  "nativeVersion": 6,
+  "configuredThreads": 4,
+  "parityFrames": 117,
+  "occupiedPillarsCompared": 292355,
+  "modesExact": true,
+  "assignedExact": true,
+  "groupsExact": true,
+  "serialCachePreviouslyMatchedFrozenBaseline": true,
+  "nullScenes": 32,
+  "nullRng": "twister",
+  "nullAccepted": 5,
+  "nullAcceptedSeeds": [
+    7,
+    13,
+    23,
+    26,
+    28
+  ],
+  "nullMasksExact": true,
+  "nullScoreMaximumDifference": 2.2204460492503131E-16,
+  "testsPassed": 161,
+  "testsFailed": 0,
+  "testsIncomplete": 0,
+  "expectedTestCount": 161
+}

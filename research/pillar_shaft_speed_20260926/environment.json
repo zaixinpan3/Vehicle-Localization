@@ -1,0 +1,16 @@
+{
+  "cpuModel": "AMD Ryzen 7 7800X3D 8-Core Processor",
+  "physicalCores": 8,
+  "logicalCpus": 16,
+  "availableAffinityCpus": 16,
+  "loadAverageAtSteadyBenchmark": [
+    9.13427734375,
+    7.580078125,
+    4.64501953125
+  ],
+  "platform": "Linux 7.2.6-zen2-1-zen",
+  "matlab": "R2026a Update 3 (26.1.0.3276743)",
+  "nativeInterface": 6,
+  "isolation": "Normal desktop; background workloads were not stopped or controlled",
+  "timedRegion": "perceiveFrame only; reading frames, backend switching, warmups, comparisons and writes excluded"
+}

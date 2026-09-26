@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "seed": 82609126,
+  "scenes": 5000,
+  "exact_axis_fits": 10000,
+  "exact_interval_evaluations": 15000,
+  "accepted_scenes": 4031,
+  "baseline_commit": "35cdb88388300ba1b8bb215905435bde670dff03",
+  "compiler": "g++ (GCC) 16.2.1 20260810",
+  "compiler_options": [
+    "-O2",
+    "-std=c++17"
+  ],
+  "comparison": "Exact numeric equality with corresponding NaNs accepted",
+  "coverage": [
+    "variable point counts",
+    "repeated heights",
+    "constant heights",
+    "unowned interval endpoints",
+    "unsorted radii"
+  ],
+  "baseline_header_sha256": "86d04d3a69749820efdf9de9688d9b0fecffa3dbd470c1254c683075a54d84e6",
+  "baseline_helpers_sha256": "5c6204cba7ff0d6355e4694f54365591d73b2c0a4039a3c9a824a298850fa944",
+  "optimized_header_sha256": "2ff8f8242d53f21e358898f4df7884d6cfd7b8a4f7e1b8479ed3bde57358ad91",
+  "generated_source_sha256": "45adbeef7a2ad033da351f774670ecf20bd2cc4490463b0098f0ad15d29d1270"
+}
