@@ -1,0 +1,75 @@
+{
+  "/novatel/oem7/corrimu": {
+    "topic": "/novatel/oem7/corrimu",
+    "type": "novatel_oem7_msgs/msg/CORRIMU",
+    "publisher": "/novatel/oem7/driver",
+    "frame": "gps",
+    "count": 11695
+  },
+  "/vehicle/imu/data_raw": {
+    "topic": "/vehicle/imu/data_raw",
+    "type": "sensor_msgs/msg/Imu",
+    "publisher": "/vehicle/dbw_node",
+    "frame": "base_footprint",
+    "count": 5847,
+    "angular_velocity_covariance": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "linear_acceleration_covariance": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "orientation_covariance": [
+      -1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "/vehicle/lidar/front_ouster/points": {
+    "topic": "/vehicle/lidar/front_ouster/points",
+    "type": "sensor_msgs/msg/PointCloud2",
+    "publisher": "/vehicle/lidar/front_ouster/cloud_node",
+    "frame": "front_ouster",
+    "count": 1170,
+    "height": 64,
+    "width": 1024,
+    "fields": [
+      "x",
+      "y",
+      "z",
+      "intensity",
+      "t",
+      "reflectivity",
+      "ring",
+      "ambient",
+      "range"
+    ]
+  },
+  "novatelRecordedConfiguration": {
+    "source": "output/mncav_interface_audit_20260916/12-09-31/insconfig.json",
+    "imuType": 41,
+    "exportedTranslations": 0,
+    "exportedRotations": 0
+  }
+}

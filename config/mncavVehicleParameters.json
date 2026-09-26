@@ -15,25 +15,68 @@
     "widthWithoutMirrorsM": 2.022,
     "frontStaticLoadFraction": 0.555,
     "rearStaticLoadFraction": 0.445,
-    "curbMassKg": 2273
+    "curbMassKg": 2273,
+    "frontTrackM": 1.734,
+    "rearTrackM": 1.735,
+    "grossVehicleWeightRatingKg": 2858,
+    "standardTireSize": "235/65R17",
+    "optionalTireSize": "235/60R18"
   },
   "loadedVehicleParametersIdentified": false,
   "provenance": {
     "identity": "UMN CTS vehicle introduction, 2021-08-24; verified 2026-09-14.",
-    "massGeometrySteering": "Manufacturer 2021 Pacifica Hybrid specifications pp. 2-4, at curb weight with standard equipment. Not the actual occupied/instrumented MnCAV.",
+    "massGeometrySteering": "Reverified 2026-09-25 against manufacturer 2021 Pacifica Hybrid specifications pp. 2-5, retrieved from the manufacturer media asset host. Values describe the stock vehicle at curb weight, not occupied/instrumented MnCAV.",
     "lfLr": "Derived from stock wheelbase and static front/rear load fractions: lf=L*rearFraction, lr=L*frontFraction.",
     "yawInertia": "Uniform rectangular planform prior m*(length^2+width^2)/12; not measured MnCAV inertia.",
     "corneringStiffness": "Unidentified nominal prior retained from existing MnCAV calibration report: legacy 75000/56000 N/rad scaled by 2273/1575. Not manufacturer specifications or validated tire identification.",
     "actualLoadedMass": "Unknown: no payload, occupancy or sensor-rack mass is invented.",
-    "sensorNoiseDelay": "Not vehicle specifications; must be sourced from sensor/registration characterization or explicitly declared synthetic assumptions.",
+    "sensorNoiseDelay": "See mncavSensorParameters.json and mncavSensorConfig: recorded DBW observer IMU is distinct from the NovAtel G320N reference IMU; noise priors, OEM random walks, native rates and calibrated equivalents are separate.",
     "sources": [
       "https://www.cts.umn.edu/news-pubs/news/2021/august/mncav",
-      "https://www.stellantisfleet.com/content/dam/fca-fleet/na/fleet/en_us/chrysler/2021/Pacifica/specifications/2021_CH_PacificaHybrid_Specifications.pdf"
+      "https://www.stellantisfleet.com/content/dam/fca-fleet/na/fleet/en_us/chrysler/2021/Pacifica/specifications/2021_CH_PacificaHybrid_Specifications.pdf",
+      "https://s3.amazonaws.com/chryslermedia.iconicweb.com/mediasite/specs/2021_CH_PacificaHybrid_Specificationsp2i5bgb1foc74s1scirptivlb5.pdf"
     ]
   },
   "sensitivityFactors": [
     0.7,
     1,
     1.3
-  ]
+  ],
+  "parameterReviewDate": "2026-09-25",
+  "assumptions": {
+    "selectionPolicy": "Retain the existing nominal dynamics when no measured MnCAV inertia, payload or tire stiffness is available. These are engineering priors authorized for use, not identified truth or fitted evaluation-drive values.",
+    "nominalMassPolicy": "Use published curb mass 2273 kg as the nominal anchor. No occupants or sensor-rack mass is asserted. Actual loaded mass is unknown.",
+    "yawInertiaFormula": "mass*(stock.lengthM^2+stock.widthWithoutMirrorsM^2)/12",
+    "axleCorneringStiffnessUnits": "N/rad for the complete axle, not each tire; do not multiply by two again.",
+    "frontCorneringStiffnessFormula": "75000*(2273/1575)",
+    "rearCorneringStiffnessFormula": "56000*(2273/1575)",
+    "massSensitivityKg": [
+      2273,
+      2473,
+      2673,
+      2858
+    ],
+    "massSensitivityMeaning": "Illustrative loaded-mass scenarios up to the published stock GVWR; no recorded payload or operational bound is inferred.",
+    "yawInertiaSensitivityFactors": [
+      0.7,
+      1,
+      1.3
+    ],
+    "frontCorneringStiffnessSensitivityFactors": [
+      0.7,
+      1,
+      1.3
+    ],
+    "rearCorneringStiffnessSensitivityFactors": [
+      0.7,
+      1,
+      1.3
+    ],
+    "cgSensitivityM": [
+      -0.15,
+      0,
+      0.15
+    ],
+    "cgSensitivityMeaning": "Assumed longitudinal CG shifts about the stock axle-load-derived location; keep wheelbase fixed; not a confidence interval."
+  }
 }

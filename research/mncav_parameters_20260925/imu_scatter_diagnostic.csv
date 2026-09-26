@@ -1,0 +1,7 @@
+drive,field,samples,receiverStartSeconds,receiverEndSeconds,secondDifferenceScatterProxy
+12-11-24,acceleration_x_mps2,1949,1,40,0.04842158569124444
+12-11-24,acceleration_y_mps2,1949,1,40,0.04842158569124451
+12-11-24,angular_z_radps,1949,1,40,0.0008473777495967783
+12-09-31,acceleration_x_mps2,1950,1,40,0.04842158569124451
+12-09-31,acceleration_y_mps2,1950,1,40,0.09684317138248892
+12-09-31,angular_z_radps,1950,1,40,0.0008473777495967788

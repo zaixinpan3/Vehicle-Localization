@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-09-25",
+  "platform": "UMN MnCAV 2021 Chrysler Pacifica Hybrid",
+  "observerImu": {
+    "topic": "/vehicle/imu/data_raw",
+    "publisher": "/vehicle/dbw_node",
+    "frameId": "base_footprint",
+    "hardwareModel": null,
+    "hardwareModelStatus": "Unidentified OEM vehicle inertial sensor exposed through Dataspeed FCA DBW; do not substitute NovAtel specifications.",
+    "nativeRateHz": 50,
+    "rateBasis": "Both June 7 2024 bags: approximately 50 Hz after the existing affine receiver-clock conversion.",
+    "reportedCovarianceKnown": false,
+    "covarianceEvidence": "First recorded Imu message has all-zero angular/linear covariance (unknown by ROS definition), and orientation_covariance[0]=-1 (no orientation).",
+    "axisAndBiasCalibrationPath": "output/mncav_interface_audit_20260916/vehicle_parameters.json",
+    "physicalMountingExtrinsicsKnown": false
+  },
+  "lateralSimulation": {
+    "lateralAccelerationNoiseStdMps2": 0.05,
+    "yawRateNoiseStdRadps": 0.002,
+    "interpretation": "Engineering per-sample independent Gaussian priors on the existing 100 Hz synthetic grid, not certified covariance or OEM specifications. Retained for continuity; not a native-50-Hz interpolation/noise-correlation model.",
+    "basis": "Calibration-drive seconds 1-40 robust second-difference scatter proxies are approximately 0.04842 m/s2 and 0.0008474 rad/s; dynamics, quantization and temporal correlation contaminate these proxies. Gyro prior is deliberately larger.",
+    "lateralAccelerationBiasStressMps2": [
+      -0.2,
+      0,
+      0.2
+    ],
+    "yawRateBiasStressRadps": [
+      -0.01,
+      0,
+      0.01
+    ],
+    "noiseStdStressFactors": [
+      1,
+      2,
+      5
+    ]
+  },
+  "referenceGnssIns": {
+    "receiverFamily": "NovAtel OEM7 SPAN",
+    "enclosureCandidate": "PwrPak7D-E1",
+    "enclosureConfirmed": false,
+    "imuModel": "Epson G320N",
+    "recordedImuTypeCode": 41,
+    "identityBasis": "Recorded INSCONFIG imu_type=41 plus NovAtel CONNECTIMU enumeration. E1 enclosure is consistent but not uniquely identified by the enum.",
+    "reportedModelConflict": "CTS 25-14 Table 1 says PWRPAK7-E2 and gives E2 random walks; adjacent Figure 2(a) says PwrPak7D-E1. Use recorded IMU identity for these 2024 bags.",
+    "corrimuLoggedRateHz": 100,
+    "inspvaLoggedRateHz": 50,
+    "referenceVelocityUsedByLateralObserver": false,
+    "e1ClassManufacturerSpecifications": {
+      "gyroscopeRangeDegps": 150,
+      "gyroscopeBiasInstabilityDegph": 3.5,
+      "angleRandomWalkDegPerSqrtHour": 0.1,
+      "accelerometerRangeG": 5,
+      "accelerometerBiasInstabilityMg": 0.1,
+      "velocityRandomWalkMpsPerSqrtHour": 0.05
+    },
+    "specificationScope": "E1-class/G320N reference IMU specifications; not specifications of /vehicle/imu/data_raw. Bias instability is not turn-on bias or a hard error bound.",
+    "positionErrorSimulationPriorM": 0.1,
+    "positionErrorPriorStatus": "Optional conservative RTK-fixed simulation prior, not a guarantee; actual GNSS updates use recorded quality/covariance. Float, multipath and outage need separate scenarios.",
+    "sourceIds": [
+      "novatel_imu_types",
+      "novatel_e1_specs",
+      "mncav_cts25_14"
+    ]
+  },
+  "frontLidar": {
+    "topic": "/vehicle/lidar/front_ouster/points",
+    "manufacturer": "Ouster",
+    "model": "OS1-64",
+    "modelStatus": "Reported by UMN CTS 25-14; bag verifies 64 rings and 1024 columns, not hardware generation.",
+    "channels": 64,
+    "columnsPerRecordedScan": 1024,
+    "nativeRateHz": 10,
+    "rangeErrorSimulationPriorM": 0.05,
+    "rangeErrorPriorStatus": "Nominal scenario scale based on the UMN sensor table; not scan-matching pose covariance or an all-target accuracy guarantee.",
+    "hardwareGenerationKnown": false,
+    "sourceIds": [
+      "mncav_vehicle",
+      "mncav_cts25_14"
+    ]
+  },
+  "wheelSpeed": {
+    "topic": "/vehicle/wheel_speed_report",
+    "nativeRateHz": 50,
+    "nativeUnits": "rad/s",
+    "calibrationPath": "config/mncavWheelSpeedCalibration.json",
+    "interpretation": "Use the existing separate-drive effective per-wheel radii and lag coefficients, not unloaded tire radius or measured physical latency."
+  },
+  "steering": {
+    "topic": "/vehicle/steering_report",
+    "nativeRateHz": 100,
+    "nativeUnits": "steering-wheel radians",
+    "calibrationPath": "config/mncavReplayInterface.json",
+    "roadWheelConversion": "(steering_wheel_angle_rad - steeringWheelOffsetRad)/mncavVehicleConfig().steeringRatio"
+  },
+  "extrinsics": {
+    "lateralOutputPointPath": "config/mncavMotionOutputPoint.json",
+    "bestposOutputPointPath": "config/mncavBestposOutputPoint.json",
+    "lidarFramePath": "config/mississippiLidarFrameCalibration.json",
+    "physicalSurveyAvailable": false,
+    "interpretation": "Retain existing empirical output-point/frame calibrations. Do not invent mounting translations, orientations or physical delays. Stored INSCONFIG has no exported translations/rotations; absence is not proof of zero installation offsets."
+  },
+  "timing": {
+    "observerReplayGridHz": 100,
+    "nativeImuRateHz": 50,
+    "physicalLatencySeconds": null,
+    "syntheticNominalAdditionalDelaySeconds": 0,
+    "syntheticDelayStressSeconds": [
+      0.02,
+      0.05,
+      0.1
+    ],
+    "interpretation": "Zero added delay is a nominal synthetic assumption only. Receiver/header clock scale is approximately 1.0909; rates must be computed in the receiver clock. Offline interpolation does not create independent 100 Hz sensor data."
+  },
+  "sources": [
+    {
+      "id": "mncav_vehicle",
+      "url": "https://mncav.umn.edu/vehicle",
+      "role": "UMN platform and sensor inventory"
+    },
+    {
+      "id": "mncav_cts25_14",
+      "url": "https://conservancy.umn.edu/server/api/core/bitstreams/dc64cb11-24de-46d6-ad17-ba34d96f6f01/content",
+      "title": "Autonomous Vehicle Challenges for the US Rural Midwest",
+      "location": "Table 1 and Figure 2(a), printed page 5",
+      "role": "UMN sensor inventory; E1/E2 inconsistency retained"
+    },
+    {
+      "id": "novatel_imu_types",
+      "url": "https://docs.novatel.com/OEM7/Content/SPAN_Commands/CONNECTIMU.htm",
+      "role": "IMU code 41 identifies Epson G320N"
+    },
+    {
+      "id": "novatel_e1_specs",
+      "url": "https://docs.novatel.com/OEM7/Content/Technical_Specs_Receiver/PwrPak7_IMU_Specifications.htm",
+      "role": "E1/E2 specs kept distinct"
+    },
+    {
+      "id": "ros_imu_covariance",
+      "url": "https://raw.githubusercontent.com/ros/common_msgs/noetic-devel/sensor_msgs/msg/Imu.msg",
+      "role": "All-zero covariance means unknown"
+    }
+  ]
+}

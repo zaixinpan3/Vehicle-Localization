@@ -169,4 +169,13 @@ function cfg = lateralObserverConfig(profile)
     cfg.simulation.yawRateNoiseStd = 0.002;
     cfg.simulation.initialStateError = [0.5; 0.05];
     cfg.simulation.randomSeed = 2026;
+    if profile == "mncav"
+        sensors = mncavSensorConfig();
+        cfg.sensorParameterProvenance = sensors;
+        % Effective white-noise priors on the reconstructed simulation grid;
+        % neither OEM IMU specifications nor a measured native covariance.
+        cfg.simulation.lateralAccelerationNoiseStd = ...
+            sensors.lateralSimulation.lateralAccelerationNoiseStdMps2;
+        cfg.simulation.yawRateNoiseStd = sensors.lateralSimulation.yawRateNoiseStdRadps;
+    end
 end
