@@ -1,0 +1,26 @@
+Prospective expansion after June-only fits (2026-09-25)
+
+1. Decode motion and CAN torque from every inventoried bag. Decode Ouster legacy
+   IMU timestamps to obtain an independent time scale; validate packet padding.
+2. Fix May split by sorted inventory index: indices divisible by 3 are validation;
+   remaining May drives train. June 11-24 is an additional training/check drive
+   (first 39.5 seconds / >=40.5 seconds). June 09-31 is transfer evaluation only.
+   June evaluation has been inspected in earlier experiments: it is a historical
+   holdout, not a pristine blind test. Never tune to its score or lateral reference.
+3. Longitudinal: compare torque-balance mass/drag, separate brake gain, and
+   traction-only fits. Keep wheel radius, road grade, brake/regen overlap and
+   torque calibration assumptions explicit. Bootstrap whole training recordings.
+4. Lateral: compare nominal and previous bicycle, refitted physical bicycle,
+   first-order understeer dynamics, and causal stable filter-bank ridge predictors.
+   Select hyperparameters using May validation only; compare June transfer.
+5. Export all candidate metrics, selected model, clocks, source provenance and
+   reproducible scripts. Do not silently replace production observer parameters.
+
+Execution amendments (before final export):
+- Recorded Ouster buffers contain 48 payload bytes plus one checked zero pad.
+- Raw torque reports were present; longitudinal mass experiments proceeded.
+- Added a joint yaw/vy family after yaw-only training predictions exposed bad vy.
+- Broad bounded RK4 search overflowed. Switched to implicit midpoint, then four
+  substeps after the 20 ms version failed an independent accuracy threshold.
+- All candidate fits were rerun after the numerical integration change.
+- No hyperparameter or frame correction was selected using June 09-31 scores.

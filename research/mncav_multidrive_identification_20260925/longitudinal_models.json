@@ -1,0 +1,28 @@
+{
+  "radiusM": 0.361877062240113,
+  "candidates": {
+    "net_torque": {
+      "massKg": 2530.6998827006014,
+      "dragNPerMps2": 0.6350866483855199,
+      "offsetN": 347.99855934518604,
+      "brakeGain": 1.0,
+      "trainingSamples": 3617
+    },
+    "free_brake_gain": {
+      "massKg": 2221.3390862542306,
+      "dragNPerMps2": 8.829998746658272e-15,
+      "offsetN": 463.30912444479094,
+      "brakeGain": 0.6480904305449963,
+      "trainingSamples": 3617
+    },
+    "traction_only": {
+      "massKg": 2087.885402015244,
+      "dragNPerMps2": 1.1707751005360962e-15,
+      "offsetN": 671.4346534908915,
+      "brakeGain": 1.0,
+      "trainingSamples": 2179
+    }
+  },
+  "seed": 20260925,
+  "bootstrapUnit": "whole May training recording"
+}

@@ -1,0 +1,16 @@
+{
+  "exportHashesChecked": 95,
+  "manufacturerDecoderCases": 36864,
+  "lateralMetricRows": 247,
+  "maxMetricDifference": 1.3660947373317356e-16,
+  "longitudinalMetricRows": 24,
+  "maxLongitudinalMetricDifference": 8.326672684688674e-17,
+  "finalTrajectoriesBelowNumericalGuard": true,
+  "midpointVsSolveIvpMaxError": [
+    7.95160219093094e-05,
+    2.2707708667829563e-05
+  ],
+  "filterOutputLeakageCheck": "passed",
+  "filterCausalRecurrenceCheck": "passed",
+  "limitations": "Offline input preprocessing uses centered Savitzky-Golay smoothing; causal recurrence is not an end-to-end online latency test."
+}

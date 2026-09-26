@@ -1,0 +1,11 @@
+{
+  "python": "3.13.12 (main, Mar 10 2026, 18:17:38) [Clang 21.1.4 ]",
+  "packages": {
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "pandas": "3.0.6",
+    "matplotlib": "3.11.2",
+    "numba": "0.67.0",
+    "rosbags": "0.11.5"
+  }
+}
