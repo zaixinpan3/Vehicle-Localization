@@ -1,7 +1,7 @@
 function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
 % analyzeStructuralPillars: Classify whole pillars using XYZ distributions.
 % No vertical index, occupancy sequence or local voxel grid is constructed.
-% The optional pole detector measures supporting subsets, while all off-ground
+% The coarse pole detector measures supporting subsets, while all off-ground
 % returns still contribute to each pillar's output moments.
     useNative=isfield(cfg,'useNativeKernels') && cfg.useNativeKernels;
     stats=aggregatePillarStatistics(pillars.points,pillars.pointPillarLinIdx, ...
@@ -31,14 +31,25 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     maps.coreFraction=zeros(mapSize); maps.coreHeight=zeros(mapSize); maps.coreIsolation=zeros(mapSize);
     maps.corePeakX=nan(mapSize); maps.corePeakY=nan(mapSize);
     maps.corePointCount=zeros(mapSize);
-    subsetMode=isfield(cfg.pole,'detector') && cfg.pole.detector=="subset";
+    shaftMode=isfield(cfg.pole,'detector') && cfg.pole.detector=="shaft";
+    subsetMode=isfield(cfg.pole,'detector') && any(cfg.pole.detector==["subset","shaft"]);
     if any(cloudCfg.semanticNames=="pole") && subsetMode
-        subsetCfg=cfg.pole.subset; subsetCfg.useNativeKernels=useNative;
-        maps.poleSubset=findPillarPoleSubsets(pillars.points,pillars.pointPillarLinIdx,geometry,subsetCfg);
+        if shaftMode
+            shaftCfg=cfg.pole.shaft;shaftCfg.useNativeKernels=useNative;
+            shaftCfg.columnMinimumScores=min(shaftCfg.strongScore, ...
+                shaftCfg.minimumShapeProduct./max(double(maps.pointScore(ids)),eps));
+            maps.poleModes=findPillarShaftModes(pillars.points,pillars.pointPillarLinIdx,geometry,shaftCfg);
+            [maps.poleSubset,maps.poleShaftGroups]=assignPillarShaftSupport( ...
+                pillars.points,pillars.pointPillarLinIdx,geometry,maps.poleModes,shaftCfg);
+        else
+            subsetCfg=cfg.pole.subset; subsetCfg.useNativeKernels=useNative;
+            maps.poleSubset=findPillarPoleSubsets(pillars.points,pillars.pointPillarLinIdx,geometry,subsetCfg);
+        end
         maps.coreHeight(ids)=maps.poleSubset.height;
         maps.corePointCount(ids)=maps.poleSubset.supportCount;
         maps.corePeakX(ids)=maps.poleSubset.axisXY(:,1); maps.corePeakY(ids)=maps.poleSubset.axisXY(:,2);
-    elseif any(cloudCfg.semanticNames=="pole")
+    end
+    if any(cloudCfg.semanticNames=="pole") && (~subsetMode || shaftMode)
         % The core is measured only where the cheap whole-pillar gates can pass.
         tall=stats.count>=cfg.pole.minimumPoints & stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.pole.minimumHeight;
         [maps.coreFraction(ids),maps.coreHeight(ids),maps.coreIsolation(ids),peak,maps.corePointCount(ids)]=computePillarDensityCore( ...
@@ -75,8 +86,14 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     maps.trafficSignMoments=maps.moments;
     floorProbability=cloudCfg.minimumSemanticProbability;
     poleEvidence=double(maps.pointScore).*(1-double(maps.lineScore));
-    if subsetMode && isfield(maps,'poleSubset') && cfg.pole.probabilityEvidence=="subset"
+    if subsetMode && isfield(maps,'poleSubset') && any(cfg.pole.probabilityEvidence==["subset","shaft"])
         poleEvidence=zeros(mapSize); poleEvidence(ids)=maps.poleSubset.score;
+        if shaftMode && any(candidates.legacyCandidateMask(:))
+            peak=[maps.corePeakX(ids),maps.corePeakY(ids)];
+            legacyEvidence=scorePolePillarDistributions(pillars.points,pillars.pointPillarLinIdx, ...
+                geometry,peak,candidates.legacyCandidateMask(ids),cfg.pole.distribution);
+            poleEvidence(ids)=max(poleEvidence(ids),legacyEvidence.score);
+        end
     elseif isfield(cfg.pole,'probabilityEvidence') && cfg.pole.probabilityEvidence=="distribution" && any(poleMask(:))
         peak=[maps.corePeakX(ids),maps.corePeakY(ids)];
         maps.poleDistribution=scorePolePillarDistributions(pillars.points,pillars.pointPillarLinIdx, ...

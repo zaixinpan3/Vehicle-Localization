@@ -5,7 +5,8 @@ struct Point { double x,y,z; bool owned; };
 struct Axis { double x,y,z,sx,sy; };
 Axis balancedAxis(const std::vector<Point>& points) {
     std::vector<Point> sorted=points;
-    std::stable_sort(sorted.begin(),sorted.end(),[](const Point& a,const Point& b){return a.z<b.z;});
+    const auto byHeight=[](const Point& a,const Point& b){return a.z<b.z;};
+    if (!std::is_sorted(sorted.begin(),sorted.end(),byHeight)) std::stable_sort(sorted.begin(),sorted.end(),byHeight);
     std::vector<double> z;
     std::vector<mwSize> starts;
     for (mwSize i=0;i<sorted.size();++i) {

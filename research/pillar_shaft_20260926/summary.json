@@ -1,0 +1,116 @@
+{
+  "units": "frame/pillar occurrences; algorithmic references, not manual truth",
+  "Mississippi": {
+    "legacyCount": 8909,
+    "candidateCount": 23008,
+    "retainedLegacy": 8909,
+    "fineCount": 306,
+    "fineMatched": 299,
+    "legacyFineMatched": 260,
+    "frames": 1170,
+    "referenceRecall": 0.9771241830065359,
+    "legacyReferenceRecall": 0.8496732026143791,
+    "captureMedianMs": 215.63,
+    "coarseReferenceCount": 9129,
+    "coarseExactPrecision": 0.28889951321279556,
+    "coarseExactRecall": 0.7281191806331471,
+    "coarseTolerantPrecision": 0.36287378303198886,
+    "coarseTolerantRecall": 0.7901193997151933
+  },
+  "Downtown": {
+    "legacyCount": 634,
+    "candidateCount": 1956,
+    "retainedLegacy": 634,
+    "fineCount": 132,
+    "fineMatched": 128,
+    "legacyFineMatched": 111,
+    "frames": 24,
+    "referenceRecall": 0.9696969696969697,
+    "legacyReferenceRecall": 0.8409090909090909,
+    "captureMedianMs": 259.119,
+    "subsetCount": 1402,
+    "subsetReferenceMatched": 118
+  },
+  "pairedTiming": {
+    "legacyMs": 32.61,
+    "subsetMs": 121.559,
+    "shaftMs": 201.007,
+    "shaftMinusLegacyMedianMs": 167.832
+  },
+  "validation": {
+    "parityFrames": 12,
+    "parityReferenceCells": 129,
+    "maximumFieldError": 8.881784197001252e-15,
+    "nullScenes": 32,
+    "nullAccepted": 5,
+    "testsPassed": 126,
+    "testsFailed": 0,
+    "testsIncomplete": 0
+  },
+  "developmentVariants": [
+    {
+      "variant": "associated",
+      "frames": 117,
+      "rawModeCells": 2776,
+      "fineMatchedBeforeSelection": 291,
+      "fineReferenceCells": 306,
+      "developmentMedianMs": 488.157
+    },
+    {
+      "variant": "compactSearch",
+      "frames": 117,
+      "rawModeCells": 5499,
+      "fineMatchedBeforeSelection": 304,
+      "fineReferenceCells": 306,
+      "developmentMedianMs": 178.476
+    },
+    {
+      "variant": "consensus",
+      "frames": 117,
+      "rawModeCells": 6160,
+      "fineMatchedBeforeSelection": 297,
+      "fineReferenceCells": 306,
+      "developmentMedianMs": 185.93699999999998
+    },
+    {
+      "variant": "persistent",
+      "frames": 117,
+      "rawModeCells": 3013,
+      "fineMatchedBeforeSelection": 301,
+      "fineReferenceCells": 306,
+      "developmentMedianMs": 183.65
+    },
+    {
+      "variant": "prototype",
+      "frames": 117,
+      "rawModeCells": 17977,
+      "fineMatchedBeforeSelection": 305,
+      "fineReferenceCells": 306,
+      "developmentMedianMs": 506.60400000000004
+    },
+    {
+      "variant": "radialEvidence",
+      "frames": 117,
+      "rawModeCells": 4293,
+      "fineMatchedBeforeSelection": 302,
+      "fineReferenceCells": 306,
+      "developmentMedianMs": 180.12
+    },
+    {
+      "variant": "robustAxis",
+      "frames": 117,
+      "rawModeCells": 8641,
+      "fineMatchedBeforeSelection": 305,
+      "fineReferenceCells": 306,
+      "developmentMedianMs": 518.8779999999999
+    },
+    {
+      "variant": "vertical",
+      "frames": 117,
+      "rawModeCells": 4244,
+      "fineMatchedBeforeSelection": 302,
+      "fineReferenceCells": 306,
+      "developmentMedianMs": 273.736
+    }
+  ]
+}

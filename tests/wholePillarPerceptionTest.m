@@ -144,6 +144,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
             cloudCfg=coarseSemanticProbabilityCloudConfig(); cloudCfg.semanticNames="pole";
             structural=structuralPillarConfig(cfg.voxelSize(1));
+            structural.pole.detector="pillar";structural.pole.probabilityEvidence="distribution";
             legacy=analyzeStructuralPillars(pillarizePointCloud(both,cfg),structural,cloudCfg);
             testCase.verifyFalse(any(legacy.poleCellMask,'all'));
             structural.pole.detector="subset"; structural.pole.probabilityEvidence="subset";

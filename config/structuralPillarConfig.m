@@ -82,10 +82,15 @@ function cfg = structuralPillarConfig(spacing)
     cfg.pole.distribution=struct('coreRadius',0.25,'contextRadius',0.75, ...
         'minimumRobustHeight',1.5,'minimumCorePoints',12);
 
-    % The existential shaft detector is available for evaluation by setting
-    % detector and probabilityEvidence to "subset". Keep the current default
-    % until the grid-migration agreement criterion is met on recorded data.
+    % Coarse pillars retain established detections and add independently
+    % supported shaft modes. The earlier subset experiment remains selectable
+    % for reproducible comparisons; the offline 0.3 m branch stays unchanged.
     cfg.pole.detector="pillar";
+    cfg.pole.shaft=pillarShaftConfig();
+    if spacing>0.3
+        cfg.pole.detector="shaft";
+        cfg.pole.probabilityEvidence="shaft";
+    end
     cfg.pole.subset=struct('radii',[0.06 0.10 0.15], ...
         'maximumSeeds',12,'seedSeparation',0.08,'fitRadius',0.15, ...
         'fitHeight',2.0,'heightHypotheses',4,'neighborhoodRadius',0.75, ...

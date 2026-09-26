@@ -1,10 +1,23 @@
 function candidates=detectPolePillars(maps,facadeMask,cfg)
 % detectPolePillars: Select supported poles on the shared pillar lattice.
-% The experimental subset mode requires one compact, continuous shaft and
-% does not veto it using whole-pillar scatter, core fraction, or isolation.
-% The default pillar mode retains the existing whole-pillar/context gates.
-% Both modes join whole neighbors without creating a finer pillar lattice.
+% The coarse shaft mode preserves established pillar detections and adds
+% independently supported modes with verified owner contributions. Legacy
+% pillar and experimental subset modes remain available for comparisons.
+% All modes share existing XY pillars; none introduces a finer lattice.
     stats=maps.statistics; ids=double(stats.pillarIndices);
+    if isfield(cfg,'detector') && cfg.detector=="shaft"
+        legacyCfg=cfg;legacyCfg.detector="pillar";
+        legacy=detectPolePillars(maps,facadeMask,legacyCfg);
+        core=false(maps.mapSize);core(ids)=maps.poleSubset.found;
+        evidence=zeros(maps.mapSize);evidence(ids)=maps.poleSubset.score;
+        combined=core | legacy.candidateMask;
+        candidates=struct('eligibleMask',maps.occupiedMask,'coreMask',core|legacy.coreMask,'supportMask',combined, ...
+            'footprintCandidateMask',combined,'contextCandidateMask',combined, ...
+            'contextFraction',double(core),'componentEvidence',evidence, ...
+            'contextEvidence',evidence,'candidateMask',combined, ...
+            'legacyCandidateMask',legacy.candidateMask,'shaftCandidateMask',core);
+        return;
+    end
     if isfield(cfg,'detector') && cfg.detector=="subset"
         candidates=detectSupportedSubsets(maps,cfg,ids); return;
     end

@@ -1,0 +1,17 @@
+file,line,message
+config/pillarShaftConfig.m,0,clean
+config/structuralPillarConfig.m,0,clean
+perception/offGroundFeatures/findPillarShaftModes.m,0,clean
+perception/offGroundFeatures/assignPillarShaftSupport.m,0,clean
+perception/offGroundFeatures/analyzeStructuralPillars.m,0,clean
+perception/offGroundFeatures/detectPolePillars.m,0,clean
+perception/perceptionNativeAvailable.m,0,clean
+scripts/buildPerceptionKernels.m,0,clean
+tests/pillarShaftModesTest.m,0,clean
+tests/wholePillarPerceptionTest.m,0,clean
+research/pillar_shaft_20260926/benchmarkShaftPipeline.m,0,clean
+research/pillar_shaft_20260926/captureShaftPipeline.m,0,clean
+research/pillar_shaft_20260926/captureShaftStudy.m,0,clean
+research/pillar_shaft_20260926/evaluateShaftSelection.m,0,clean
+research/pillar_shaft_20260926/plotShaftStudy.m,0,clean
+research/pillar_shaft_20260926/validateShaftStudy.m,0,clean
