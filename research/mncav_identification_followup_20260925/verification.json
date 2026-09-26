@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "recomputedMetricRows": 21,
+  "maxAbsoluteMetricDifference": 4.0245584642661925e-16,
+  "verifiedHashes": 19,
+  "algebraCases": 100,
+  "algebraMaxError": 4.218847493575595e-15,
+  "parameterFamilyRows": 29,
+  "parameterFamilyMaxCoefficientError": 1.4210854715202004e-14,
+  "inventoriedBags": 19,
+  "bagsWithExactInspvaTopic": 2
+}

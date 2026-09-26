@@ -1,0 +1,42 @@
+{
+  "selectedIntegral": "integral_0.5",
+  "selectedYaw": "yaw_alignment",
+  "productionParametersChanged": false,
+  "gyroBiasRadps": 0.0122209801079676,
+  "fixedOutputPointX": -2.3597988944583816,
+  "algebraCases": 100,
+  "algebraMaxError": 4.218847493575595e-15,
+  "candidateVectors": {
+    "nominal": [
+      3.8632328412587142,
+      3.571096418457553,
+      0.9495386755502131,
+      0.0016160456036984534,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "yaw_physical": [
+      2.220427943436492,
+      2.0639575303570044,
+      -0.8447285442272022,
+      0.0016160456036984534,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "yaw_alignment": [
+      4.47917952436836,
+      5.010635294096255,
+      0.747069368778072,
+      0.0024307176639074535,
+      0.0,
+      0.0,
+      -0.018468796051082134
+    ]
+  },
+  "randomSeed": 20260925,
+  "sourceCommit": "c49895662fcf4211da707cec763d92f6bb2039cd",
+  "betaLessInterpretation": "Conditional reconstruction driven by measured steering, yaw and acceleration; not free-run steering-only prediction",
+  "yawInterpretation": "Steering-only dynamic prediction with measured speed, zero initial vy, measured initial yaw and 1 s burn-in per <=8 s window"
+}

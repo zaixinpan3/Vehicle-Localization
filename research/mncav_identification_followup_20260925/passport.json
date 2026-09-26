@@ -1,0 +1,22 @@
+{
+  "origin_skill": "academic-research-suite",
+  "mode": "targeted literature search and identification experiment",
+  "date": "2026-09-25",
+  "verification_scope": "Five DOI metadata records checked with Crossref; one arXiv full text examined; local experimental metrics verified separately",
+  "claim_intent_manifests": [{
+    "manifest_version": "1.0",
+    "manifest_id": "M-MNCAV-FOLLOWUP-20260925",
+    "emitted_by": "inline synthesis phase",
+    "claims": [
+      {"claim_id": "C1", "claim_text": "Published approaches support sideslip-free estimation, bank/bias-aware adaptation and LPV input-output identification under their respective assumptions.", "intended_evidence_kind": "empirical", "planned_refs": ["You2009", "Liao2019", "Wittmer2023", "Cerone2011"]},
+      {"claim_id": "C2", "claim_text": "The derived reduced yaw/acceleration equation alone admits a continuum of conditional stiffness/inertia solutions.", "intended_evidence_kind": "theoretical", "planned_refs": []},
+      {"claim_id": "C3", "claim_text": "The MnCAV follow-up tests improve yaw prediction but do not establish physical parameters or remove the second-drive lateral discrepancy.", "intended_evidence_kind": "empirical", "planned_refs": []}
+    ],
+    "manifest_negative_constraints": [
+      {"constraint_id": "NC1", "rule": "Do not present the independently derived diagnostic as a full reproduction of the beta-less or EKF papers."},
+      {"constraint_id": "NC2", "rule": "Do not equate accurate yaw prediction with identified physical parameters or validated lateral velocity."},
+      {"constraint_id": "NC3", "rule": "Distinguish numerical/profile sensitivity from statistical confidence intervals."}
+    ]
+  }],
+  "disclosure": "AI-assisted literature search, derivation, implementation and result checking; no claim of independent human review."
+}

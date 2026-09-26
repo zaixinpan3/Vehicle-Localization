@@ -1,0 +1,379 @@
+[
+  {
+    "DOI": "10.1016/j.conengprac.2009.07.002",
+    "title": [
+      "New adaptive approaches to real-time estimation of vehicle sideslip angle"
+    ],
+    "author": [
+      {
+        "given": "Seung-Han",
+        "family": "You",
+        "sequence": "first",
+        "affiliation": [],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Jin-Oh",
+        "family": "Hahn",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Hyeongcheol",
+        "family": "Lee",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      }
+    ],
+    "container-title": [
+      "Control Engineering Practice"
+    ],
+    "volume": "17",
+    "issue": "12",
+    "page": "1367-1379",
+    "published": {
+      "date-parts": [
+        [
+          2009,
+          12
+        ]
+      ]
+    },
+    "URL": "https://doi.org/10.1016/j.conengprac.2009.07.002",
+    "verification": "Crossref DOI record"
+  },
+  {
+    "DOI": "10.1016/j.conengprac.2008.10.008",
+    "title": [
+      "Identification of vehicle parameters using stationary driving maneuvers"
+    ],
+    "author": [
+      {
+        "given": "Daniel",
+        "family": "Wesemeier",
+        "sequence": "first",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      },
+      {
+        "given": "Rolf",
+        "family": "Isermann",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      }
+    ],
+    "container-title": [
+      "Control Engineering Practice"
+    ],
+    "volume": "17",
+    "issue": "12",
+    "page": "1426-1431",
+    "published": {
+      "date-parts": [
+        [
+          2009,
+          12
+        ]
+      ]
+    },
+    "URL": "https://doi.org/10.1016/j.conengprac.2008.10.008",
+    "verification": "Crossref DOI record"
+  },
+  {
+    "DOI": "10.1016/j.automatica.2011.04.016",
+    "title": [
+      "Set-membership LPV model identification of vehicle lateral dynamics"
+    ],
+    "author": [
+      {
+        "given": "Vito",
+        "family": "Cerone",
+        "sequence": "first",
+        "affiliation": [],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Dario",
+        "family": "Piga",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Diego",
+        "family": "Regruto",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      }
+    ],
+    "container-title": [
+      "Automatica"
+    ],
+    "volume": "47",
+    "issue": "8",
+    "page": "1794-1799",
+    "published": {
+      "date-parts": [
+        [
+          2011,
+          8
+        ]
+      ]
+    },
+    "URL": "https://doi.org/10.1016/j.automatica.2011.04.016",
+    "verification": "Crossref DOI record"
+  },
+  {
+    "DOI": "10.1016/j.ifacol.2023.10.437",
+    "title": [
+      "A Beta-less Approach for Vehicle Cornering Stiffness Estimation"
+    ],
+    "author": [
+      {
+        "given": "Kelvin",
+        "family": "Wittmer",
+        "sequence": "first",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      },
+      {
+        "given": "Kay-Uwe",
+        "family": "Henning",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      },
+      {
+        "given": "Oliver",
+        "family": "Sawodny",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      }
+    ],
+    "container-title": [
+      "IFAC-PapersOnLine"
+    ],
+    "volume": "56",
+    "issue": "2",
+    "page": "11477-11482",
+    "published": {
+      "date-parts": [
+        [
+          2023
+        ]
+      ]
+    },
+    "URL": "https://doi.org/10.1016/j.ifacol.2023.10.437",
+    "verification": "Crossref DOI record"
+  },
+  {
+    "DOI": "10.1109/tie.2025.3610738",
+    "title": [
+      "Dynamic Uncertainty-Adaptive Vehicle Lateral Velocity Estimation for Near-Limit Cornering With Tire Stiffness Compensation"
+    ],
+    "author": [
+      {
+        "ORCID": "https://orcid.org/0009-0005-2904-9320",
+        "authenticated-orcid": false,
+        "given": "Jiaxing",
+        "family": "Lu",
+        "sequence": "first",
+        "affiliation": [
+          {
+            "name": "Shanghai Research Institute for Intelligent Autonomous Systems, Tongji University, Shanghai, China"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "ORCID": "https://orcid.org/0009-0003-4493-1050",
+        "authenticated-orcid": false,
+        "given": "Wei",
+        "family": "Pan",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "College of Electronic and Information Engineering, Tongji University, Shanghai, China"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "ORCID": "https://orcid.org/0000-0003-3717-7304",
+        "authenticated-orcid": false,
+        "given": "Bin",
+        "family": "Li",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "College of Electronic and Information Engineering, Tongji University, Shanghai, China"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "ORCID": "https://orcid.org/0000-0003-2207-9947",
+        "authenticated-orcid": false,
+        "given": "Tao",
+        "family": "Cao",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "Shanghai Aerospace Control Technology Institute, Shanghai, China"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "ORCID": "https://orcid.org/0000-0001-7783-4183",
+        "authenticated-orcid": false,
+        "given": "Zhouyuan",
+        "family": "Qian",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "Shanghai Aerospace Control Technology Institute, Shanghai, China"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "ORCID": "https://orcid.org/0000-0002-9358-0264",
+        "authenticated-orcid": false,
+        "given": "Lin",
+        "family": "Zhang",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "School of Automotive Studies, Tongji University, Shanghai, China"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "ORCID": "https://orcid.org/0000-0002-1724-8649",
+        "authenticated-orcid": false,
+        "given": "Hong",
+        "family": "Chen",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "Shanghai Research Institute for Intelligent Autonomous Systems, Tongji University, Shanghai, China"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      }
+    ],
+    "container-title": [
+      "IEEE Transactions on Industrial Electronics"
+    ],
+    "volume": "73",
+    "issue": "2",
+    "page": "3269-3279",
+    "published": {
+      "date-parts": [
+        [
+          2026,
+          2
+        ]
+      ]
+    },
+    "URL": "https://doi.org/10.1109/tie.2025.3610738",
+    "verification": "Crossref DOI record"
+  }
+]
