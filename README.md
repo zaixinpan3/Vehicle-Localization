@@ -264,8 +264,7 @@ loop. `runLateralVelocityObserver` supplies exactly this interface:
   transports it by rigid-body kinematics, `vyOutput = vyObserver - d*r`, to the
   point that the pose state, map and GNSS correction use. The MnCAV profile
   loads `config/mncavMotionOutputPoint.json` (2.36 m, fitted on seconds 1--40
-  of the separate 12-11-24 drive by `calibrateMncavMotionOutputPoint`); the
-  reference profile exports at the observer point. The persistent second-order
+  of the separate 12-11-24 drive by `calibrateMncavMotionOutputPoint`). The persistent second-order
   side-slip interface tracks the direction of that output-point velocity.
   `observerPointLateralVelocity` retains the untransported state;
 * `longitudinalSpeedRate`, rebuilt as `ax + vy*r` because the IMU reports a
@@ -403,10 +402,10 @@ selfScore = scoreSemanticProbabilityCloudAlignment( ...
 design = designLateralObserverGains(lateralObserverConfig("mncav")); % nominal MnCAV LPV H2 synthesis
 estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
 
-lateral = load("tests/reference/lateralObserverDesign.mat");
+lateral = designLateralObserverGains(); % current MnCAV; requires YALMIP/SDP
 improved = improvedObserverReferenceDesign();
 result = simulateImprovedObserverScenario( ...
-    improved, lateral.design, improvedObserverConfig());        % complete cascade
+    improved, lateral, improvedObserverConfig());        % complete cascade
 ```
 
 `scripts/` holds the runnable entry points: `extractPointCloudsFromBag.m` and

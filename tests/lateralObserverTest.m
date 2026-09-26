@@ -1,18 +1,17 @@
 classdef lateralObserverTest < matlab.unittest.TestCase
 % lateralObserverTest: Tests of the LPV lateral-velocity observer. The model
 % and scheduling tests check the algebra that makes the polytopic
-% representation exact; the observer tests run against a stored design so
-% they need no SDP solver; the synthesis test re-runs the LMI and therefore
-% requires YALMIP.
+% representation exact. Observer tests synthesize the current MnCAV design
+% once per class and require YALMIP and an SDP solver.
 
     properties (Access = private)
-        StoredDesign
+        CurrentDesign
     end
 
     methods (TestClassSetup)
         function addProjectPaths(testCase)
         % addProjectPaths: Put the vehicleLocalization modules on the path and
-        % load the stored observer design.
+        % synthesize the current MnCAV observer design.
         %
         % Input:
         %   testCase: matlab.unittest.TestCase instance
@@ -21,11 +20,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         %   none
             projectFolder = fileparts(fileparts(mfilename("fullpath")));
             run(fullfile(projectFolder, "setupVehicleLocalization.m"));
-            loaded = load(fullfile(projectFolder, "tests", "reference", "lateralObserverDesign.mat"));
-            testCase.StoredDesign = loaded.design;
-            current=lateralObserverConfig("reference");
-            testCase.StoredDesign.cfg.hybrid=current.hybrid;
-            testCase.StoredDesign.cfg.outputPoint=current.outputPoint;
+            testCase.CurrentDesign = designLateralObserverGains(lateralObserverConfig());
         end
     end
 
@@ -35,7 +30,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % textbook 2-DOF lateral bicycle matrices, and the first row of A and C
         % differ exactly by the centripetal term, which is the identity
         % vydot = ay - Vx r.
-            cfg = lateralObserverConfig("reference");
+            cfg = lateralObserverConfig();
             vehicle = cfg.vehicle;
             model = lateralBicycleModel(vehicle);
             longitudinalSpeed = 15.0;
@@ -62,7 +57,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % every scheduling point in the speed range are nonnegative and sum to
         % one, which is exactly the statement that the triangle contains the
         % curve rho(Vx) = [Vx; 1/Vx].
-            cfg = lateralObserverConfig("reference");
+            cfg = lateralObserverConfig();
             polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
             speeds = linspace(cfg.scheduling.speedRange(1), cfg.scheduling.speedRange(2), 401);
             for speed = speeds
@@ -77,7 +72,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % polytopicReconstructionIsExact: Because A and C are affine in rho,
         % their values equal the convex combination of the vertex values with
         % the same barycentric coordinates.
-            cfg = lateralObserverConfig("reference");
+            cfg = lateralObserverConfig();
             model = lateralBicycleModel(cfg.vehicle);
             polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
             vertexA = zeros(2, 2, 3);
@@ -97,13 +92,13 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             end
         end
 
-        function storedDesignSatisfiesTheOriginalCertificate(testCase)
-        % storedDesignSatisfiesTheOriginalCertificate: The stored vertex gains
+        function currentDesignSatisfiesTheOriginalCertificate(testCase)
+        % currentDesignSatisfiesTheOriginalCertificate: The stored vertex gains
         % satisfy the pre-convexification conditions of the proposition at
         % every grid speed: negative definite Lyapunov derivative, H2 quantity
         % below mu, and a stable error matrix. The check is repeated here with
         % the blended gain so the stored margins are not taken on trust.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             testCase.verifyTrue(design.certified);
             testCase.verifyLessThan(design.maxCertificateMargin, 0);
             testCase.verifyLessThan(design.maxErrorEigenvalueRealPart, 0);
@@ -128,7 +123,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % is the vertex gain itself at the two speed vertices, the barycentric
         % blend of the three vertex gains at an interior speed, and the nearer
         % vertex gain when the speed leaves the designed range.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             polytope = design.polytope;
             vertexGains = design.vertexGains;
 
@@ -155,7 +150,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % the barycentric coordinates of rho = [Vx; 1/Vx], the gain is affine
         % in rho: the blended gain along the speed range equals the least
         % squares affine fit L0 + rho1 L1 + rho2 L2 to numerical precision.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             speeds = linspace(design.polytope.speedRange(1), design.polytope.speedRange(2), 41);
             regressors = [ones(numel(speeds), 1), speeds(:), 1.0 ./ speeds(:)];
             gains = zeros(numel(speeds), 4);
@@ -172,7 +167,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % observerConvergesFromAWrongInitialState: On the synthetic scenario the
         % observer recovers the lateral velocity from a deliberately wrong
         % initial state and settles well below the peak of the signal.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             result = simulateLateralObserverScenario(design, design.cfg);
 
             testCase.verifyGreaterThan(result.metrics.peakLateralVelocity, 0.2);
@@ -187,7 +182,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % whose Lipschitz constant respects the design bound, the observer still
         % converges, which is what the Young-inequality term of the certificate
         % is there to guarantee.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             cfg = design.cfg;
             nonlinearGain = 0.3;
             cfg.observer.nonlinearity = @(x) [nonlinearGain .* sin(x(2)); -0.2 .* sin(x(1))];
@@ -204,7 +199,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % side-slip interface state's rate agrees with a finite difference of
         % its reported angle. This is the signal the ego-state observer
         % consumes as part of the track-angle rate.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             result = simulateLateralObserverScenario(design, design.cfg);
             estimate = result.estimate;
 
@@ -222,11 +217,11 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % speedRateIsReconstructedFromTheSpecificForce: The observer treats the
         % longitudinal measurement as the inertial specific force and rebuilds
         % the speed derivative as ax + vy r, which enters the side-slip rate.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             result = simulateLateralObserverScenario(design, design.cfg);
 
             expectedRate = result.measurements.longitudinalAcceleration + ...
-                (result.estimate.lateralVelocity .* result.measurements.yawRate);
+                (result.estimate.observerPointLateralVelocity .* result.measurements.yawRate);
             testCase.verifyEqual(result.estimate.longitudinalSpeedRate, expectedRate, AbsTol=1.0e-12);
             testCase.verifyGreaterThan(max(abs(result.estimate.longitudinalSpeedRate - ...
                 result.measurements.longitudinalAcceleration)), 0, ...
@@ -239,7 +234,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % point, vyOutput = vyObserver - forwardOffset*r, and the side-slip
         % interface tracks the direction of that output-point velocity. A zero
         % offset exports the observer point unchanged.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             cfg = design.cfg;
             measurements = lateralObserverTest.constantSpeedMeasurements(6.0, 12.0);
             measurements.yawRate(:) = 0.20;
@@ -264,7 +259,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function missingOutputPointConfigurationIsRejected(testCase)
         % missingOutputPointConfigurationIsRejected: A configuration without
         % the output-point group is an obsolete contract, not a zero offset.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             cfg = rmfield(design.cfg, "outputPoint");
             measurements = lateralObserverTest.constantSpeedMeasurements(1.0, 8.0);
             testCase.verifyError(@() runLateralVelocityObserver(measurements, design, cfg), ...
@@ -275,7 +270,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % invalidSideSlipSpeedZeroesTheOutputs: Below the valid side-slip speed
         % the persistent interface tracks zero while the common lateral state
         % remains free to converge continuously.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             cfg = design.cfg;
             numSamples = 200;
             measurements = struct();
@@ -298,10 +293,10 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % zeroSpeedNeverEvaluatesTheReciprocalModel Corrupt the reciprocal
         % coefficients and prove that the zero-speed execution path does not
         % access them.
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             design.model.A2(:) = NaN;
             design.model.C2(:) = NaN;
-            cfg = lateralObserverConfig("reference");
+            cfg = lateralObserverConfig();
             cfg.observer.initialState = [1.0; 0.2];
             cfg.hybrid.initialMasterState = [1.0; 0.0];
             measurements = testCase.zeroMotionMeasurements(2.0);
@@ -322,14 +317,14 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function abruptValidityLossFadesTheStoredCorrection(testCase)
         % abruptValidityLossFadesTheStoredCorrection A one-edge validity loss
         % removes the raw target immediately but not the injected correction.
-            cfg = lateralObserverConfig("reference");
+            cfg = lateralObserverConfig();
             cfg.observer.initialState = [0.0; 0.0];
             cfg.hybrid.initialMasterState = [1.0; 0.0];
             measurements = testCase.constantSpeedMeasurements(3.0, 10.0);
             measurements.dynamicValid = measurements.time < 1.5;
             firstInvalid = find(~measurements.dynamicValid, 1, "first");
 
-            estimate = runLateralVelocityObserver(measurements, testCase.StoredDesign, cfg);
+            estimate = runLateralVelocityObserver(measurements, testCase.CurrentDesign, cfg);
 
             testCase.verifyFalse(estimate.diagnostics.dynamicModelEvaluated(firstInvalid));
             testCase.verifyEqual(estimate.correctionTarget.dynamic(firstInvalid, :), ...
@@ -346,12 +341,12 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function stopGoModesShareOneContinuousOutputPath(testCase)
         % stopGoModesShareOneContinuousOutputPath Exercise both speed edges,
         % the stationary detector, and a deliberately mismatched hidden state.
-            cfg = lateralObserverConfig("reference");
+            cfg = lateralObserverConfig();
             cfg.observer.initialState = [0.0; 0.10];
             cfg.hybrid.initialMasterState = [0.80; 0.0];
             measurements = testCase.stopGoMeasurements();
 
-            estimate = runLateralVelocityObserver(measurements, testCase.StoredDesign, cfg);
+            estimate = runLateralVelocityObserver(measurements, testCase.CurrentDesign, cfg);
             transitionStep = [0.0; abs(diff(estimate.lateralVelocity))];
             transitionRateStep = [0.0; abs(diff(estimate.sideSlipAngleRate))];
 
@@ -365,12 +360,12 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(all(isfinite(estimate.sideSlipAngleRate)));
         end
 
-        function synthesisReproducesTheStoredDesign(testCase)
-        % synthesisReproducesTheStoredDesign: Re-running the LMI synthesis
-        % reproduces the stored vertex gains. Needs YALMIP and an SDP solver.
+        function synthesisReproducesTheCurrentDesign(testCase)
+        % synthesisReproducesTheCurrentDesign: Re-running the LMI synthesis
+        % reproduces the current vertex gains. Needs YALMIP and an SDP solver.
             testCase.assumeTrue(exist("sdpvar", "file") == 2, ...
                 "The lateral observer synthesis test needs YALMIP and an SDP solver on the MATLAB path.");
-            design = testCase.StoredDesign;
+            design = testCase.CurrentDesign;
             resolved = designLateralObserverGains(design.cfg);
 
             testCase.verifyEqual(resolved.tau, design.tau);

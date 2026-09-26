@@ -10,46 +10,33 @@ function cfg = lateralObserverConfig(profile)
 % observer.
 %
 % Default vehicle parameters come from config/mncavVehicleParameters.json.
-% The explicit "reference" profile preserves the archived sedan regression model.
+% MnCAV is the only supported vehicle profile.
 %
 % Input:
-%   profile: "reference" retains archived regression parameters; "mncav"
-%       (default) uses the adopted MnCAV identification and public geometry.
-%       Re-synthesize lateral gains after changing the vehicle profile.
+%   profile: optional "mncav" selector, retained for existing callers.
+%       All parameters come from the adopted identification and public geometry.
+%       Re-synthesize lateral gains after changing the vehicle configuration.
 %
 % Output:
 %   cfg: struct with vehicle, scheduling, synthesis, observer, and
 %       simulation groups
     arguments
-        profile (1,1) string {mustBeMember(profile,["reference","mncav"])} = "mncav"
+        profile (1,1) string = "mncav"
     end
+    assert(profile == "mncav", "VehicleLocalization:RemovedVehicleProfile", ...
+        "Only the current MnCAV configuration is supported. Use lateralObserverConfig().");
     cfg = struct();
 
-    % 2-DOF lateral bicycle model parameters
-    cfg.vehicle = struct();
-    cfg.vehicle.mass = 1575.0;
-    cfg.vehicle.yawInertia = 2875.0;
-    cfg.vehicle.lf = 1.20;
-    cfg.vehicle.lr = 1.60;
-    cfg.vehicle.frontCorneringStiffness = 75000.0;
-    cfg.vehicle.rearCorneringStiffness = 56000.0;
-    if profile=="mncav"
-        parameters=mncavVehicleConfig();
-        cfg.vehicle=parameters.vehicle;
-        cfg.vehicleParameterProvenance=parameters;
-    end
+    % Single source for the adopted 2-DOF lateral bicycle model.
+    parameters = mncavVehicleConfig();
+    cfg.vehicle = parameters.vehicle;
+    cfg.vehicleParameterProvenance = parameters;
 
-    % Exported lateral velocity and side slip refer to the output point that
-    % the pose state, map and GNSS correction use. The observer integrates the
-    % IMU, so its own point is forwardOffsetM ahead of the output point:
-    % vyOutput = vyObserver - forwardOffsetM*yawRate. The reference profile
-    % exports at the observer point; the MnCAV offset was calibrated on the
-    % separate 12-11-24 drive by calibrateMncavMotionOutputPoint.
-    cfg.outputPoint = struct("forwardOffsetM", 0.0, "identifier", "observer-point");
-    if profile=="mncav"
-        cfg.outputPoint = jsondecode(fileread(fullfile(fileparts(mfilename("fullpath")), ...
-            "mncavMotionOutputPoint.json")));
-    end
+    % The observer point is forwardOffsetM ahead of the exported output point:
+    % vyOutput = vyObserver - forwardOffsetM*yawRate. The offset was calibrated
+    % on the separate 12-11-24 drive by calibrateMncavMotionOutputPoint.
+    cfg.outputPoint = jsondecode(fileread(fullfile(fileparts(mfilename("fullpath")), ...
+        "mncavMotionOutputPoint.json")));
 
     % Scheduling parameter rho = [Vx; 1/Vx] and the speed grid over it. The
     % gain is affine in the barycentric coordinates of rho on the triangle
@@ -162,17 +149,13 @@ function cfg = lateralObserverConfig(profile)
     % Kept small enough that the side-slip angle stays inside the linear
     % tire regime the 2-DOF model assumes
     cfg.simulation.steeringWaypointDeg = [0.0, 2.0, -2.0, 1.8, -1.8, 2.0, -1.4, 1.6, 0.0];
-    cfg.simulation.lateralAccelerationNoiseStd = 0.05;
-    cfg.simulation.yawRateNoiseStd = 0.002;
     cfg.simulation.initialStateError = [0.5; 0.05];
     cfg.simulation.randomSeed = 2026;
-    if profile == "mncav"
-        sensors = mncavSensorConfig();
-        cfg.sensorParameterProvenance = sensors;
-        % Effective white-noise priors on the reconstructed simulation grid;
-        % neither OEM IMU specifications nor a measured native covariance.
-        cfg.simulation.lateralAccelerationNoiseStd = ...
-            sensors.lateralSimulation.lateralAccelerationNoiseStdMps2;
-        cfg.simulation.yawRateNoiseStd = sensors.lateralSimulation.yawRateNoiseStdRadps;
-    end
+    sensors = mncavSensorConfig();
+    cfg.sensorParameterProvenance = sensors;
+    % Effective white-noise priors on the reconstructed simulation grid;
+    % neither OEM IMU specifications nor a measured native covariance.
+    cfg.simulation.lateralAccelerationNoiseStd = ...
+        sensors.lateralSimulation.lateralAccelerationNoiseStdMps2;
+    cfg.simulation.yawRateNoiseStd = sensors.lateralSimulation.yawRateNoiseStdRadps;
 end

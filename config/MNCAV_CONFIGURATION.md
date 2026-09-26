@@ -34,12 +34,14 @@ configuration used to create it, not an alternative default. Cache-consuming
 motion comparison entrypoints validate its vehicle and steering metadata before
 execution. Do not overwrite old experimental outputs merely to make checks pass.
 
-The archived sedan remains available as **explicit**
-`lateralObserverConfig("reference")` for regression/reproduction. Parameter
-sweeps may explicitly modify a configuration derived from the default; record
-those overrides and synthesize matching gains. Versioned historical research
-artifacts retain their originally recorded assumptions and results. They are
-not live configuration sources.
+MnCAV is the only supported vehicle profile. The old `"reference"` profile
+and both obsolete saved lateral-design MAT files have been removed. Tests
+synthesize the current design, so YALMIP and an SDP solver are required for
+lateral runtime tests as well as synthesis tests. Parameter sweeps may explicitly
+modify a configuration derived from the default; record those overrides and
+synthesize matching gains. Versioned historical research artifacts retain their
+originally recorded assumptions and results; reproduce those at their recorded
+Git revision. They are not live configuration sources.
 
 Synthetic truth must be expressed at the configured output point:
 `vy_output=vy_origin-forwardOffsetM*yawRate`, with the corresponding derivative

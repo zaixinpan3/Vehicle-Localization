@@ -12,7 +12,6 @@ classdef mncavDefaultsTest < matlab.unittest.TestCase
             canonical=mncavVehicleConfig();cfg=lateralObserverConfig();
             testCase.verifyEqual(cfg.vehicle,canonical.vehicle);
             testCase.verifyEqual(cfg.outputPoint,lateralObserverConfig("mncav").outputPoint);
-            testCase.verifyNotEqual(cfg.vehicle,lateralObserverConfig("reference").vehicle);
         end
         function wheelGeometryUsesTheSameVehicle(testCase)
             p=mncavVehicleConfig();wheel=wheelSpeedObserverConfig();
@@ -43,8 +42,8 @@ classdef mncavDefaultsTest < matlab.unittest.TestCase
             testCase.verifyEqual(actual.input_correction.yawRate.offset,.123);
         end
         function staleDesignIsRejectedBeforeUsingMeasurements(testCase)
-            reference=lateralObserverConfig("reference");
-            design=struct('model',lateralBicycleModel(reference.vehicle));
+            changed=lateralObserverConfig();changed.vehicle.mass=1.1*changed.vehicle.mass;
+            design=struct('model',lateralBicycleModel(changed.vehicle));
             testCase.verifyError(@() runLateralVelocityObserver(struct(),design), ...
                 'VehicleLocalization:VehicleParameterMismatch');
             testCase.verifyError(@() simulateLateralObserverScenario(design), ...
@@ -57,20 +56,19 @@ classdef mncavDefaultsTest < matlab.unittest.TestCase
             testCase.verifyWarningFree(@() assertMncavReplayCurrent(mncavReplayConfig()));
         end
         function syntheticTruthUsesTheConfiguredOutputPoint(testCase)
-            root=fileparts(fileparts(mfilename('fullpath')));
-            saved=load(fullfile(root,'tests','reference','lateralObserverDesign.mat'),'design');
-            cfg=lateralObserverConfig("reference");cfg.simulation.tFinal=2;
+            cfg=lateralObserverConfig();cfg.simulation.tFinal=2;
+            design=designLateralObserverGains(cfg);
             cfg.outputPoint.forwardOffsetM=2;
-            result=simulateLateralObserverScenario(saved.design,cfg);
+            result=simulateLateralObserverScenario(design,cfg);
             expected=result.truth.state(:,1)-2*result.truth.state(:,2);
             testCase.verifyEqual(result.truth.lateralVelocity,expected,AbsTol=1e-12);
             testCase.verifyEqual(result.truth.lateralVelocityRate, ...
                 result.truth.observerPointLateralVelocityRate-2*result.truth.yawRateRate,AbsTol=1e-12);
         end
-        function explicitReferenceAndMatchingMncavRemainSupported(testCase)
-            cfg=lateralObserverConfig("reference");
-            testCase.verifyWarningFree(@() assertLateralVehicleMatches(struct('model',lateralBicycleModel(cfg.vehicle)),cfg));
-            current=lateralObserverConfig();
+        function explicitSensitivityConfigurationRemainsSupported(testCase)
+            current=lateralObserverConfig();changed=current;
+            changed.vehicle.mass=1.1*current.vehicle.mass;
+            testCase.verifyWarningFree(@() assertLateralVehicleMatches(struct('model',lateralBicycleModel(changed.vehicle)),changed));
             testCase.verifyWarningFree(@() assertLateralVehicleMatches(struct('model',lateralBicycleModel(current.vehicle)),current));
         end
     end

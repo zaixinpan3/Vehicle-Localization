@@ -32,13 +32,11 @@ classdef mncavVehicleConfigTest < matlab.unittest.TestCase
             testCase.verifyLessThan(cfg.outputPoint.forwardOffsetM,4);
             testCase.verifyFalse(stored.evaluationDriveUsed);
             testCase.verifyFalse(stored.runtimeReferenceUsed);
-            testCase.verifyEqual(lateralObserverConfig("reference").outputPoint.forwardOffsetM,0);
         end
-        function archivedReferenceRemainsExplicitlySeparate(testCase)
-            old=lateralObserverConfig("reference");current=lateralObserverConfig("mncav");
-            testCase.verifyEqual(old.vehicle.mass,1575,AbsTol=1e-12);
-            testCase.verifyNotEqual(current.vehicle,old.vehicle);
-            testCase.verifyEqual(current.scheduling,old.scheduling);
+        function removedReferenceProfileIsRejected(testCase)
+            testCase.verifyError(@() lateralObserverConfig("reference"), ...
+                'VehicleLocalization:RemovedVehicleProfile');
+            testCase.verifyEqual(lateralObserverConfig().vehicle,lateralObserverConfig("mncav").vehicle);
         end
     end
 end

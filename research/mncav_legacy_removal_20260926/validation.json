@@ -1,0 +1,21 @@
+{
+  "isolatedTree": "f93249e4a5970280ae5378fd2cad6ebf8c1ecc2b",
+  "isolatedTestsPassed": 90,
+  "isolatedTestsTotal": 90,
+  "workingTestsPassed": 90,
+  "workingTestsTotal": 91,
+  "workingFailure": {
+    "test": "lateralObserverTest/currentDesignSatisfiesTheOriginalCertificate",
+    "maximumVertexGainNorm": 5.478378781907876e-10,
+    "allowedGainBound": 9.458917798842216e-11,
+    "scope": "Only present in the independent uncommitted synthesis/test implementation. No tolerance relaxation or solver change was made."
+  },
+  "deleted": [
+    "tests/reference/lateralObserverDesign.mat",
+    "tests/reference/mncavLateralObserverDesign.mat"
+  ],
+  "removedVehicleProfile": "reference",
+  "currentVehicleProfile": "mncav",
+  "physicalConstantsChanged": false,
+  "realDataReplayExecuted": false
+}

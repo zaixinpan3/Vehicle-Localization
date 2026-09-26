@@ -1,9 +1,9 @@
 function assertLateralVehicleMatches(design,cfg)
 % assertLateralVehicleMatches Reject gains synthesized for another vehicle.
-% Passing an explicit reference/sensitivity configuration is supported, but
+% Passing an explicit sensitivity configuration is supported, but
 % a saved certificate cannot silently be relabeled with a different model.
     assert(isfield(design,'model') && isfield(design.model,'vehicle') && ...
         isfield(cfg,'vehicle') && isequaln(design.model.vehicle,cfg.vehicle), ...
         'VehicleLocalization:VehicleParameterMismatch', ...
-        'Saved lateral gains do not match the requested vehicle. Re-synthesize using lateralObserverConfig, or explicitly request the original reference/sensitivity configuration.');
+        'Saved lateral gains do not match the requested vehicle. Re-synthesize using lateralObserverConfig, or pass an explicit sensitivity configuration with matching gains.');
 end

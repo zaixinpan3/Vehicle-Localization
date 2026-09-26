@@ -26,8 +26,9 @@ parameters in `config/mncavVehicleParameters.json`, loaded through
 `config/mncavReplayInterface.json` via `mncavReplayConfig` (Python:
 `scripts/mncavParameters.py`). Do not copy nominal constants or use historical
 output snapshots as live defaults. Re-synthesize gains for changed vehicles;
-reject stale replay metadata. Historical regression and sensitivity models
-require explicit selection/overrides. See `config/MNCAV_CONFIGURATION.md`.
+reject stale replay metadata. The old vehicle profiles and saved lateral gains
+are removed; tests synthesize from current configuration. Sensitivity models
+require explicit overrides. See `config/MNCAV_CONFIGURATION.md`.
 
 ## Documentation language
 

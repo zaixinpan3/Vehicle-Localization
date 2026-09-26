@@ -1,0 +1,74 @@
+[
+  {
+    "path": "README.md",
+    "stagedSha256": "e24eb1ecf49324a8d4a54c8caa2b060c7f34d70d5db29cd6aa3c0c0fcdd4b36a",
+    "workingSha256": "c8ec9b5295574c3f293219575df44712d970d02ec780c1c052421769c2e3a5eb",
+    "workingDiffers": true
+  },
+  {
+    "path": "config/MNCAV_CONFIGURATION.md",
+    "stagedSha256": "6393ee604df5cc0e6d06b4a9c66546ab901afe4e7b15504a3d7b9d0c4826f341",
+    "workingSha256": "6393ee604df5cc0e6d06b4a9c66546ab901afe4e7b15504a3d7b9d0c4826f341",
+    "workingDiffers": false
+  },
+  {
+    "path": "config/lateralObserverConfig.m",
+    "stagedSha256": "b3b2218b24ffa4a9e5a63317b8ff33404250059758cb93d01eaecc2d54410c07",
+    "workingSha256": "2bfa040a91ce182b75352670d7212adc8c7064581c0bcb8802c957151414c30c",
+    "workingDiffers": true
+  },
+  {
+    "path": "localization/lateralObserver/assertLateralVehicleMatches.m",
+    "stagedSha256": "b47ec85419bcdacd3a92c1b90ec9bc3505f4d3883c4b32851c9e947770deb620",
+    "workingSha256": "b47ec85419bcdacd3a92c1b90ec9bc3505f4d3883c4b32851c9e947770deb620",
+    "workingDiffers": false
+  },
+  {
+    "path": "tests/improvedObserverTest.m",
+    "stagedSha256": "2411ce293242eb2518982247ec42e000f4159a3c5fcc5e69162120021a2f4c48",
+    "workingSha256": "2411ce293242eb2518982247ec42e000f4159a3c5fcc5e69162120021a2f4c48",
+    "workingDiffers": false
+  },
+  {
+    "path": "tests/lateralObserverTest.m",
+    "stagedSha256": "5d87eb980f9d7c6ac03bb60ac6f4488e33d7027d877e05b2e5956dd83bb900e6",
+    "workingSha256": "06a78e642ac558e0c92dfde61e9f4cf22e6244bc588315913ad2c9edaac3565e",
+    "workingDiffers": true
+  },
+  {
+    "path": "tests/mncavDefaultsTest.m",
+    "stagedSha256": "69222b19eec513158dee7e44492d34ee37eff5da92c9eeb5276e405bf35b60d6",
+    "workingSha256": "69222b19eec513158dee7e44492d34ee37eff5da92c9eeb5276e405bf35b60d6",
+    "workingDiffers": false
+  },
+  {
+    "path": "tests/mncavVehicleConfigTest.m",
+    "stagedSha256": "61af20e3c8162e6f8b87025b4322bf077be967e88df8af727f75ffd30f69872e",
+    "workingSha256": "61af20e3c8162e6f8b87025b4322bf077be967e88df8af727f75ffd30f69872e",
+    "workingDiffers": false
+  },
+  {
+    "path": "localization/lateralObserver/designLateralObserverGains.m",
+    "stagedSha256": "d2136151214351d4a57aa6ffea843b388f5a5431cf093e1992f12ab97dfc6570",
+    "workingSha256": "98fa022648513be949dcdaef16242ac8c0fc6cc471194622e841981d7d465278",
+    "workingDiffers": true
+  },
+  {
+    "path": "localization/lateralObserver/runLateralVelocityObserver.m",
+    "stagedSha256": "cc1df51c657e946ca93543409515cb89b2d892b7c8291d197885a586cb503758",
+    "workingSha256": "064094e45bb7cb82a2665b983940eced3934f1d52e4ff77d0158f9c2891174f4",
+    "workingDiffers": true
+  },
+  {
+    "path": "localization/lateralObserver/scheduleLateralObserverGain.m",
+    "stagedSha256": "9124bd18046365a9837f5cba806436fcbe32e34e9052f651a8a62b19b978a9c1",
+    "workingSha256": "affec50fc61e3a31f4b5a0ebdd62cd2025f1254647caa93a1732606678b44e24",
+    "workingDiffers": true
+  },
+  {
+    "path": "localization/lateralObserver/schedulingCoordinates.m",
+    "stagedSha256": "a5924a161e18d6536cb021891b8694930645716a323a254f6a39ec19dcd6ce57",
+    "workingSha256": "51eba971c4aefc1fc8aa827f4bec54367db7208ff2e022b0f4ff0317cc1041e8",
+    "workingDiffers": true
+  }
+]

@@ -215,9 +215,8 @@ classdef improvedObserverTest < matlab.unittest.TestCase
             testCase.verifyError(@() runFixture(f),'VehicleLocalization:InvalidLateralInputs');
         end
         function defaultLateralStageMatchesItsSuppliedOutput(testCase)
-            f=fixture("gnss",.2);loaded=load(fullfile(fileparts(mfilename('fullpath')),'reference','lateralObserverDesign.mat'));
-            cfg=lateralObserverConfig;loaded.design.cfg.hybrid=cfg.hybrid;
-            actual=runImprovedVehicleObserver(f.data,loaded.design,f.design,f.cfg);
+            f=fixture("gnss",.2);lateralDesign=designLateralObserverGains();
+            actual=runImprovedVehicleObserver(f.data,lateralDesign,f.design,f.cfg);
             f.lateral=actual.lateral;expected=runFixture(f);
             testCase.verifyEqual(actual.z,expected.z,AbsTol=1e-12);
         end
