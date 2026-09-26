@@ -1,13 +1,13 @@
 function candidates=detectPolePillars(maps,facadeMask,cfg)
-% detectPolePillars: Whole-pillar XYZ extent and compact XY context.
-% Metric height and raw point support replace all subpillar occupancy gates.
-% A core pillar also concentrates its returns at one XY density peak that
-% spans a pole-like height and stands free of its neighbourhood
-% (computePillarDensityCore), so a shaft sharing a wide pillar with foliage
-% or brackets is not rejected by its total scatter, while the point-level
-% isolation replaces the coarse pillar-ring context on wide pillars.
-% Candidate footprints join whole neighbors without subdividing any pillar.
+% detectPolePillars: Select supported poles on the shared pillar lattice.
+% The experimental subset mode requires one compact, continuous shaft and
+% does not veto it using whole-pillar scatter, core fraction, or isolation.
+% The default pillar mode retains the existing whole-pillar/context gates.
+% Both modes join whole neighbors without creating a finer pillar lattice.
     stats=maps.statistics; ids=double(stats.pillarIndices);
+    if isfield(cfg,'detector') && cfg.detector=="subset"
+        candidates=detectSupportedSubsets(maps,cfg,ids); return;
+    end
     covariance=stats.covarianceXYZ;
     slope=covariance(:,4:5)./max(covariance(:,6),eps);
     radialVariance=max(0,covariance(:,1)+covariance(:,3)- ...
@@ -65,4 +65,19 @@ function mask=completeSplitShafts(mask,core,maps,cfg)
         best(closer)=neighbour(closer); bestDistance(closer)=gap(closer);
     end
     mask(best(best>0))=true;
+end
+
+function candidates=detectSupportedSubsets(maps,cfg,ids)
+% A supported point bundle is sufficient even when the whole pillar is broad,
+% dense with clutter, or also overlaps a facade. Only supported owner cells
+% participate in footprint selection; a neighboring shaft cannot lend a label.
+    eligible=maps.occupiedMask; core=false(maps.mapSize);
+    core(ids)=maps.poleSubset.found;
+    evidence=zeros(maps.mapSize); evidence(ids)=maps.poleSubset.ownCount.*maps.poleSubset.score;
+    [footprint,context,mask,ratio,componentSum,contextSum]=selectPillarFootprints( ...
+        core,core,evidence,evidence,cfg,false(maps.mapSize));
+    mask=completeSplitShafts(mask,core,maps,cfg);
+    candidates=struct('eligibleMask',eligible,'coreMask',core,'supportMask',core, ...
+        'footprintCandidateMask',footprint,'contextCandidateMask',context, ...
+        'contextFraction',ratio,'componentEvidence',componentSum,'contextEvidence',contextSum,'candidateMask',mask);
 end

@@ -1,7 +1,8 @@
 function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
 % analyzeStructuralPillars: Classify whole pillars using XYZ distributions.
-% No vertical index, occupancy sequence, local voxel grid or semantic point
-% selection exists here. All off-ground returns contribute to each pillar.
+% No vertical index, occupancy sequence or local voxel grid is constructed.
+% The optional pole detector measures supporting subsets, while all off-ground
+% returns still contribute to each pillar's output moments.
     useNative=isfield(cfg,'useNativeKernels') && cfg.useNativeKernels;
     stats=aggregatePillarStatistics(pillars.points,pillars.pointPillarLinIdx, ...
         pillars.pointAttributes,useNative);
@@ -26,11 +27,18 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
             buildPillarShapeScores(maps.supportEvidence,maps.occupiedMask,cfg,maps.dx,maps.dy);
     end
     maps.moments=projectStatistics(stats,prod(mapSize),cloudCfg);
-    % Pole evidence: the pillar's XY density peak and the height it spans.
+    % Pole evidence: either the legacy density core or a supported shaft.
     maps.coreFraction=zeros(mapSize); maps.coreHeight=zeros(mapSize); maps.coreIsolation=zeros(mapSize);
     maps.corePeakX=nan(mapSize); maps.corePeakY=nan(mapSize);
     maps.corePointCount=zeros(mapSize);
-    if any(cloudCfg.semanticNames=="pole")
+    subsetMode=isfield(cfg.pole,'detector') && cfg.pole.detector=="subset";
+    if any(cloudCfg.semanticNames=="pole") && subsetMode
+        subsetCfg=cfg.pole.subset; subsetCfg.useNativeKernels=useNative;
+        maps.poleSubset=findPillarPoleSubsets(pillars.points,pillars.pointPillarLinIdx,geometry,subsetCfg);
+        maps.coreHeight(ids)=maps.poleSubset.height;
+        maps.corePointCount(ids)=maps.poleSubset.supportCount;
+        maps.corePeakX(ids)=maps.poleSubset.axisXY(:,1); maps.corePeakY(ids)=maps.poleSubset.axisXY(:,2);
+    elseif any(cloudCfg.semanticNames=="pole")
         % The core is measured only where the cheap whole-pillar gates can pass.
         tall=stats.count>=cfg.pole.minimumPoints & stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.pole.minimumHeight;
         [maps.coreFraction(ids),maps.coreHeight(ids),maps.coreIsolation(ids),peak,maps.corePointCount(ids)]=computePillarDensityCore( ...
@@ -67,7 +75,9 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     maps.trafficSignMoments=maps.moments;
     floorProbability=cloudCfg.minimumSemanticProbability;
     poleEvidence=double(maps.pointScore).*(1-double(maps.lineScore));
-    if isfield(cfg.pole,'probabilityEvidence') && cfg.pole.probabilityEvidence=="distribution" && any(poleMask(:))
+    if subsetMode && isfield(maps,'poleSubset') && cfg.pole.probabilityEvidence=="subset"
+        poleEvidence=zeros(mapSize); poleEvidence(ids)=maps.poleSubset.score;
+    elseif isfield(cfg.pole,'probabilityEvidence') && cfg.pole.probabilityEvidence=="distribution" && any(poleMask(:))
         peak=[maps.corePeakX(ids),maps.corePeakY(ids)];
         maps.poleDistribution=scorePolePillarDistributions(pillars.points,pillars.pointPillarLinIdx, ...
             geometry,peak,poleMask(ids),cfg.pole.distribution);

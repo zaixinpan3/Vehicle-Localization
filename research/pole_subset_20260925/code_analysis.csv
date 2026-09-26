@@ -1,0 +1,15 @@
+file,findings
+config/structuralPillarConfig.m,0
+perception/offGroundFeatures/findPillarPoleSubsets.m,0
+perception/offGroundFeatures/analyzeStructuralPillars.m,0
+perception/offGroundFeatures/detectPolePillars.m,0
+perception/perceptionNativeAvailable.m,0
+scripts/buildPerceptionKernels.m,0
+tests/poleSubsetEvidenceTest.m,0
+tests/wholePillarPerceptionTest.m,0
+research/pole_subset_20260925/capturePoleSubsetStudy.m,0
+research/pole_subset_20260925/plotPoleSubsetExamples.m,0
+research/pole_subset_20260925/poleSubsetExperimentConfig.m,0
+research/pole_subset_20260925/runPoleSubsetChecks.m,0
+research/pole_subset_20260925/validatePoleSubsetCapture.m,0
+research/pole_subset_20260925/validatePoleSubsetIntegration.m,0

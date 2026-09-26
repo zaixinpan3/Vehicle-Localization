@@ -12,7 +12,7 @@ function available = perceptionNativeAvailable(backend)
         installed = false;
         if exist('perceptionKernelsMex','file') == 3
             try
-                installed = isequal(perceptionKernelsMex('version'),3);
+                installed = isequal(perceptionKernelsMex('version'),4);
             catch exception
                 % An older binary has no version command. Auto mode keeps the
                 % MATLAB implementation available until the kernel is rebuilt.

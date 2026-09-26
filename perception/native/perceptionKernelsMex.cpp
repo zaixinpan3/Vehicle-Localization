@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <limits>
 #include <vector>
+#include <utility>
 
 namespace {
 void require(bool condition, const char* message) {
@@ -24,6 +25,7 @@ double smallMedian(double* v, mwSize n) {
     std::sort(v, v+n);
     return n % 2 ? v[n/2] : 0.5 * (v[n/2-1] + v[n/2]);
 }
+#include "poleSubsetKernel.hpp"
 void propagate(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
     require(nrhs == 11 && nlhs == 2, "Propagation needs ten inputs and two outputs.");
     const mwSize n = mxGetNumberOfElements(in[1]);
@@ -449,10 +451,11 @@ void mexFunction(int nlhs, mxArray** out, int nrhs, const mxArray** in) {
     try {
         if (!std::strcmp(command,"version")) {
             require(nrhs==1 && nlhs==1,"Version needs no data and one output.");
-            out[0]=mxCreateDoubleScalar(3);
+            out[0]=mxCreateDoubleScalar(4);
         }
         else if (!std::strcmp(command, "propagateGround")) propagate(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "growRoad")) roadGrowth(nlhs, out, nrhs, in);
+        else if (!std::strcmp(command, "poleSubsets")) pole_subset::run(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "pillarShape")) pillarShape(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "cellMoments")) cellMoments(nlhs, out, nrhs, in);
         else if (!std::strcmp(command, "boxSum")) boxSum(nlhs, out, nrhs, in);

@@ -1,0 +1,15 @@
+{
+  "fullFrames": 1170,
+  "unchangedNonPoleChannels": true,
+  "commonPoleCells": 6884,
+  "addedPoleCells": 13922,
+  "removedPoleCells": 2025,
+  "defaultUnchangedFrames": 117,
+  "allPointMomentChecks": 117,
+  "backendParityRawFrames": 5,
+  "maximumBackendScoreError": 7.105427357601002e-15,
+  "defaultMedianMs": 31.669999999999998,
+  "subsetMedianMs": 121.27499999999999,
+  "medianPairedIncreaseMs": 89.74099999999999,
+  "unchangedSegmentationCounts": true
+}

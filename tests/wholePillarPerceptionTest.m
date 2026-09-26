@@ -121,9 +121,10 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             result=analyzeStructuralPillars(clutterOnly,structural,cloudCfg);
             testCase.verifyFalse(any(result.poleCellMask,'all'));
         end
-        function hedgeBesideTheShaftLowersItsIsolation(testCase)
+        function hedgeIsolationDoesNotVetoAnExistingShaft(testCase)
             % The shaft's own pillar is clean, but a hedge fills the next
-            % pillar within 0.6 m of the peak: isolation drops below the gate.
+            % pillar within 0.6 m of the peak: the legacy global isolation is low,
+            % but an independently supported shaft must remain detectable.
             angle=linspace(0,2*pi,41).'; angle(end)=[];
             shaft=[1.6+0.05*cos(angle),1.6+0.05*sin(angle),linspace(-1,3,40).'];
             % A dense 1.3 m hedge 0.35 m from the shaft, too low to be a pole.
@@ -143,10 +144,13 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
             cloudCfg=coarseSemanticProbabilityCloudConfig(); cloudCfg.semanticNames="pole";
             structural=structuralPillarConfig(cfg.voxelSize(1));
+            legacy=analyzeStructuralPillars(pillarizePointCloud(both,cfg),structural,cloudCfg);
+            testCase.verifyFalse(any(legacy.poleCellMask,'all'));
+            structural.pole.detector="subset"; structural.pole.probabilityEvidence="subset";
             result=analyzeStructuralPillars(pillarizePointCloud(shaft,cfg),structural,cloudCfg);
             testCase.verifyEqual(nnz(result.poleCellMask),1);
             result=analyzeStructuralPillars(pillarizePointCloud(both,cfg),structural,cloudCfg);
-            testCase.verifyFalse(any(result.poleCellMask,'all'));
+            testCase.verifyTrue(any(result.poleCellMask,'all'));
         end
         function horizontalDistributionIsNotAPole(testCase)
             cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;

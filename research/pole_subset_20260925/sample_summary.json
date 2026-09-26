@@ -1,0 +1,84 @@
+{
+  "frames": 117,
+  "references": "Frozen 0.3 m coarse and offline fine algorithms; not manual labels.",
+  "tolerance": "One Chebyshev cell: 0.6 m per axis, up to 0.849 m diagonal.",
+  "subsetVsCoarse": {
+    "candidate": 2104,
+    "reference": 924,
+    "shared": 591,
+    "precision": 0.280893536121673,
+    "recall": 0.6396103896103896,
+    "f1": 0.3903566710700132,
+    "precisionTol": 0.3255703422053232,
+    "recallTol": 0.7348484848484849,
+    "f1Tol": 0.4512271313512707
+  },
+  "subsetVsFine": {
+    "candidate": 2104,
+    "reference": 306,
+    "shared": 296,
+    "precision": 0.14068441064638784,
+    "recall": 0.9673202614379085,
+    "f1": 0.24564315352697094,
+    "precisionTol": 0.15636882129277566,
+    "recallTol": 0.9836601307189542,
+    "f1Tol": 0.26984187536956145
+  },
+  "previousVsFine": {
+    "candidate": 869,
+    "reference": 306,
+    "shared": 260,
+    "precision": 0.2991944764096663,
+    "recall": 0.8496732026143791,
+    "f1": 0.44255319148936173,
+    "precisionTol": 0.3233601841196778,
+    "recallTol": 0.9150326797385621,
+    "f1Tol": 0.47785342508183887
+  },
+  "previousVsCoarse": {
+    "candidate": 869,
+    "reference": 924,
+    "shared": 569,
+    "precision": 0.6547756041426928,
+    "recall": 0.6158008658008658,
+    "f1": 0.6346904629113219,
+    "precisionTol": 0.7008055235903338,
+    "recallTol": 0.7121212121212122,
+    "f1Tol": 0.7064180559497514
+  },
+  "retainedPrevious": 680,
+  "added": 1424,
+  "removed": 189,
+  "groupMedians": [
+    {
+      "group": "fine_supported",
+      "count": 296,
+      "score": 0.602498937782315,
+      "supportCount": 38.5,
+      "ownCount": 27.0,
+      "height": 2.489320158958435,
+      "robustHeight": 2.28026650249958,
+      "radialRms": 0.05594868851373615,
+      "maximumGap": 0.152503967285156,
+      "contrast": 12.125,
+      "peakContrast": 1.8,
+      "radius": 0.1,
+      "ownSupportFraction": 0.571428571428571
+    },
+    {
+      "group": "accepted_without_fine_reference",
+      "count": 1808,
+      "score": 0.340014964620525,
+      "supportCount": 20.0,
+      "ownCount": 15.0,
+      "height": 2.165967106819155,
+      "robustHeight": 2.02610577940941,
+      "radialRms": 0.069251826578443,
+      "maximumGap": 0.281603455543518,
+      "contrast": 9.0,
+      "peakContrast": 1.6,
+      "radius": 0.1,
+      "ownSupportFraction": 0.42345899133978604
+    }
+  ]
+}
