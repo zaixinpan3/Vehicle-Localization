@@ -1,0 +1,149 @@
+{
+  "selectedOnCalibrationHoldout": "forward_point_offset",
+  "productionParametersChanged": false,
+  "fixedMassKg": 2273.0,
+  "absoluteMassIdentifiable": false,
+  "parameterNames": [
+    "log_Cf_over_m",
+    "log_Cr_over_m",
+    "log_Iz_over_m",
+    "road_steering_offset_rad",
+    "reference_x_from_cg_m",
+    "heading_correction_rad",
+    "steering_shift_s"
+  ],
+  "candidateVectors": {
+    "nominal": [
+      3.8632328412587142,
+      3.571096418457553,
+      0.9495386755502131,
+      0.0016160456036984534,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "derivative_fixed_frame": [
+      2.641929142410125,
+      2.498539217179849,
+      0.7701134819057927,
+      0.0016160456036984534,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "forward_fixed_frame": [
+      2.8874848314323844,
+      2.785040806628539,
+      -0.7047852627475762,
+      0.0016160456036984534,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "derivative_point_offset": [
+      3.050746373347141,
+      2.9685244565194453,
+      0.9842784999996592,
+      0.0016160456036984534,
+      -1.3605061412661557,
+      0.0,
+      0.0
+    ],
+    "forward_point_offset": [
+      4.498151839168159,
+      5.010635294096255,
+      0.7462963484757524,
+      0.0016160456036984534,
+      -2.863637641411425,
+      0.0,
+      0.0
+    ],
+    "derivative_point_heading": [
+      3.0202224232327017,
+      2.9362102342405008,
+      0.8884911183743822,
+      0.0016160456036984534,
+      -1.3017158433609333,
+      -0.00035055259749926823,
+      0.0
+    ],
+    "forward_point_heading": [
+      4.494785189535379,
+      5.010635294096255,
+      0.7669458493162538,
+      0.0016160456036984534,
+      -2.8685868468368745,
+      0.0018474356397396071,
+      0.0
+    ],
+    "derivative_point_heading_steering": [
+      3.0143663793162774,
+      2.8831339095462263,
+      0.6503391598758743,
+      0.002593784591228552,
+      -1.1602475216140646,
+      -0.0004935841026926671,
+      0.1204853554177318
+    ],
+    "forward_point_heading_steering": [
+      4.511250517879095,
+      5.010509793638283,
+      0.6142646187310842,
+      0.0024843047252163276,
+      -2.8664244806011534,
+      0.0022205638402800535,
+      -1.1565364465961726e-08
+    ],
+    "nominal_empirical_point": [
+      3.8632328412587142,
+      3.571096418457553,
+      0.9495386755502131,
+      0.0016160456036984534,
+      -2.3597988944583816,
+      0.0,
+      0.0
+    ]
+  },
+  "syntheticRecovery": {
+    "recoveredLogRatioMaxError": 8.06764433036733e-10,
+    "recoveredOffsetMaxError": 1.1675660438470459e-09,
+    "massScaleInvariant": true,
+    "sevenParameterRecoveryMaxScaledError": 3.1422169310957315e-09,
+    "sevenParameterOptimizerSuccess": true,
+    "optimizerSuccess": true
+  },
+  "bounds": {
+    "lower": [
+      1.6094379124341003,
+      1.6094379124341003,
+      -0.916290731874155,
+      -0.01,
+      -3.0,
+      -0.05,
+      -0.15
+    ],
+    "upper": [
+      5.0106352940962555,
+      5.0106352940962555,
+      1.791759469228055,
+      0.01,
+      3.0,
+      0.05,
+      0.15
+    ]
+  },
+  "fixedGeometry": {
+    "lfM": 1.3746049999999999,
+    "lrM": 1.7143950000000001,
+    "steeringRatio": 16.2
+  },
+  "randomSeed": 20260925,
+  "preprocessing": "INS status 3 only, non-good smoothing collars excluded, speed >=5 m/s, abs reference ay <=4 m/s2",
+  "software": {
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "pandas": "3.0.6",
+    "numba": "0.67.0",
+    "matplotlib": "3.11.2"
+  }
+}

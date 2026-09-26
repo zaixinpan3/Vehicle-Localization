@@ -1,0 +1,230 @@
+[
+  {
+    "drive": "12-11-24",
+    "bag": "data/raw/Missisipi/raw_data_2024-06-07-12-11-24_0.bag",
+    "bagBytes": 4344846963,
+    "topicCounts": {
+      "imu": 3897,
+      "inspva": 3897,
+      "steering": 7792,
+      "insstdev": 78,
+      "heading2": 75
+    },
+    "topicIdentity": {
+      "imu": {
+        "topic": "/vehicle/imu/data_raw",
+        "messageType": "sensor_msgs/msg/Imu",
+        "publisher": "/vehicle/dbw_node",
+        "frame": "base_footprint"
+      },
+      "inspva": {
+        "topic": "/novatel/oem7/inspva",
+        "messageType": "novatel_oem7_msgs/msg/INSPVA",
+        "publisher": "/novatel/oem7/driver",
+        "frame": "gps"
+      },
+      "steering": {
+        "topic": "/vehicle/steering_report",
+        "messageType": "dbw_fca_msgs/msg/SteeringReport",
+        "publisher": "/vehicle/dbw_node",
+        "frame": ""
+      },
+      "insstdev": {
+        "topic": "/novatel/oem7/insstdev",
+        "messageType": "novatel_oem7_msgs/msg/INSSTDEV",
+        "publisher": "/novatel/oem7/driver",
+        "frame": "gps"
+      },
+      "heading2": {
+        "topic": "/novatel/oem7/heading2",
+        "messageType": "novatel_oem7_msgs/msg/HEADING2",
+        "publisher": "/novatel/oem7/driver",
+        "frame": "gps"
+      }
+    },
+    "topicStreamSha256": {
+      "imu": "2fa00b1f9e75c50b90ffab6ca5bff0f69afd2ac2616b6b6fde18f3e5da072f6a",
+      "inspva": "e8ca53e9258a198f29f2c58c9a22fb2f7d622f56511b422b240b89df4ea92b21",
+      "steering": "35dccbf2d4a885de94d941aa5bcc749bc00bc69f57d5ba4cfc62964dceeb1364",
+      "insstdev": "528d1cf314bb3dfaa0452712dcae52c5ab33450f7a34e09338aca38f91f23e39",
+      "heading2": "a0b42dc73040d6472e9507c48c4fd4391567b5f8288f256a2c6a45bfad4e4557"
+    },
+    "hashEncoding": "For each topic: concatenated little-endian uint64 bag timestamp, uint64 payload length, ROS1 payload",
+    "inspvaStatusCounts": {
+      "3": 3747,
+      "6": 150
+    },
+    "headingSolutionStatusCounts": {
+      "0": 57,
+      "1": 18
+    },
+    "inspvaStatusIntervals": [
+      {
+        "status": 3,
+        "startSeconds": 0.0,
+        "endSeconds": 16.420000076293945,
+        "samples": 822
+      },
+      {
+        "status": 6,
+        "startSeconds": 16.44000005722046,
+        "endSeconds": 19.420000076293945,
+        "samples": 150
+      },
+      {
+        "status": 3,
+        "startSeconds": 19.44000005722046,
+        "endSeconds": 77.92000007629395,
+        "samples": 2925
+      }
+    ],
+    "firstInsstdevMessage": [
+      "novatel_oem7_msgs__msg__INSSTDEV(header=std_msgs__msg__Header(seq=843, stamp=builtin_interfaces__msg__Time(sec=1717776684, nanosec=908810080, __msgtype__='builtin_interfaces/msg/Time'), frame_id='gps', __msgtype__='std_msgs/msg/Header'), nov_header=novatel_oem7_msgs__msg__Oem7Header(message_name='INSSTDEV', message_id=2051, message_type=0, sequence_number=0, time_status=180, gps_week_number=2317, gps_week_milliseconds=490207000, OEM7MSGTYPE_LOG=0, __msgtype__='novatel_oem7_msgs/msg/Oem7Header'), latitude_stdev=0.539913535118103, longitude_stdev=0.4116012156009674, height_stdev=0.6431490182876587, north_velocity_stdev=0.049423906952142715, east_velocity_stdev=0.04064937308430672, up_velocity_stdev=0.033059872686862946, roll_stdev=0.024367669597268105, pitch_stdev=0.026495397090911865, azimuth_stdev=0.11609573662281036, ext_sol_status=novatel_oem7_msgs__msg__INSExtendedSolutionStatus(status=184549441, POSITION_UPDATE=1, PHASE_UPDATE=2, ZERO_VELOCITY_UPDATE=4, WHEEL_SEONSOR_UPDATE=8, ALIGN_UPDATE=16, EXTERNAL_POSITION_UPDATE=32, INS_SOLUTIN_CONVERGENCE_FLAG=64, DOPPLER_UPDATE=128, PSEUDORANGE_UPDATE=256, VELOCITY_UPDATE=512, RESERVED_1=1024, DEAD_RECONING_UPDATE=2048, PHASE_WIND_UP_UPDATE=4096, COURSE_OVER_GROUND_UPDATE=8192, EXTERNAL_VELOCITY_UPDATE=16384, EXTERNAL_ATTITUDE_UPDATE=32768, EXTERNAL_HEADING_UPDATE=65535, EXTERNAL_HEIGHT_UPDATE=131072, RESERVED_2=262144, RESERVED_3=524288, ROVER_POSITION_UPDATE=1048576, ROVER_POSITION_UPDATE_TYPE=2097152, RESERVED_4=4194304, RESERVED_5=8388608, TURN_ON_BIASES_ESTIMATED=16777216, ALIGNMENT_DIRECTION_VERIFIED=33554432, ALIGNMENT_INDICATION_1=67108864, ALIGNMENT_INDICATION_2=134217728, ALIGNMENT_INDICATION_3=268435456, NVM_SEED_INDICATION_1=538870912, NVM_SEED_INDICATION_2=1073741824, NVM_SEED_INDICATION_3=2147483648, ALIGNMENT_INCOMPLETE_ALIGNMENT=0, ALIGNMENT_STATIC=1, ALIGNMENT_KINETMATIC=2, ALIGNMENT_DUAL_ANTENNA=3, ALIGNMENT_USER_COMMAND=4, ALIGNMENT_NVM_SEED=5, NVM_SEED_INACTIVE=0, NVM_SEED_STORED_INVALID=1, NVM_SEED_PENDING_VALIDATION=2, NVM_SEED_INJECTED=4, NVM_SEEED_DATA_IGNORED=5, NVM_SEED_ERROR_MODEL_DATA_INJECTED=6, __msgtype__='novatel_oem7_msgs/msg/INSExtendedSolutionStatus'), time_since_last_update=0, reserved1=0, reserved2=8376767, reserved3=0, __msgtype__='novatel_oem7_msgs/msg/INSSTDEV')"
+    ],
+    "exportChecks": {
+      "inspva": {
+        "rows": 3897,
+        "fields": [
+          "north_velocity",
+          "east_velocity",
+          "roll",
+          "pitch",
+          "azimuth"
+        ],
+        "maxAbsoluteDifference": 0.0,
+        "csvSha256": "125b353460904965fea08a64a1f0dea0506843b56551ec77b6723da4e1bcfa24"
+      },
+      "imu": {
+        "rows": 3897,
+        "fields": [
+          "angular_z_radps",
+          "acceleration_y_mps2"
+        ],
+        "maxAbsoluteDifference": 0.0,
+        "csvSha256": "1751d1708ed3ee6ba51f25f13c3d8dfbb08a0fd5d99b776c670399913c3fafb9"
+      },
+      "steering": {
+        "rows": 7792,
+        "fields": [
+          "steering_wheel_angle_rad"
+        ],
+        "maxAbsoluteDifference": 0.0,
+        "csvSha256": "8bae669a19e05501341642998027dc01988ad8da74bc0d6dd17556caae882651"
+      }
+    }
+  },
+  {
+    "drive": "12-09-31",
+    "bag": "data/raw/Missisipi/raw_data_2024-06-07-12-09-31_0.bag",
+    "bagBytes": 6354610019,
+    "topicCounts": {
+      "steering": 11693,
+      "imu": 5847,
+      "inspva": 5847,
+      "insstdev": 117,
+      "heading2": 110
+    },
+    "topicIdentity": {
+      "steering": {
+        "topic": "/vehicle/steering_report",
+        "messageType": "dbw_fca_msgs/msg/SteeringReport",
+        "publisher": "/vehicle/dbw_node",
+        "frame": ""
+      },
+      "imu": {
+        "topic": "/vehicle/imu/data_raw",
+        "messageType": "sensor_msgs/msg/Imu",
+        "publisher": "/vehicle/dbw_node",
+        "frame": "base_footprint"
+      },
+      "inspva": {
+        "topic": "/novatel/oem7/inspva",
+        "messageType": "novatel_oem7_msgs/msg/INSPVA",
+        "publisher": "/novatel/oem7/driver",
+        "frame": "gps"
+      },
+      "insstdev": {
+        "topic": "/novatel/oem7/insstdev",
+        "messageType": "novatel_oem7_msgs/msg/INSSTDEV",
+        "publisher": "/novatel/oem7/driver",
+        "frame": "gps"
+      },
+      "heading2": {
+        "topic": "/novatel/oem7/heading2",
+        "messageType": "novatel_oem7_msgs/msg/HEADING2",
+        "publisher": "/novatel/oem7/driver",
+        "frame": "gps"
+      }
+    },
+    "topicStreamSha256": {
+      "steering": "ccee665506a6819c7111537ca06ce576b729fff51b4a467020bded081dcddaa1",
+      "imu": "c4c9188029ba1f9232442d6bf4c3163003adb42083b58233f35711cbede427d7",
+      "inspva": "78638433c15e5e95207399733d82e577bde389a8d8ad479ab5c197ed1984f508",
+      "insstdev": "933b138266aab7a47d8e111a82a58ced2e7bf3c81a1d09c07a9d16005534df4a",
+      "heading2": "4736215783088273cadf682ac7ed5fdbcdee2b4ec0984e73eb01bbbff5c9f7c9"
+    },
+    "hashEncoding": "For each topic: concatenated little-endian uint64 bag timestamp, uint64 payload length, ROS1 payload",
+    "inspvaStatusCounts": {
+      "3": 5647,
+      "6": 200
+    },
+    "headingSolutionStatusCounts": {
+      "0": 90,
+      "1": 20
+    },
+    "inspvaStatusIntervals": [
+      {
+        "status": 3,
+        "startSeconds": 0.0,
+        "endSeconds": 31.579999923706055,
+        "samples": 1580
+      },
+      {
+        "status": 6,
+        "startSeconds": 31.59999990463257,
+        "endSeconds": 35.579999923706055,
+        "samples": 200
+      },
+      {
+        "status": 3,
+        "startSeconds": 35.59999990463257,
+        "endSeconds": 116.91999983787537,
+        "samples": 4067
+      }
+    ],
+    "firstInsstdevMessage": [
+      "novatel_oem7_msgs__msg__INSSTDEV(header=std_msgs__msg__Header(seq=720, stamp=builtin_interfaces__msg__Time(sec=1717776572, nanosec=160411130, __msgtype__='builtin_interfaces/msg/Time'), frame_id='gps', __msgtype__='std_msgs/msg/Header'), nov_header=novatel_oem7_msgs__msg__Oem7Header(message_name='INSSTDEV', message_id=2051, message_type=0, sequence_number=0, time_status=180, gps_week_number=2317, gps_week_milliseconds=490084000, OEM7MSGTYPE_LOG=0, __msgtype__='novatel_oem7_msgs/msg/Oem7Header'), latitude_stdev=0.012941324152052402, longitude_stdev=0.012713544070720673, height_stdev=0.014166277833282948, north_velocity_stdev=0.0018041008152067661, east_velocity_stdev=0.001803978462703526, up_velocity_stdev=0.0016650717006996274, roll_stdev=0.01122357603162527, pitch_stdev=0.011296897195279598, azimuth_stdev=0.07141368836164474, ext_sol_status=novatel_oem7_msgs__msg__INSExtendedSolutionStatus(status=184549445, POSITION_UPDATE=1, PHASE_UPDATE=2, ZERO_VELOCITY_UPDATE=4, WHEEL_SEONSOR_UPDATE=8, ALIGN_UPDATE=16, EXTERNAL_POSITION_UPDATE=32, INS_SOLUTIN_CONVERGENCE_FLAG=64, DOPPLER_UPDATE=128, PSEUDORANGE_UPDATE=256, VELOCITY_UPDATE=512, RESERVED_1=1024, DEAD_RECONING_UPDATE=2048, PHASE_WIND_UP_UPDATE=4096, COURSE_OVER_GROUND_UPDATE=8192, EXTERNAL_VELOCITY_UPDATE=16384, EXTERNAL_ATTITUDE_UPDATE=32768, EXTERNAL_HEADING_UPDATE=65535, EXTERNAL_HEIGHT_UPDATE=131072, RESERVED_2=262144, RESERVED_3=524288, ROVER_POSITION_UPDATE=1048576, ROVER_POSITION_UPDATE_TYPE=2097152, RESERVED_4=4194304, RESERVED_5=8388608, TURN_ON_BIASES_ESTIMATED=16777216, ALIGNMENT_DIRECTION_VERIFIED=33554432, ALIGNMENT_INDICATION_1=67108864, ALIGNMENT_INDICATION_2=134217728, ALIGNMENT_INDICATION_3=268435456, NVM_SEED_INDICATION_1=538870912, NVM_SEED_INDICATION_2=1073741824, NVM_SEED_INDICATION_3=2147483648, ALIGNMENT_INCOMPLETE_ALIGNMENT=0, ALIGNMENT_STATIC=1, ALIGNMENT_KINETMATIC=2, ALIGNMENT_DUAL_ANTENNA=3, ALIGNMENT_USER_COMMAND=4, ALIGNMENT_NVM_SEED=5, NVM_SEED_INACTIVE=0, NVM_SEED_STORED_INVALID=1, NVM_SEED_PENDING_VALIDATION=2, NVM_SEED_INJECTED=4, NVM_SEEED_DATA_IGNORED=5, NVM_SEED_ERROR_MODEL_DATA_INJECTED=6, __msgtype__='novatel_oem7_msgs/msg/INSExtendedSolutionStatus'), time_since_last_update=0, reserved1=0, reserved2=8376767, reserved3=0, __msgtype__='novatel_oem7_msgs/msg/INSSTDEV')"
+    ],
+    "exportChecks": {
+      "inspva": {
+        "rows": 5847,
+        "fields": [
+          "north_velocity",
+          "east_velocity",
+          "roll",
+          "pitch",
+          "azimuth"
+        ],
+        "maxAbsoluteDifference": 0.0,
+        "csvSha256": "8e4de8eefc2fa471f1699fe3142fa2848acbd83cb6c195c1a173abec835627a5"
+      },
+      "imu": {
+        "rows": 5847,
+        "fields": [
+          "angular_z_radps",
+          "acceleration_y_mps2"
+        ],
+        "maxAbsoluteDifference": 0.0,
+        "csvSha256": "52efb34d5815f46e1d1e02c7cdc94ae420666d6c49be49336761771d2d821701"
+      },
+      "steering": {
+        "rows": 11693,
+        "fields": [
+          "steering_wheel_angle_rad"
+        ],
+        "maxAbsoluteDifference": 0.0,
+        "csvSha256": "edbb5905529d203dacbbe4b6858f5b8192c2bd0acfd331e4654f6661398bee52"
+      }
+    }
+  }
+]

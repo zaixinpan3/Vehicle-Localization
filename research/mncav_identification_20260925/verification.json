@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "recomputedScoreRows": 30,
+  "maximumAbsoluteMetricDifference": 9.974659986866641e-17,
+  "verifiedInputHashes": 13,
+  "rawBagExportChecks": 6,
+  "finitePositiveCandidates": 10,
+  "qualityAndSpeedMasksPassed": true,
+  "syntheticRecovery": {
+    "recoveredLogRatioMaxError": 8.06764433036733e-10,
+    "recoveredOffsetMaxError": 1.1675660438470459e-09,
+    "massScaleInvariant": true,
+    "sevenParameterRecoveryMaxScaledError": 3.1422169310957315e-09,
+    "sevenParameterOptimizerSuccess": true,
+    "optimizerSuccess": true
+  }
+}
