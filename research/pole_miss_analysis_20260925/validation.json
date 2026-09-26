@@ -1,0 +1,16 @@
+{
+  "frames": 117,
+  "referenceCells": 980,
+  "traceMatchesNative": true,
+  "maximumScoreDifference": 1.0103029524088925e-14,
+  "defaultReplayMatches": true,
+  "codeAnalyzerFiles": 7,
+  "codeAnalyzerFindings": 0,
+  "fixedAxisSubsetContainmentAndOtherGateAssertions": "passed",
+  "pythonCompilationAndSummaryAssertions": "passed",
+  "counterfactualCaseRows": 100,
+  "fullFrameVariantRows": 1053,
+  "figureVisuallyInspected": true,
+  "productionFilesChangedByStudy": false,
+  "productionTestSuiteRerun": false
+}

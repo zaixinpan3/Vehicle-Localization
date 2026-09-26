@@ -1,0 +1,112 @@
+{
+  "units": "frame/pillar occurrences, not unique physical poles",
+  "referenceType": "algorithmic outputs; no manual ground truth",
+  "fullFrames": 1170,
+  "fullCoarseAgreement": {
+    "referenceCells": 9129,
+    "experimentCells": 20806,
+    "exactShared": 5681,
+    "exactMissingOldCells": 3448,
+    "exactNewUnmatchedCells": 15125,
+    "tolerantMatchedOldCells": 6468,
+    "tolerantMissingOldCells": 2661,
+    "tolerantMatchedNewCells": 6548,
+    "tolerantNewUnmatchedCells": 14258,
+    "tolerantPrecision": 0.3147169085840623,
+    "tolerantRecall": 0.7085113374958922,
+    "tolerance": "independent 8-neighbor matches, 0.6 m/axis, not one-to-one object matching"
+  },
+  "sampleFrames": 117,
+  "sampleReferenceUnionCells": 980,
+  "fineCells": 306,
+  "defaultFineMatched": 260,
+  "subsetFineMatched": 296,
+  "subsetRecoversDefaultFineMisses": 38,
+  "subsetLosesPreviouslyMatchedFineCells": 2,
+  "coarseCells": 924,
+  "coarseExactMissing": 333,
+  "coarseExactMissingWithFineSupport": 3,
+  "coarseExactMissingWithoutFineSupport": 330,
+  "coarseMissingFurthestStage": {
+    "initial owner count/span": 6,
+    "seed support": 15,
+    "cylinder count": 46,
+    "local window contrast": 77,
+    "gap-separated run count": 32,
+    "run owner count": 13,
+    "total/robust/owner height": 75,
+    "radial RMS": 5,
+    "transverse density peak": 44,
+    "shaft found; final footprint omitted": 20
+  },
+  "defaultFineMisses": {
+    "total": 46,
+    "countOrHeightPrefilter": 7,
+    "measuredIsolationFailed": 33,
+    "isolationOnly": 31,
+    "otherCoreGatesWithoutIsolation": 1,
+    "footprintOmissions": 5,
+    "isolationOnlyMinimum": 0.202020202020202,
+    "isolationOnlyMaximum": 0.347222222222222,
+    "fineOriginalOwnPoints": 1089,
+    "fineGroundRemovedPoints": 2,
+    "cellsWithGroundRemovedFinePoints": 1
+  },
+  "fineOriginalOwnPoints": 20305,
+  "fineGroundRemovedPoints": 32,
+  "fineCellsWithGroundRemovedPoints": 13,
+  "subsetFineMisses": {
+    "total": 10,
+    "furthestStage": {
+      "local window contrast": 1,
+      "gap-separated run count": 1,
+      "total/robust/owner height": 3,
+      "radial RMS": 1,
+      "transverse density peak": 2,
+      "shaft found; final footprint omitted": 2
+    },
+    "withAcceptedOneCellNeighbor": 5
+  },
+  "contrastRelaxationFineLosses": {
+    "total": 11,
+    "shaftFoundButFootprintOmitted": 10,
+    "shaftNoLongerFound": 1
+  },
+  "ownEvidenceRescuedByCounterfactual": {
+    "base": [],
+    "search48x12": [],
+    "fit0p08": [],
+    "fit0p10": [
+      "501/7257"
+    ],
+    "fit0p20": [
+      "21/6586",
+      "21/7773",
+      "1031/4718"
+    ],
+    "height1p35": [
+      "301/4944",
+      "641/3864",
+      "1081/7532"
+    ],
+    "peak1p25": [
+      "21/6586",
+      "1031/4718"
+    ],
+    "rms0p101": [],
+    "points11": [],
+    "contrast3": [
+      "21/6586",
+      "21/7773",
+      "1031/4718"
+    ]
+  },
+  "caveats": [
+    "Fine reference is algorithmic and can miss real poles or label non-poles.",
+    "No fine support is not proof of a coarse false positive.",
+    "Furthest successful gate summarizes a search; relaxing one gate may expose another.",
+    "Trace extrema can arise from different hypotheses; longest-run metrics share one run.",
+    "Density core values are placeholders when the whole-count/height prefilter failed.",
+    "A neighboring accepted cell does not by itself prove the same pole was retained."
+  ]
+}
