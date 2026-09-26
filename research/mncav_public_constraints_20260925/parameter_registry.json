@@ -1,0 +1,38 @@
+{
+  "identity": "UMN MnCAV, 2021 Chrysler Pacifica Hybrid",
+  "policy": "Fix public geometry and steering conversion. Fix stock mass/CG only as declared nominal assumptions. Fit unknown normalized tire/inertia parameters and steering zero. Profile unknown loaded CG; retain mass-scale alternatives.",
+  "fixed_public": {
+    "wheelbaseM": {"value": 3.089, "source": "FCA2021", "page": 3},
+    "steeringRatio": {"value": 16.2, "source": "FCA2021", "page": 2},
+    "frontTrackM": {"value": 1.734, "source": "FCA2021", "page": 3},
+    "rearTrackM": {"value": 1.735, "source": "FCA2021", "page": 3}
+  },
+  "fixed_nominal_public": {
+    "massKg": {"value": 2273.0, "source": "FCA2021", "page": 4, "limitation": "Stock curb mass, not instrumented/occupied vehicle mass."},
+    "frontLoadFraction": {"value": 0.555, "source": "FCA2021", "page": 4, "limitation": "Stock distribution; installed hardware and passengers can change it."}
+  },
+  "derived_nominal": {"lfM": 1.374605, "lrM": 1.714395, "formula": "lf=L*(1-frontLoadFraction); lr=L*frontLoadFraction"},
+  "unknown_to_identify": ["Cf/m", "Cr/m", "Iz/m", "steeringWheelZeroRad"],
+  "sensitivity_only": {"cgShiftM": [-0.15, 0.0, 0.15], "massKg": [2273.0, 2530.6998827006014, 2858.0], "meaning": "CG shifts are engineering scenarios. Middle mass is prior torque-fit estimate; 2858 is published GVWR, not an observed payload or verified actual-mass bound."},
+  "retained_empirical_calibrations": {
+    "outputPointXAtNominalCgM": -2.3597988944583816,
+    "gyroBiasRadps": 0.0122209801079676,
+    "wheelRadiiSource": "config/mncavWheelSpeedCalibration.json",
+    "limitation": "Estimated from existing calibration recording, not public specifications. No independent survey of output point. For CG shift d=lf-lf0, outputPointX=x0+d."
+  },
+  "sensor_public_constraints": {
+    "ousterBeams": {"front": 64, "rearUnits": [16,16], "source": "MNCAV"},
+    "referenceImuFamily": {"value": "Epson G320N", "basis": "Previous bag INSCONFIG imu_type=41 audit, not inferred solely from public E1/E2 labels."},
+    "observerDbwImu": {"model": null, "covariance": null, "limitation": "OEM model unidentified; do not assign NovAtel IMU noise to the DBW topic."}
+  },
+  "sources": {
+    "MNCAV": "https://mncav.umn.edu/vehicle",
+    "IDENTITY": "https://www.cts.umn.edu/news-pubs/news/2021/august/mncav",
+    "FCA2021": "https://s3.amazonaws.com/chryslermedia.iconicweb.com/mediasite/specs/2021_CH_PacificaHybrid_Specificationsp2i5bgb1foc74s1scirptivlb5.pdf",
+    "DATASPEED": "https://www.dataspeedinc.com/app/uploads/2022/05/FCA_RU_FAQ.pdf",
+    "MNDOT2023": "https://rosap.ntl.bts.gov/view/dot/73017/dot_73017_DS1.pdf",
+    "CTS2514": "https://conservancy.umn.edu/server/api/core/bitstreams/dc64cb11-24de-46d6-ad17-ba34d96f6f01/content"
+  },
+  "not_found_in_targeted_search": ["Verified public downloadable MnCAV dynamics bag benchmark", "Measured loaded MnCAV mass and axle loads", "Measured MnCAV yaw inertia", "Measured installed-tire cornering stiffness", "Surveyed observer sensor position relative to actual CG"],
+  "public_sources_are_not": "A claim that the recorded platform matches every stock specification exactly or that a public source does not exist elsewhere."
+}

@@ -1,0 +1,31 @@
+{
+  "status": "Fixed public nominal model; loaded mass/CG are not measured",
+  "fixed": {
+    "model": "cg_+0.00",
+    "cgShiftM": 0.0,
+    "massKg": 2273.0,
+    "lfM": 1.3746049999999999,
+    "lrM": 1.7143950000000001,
+    "outputPointXM": -2.3597988944583816,
+    "CfNPerRad": 124178.82898505156,
+    "CrNPerRad": 139550.58470228594,
+    "IzKgM2": 4485.72224015285,
+    "steeringRatio": 16.2,
+    "steeringWheelZeroDeg": 2.3663769215012733,
+    "fitCost": 0.0005457397132846225
+  },
+  "identifiedVector": [
+    4.00062215104162,
+    4.117326605015623,
+    0.6797989722693984,
+    0.041301068623404616
+  ],
+  "selection": "Nominal published stock geometry fixed prospectively, not selected using evaluation errors",
+  "parameterOrder": [
+    "log(Cf/m)",
+    "log(Cr/m)",
+    "log(Iz/m)",
+    "steeringWheelZeroRad"
+  ],
+  "productionConfigurationChanged": false
+}

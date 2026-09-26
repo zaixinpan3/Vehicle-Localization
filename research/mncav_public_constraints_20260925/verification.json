@@ -1,0 +1,14 @@
+{
+  "metricRows": 57,
+  "metricRecomputeMaxDifference": 0.0,
+  "previousSolverMaxDifference": 0.0,
+  "massScalePredictionMaxDifferences": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "fixedGeometryChecks": "passed",
+  "multistartFits": 9,
+  "allFitsConverged": true,
+  "noFinalTrajectoryGuardActivation": true
+}
