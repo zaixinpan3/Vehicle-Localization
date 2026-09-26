@@ -4,9 +4,9 @@
     "mass": 2273.0,
     "lf": 1.3746049999999999,
     "lr": 1.7143950000000001,
-    "yawInertia": 5874.607330416667,
-    "frontCorneringStiffness": 108238.09523809524,
-    "rearCorneringStiffness": 80817.77777777778
+    "yawInertia": 4485.72224015285,
+    "frontCorneringStiffness": 124178.82898505156,
+    "rearCorneringStiffness": 139550.58470228594
   },
   "steeringRatio": 16.2,
   "stock": {
@@ -27,15 +27,16 @@
     "identity": "UMN CTS vehicle introduction, 2021-08-24; verified 2026-09-14.",
     "massGeometrySteering": "Reverified 2026-09-25 against manufacturer 2021 Pacifica Hybrid specifications pp. 2-5, retrieved from the manufacturer media asset host. Values describe the stock vehicle at curb weight, not occupied/instrumented MnCAV.",
     "lfLr": "Derived from stock wheelbase and static front/rear load fractions: lf=L*rearFraction, lr=L*frontFraction.",
-    "yawInertia": "Uniform rectangular planform prior m*(length^2+width^2)/12; not measured MnCAV inertia.",
-    "corneringStiffness": "Unidentified nominal prior retained from existing MnCAV calibration report: legacy 75000/56000 N/rad scaled by 2273/1575. Not manufacturer specifications or validated tire identification.",
+    "yawInertia": "Joint yaw/lateral-velocity identification with public stock mass and axle-load-derived CG fixed; conditional model, not directly measured inertia.",
+    "corneringStiffness": "Complete-axle stiffnesses from the public-constrained multi-recording fit, adopted 2026-09-25. Conditional on stock mass/CG, calibrated output point and linear bicycle assumptions.",
     "actualLoadedMass": "Unknown: no payload, occupancy or sensor-rack mass is invented.",
     "sensorNoiseDelay": "See mncavSensorParameters.json and mncavSensorConfig: recorded DBW observer IMU is distinct from the NovAtel G320N reference IMU; noise priors, OEM random walks, native rates and calibrated equivalents are separate.",
     "sources": [
       "https://www.cts.umn.edu/news-pubs/news/2021/august/mncav",
       "https://www.stellantisfleet.com/content/dam/fca-fleet/na/fleet/en_us/chrysler/2021/Pacifica/specifications/2021_CH_PacificaHybrid_Specifications.pdf",
       "https://s3.amazonaws.com/chryslermedia.iconicweb.com/mediasite/specs/2021_CH_PacificaHybrid_Specificationsp2i5bgb1foc74s1scirptivlb5.pdf"
-    ]
+    ],
+    "identification": "research/mncav_public_constraints_20260925/constrained_model.json"
   },
   "sensitivityFactors": [
     0.7,
@@ -44,12 +45,9 @@
   ],
   "parameterReviewDate": "2026-09-25",
   "assumptions": {
-    "selectionPolicy": "Retain the existing nominal dynamics when no measured MnCAV inertia, payload or tire stiffness is available. These are engineering priors authorized for use, not identified truth or fitted evaluation-drive values.",
+    "selectionPolicy": "Use the public-constrained nominal identification adopted by user instruction on 2026-09-25. Geometry, stock mass and CG are fixed; stiffness and inertia are fitted constants. Re-synthesize observer gains for this vehicle configuration.",
     "nominalMassPolicy": "Use published curb mass 2273 kg as the nominal anchor. No occupants or sensor-rack mass is asserted. Actual loaded mass is unknown.",
-    "yawInertiaFormula": "mass*(stock.lengthM^2+stock.widthWithoutMirrorsM^2)/12",
     "axleCorneringStiffnessUnits": "N/rad for the complete axle, not each tire; do not multiply by two again.",
-    "frontCorneringStiffnessFormula": "75000*(2273/1575)",
-    "rearCorneringStiffnessFormula": "56000*(2273/1575)",
     "massSensitivityKg": [
       2273,
       2473,
@@ -78,5 +76,27 @@
       0.15
     ],
     "cgSensitivityMeaning": "Assumed longitudinal CG shifts about the stock axle-load-derived location; keep wheelbase fixed; not a confidence interval."
+  },
+  "identification": {
+    "source": "research/mncav_public_constraints_20260925/constrained_model.json",
+    "sourceCommit": "c1acc0d8b469a7095688035fd4ac3700616a91bd",
+    "adoptedDate": "2026-09-25",
+    "fixedPublicNominal": [
+      "mass",
+      "lf",
+      "lr",
+      "steeringRatio"
+    ],
+    "fitted": [
+      "yawInertia",
+      "frontCorneringStiffness",
+      "rearCorneringStiffness"
+    ],
+    "steeringCalibrationPath": "config/mncavReplayInterface.json",
+    "outputPointPath": "config/mncavMotionOutputPoint.json",
+    "parameterScope": "Conditional nominal model; actual loaded mass/CG remain unknown.",
+    "evaluationLateralRmseMps": 0.25561141841113305,
+    "evaluationLateralBiasMps": -0.24108521515302456,
+    "gainPolicy": "Previously saved gains/certificates belong to their stored vehicle model; synthesize and validate new gains before claiming a certificate for this configuration."
   }
 }
