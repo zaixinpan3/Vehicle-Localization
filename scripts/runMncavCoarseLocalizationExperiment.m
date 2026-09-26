@@ -15,9 +15,9 @@ function report=runMncavCoarseLocalizationExperiment(outputFolder,options)
     mapCfg=featureMapBuildConfig();mapFile=mapCfg.probabilityCloudPath;
     if strlength(options.MapFile)>0,mapFile=options.MapFile;end
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
-    parameterFile="output/mncav_interface_audit_20260916/vehicle_parameters.json";
+    parameterFile="";
     [prepared,~,~]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
-    saved=load('tests/reference/mncavLateralObserverDesign.mat','design');
+    saved=struct('design',designLateralObserverGains(lateralObserverConfig()));
     lateral=runLateralVelocityObserver(prepared.highRate,saved.design,lateralObserverConfig("mncav"));
     h=prepared.highRate;
     motion=struct('time',h.time,'longitudinalSpeed',h.longitudinalSpeed, ...

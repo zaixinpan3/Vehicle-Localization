@@ -15,8 +15,9 @@ function result = simulateLateralObserverScenario(design, cfg)
 % Output:
 %   result: struct with truth, measurements, estimate, and metrics
     if nargin < 2 || isempty(cfg)
-        cfg = design.cfg;
+        cfg = lateralObserverConfig();
     end
+    assertLateralVehicleMatches(design,cfg);
     truth = simulateTruth(design, cfg);
     measurements = buildMeasurements(truth, design, cfg);
 
@@ -65,18 +66,24 @@ function truth = simulateTruth(design, cfg)
 
     lateralAcceleration = zeros(numel(time), 1);
     lateralVelocityRate = zeros(numel(time), 1);
+    yawRateRate = zeros(numel(time), 1);
     for sampleIdx = 1:numel(time)
         [~, C] = evaluateLateralModel(model, [longitudinalSpeed(sampleIdx); 1.0 ./ longitudinalSpeed(sampleIdx)]);
         lateralAcceleration(sampleIdx) = (C(1, :) * state(sampleIdx, :).') + (model.D(1) .* steeringAngle(sampleIdx));
         derivative = plantDerivative(state(sampleIdx, :).', sampleIdx, 0.0, longitudinalSpeed, steeringAngle, model, nonlinearity);
         lateralVelocityRate(sampleIdx) = derivative(1);
+        yawRateRate(sampleIdx) = derivative(2);
     end
 
     % The IMU reports the inertial specific force, not the speed derivative
     longitudinalSpecificForce = longitudinalAcceleration - (state(:, 1) .* state(:, 2));
-    sideSlipAngle = atan2(state(:, 1), longitudinalSpeed);
-    sideSlipAngleRate = ((lateralVelocityRate .* longitudinalSpeed) - ...
-        (state(:, 1) .* longitudinalAcceleration)) ./ ((longitudinalSpeed.^2) + (state(:, 1).^2));
+    % Score at the configured output point while keeping plant/IMU states
+    % at the bicycle origin. vyOutput = vyOrigin - forwardOffset*yawRate.
+    outputVy = state(:,1) - cfg.outputPoint.forwardOffsetM .* state(:,2);
+    outputVyRate = lateralVelocityRate - cfg.outputPoint.forwardOffsetM .* yawRateRate;
+    sideSlipAngle = atan2(outputVy, longitudinalSpeed);
+    sideSlipAngleRate = ((outputVyRate .* longitudinalSpeed) - ...
+        (outputVy .* longitudinalAcceleration)) ./ ((longitudinalSpeed.^2) + outputVy.^2);
 
     truth = struct();
     truth.time = time;
@@ -84,10 +91,13 @@ function truth = simulateTruth(design, cfg)
     truth.longitudinalAcceleration = longitudinalAcceleration;
     truth.steeringAngle = steeringAngle;
     truth.state = state;
-    truth.lateralVelocity = state(:, 1);
+    truth.lateralVelocity = outputVy;
+    truth.observerPointLateralVelocity = state(:,1);
     truth.yawRate = state(:, 2);
     truth.lateralAcceleration = lateralAcceleration;
-    truth.lateralVelocityRate = lateralVelocityRate;
+    truth.lateralVelocityRate = outputVyRate;
+    truth.observerPointLateralVelocityRate = lateralVelocityRate;
+    truth.yawRateRate = yawRateRate;
     truth.longitudinalSpecificForce = longitudinalSpecificForce;
     truth.sideSlipAngle = sideSlipAngle;
     truth.sideSlipAngleRate = sideSlipAngleRate;

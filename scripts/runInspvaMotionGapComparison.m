@@ -8,6 +8,7 @@ function report=runInspvaMotionGapComparison(outputFolder)
         outputFolder (1,1) string="output/mncav_inspva_observer_20260915"
     end
     setupVehicleLocalization();saved=load(fullfile(outputFolder,'experiment.mat'),'experiments','cfg','report');
+    assertMncavReplayCurrent(saved.report.metadata.parameters);
     frames=readtable(fullfile(outputFolder,'frame_errors.csv'),TextType="string");
     rows=cell(0,11);cases=cell(3,1);experiments=cell(3,1);frameRows=cell(3,1);
     for j=1:3

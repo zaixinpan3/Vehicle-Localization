@@ -1,6 +1,6 @@
 function report = tuneSyntheticObserverPeaking(outputFolder)
 % tuneSyntheticObserverPeaking Compare constant certified GNSS gain settings.
-% Reuses the exact clean/noisy sedan input, truth and initial errors from
+% Reuses the exact clean/noisy MnCAV input, truth and initial errors from
 % demoSyntheticVehicleObserver. Does not clip states or alter the trajectory.
     arguments
         outputFolder (1,1) string = "output/observer_peaking_tuning"
@@ -23,6 +23,11 @@ function report = tuneSyntheticObserverPeaking(outputFolder)
         for j = 1:2
             index = index+1;
             baseline = stored.results{j};
+            currentLateral = lateralObserverConfig();
+            assert(isequaln(baseline.lateralCfg.vehicle,currentLateral.vehicle) && ...
+                isequaln(baseline.lateralCfg.outputPoint,currentLateral.outputPoint), ...
+                'VehicleLocalization:StaleReplayConfiguration', ...
+                'Rebuild demoSyntheticVehicleObserver with the current MnCAV configuration.');
             cfg = baseline.cfg;
             cfg.observer.theta = candidates{k,2};
             cfg.observer.yawGain = candidates{k,4};

@@ -9,6 +9,7 @@ function report=analyzeMncavLateralDiagnosis(outputFolder)
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     source="output/mncav_inspva_observer_20260915/experiment.mat";
     z=load(source,'high','lateralCfg','lateralDesign','lateral');
+    assertLateralVehicleMatches(z.lateralDesign,lateralObserverConfig());
     h=z.high;t=h.time;cfg=z.lateralCfg;design=z.lateralDesign;n=numel(t);
     audit=readtable('output/mncav_inspva_median_20260915/motion_audit.csv');
     reference=interp1(audit.time,audit{:,{'insVx','insVy','insDerivedAx','insDerivedAy','insDerivedYawRate'}},t);

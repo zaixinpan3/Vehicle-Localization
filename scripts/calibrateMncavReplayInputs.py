@@ -57,10 +57,9 @@ def main():
                                     'config/mncavVehicleParameters.json').read_text())
     interface = json.loads((Path(__file__).resolve().parents[1] /
                             'config/mncavReplayInterface.json').read_text())
-    mass = vehicle_parameters['stock']['curbMassKg']
-    wheelbase = vehicle_parameters['stock']['wheelbaseM']
-    front_fraction = vehicle_parameters['stock']['frontStaticLoadFraction']
-    lf, lr = wheelbase*(1-front_fraction), wheelbase*front_fraction
+    mass = vehicle_parameters['vehicle']['mass']
+    lf = vehicle_parameters['vehicle']['lf']
+    lr = vehicle_parameters['vehicle']['lr']
     delta = (np.interp(t, steering_time, steering.steering_wheel_angle_rad)
              - interface['steeringWheelOffsetRad'])/vehicle_parameters['steeringRatio']
     design = np.c_[delta-(vy+lf*yaw_rate)/np.maximum(vx, 1),
@@ -85,8 +84,8 @@ def main():
             'identity': 'UMN identifies MnCAV as a 2021 Chrysler Pacifica Hybrid.',
             'stock_specifications': '2273 kg EPA curb mass, 3.089 m wheelbase, 55.5/44.5 axle load split, 16.2 steering ratio; actual loaded MnCAV mass is unknown.',
             'lf_lr': 'Derived static unladen CG distances from published axle load fractions.',
-            'yawInertia': 'Explicit uniform rectangular planform approximation, not a measured MnCAV inertia.',
-            'cornering_stiffness': 'Unidentified nominal prior: existing generic model stiffnesses scaled by the stock mass ratio. Not a manufacturer specification.',
+            'yawInertia': vehicle_parameters['provenance']['yawInertia'],
+            'cornering_stiffness': vehicle_parameters['provenance']['corneringStiffness'],
             'sensitivity': 'Repeat the experiment at 0.7 and 1.3 times nominal inertia and both axle stiffnesses; nominal mass and geometry remain fixed.',
             'input_offsets': 'Fixed signs plus median offsets from the independent calibration drive; no online truth injection. Residual road-bank and sensor-to-CG lever-arm errors remain.',
             'sources': [

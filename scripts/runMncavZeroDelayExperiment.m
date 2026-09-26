@@ -13,7 +13,7 @@ function report=runMncavZeroDelayExperiment(outputFolder,options)
     root=setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     if strlength(options.MapFile)==0,mapCfg=featureMapBuildConfig();options.MapFile=mapCfg.probabilityCloudPath;end
     sensorFolder=fullfile(root,'output','mississippi_20240607_120931_20260907','sensors');
-    parameters=fullfile(fileparts(sensorFolder),'vehicle_parameters.json');
+    parameters="";
     [raw,reference,inputMetadata]=prepareMncavObserverReplay(sensorFolder,parameters);
     lateralCfg=lateralObserverConfig("mncav");
     assert(isequal(lateralCfg.vehicle,inputMetadata.parameters.vehicle), ...

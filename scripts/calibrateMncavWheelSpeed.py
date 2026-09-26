@@ -6,6 +6,7 @@ The 1--40 s fit and >=40 s validation are separate. Evaluation references
 are exported for scoring, never for fitting or runtime wheel estimation.
 """
 from pathlib import Path
+from mncavParameters import replay_parameters
 import hashlib
 import json
 
@@ -19,7 +20,6 @@ BASE = ROOT / "output/mncav_wheel_only_20260916"
 INTERFACES = ROOT / "output/mncav_interface_audit_20260916"
 OUT = BASE / "calibration"
 WHEELS = ["front_left", "front_right", "rear_left", "rear_right"]
-TRACK_Y = np.array([1.734, -1.734, 1.735, -1.735]) / 2
 
 
 def prepare(sequence, parameters):
@@ -75,20 +75,24 @@ def prepare(sequence, parameters):
 
 
 def main():
-    parameters = json.loads((INTERFACES / "vehicle_parameters.json").read_text())
+    parameters = replay_parameters()
+    front = parameters["stock"]["frontTrackM"]
+    rear = parameters["stock"]["rearTrackM"]
+    track_y = np.array([front, -front, rear, -rear]) / 2
+    wheelbase = parameters["vehicle"]["lf"] + parameters["vehicle"]["lr"]
     motion, wheels, calibration_metadata = prepare("12-11-24", parameters)
     time = motion.time.to_numpy()
     omega = np.column_stack([np.interp(time, wheels.time, wheels[k]) for k in WHEELS])
     r = motion.yawRate.to_numpy()
     delta = motion.steeringAngle.to_numpy()
     angle = np.zeros_like(omega)
-    angle[:, :2] = np.arctan2((3.089*np.tan(delta))[:, None], 3.089-TRACK_Y[:2]*np.tan(delta)[:, None])
-    acceleration = motion.longitudinalAcceleration.to_numpy() + 1.714395*r*r
+    angle[:, :2] = np.arctan2((wheelbase*np.tan(delta))[:, None], wheelbase-track_y[:2]*np.tan(delta)[:, None])
+    acceleration = motion.longitudinalAcceleration.to_numpy() + parameters["vehicle"]["lr"]*r*r
     mask = (time > 1) & (time < 40) & (motion.referenceVx.to_numpy() > 3)
     radius, lag, residuals = [], [], []
     for i in range(4):
         design = np.column_stack([omega[:, i]*np.cos(angle[:, i]), acceleration])
-        target = motion.referenceVx.to_numpy() - r*TRACK_Y[i]
+        target = motion.referenceVx.to_numpy() - r*track_y[i]
         fit = least_squares(lambda p: (design@p-target)[mask], [.36, .03],
                             bounds=([.32, 0], [.40, .2]), loss="soft_l1", f_scale=.025)
         assert fit.success

@@ -15,7 +15,7 @@ function report=runMncavFullLocalizationExperiment(outputFolder,options)
     if strlength(options.MapFile)==0,mapCfg=featureMapBuildConfig();options.MapFile=mapCfg.probabilityCloudPath;end
     if ~isfolder(outputFolder),mkdir(outputFolder);end
     sensorFolder=fullfile(root,'output','mississippi_20240607_120931_20260907','sensors');
-    parameterFile=fullfile(fileparts(sensorFolder),'vehicle_parameters.json');
+    parameterFile="";
     lateralCfg=lateralObserverConfig("mncav");
     timer=tic;lateralDesign=designLateralObserverGains(lateralCfg);lateralSynthesisSeconds=toc(timer);
     [raw,reference,metadata]=prepareMncavObserverReplay(sensorFolder,parameterFile);

@@ -24,6 +24,8 @@ function report=runMncavWheelSpeedExperiment(outputFolder)
     writetable(candidateMetrics,fullfile(outputFolder,'calibration_candidates.csv'));
     disp(candidateMetrics);disp(selectedCfg);
     stored=load('output/mncav_wheel_only_20260916/full_observer/experiment.mat');
+    assertMncavReplayCurrent(stored.report.metadata.inputMetadata.parameters);
+    stored.lateralDesign=designLateralObserverGains(lateralObserverConfig());
     h=stored.data.highRate;native=readtable(fullfile(outputFolder,'12-09-31','wheels.csv'));
     d=h;d.wheels=struct('time',native.time,'angularVelocity',native{:,2:5});
     selectedCfg.initialSpeed=0; % Same known stationary start as the frozen experiment.

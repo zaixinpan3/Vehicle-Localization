@@ -9,22 +9,19 @@ function cfg = lateralObserverConfig(profile)
 % the simulation group defines the synthetic scenario used to exercise the
 % observer.
 %
-% The vehicle parameters are the archived lateral-observer values of the
-% original repository. They are a plausible mid-size sedan, not identified
-% MnCAV parameters: replace mass, yaw inertia, and the cornering
-% stiffnesses with identified values before drawing quantitative
-% conclusions.
+% Default vehicle parameters come from config/mncavVehicleParameters.json.
+% The explicit "reference" profile preserves the archived sedan regression model.
 %
 % Input:
 %   profile: "reference" retains archived regression parameters; "mncav"
-%       uses source-qualified Pacifica Hybrid geometry and nominal dynamics.
+%       (default) uses the adopted MnCAV identification and public geometry.
 %       Re-synthesize lateral gains after changing the vehicle profile.
 %
 % Output:
 %   cfg: struct with vehicle, scheduling, synthesis, observer, and
 %       simulation groups
     arguments
-        profile (1,1) string {mustBeMember(profile,["reference","mncav"])} = "reference"
+        profile (1,1) string {mustBeMember(profile,["reference","mncav"])} = "mncav"
     end
     cfg = struct();
 

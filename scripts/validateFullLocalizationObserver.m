@@ -12,6 +12,7 @@ function validation=validateFullLocalizationObserver(outputFolder)
     results=runtests(cellstr(files));writetable(table(results),fullfile(outputFolder,'tests.csv'));
     assert(all([results.Passed]),'VehicleLocalization:RegressionFailure','Observer regression failed.');
     stored=load(fullfile(outputFolder,'experiment.mat'));
+    assertMncavReplayCurrent(stored.report.metadata.inputMetadata.parameters);
     data=stored.data;cfg=stored.cfg;lateral=stored.lateral;r=stored.runs{1}.estimate;
     repeat=runFullLocalizationObserver(data,stored.lateralDesign,cfg,LateralInputs=lateral);
     repeatDifference=max(abs(repeat.z-r.z),[],'all');assert(repeatDifference==0);

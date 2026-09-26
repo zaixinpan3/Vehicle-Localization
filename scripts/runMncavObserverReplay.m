@@ -18,6 +18,7 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
     calls=table();if mode=="lidar",calls=readtable(fullfile(replayFolder,'calls.csv'));end
     [raw,reference,metadata]=prepareMncavObserverReplay(folder,parameterFile,calls,fixedLidarDelay);
     loaded=load(designFile,'observerDesign','observerCfg','lateralDesign');cfg=loaded.observerCfg;
+    assertLateralVehicleMatches(loaded.lateralDesign,lateralObserverConfig());
     assert(isfield(cfg,'mode') && cfg.mode==mode,'VehicleLocalization:CertificateMismatch', ...
         'Generate a design for the selected continuous mode first.');
     cfg.measurement.fixedLidarDelay=fixedLidarDelay;

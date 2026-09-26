@@ -18,6 +18,17 @@ Pole-like Feature, and Building Facade*. Three modules mirror the paper:
   reference `tests/reference/pipelineReference.mat`.
 - `scripts/` — bag extraction and map-building entry points.
 
+## Default Vehicle Configuration
+
+All new simulations and experiment scripts default to the adopted MnCAV
+parameters in `config/mncavVehicleParameters.json`, loaded through
+`mncavVehicleConfig` / `lateralObserverConfig`. Replay steering uses
+`config/mncavReplayInterface.json` via `mncavReplayConfig` (Python:
+`scripts/mncavParameters.py`). Do not copy nominal constants or use historical
+output snapshots as live defaults. Re-synthesize gains for changed vehicles;
+reject stale replay metadata. Historical regression and sensitivity models
+require explicit selection/overrides. See `config/MNCAV_CONFIGURATION.md`.
+
 ## Documentation language
 
 Write every document in this repository in English — Markdown, LaTeX, archive

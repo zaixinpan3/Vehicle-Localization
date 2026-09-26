@@ -1,0 +1,9 @@
+{
+  "replaySamples": 11690,
+  "defaultAndHistoricalCalibrationInputsExactlyEqual": true,
+  "pythonDefaultAndStaleOverrideChecks": "passed",
+  "replaySteeringOffsetRad": 0.041301068623404616,
+  "replayCfNPerRad": 124178.82898505156,
+  "savedGainsRegeneratedInDefaults": true,
+  "fullRealLocalizationReexecuted": false
+}

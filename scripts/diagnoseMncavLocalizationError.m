@@ -8,6 +8,7 @@ function report=diagnoseMncavLocalizationError(outputFolder)
     root=setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     baselineFolder=fullfile(root,'output','mncav_full_localization_20260914');
     f=load(fullfile(baselineFolder,'full_experiment.mat'));
+    assertMncavReplayCurrent(f.report.metadata.parameters);
     calls=readtable(fullfile(baselineFolder,'matching','calls.csv'));a=calls.accepted==1;
     poseTime=calls.timeSeconds(a);pose=[calls.x(a),calls.y(a),calls.psi(a)];
     c=calls(a,:);information=zeros(3,3,height(c));

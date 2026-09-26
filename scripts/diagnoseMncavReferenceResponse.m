@@ -5,6 +5,7 @@ function report=diagnoseMncavReferenceResponse(outputFolder)
         outputFolder (1,1) string="output/mncav_error_diagnosis_20260914"
     end
     root=setupVehicleLocalization();s=load(fullfile(outputFolder,'ablations.mat'));
+    assertMncavReplayCurrent(s.f.report.metadata.parameters);
     pva=readtable(fullfile(outputFolder,'pva_reference.csv'));
     parameters=fullfile(root,'output','mississippi_20240607_120931_20260907','vehicle_parameters.json');
     [~,reference]=prepareMncavObserverReplay(fullfile(fileparts(parameters),'sensors'),parameters);

@@ -9,6 +9,7 @@ function report=compareMncavObserverWithLidarInput(outputFolder)
     setupVehicleLocalization;if ~isfolder(outputFolder),mkdir(outputFolder);end
     baselineFolder="output/mncav_zero_delay_20260914";
     baseline=load(fullfile(baselineFolder,'experiment.mat'));
+    assertMncavReplayCurrent(baseline.report.metadata.input.parameters);
     calls=readtable(fullfile(baselineFolder,'precomputed_calls.csv'));
     index=baseline.uniformIndices;time=baseline.estimate.time(index);
     inputPose=baseline.data.lidar.pose(index,:);reference=baseline.referencePose(index,:);

@@ -1,0 +1,27 @@
+{
+  "vehicle": {
+    "mass": 2273,
+    "lf": 1.3746049999999999,
+    "lr": 1.7143950000000001,
+    "yawInertia": 4485.72224015285,
+    "frontCorneringStiffness": 124178.82898505156,
+    "rearCorneringStiffness": 139550.58470228594
+  },
+  "certified": true,
+  "maxCertificateMargin": -0.051986176678551016,
+  "durationSeconds": 24,
+  "metrics": {
+    "lateralVelocityRmse": 0.040394627406713415,
+    "yawRateRmse": 0.0038190396181725459,
+    "settledLateralVelocityRmse": 0.00533175610612815,
+    "settledYawRateRmse": 1.6759876183134923E-14,
+    "settledSideSlipRmse": 0.0027960582002162968,
+    "settledSideSlipRateRmse": 0.0031733325283628063,
+    "peakSideSlipAngleRate": 0.032637843871710967,
+    "maxSettledLateralVelocityError": 0.019081760092017185,
+    "peakLateralVelocity": 0.74524961225609632,
+    "peakSideSlipAngle": 0.032939859857703986,
+    "settleTime": 6
+  },
+  "testCount": 45
+}

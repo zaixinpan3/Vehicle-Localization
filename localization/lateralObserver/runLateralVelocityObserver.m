@@ -37,6 +37,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
         "VehicleLocalization:MissingOutputPointConfiguration", ...
         "Use the current lateralObserverConfig with an outputPoint.forwardOffsetM entry.");
     forwardOffset = double(cfg.outputPoint.forwardOffsetM);
+    assertLateralVehicleMatches(design,cfg);
     measurements = normalizeMeasurements(measurements);
     settings = validateRuntimeConfiguration(cfg, design);
     layout = stateLayout();

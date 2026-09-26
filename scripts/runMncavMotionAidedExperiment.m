@@ -12,6 +12,7 @@ function report=runMncavMotionAidedExperiment(outputFolder,options)
     end
     root=setupVehicleLocalization;if ~isfolder(outputFolder),mkdir(outputFolder);end
     base=load(options.InputFile);calls=readtable(options.CallsFile);
+    assertMncavReplayCurrent(base.report.metadata.input.parameters);
     assert(isequal(calls.frame,(1:1170).'),'VehicleLocalization:IncompletePrecomputation','All processed frames are required.');
     cfg=motionAidedObserverConfig;
     if strlength(options.DesignFile)>0,chosen=load(options.DesignFile,'cfg');cfg=chosen.cfg;end

@@ -1,0 +1,230 @@
+[
+  {
+    "path": "config/MNCAV_CONFIGURATION.md",
+    "stagedSha256": "d6497adeac1b0706523b0cc0411445a34111ec10c49be99f2bde551915d15a22",
+    "workingValidationSha256": "d6497adeac1b0706523b0cc0411445a34111ec10c49be99f2bde551915d15a22",
+    "workingDiffers": false
+  },
+  {
+    "path": "config/assertMncavReplayCurrent.m",
+    "stagedSha256": "533515e64a765895c34e8276cbabeeb0b379cf45cb1a747985c06bbb2d12472b",
+    "workingValidationSha256": "533515e64a765895c34e8276cbabeeb0b379cf45cb1a747985c06bbb2d12472b",
+    "workingDiffers": false
+  },
+  {
+    "path": "config/lateralObserverConfig.m",
+    "stagedSha256": "13af93a3383f28f8c48e825e3f883239b55ad61ed169892650e55b84045a68f3",
+    "workingValidationSha256": "10c858b2872f68fa679b229cea374969812f62549a4b6eca3f47c3b3fd2fca46",
+    "workingDiffers": true
+  },
+  {
+    "path": "config/mncavInputCorrections.json",
+    "stagedSha256": "21412aecba747dbf3eeb38c461adab4ef28c35b295f93e632df61518cd60c4c8",
+    "workingValidationSha256": "21412aecba747dbf3eeb38c461adab4ef28c35b295f93e632df61518cd60c4c8",
+    "workingDiffers": false
+  },
+  {
+    "path": "config/mncavReplayConfig.m",
+    "stagedSha256": "27f1ebfdd0f0ac03b007587df6bfe82004f1a0655dbd8cb6311598c7946fccff",
+    "workingValidationSha256": "27f1ebfdd0f0ac03b007587df6bfe82004f1a0655dbd8cb6311598c7946fccff",
+    "workingDiffers": false
+  },
+  {
+    "path": "config/wheelSpeedObserverConfig.m",
+    "stagedSha256": "46df8a3774b80ed93da0ec6e88e305d042448f7224428093d155a4dd0bb802b9",
+    "workingValidationSha256": "46df8a3774b80ed93da0ec6e88e305d042448f7224428093d155a4dd0bb802b9",
+    "workingDiffers": false
+  },
+  {
+    "path": "localization/lateralObserver/assertLateralVehicleMatches.m",
+    "stagedSha256": "770bd7021d7c301ca760ab4680dc948284730bdb98601e2731ef51aefa0265c4",
+    "workingValidationSha256": "770bd7021d7c301ca760ab4680dc948284730bdb98601e2731ef51aefa0265c4",
+    "workingDiffers": false
+  },
+  {
+    "path": "localization/lateralObserver/runLateralVelocityObserver.m",
+    "stagedSha256": "cc1df51c657e946ca93543409515cb89b2d892b7c8291d197885a586cb503758",
+    "workingValidationSha256": "064094e45bb7cb82a2665b983940eced3934f1d52e4ff77d0158f9c2891174f4",
+    "workingDiffers": true
+  },
+  {
+    "path": "localization/lateralObserver/simulateLateralObserverScenario.m",
+    "stagedSha256": "84189959d6593dd7cccbfcf7e67b4e86b694660f5c8a9ea60604914d5799a84d",
+    "workingValidationSha256": "d7d6ce002d28db7c69fbd3c0c0e49b6facd1be12623bfe3ef978baf8923abfa8",
+    "workingDiffers": true
+  },
+  {
+    "path": "scripts/analyzeMncavLateralDiagnosis.m",
+    "stagedSha256": "99ba5c73a237989bc66ea8b9a1c9008788f16fb7a3fa47d5fd066125ed7f6938",
+    "workingValidationSha256": "99ba5c73a237989bc66ea8b9a1c9008788f16fb7a3fa47d5fd066125ed7f6938",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/benchmarkLocalizationPipeline.m",
+    "stagedSha256": "8dbe7228351bea6bf405426bda8833d189c488e79e6fb5ee544ea491ab01f48f",
+    "workingValidationSha256": "8dbe7228351bea6bf405426bda8833d189c488e79e6fb5ee544ea491ab01f48f",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/calibrateMncavMotionOutputPoint.m",
+    "stagedSha256": "580eea200112309e864e52f7acdf55adab30e72eaf889e4403e32acb5b669545",
+    "workingValidationSha256": "580eea200112309e864e52f7acdf55adab30e72eaf889e4403e32acb5b669545",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/calibrateMncavReplayInputs.py",
+    "stagedSha256": "741b7999d3aa02c77993975eb82511e1e9373c60c91fbf4d10e8b623cfcaa395",
+    "workingValidationSha256": "741b7999d3aa02c77993975eb82511e1e9373c60c91fbf4d10e8b623cfcaa395",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/calibrateMncavWheelSpeed.py",
+    "stagedSha256": "0f0f6fbcad3c75170bb4ecbf733a341763ec42a0440b666bab159b8c3ae34017",
+    "workingValidationSha256": "0f0f6fbcad3c75170bb4ecbf733a341763ec42a0440b666bab159b8c3ae34017",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/compareMncavObserverWithLidarInput.m",
+    "stagedSha256": "087b138a140d19b27adca302a09ccb8f8fc6603184b193ba2d88d014c176ba3f",
+    "workingValidationSha256": "087b138a140d19b27adca302a09ccb8f8fc6603184b193ba2d88d014c176ba3f",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/demoSyntheticVehicleObserver.m",
+    "stagedSha256": "87825456e75a80c6415efdc54d6656f7c004525878284706f76ba9be17359e36",
+    "workingValidationSha256": "87825456e75a80c6415efdc54d6656f7c004525878284706f76ba9be17359e36",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/designMncavReplayObserver.m",
+    "stagedSha256": "fb2a1b2a25d8da92f54d6ce529a90a42cb1939d5dd2971a3554f54e7d1fb4e62",
+    "workingValidationSha256": "fb2a1b2a25d8da92f54d6ce529a90a42cb1939d5dd2971a3554f54e7d1fb4e62",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/diagnoseMncavLocalizationError.m",
+    "stagedSha256": "bbb5749877719ceed7aa912d6b4e735db1e8bfd1585eb9f8b23e380aed8ce94f",
+    "workingValidationSha256": "bbb5749877719ceed7aa912d6b4e735db1e8bfd1585eb9f8b23e380aed8ce94f",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/diagnoseMncavReferenceResponse.m",
+    "stagedSha256": "b4ca8b7f60a3b6da336dd43b9270099732b463e6315840a4df68f22830c047fe",
+    "workingValidationSha256": "b4ca8b7f60a3b6da336dd43b9270099732b463e6315840a4df68f22830c047fe",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/mncavParameters.py",
+    "stagedSha256": "33698ce8b7662b699fc429078dc7f1d7d0c1f8e9811256850cc5210c4452851b",
+    "workingValidationSha256": "33698ce8b7662b699fc429078dc7f1d7d0c1f8e9811256850cc5210c4452851b",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/prepareMncavObserverReplay.m",
+    "stagedSha256": "75466302b3ea0a68765286fe15d1c7b6965fc2cf61ddf80b5e7bd0e000269d86",
+    "workingValidationSha256": "75466302b3ea0a68765286fe15d1c7b6965fc2cf61ddf80b5e7bd0e000269d86",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/replayMississippiLocalization.m",
+    "stagedSha256": "be39312f070a4a82704864bef71833e577d038b692fa490983a8cfb6443114bc",
+    "workingValidationSha256": "be39312f070a4a82704864bef71833e577d038b692fa490983a8cfb6443114bc",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/runInspvaMapObserverComparison.m",
+    "stagedSha256": "2ab0ca920802d5065a4f156d12654968e10b62e039c9fa908d62a8dd92923bc7",
+    "workingValidationSha256": "cbea7b508bc8ff4a4d73332992cac83b87011a854dadd38bfef67f14c3912d29",
+    "workingDiffers": true
+  },
+  {
+    "path": "scripts/runInspvaMotionGapComparison.m",
+    "stagedSha256": "81168918135682be236950497828dd8c86230a0b70cb4d5deb8ad70789447b8a",
+    "workingValidationSha256": "81168918135682be236950497828dd8c86230a0b70cb4d5deb8ad70789447b8a",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/runMississippiMapMatchingExperiment.m",
+    "stagedSha256": "2e49422436bd9459809cc6f40e822d8f30b04ee4a2d04067adbbb9e62e43009a",
+    "workingValidationSha256": "2e49422436bd9459809cc6f40e822d8f30b04ee4a2d04067adbbb9e62e43009a",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/runMncavCoarseLocalizationExperiment.m",
+    "stagedSha256": "fb80f0066d2887a5cb4803a81a677c5f2b50b715ead1fe80499e76c5af804da7",
+    "workingValidationSha256": "fb80f0066d2887a5cb4803a81a677c5f2b50b715ead1fe80499e76c5af804da7",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/runMncavFullLocalizationExperiment.m",
+    "stagedSha256": "604963d091d31914b09b389799e4707826d8078e9d088470b650f8e8761cbebe",
+    "workingValidationSha256": "4140bf391223ff43e108a32b74ee36cdcb828164661aada08989d52961ffee09",
+    "workingDiffers": true
+  },
+  {
+    "path": "scripts/runMncavFullObserverExperiment.m",
+    "stagedSha256": "3df0cba6a2ae608fc2120fadc0cfeefb990315f38b423454fbb93511b5f2d827",
+    "workingValidationSha256": "3df0cba6a2ae608fc2120fadc0cfeefb990315f38b423454fbb93511b5f2d827",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/runMncavInterfaceCorrectionComparison.m",
+    "stagedSha256": "3752f8e8720dd2871489d6fe620d5ace366ddcd386fb9705230bf1ffe1f711fd",
+    "workingValidationSha256": "3752f8e8720dd2871489d6fe620d5ace366ddcd386fb9705230bf1ffe1f711fd",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/runMncavMotionAidedExperiment.m",
+    "stagedSha256": "4bb15fa273006f5bb8d7f85bef9519a8aa2577b0e047bdd1f1a31d7850e3fb94",
+    "workingValidationSha256": "49eb9cae7197ef0dc38d6faa986888d290d2fb0a826b80c122ee3042e4380016",
+    "workingDiffers": true
+  },
+  {
+    "path": "scripts/runMncavObserverReplay.m",
+    "stagedSha256": "15978138a58d86b3f2f751c1737a3f2cc37f1edec27b81a5e70f0d8ebbb66888",
+    "workingValidationSha256": "15978138a58d86b3f2f751c1737a3f2cc37f1edec27b81a5e70f0d8ebbb66888",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/runMncavWheelSpeedExperiment.m",
+    "stagedSha256": "ed42fc691b0ae74a02d4fced57bf8229871ef1b8a68dc7e1c9be7b8a3f023705",
+    "workingValidationSha256": "ed42fc691b0ae74a02d4fced57bf8229871ef1b8a68dc7e1c9be7b8a3f023705",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/runMncavZeroDelayExperiment.m",
+    "stagedSha256": "985c05940ccfa93e9e6ee29cfac9b07db8203f7cacbdfa27737a83993719f797",
+    "workingValidationSha256": "7d53e6de02a8f99f3005fe154a91b2d069f537fbc573c325c9071df189cfb191",
+    "workingDiffers": true
+  },
+  {
+    "path": "scripts/tuneSyntheticObserverPeaking.m",
+    "stagedSha256": "29a54a62e7525a903841c04e44f369773da1ec7ab164fcc9eca5e61a64943708",
+    "workingValidationSha256": "29a54a62e7525a903841c04e44f369773da1ec7ab164fcc9eca5e61a64943708",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/validateFullLocalizationObserver.m",
+    "stagedSha256": "bd1575a92dd1b0d99d7718bc97436464f1f250acac593f1624516fcd96a00443",
+    "workingValidationSha256": "bd1575a92dd1b0d99d7718bc97436464f1f250acac593f1624516fcd96a00443",
+    "workingDiffers": false
+  },
+  {
+    "path": "scripts/validateMotionAidedObserver.m",
+    "stagedSha256": "8356a5c32188b5ab5c30fdf86eea2cb9d17c75f095bcd8bdf3a7f4b8cbadb9bc",
+    "workingValidationSha256": "8356a5c32188b5ab5c30fdf86eea2cb9d17c75f095bcd8bdf3a7f4b8cbadb9bc",
+    "workingDiffers": false
+  },
+  {
+    "path": "tests/lateralObserverTest.m",
+    "stagedSha256": "4664248e6debadd976d82fa21ea6ba0ce0a7bf2f42beb4eea9395c6dbd73f339",
+    "workingValidationSha256": "bc3d164badcd42b775d997cb064f6d70f6851903219f6976cb31735c0797cd9d",
+    "workingDiffers": true
+  },
+  {
+    "path": "tests/mncavDefaultsTest.m",
+    "stagedSha256": "ab3da8090ec399beb89306dffb2a35a968fe35e018da93abcf2d8da9ed2756e7",
+    "workingValidationSha256": "ab3da8090ec399beb89306dffb2a35a968fe35e018da93abcf2d8da9ed2756e7",
+    "workingDiffers": false
+  }
+]

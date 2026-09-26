@@ -1,0 +1,20 @@
+{
+  "tree": "bcffcdf29f17bb14350400b5880d4accb31af759",
+  "testCount": 90,
+  "allTestsPassed": true,
+  "metrics": {
+    "lateralVelocityRmse": 0.040394627735992707,
+    "yawRateRmse": 0.0038190395000847082,
+    "settledLateralVelocityRmse": 0.0053317561426009831,
+    "settledYawRateRmse": 1.6197427189575332E-10,
+    "settledSideSlipRmse": 0.0027960582109659874,
+    "settledSideSlipRateRmse": 0.0031733325371182761,
+    "peakSideSlipAngleRate": 0.032637843871710967,
+    "maxSettledLateralVelocityError": 0.019081760158590942,
+    "peakLateralVelocity": 0.74524961225609632,
+    "peakSideSlipAngle": 0.032939859857703986,
+    "settleTime": 6
+  },
+  "certified": true,
+  "maxCertificateMargin": -0.57305263816973007
+}

@@ -16,11 +16,10 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
-    parameterFile="output/mncav_interface_audit_20260916/vehicle_parameters.json";
+    parameterFile="";
     [prepared,~,inputMetadata]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
     h=prepared.highRate;t=h.time;
-    prior=load('tests/reference/mncavLateralObserverDesign.mat','design');
-    lateralDesign=prior.design;
+    lateralDesign=designLateralObserverGains(lateralObserverConfig());
     lateral=runLateralVelocityObserver(h,lateralDesign,lateralObserverConfig("mncav"));
     [calls,matching]=readMatchingInputs(options.MatchingFolder);
     calls=calls(calls.time>=t(1) & calls.time<=t(end),:);

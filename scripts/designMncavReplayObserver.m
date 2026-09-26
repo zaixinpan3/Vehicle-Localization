@@ -1,14 +1,16 @@
 function designMncavReplayObserver(parameterFile,outputFile,dynamicsFactor,mode)
 % designMncavReplayObserver Synthesize gains for an explicitly nominal vehicle.
 % YALMIP and the configured SDP solver must already be on the MATLAB path.
-% The input file records sourced stock geometry and unmeasured dynamic priors.
+% Optional input file supplies sensor calibration only; vehicle and steering
+% always come from the canonical MnCAV configuration. dynamicsFactor is an
+% explicit sensitivity override relative to that current nominal vehicle.
     arguments
-        parameterFile (1,1) string
-        outputFile (1,1) string
+        parameterFile (1,1) string = ""
+        outputFile (1,1) string = "output/mncav_replay_design.mat"
         dynamicsFactor (1,1) double {mustBePositive} = 1
         mode (1,1) string {mustBeMember(mode,["gnss","lidar"])} = "lidar"
     end
-    parameters=jsondecode(fileread(parameterFile));
+    parameters=mncavReplayConfig(parameterFile);
     lateralCfg=lateralObserverConfig();
     lateralCfg.vehicle=parameters.vehicle;
     for name=["yawInertia","frontCorneringStiffness","rearCorneringStiffness"]

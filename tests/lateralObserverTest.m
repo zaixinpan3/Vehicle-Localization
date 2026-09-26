@@ -23,7 +23,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             run(fullfile(projectFolder, "setupVehicleLocalization.m"));
             loaded = load(fullfile(projectFolder, "tests", "reference", "lateralObserverDesign.mat"));
             testCase.StoredDesign = loaded.design;
-            current=lateralObserverConfig();
+            current=lateralObserverConfig("reference");
             testCase.StoredDesign.cfg.hybrid=current.hybrid;
             testCase.StoredDesign.cfg.outputPoint=current.outputPoint;
         end
@@ -35,7 +35,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % textbook 2-DOF lateral bicycle matrices, and the first row of A and C
         % differ exactly by the centripetal term, which is the identity
         % vydot = ay - Vx r.
-            cfg = lateralObserverConfig();
+            cfg = lateralObserverConfig("reference");
             vehicle = cfg.vehicle;
             model = lateralBicycleModel(vehicle);
             longitudinalSpeed = 15.0;
@@ -62,7 +62,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % every scheduling point in the speed range are nonnegative and sum to
         % one, which is exactly the statement that the triangle contains the
         % curve rho(Vx) = [Vx; 1/Vx].
-            cfg = lateralObserverConfig();
+            cfg = lateralObserverConfig("reference");
             polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
             speeds = linspace(cfg.scheduling.speedRange(1), cfg.scheduling.speedRange(2), 401);
             for speed = speeds
@@ -77,7 +77,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % polytopicReconstructionIsExact: Because A and C are affine in rho,
         % their values equal the convex combination of the vertex values with
         % the same barycentric coordinates.
-            cfg = lateralObserverConfig();
+            cfg = lateralObserverConfig("reference");
             model = lateralBicycleModel(cfg.vehicle);
             polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
             vertexA = zeros(2, 2, 3);
@@ -301,7 +301,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.StoredDesign;
             design.model.A2(:) = NaN;
             design.model.C2(:) = NaN;
-            cfg = lateralObserverConfig();
+            cfg = lateralObserverConfig("reference");
             cfg.observer.initialState = [1.0; 0.2];
             cfg.hybrid.initialMasterState = [1.0; 0.0];
             measurements = testCase.zeroMotionMeasurements(2.0);
@@ -322,7 +322,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function abruptValidityLossFadesTheStoredCorrection(testCase)
         % abruptValidityLossFadesTheStoredCorrection A one-edge validity loss
         % removes the raw target immediately but not the injected correction.
-            cfg = lateralObserverConfig();
+            cfg = lateralObserverConfig("reference");
             cfg.observer.initialState = [0.0; 0.0];
             cfg.hybrid.initialMasterState = [1.0; 0.0];
             measurements = testCase.constantSpeedMeasurements(3.0, 10.0);
@@ -346,7 +346,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function stopGoModesShareOneContinuousOutputPath(testCase)
         % stopGoModesShareOneContinuousOutputPath Exercise both speed edges,
         % the stationary detector, and a deliberately mismatched hidden state.
-            cfg = lateralObserverConfig();
+            cfg = lateralObserverConfig("reference");
             cfg.observer.initialState = [0.0; 0.10];
             cfg.hybrid.initialMasterState = [0.80; 0.0];
             measurements = testCase.stopGoMeasurements();

@@ -10,7 +10,7 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
 % No delivery timestamps or artificial GNSS downsampling are introduced.
     arguments
         sensorFolder (1,1) string
-        parameterFile (1,1) string
+        parameterFile (1,1) string = ""
         calls table = table()
         fixedLidarDelay (1,1) double {mustBeNonnegative} = .15
         options.IncludeOdom (1,1) logical = true
@@ -20,7 +20,7 @@ function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFold
     stem="raw_data_2024-06-07-12-09-31_0";
     clock=loadReceiverClock(fullfile(folder,stem+"_inspva.csv"));
     frames=readtable(fullfile(folder,stem+"_front_lidar_points.csv"));
-    parameters=jsondecode(fileread(parameterFile));
+    parameters=mncavReplayConfig(parameterFile);
     bridge=@(stamp) receiverClockTime(clock,stamp);
     start=bridge(frames.stamp_sec(1));
     % This recording starts stationary; initial prediction is declared and

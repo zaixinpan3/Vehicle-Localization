@@ -14,7 +14,8 @@ function report=runMncavInterfaceCorrectionComparison(outputFolder)
     frames=readtable(fullfile(source,'frame_errors.csv'),TextType="string");
     audit=readtable('output/mncav_inspva_median_20260915/motion_audit.csv');
     interface=jsondecode(fileread('config/mncavReplayInterface.json'));
-    parameters=jsondecode(fileread(fullfile(outputFolder,'vehicle_parameters.json')));
+    parameters=mncavReplayConfig(fullfile(outputFolder,'vehicle_parameters.json'));
+    assertLateralVehicleMatches(old.lateralDesign,lateralObserverConfig());
     h=old.high;
     h.steeringAngle=h.steeringAngle-interface.steeringWheelOffsetRad/parameters.steeringRatio;
     assert(isequal(h.time,old.high.time));

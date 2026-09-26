@@ -10,10 +10,12 @@ function report=validateMotionAidedObserver(outputFolder,options)
     end
     setupVehicleLocalization;if ~isfolder(outputFolder),mkdir(outputFolder);end
     originalRng=rng;cleanup=onCleanup(@() rng(originalRng));
-    saved=load(options.ExperimentFile,'lateralDesign','lateralCfg','cfg');cfg=saved.cfg;
+    saved=load(options.ExperimentFile,'cfg');cfg=saved.cfg;
+    saved.lateralCfg=lateralObserverConfig();
+    saved.lateralDesign=designLateralObserverGains(saved.lateralCfg);
     records=zeros(30,12);runs=cell(30,1);count=0;
     for factor=[.7,1,1.3]
-        truth=plantTruth(saved.lateralCfg.vehicle,factor);
+        truth=plantTruth(saved.lateralCfg.vehicle,factor,saved.lateralCfg.outputPoint.forwardOffsetM);
         for seed=20260915:20260924
             count=count+1;rng(seed,'twister');t=truth.time;n=numel(t);
             high=truth.highRate;
@@ -65,7 +67,7 @@ function report=validateMotionAidedObserver(outputFolder,options)
     fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));fclose(fid);disp(report);
 end
 
-function truth=plantTruth(vehicle,factor)
+function truth=plantTruth(vehicle,factor,forwardOffset)
     vehicle.frontCorneringStiffness=vehicle.frontCorneringStiffness*factor;
     vehicle.rearCorneringStiffness=vehicle.rearCorneringStiffness*factor;
     model=lateralBicycleModel(vehicle);t=(0:.01:40).';n=numel(t);
@@ -82,11 +84,12 @@ function truth=plantTruth(vehicle,factor)
     for k=1:n
         C=model.C0+model.C2/vx(k);ay(k)=C(1,:)*state(k,:).'+model.D(1)*steering(k);
     end
-    psi=cumtrapz(t,r);velocity=[cos(psi).*vx-sin(psi).*vy,sin(psi).*vx+cos(psi).*vy];
+    outputVy=vy-forwardOffset*r;
+    psi=cumtrapz(t,r);velocity=[cos(psi).*vx-sin(psi).*outputVy,sin(psi).*vx+cos(psi).*outputVy];
     pose=[cumtrapz(t,velocity),psi];
     high=struct('time',t,'longitudinalSpeed',vx,'steeringAngle',steering, ...
         'longitudinalAcceleration',vxDot-vy.*r,'lateralAcceleration',ay,'yawRate',r);
-    truth=struct('time',t,'pose',pose,'velocity',velocity,'lateralVelocity',vy,'highRate',high, ...
+    truth=struct('time',t,'pose',pose,'velocity',velocity,'lateralVelocity',outputVy,'highRate',high, ...
         'vehicle',vehicle,'stiffnessFactor',factor);
 end
 

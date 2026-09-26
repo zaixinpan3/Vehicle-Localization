@@ -1,19 +1,17 @@
 function report = demoSyntheticVehicleObserver(outputFolder)
 % demoSyntheticVehicleObserver Run both real observer stages on synthetic data.
 % From the project root: setupVehicleLocalization; demoSyntheticVehicleObserver
-% No bag, map, registration, optimizer, or identified vehicle is needed.
+% Uses the current MnCAV configuration; gain synthesis requires YALMIP/SDP.
+% No bag, map or registration is needed.
 % Four 40 s experiments compare analytic steady-turn truth with the existing
 % GNSS and delayed LiDAR observers, with and without bounded sensor errors.
 % The plant and observer share nominal bicycle parameters (no mismatch test).
     arguments
         outputFolder (1,1) string = "output/synthetic_vehicle_observer"
     end
-    root = setupVehicleLocalization;
+    setupVehicleLocalization;
     if ~isfolder(outputFolder), mkdir(outputFolder); end
-    stored = load(fullfile(root,'tests','reference','lateralObserverDesign.mat'),'design');
-    lateralDesign = stored.design;
-    current = lateralObserverConfig;
-    lateralDesign.cfg.hybrid = current.hybrid;
+    lateralDesign = designLateralObserverGains(lateralObserverConfig());
     results = cell(4,1);
     rows = cell(4,1);
     index = 0;
@@ -65,8 +63,9 @@ function result = runScenario(mode,noisy,lateralDesign)
     equilibrium = [A(:,1),lateralDesign.model.B]\(-A(:,2)*q);
     vy = equilibrium(1);
     steering = equilibrium(2);
-    beta = atan2(vy,vx);
-    speed = hypot(vx,vy);
+    vyOutput = vy - lateralDesign.cfg.outputPoint.forwardOffsetM*q;
+    beta = atan2(vyOutput,vx);
+    speed = hypot(vx,vyOutput);
     truth = steadyTruth(t,speed,q,beta);
     truthAt = @(time) steadyTruth(time,speed,q,beta).';
     amplitude = double(noisy);
@@ -101,7 +100,7 @@ function result = runScenario(mode,noisy,lateralDesign)
     velocityError = vecnorm(e(:,[2,5]),2,2);
     accelerationError = vecnorm(e(:,[3,6]),2,2);
     headingError = rad2deg(abs(e(:,7)));
-    lateralError = estimate.lateral.lateralVelocity-vy;
+    lateralError = estimate.lateral.lateralVelocity-vyOutput;
     % Practical acceptance limits fixed before execution, applied over 20-40 s.
     limits = struct('positionRmseM',.15,'velocityRmseMps',.15, ...
         'accelerationRmseMps2',.15,'headingRmseDeg',1,'lateralVelocityRmseMps',.05);
@@ -133,7 +132,7 @@ function result = runScenario(mode,noisy,lateralDesign)
         metrics.settlingTimeSec = t(lastOutside+1);
     end
     result = struct('mode',mode,'noisy',noisy,'time',t,'truth',truth, ...
-        'trueLateralVelocity',vy,'sensorData',data,'estimate',estimate, ...
+        'trueLateralVelocity',vyOutput,'sensorData',data,'estimate',estimate, ...
         'metrics',metrics,'limits',limits,'cfg',cfg,'lateralCfg',lateralDesign.cfg, ...
         'initialHistory',history, ...
         'parameters',struct('longitudinalSpeedMps',vx,'yawRateRadps',q, ...
