@@ -1,0 +1,170 @@
+{
+  "cap10": {
+    "prefix": {
+      "Mississippi": {
+        "selected": 1063,
+        "false": 29,
+        "falseFraction": 0.027281279397930385,
+        "coveredPoints": 104178,
+        "referencePoints": 124708,
+        "pointCoverage": 0.8353754370208808
+      },
+      "Downtown": {
+        "selected": 377,
+        "false": 1,
+        "falseFraction": 0.002652519893899204,
+        "coveredPoints": 22030,
+        "referencePoints": 27716,
+        "pointCoverage": 0.794847741376822
+      }
+    },
+    "suffix": {
+      "Mississippi": {
+        "selected": 524,
+        "false": 49,
+        "falseFraction": 0.09351145038167939,
+        "coveredPoints": 49446,
+        "referencePoints": 69592,
+        "pointCoverage": 0.7105127026094954
+      },
+      "Downtown": {
+        "selected": 70,
+        "false": 11,
+        "falseFraction": 0.15714285714285714,
+        "coveredPoints": 3778,
+        "referencePoints": 7113,
+        "pointCoverage": 0.5311401658934346
+      }
+    },
+    "all": {
+      "Mississippi": {
+        "selected": 1587,
+        "false": 78,
+        "falseFraction": 0.04914933837429111,
+        "coveredPoints": 153624,
+        "referencePoints": 194300,
+        "pointCoverage": 0.7906536284096758
+      },
+      "Downtown": {
+        "selected": 447,
+        "false": 12,
+        "falseFraction": 0.026845637583892617,
+        "coveredPoints": 25808,
+        "referencePoints": 34829,
+        "pointCoverage": 0.7409917023170347
+      }
+    }
+  },
+  "cap05": {
+    "prefix": {
+      "Mississippi": {
+        "selected": 825,
+        "false": 10,
+        "falseFraction": 0.012121212121212121,
+        "coveredPoints": 93532,
+        "referencePoints": 124708,
+        "pointCoverage": 0.7500080187317574
+      },
+      "Downtown": {
+        "selected": 235,
+        "false": 0,
+        "falseFraction": 0.0,
+        "coveredPoints": 17571,
+        "referencePoints": 27716,
+        "pointCoverage": 0.6339659402511185
+      }
+    },
+    "suffix": {
+      "Mississippi": {
+        "selected": 397,
+        "false": 20,
+        "falseFraction": 0.05037783375314862,
+        "coveredPoints": 43411,
+        "referencePoints": 69592,
+        "pointCoverage": 0.6237929647085871
+      },
+      "Downtown": {
+        "selected": 40,
+        "false": 3,
+        "falseFraction": 0.075,
+        "coveredPoints": 2746,
+        "referencePoints": 7113,
+        "pointCoverage": 0.38605370448474624
+      }
+    },
+    "all": {
+      "Mississippi": {
+        "selected": 1222,
+        "false": 30,
+        "falseFraction": 0.024549918166939442,
+        "coveredPoints": 136943,
+        "referencePoints": 194300,
+        "pointCoverage": 0.7048018528049408
+      },
+      "Downtown": {
+        "selected": 275,
+        "false": 3,
+        "falseFraction": 0.01090909090909091,
+        "coveredPoints": 20317,
+        "referencePoints": 34829,
+        "pointCoverage": 0.5833357259754802
+      }
+    }
+  },
+  "cap05_blocks10": {
+    "prefix": {
+      "Mississippi": {
+        "selected": 651,
+        "false": 1,
+        "falseFraction": 0.0015360983102918587,
+        "coveredPoints": 82529,
+        "referencePoints": 124708,
+        "pointCoverage": 0.6617779132052475
+      },
+      "Downtown": {
+        "selected": 153,
+        "false": 0,
+        "falseFraction": 0.0,
+        "coveredPoints": 12383,
+        "referencePoints": 27716,
+        "pointCoverage": 0.44678164237263673
+      }
+    },
+    "suffix": {
+      "Mississippi": {
+        "selected": 314,
+        "false": 6,
+        "falseFraction": 0.01910828025477707,
+        "coveredPoints": 38391,
+        "referencePoints": 69592,
+        "pointCoverage": 0.5516582365789171
+      },
+      "Downtown": {
+        "selected": 16,
+        "false": 1,
+        "falseFraction": 0.0625,
+        "coveredPoints": 1145,
+        "referencePoints": 7113,
+        "pointCoverage": 0.16097286658231408
+      }
+    },
+    "all": {
+      "Mississippi": {
+        "selected": 965,
+        "false": 7,
+        "falseFraction": 0.007253886010362694,
+        "coveredPoints": 120920,
+        "referencePoints": 194300,
+        "pointCoverage": 0.622336592897581
+      },
+      "Downtown": {
+        "selected": 169,
+        "false": 1,
+        "falseFraction": 0.005917159763313609,
+        "coveredPoints": 13528,
+        "referencePoints": 34829,
+        "pointCoverage": 0.3884119555542795
+      }
+    }
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "sourceModel": "stable_moments_compact_d5_w1.0",
+  "sourceCommit": "6df904cfed15c72e09cabb3a39c2c620522faae1",
+  "selection": "Maximize minimum dataset point coverage with <=5% prefix OOF false selection; also require <=10% in every nonempty prefix fold when feasible. No 80% coverage floor.",
+  "caveat": "Empirical guard margins, not confidence bounds; adjacent frames are correlated.",
+  "primary": "cap05_blocks10",
+  "choices": {
+    "cap10": {
+      "threshold": 0.857298813669023,
+      "empiricalCap": 0.1,
+      "blockCap": 1,
+      "worstBlockFalseFraction": 0.34782608695652173,
+      "metrics": {
+        "Mississippi": {
+          "selected": 1030,
+          "false": 86,
+          "falseFraction": 0.08349514563106795,
+          "coveredPoints": 97993,
+          "referencePoints": 124708,
+          "pointCoverage": 0.785779581101453
+        },
+        "Downtown": {
+          "selected": 241,
+          "false": 24,
+          "falseFraction": 0.0995850622406639,
+          "coveredPoints": 15033,
+          "referencePoints": 27716,
+          "pointCoverage": 0.5423942848895945
+        }
+      }
+    },
+    "cap05": {
+      "threshold": 0.9371209151674477,
+      "empiricalCap": 0.05,
+      "blockCap": 1,
+      "worstBlockFalseFraction": 0.2,
+      "metrics": {
+        "Mississippi": {
+          "selected": 801,
+          "false": 37,
+          "falseFraction": 0.046192259675405745,
+          "coveredPoints": 88884,
+          "referencePoints": 124708,
+          "pointCoverage": 0.7127369535234307
+        },
+        "Downtown": {
+          "selected": 165,
+          "false": 8,
+          "falseFraction": 0.048484848484848485,
+          "coveredPoints": 11987,
+          "referencePoints": 27716,
+          "pointCoverage": 0.43249386635878195
+        }
+      }
+    },
+    "cap02": null,
+    "cap05_blocks10": {
+      "threshold": 0.9672864251482125,
+      "empiricalCap": 0.05,
+      "blockCap": 0.1,
+      "worstBlockFalseFraction": 0.09090909090909091,
+      "metrics": {
+        "Mississippi": {
+          "selected": 628,
+          "false": 22,
+          "falseFraction": 0.03503184713375796,
+          "coveredPoints": 76091,
+          "referencePoints": 124708,
+          "pointCoverage": 0.6101533181512012
+        },
+        "Downtown": {
+          "selected": 111,
+          "false": 3,
+          "falseFraction": 0.02702702702702703,
+          "coveredPoints": 9080,
+          "referencePoints": 27716,
+          "pointCoverage": 0.32760860152980226
+        }
+      }
+    }
+  },
+  "oofSHA256": "8121a27c25575d6f03312f0350fbb524d19cc1ee67124298f4b7a5f0f53e1f9d"
+}

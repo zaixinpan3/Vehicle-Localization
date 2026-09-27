@@ -1,0 +1,197 @@
+{
+  "previousCommit": "6df904cfed15c72e09cabb3a39c2c620522faae1",
+  "oldThreshold": 0.1488746496646483,
+  "threshold": 0.9371209151674477,
+  "metric": "False selected pillar means zero original fine points; FP/selected. Coverage uses all original fine points in the unchanged coarse ROI.",
+  "prefixOOF": {
+    "Mississippi": {
+      "selected": 801,
+      "false": 37,
+      "falseFraction": 0.046192259675405745,
+      "coveredPoints": 88884,
+      "referencePoints": 124708,
+      "pointCoverage": 0.7127369535234307
+    },
+    "Downtown": {
+      "selected": 165,
+      "false": 8,
+      "falseFraction": 0.048484848484848485,
+      "coveredPoints": 11987,
+      "referencePoints": 27716,
+      "pointCoverage": 0.43249386635878195
+    }
+  },
+  "replay": {
+    "Mississippi": {
+      "prefix": {
+        "previous": {
+          "frames": 780,
+          "selected": 2656,
+          "false": 914,
+          "falseFraction": 0.3441265060240964,
+          "coveredPoints": 123554,
+          "referencePoints": 124708,
+          "pointCoverage": 0.9907463835519774,
+          "missedPointFraction": 0.009253616448022584,
+          "framesWithAnySelection": 761,
+          "referenceFramesWithNoSelection": 1
+        },
+        "precisionFirst": {
+          "frames": 780,
+          "selected": 825,
+          "false": 10,
+          "falseFraction": 0.012121212121212121,
+          "coveredPoints": 93532,
+          "referencePoints": 124708,
+          "pointCoverage": 0.7500080187317574,
+          "missedPointFraction": 0.24999198126824262,
+          "framesWithAnySelection": 597,
+          "referenceFramesWithNoSelection": 132
+        }
+      },
+      "suffix": {
+        "previous": {
+          "frames": 390,
+          "selected": 1810,
+          "false": 910,
+          "falseFraction": 0.5027624309392266,
+          "coveredPoints": 65732,
+          "referencePoints": 69592,
+          "pointCoverage": 0.9445338544660306,
+          "missedPointFraction": 0.055466145533969446,
+          "framesWithAnySelection": 388,
+          "referenceFramesWithNoSelection": 1
+        },
+        "precisionFirst": {
+          "frames": 390,
+          "selected": 397,
+          "false": 20,
+          "falseFraction": 0.05037783375314862,
+          "coveredPoints": 43411,
+          "referencePoints": 69592,
+          "pointCoverage": 0.6237929647085871,
+          "missedPointFraction": 0.37620703529141286,
+          "framesWithAnySelection": 299,
+          "referenceFramesWithNoSelection": 77
+        }
+      },
+      "all": {
+        "previous": {
+          "frames": 1170,
+          "selected": 4466,
+          "false": 1824,
+          "falseFraction": 0.4084191670398567,
+          "coveredPoints": 189286,
+          "referencePoints": 194300,
+          "pointCoverage": 0.9741945445187854,
+          "missedPointFraction": 0.0258054554812146,
+          "framesWithAnySelection": 1149,
+          "referenceFramesWithNoSelection": 2
+        },
+        "precisionFirst": {
+          "frames": 1170,
+          "selected": 1222,
+          "false": 30,
+          "falseFraction": 0.024549918166939442,
+          "coveredPoints": 136943,
+          "referencePoints": 194300,
+          "pointCoverage": 0.7048018528049408,
+          "missedPointFraction": 0.2951981471950592,
+          "framesWithAnySelection": 896,
+          "referenceFramesWithNoSelection": 209
+        }
+      }
+    },
+    "Downtown": {
+      "prefix": {
+        "previous": {
+          "frames": 85,
+          "selected": 872,
+          "false": 289,
+          "falseFraction": 0.33142201834862384,
+          "coveredPoints": 26369,
+          "referencePoints": 27716,
+          "pointCoverage": 0.9513999134074181,
+          "missedPointFraction": 0.04860008659258186,
+          "framesWithAnySelection": 85,
+          "referenceFramesWithNoSelection": 0
+        },
+        "precisionFirst": {
+          "frames": 85,
+          "selected": 235,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 17571,
+          "referencePoints": 27716,
+          "pointCoverage": 0.6339659402511185,
+          "missedPointFraction": 0.3660340597488815,
+          "framesWithAnySelection": 72,
+          "referenceFramesWithNoSelection": 11
+        }
+      },
+      "suffix": {
+        "previous": {
+          "frames": 43,
+          "selected": 313,
+          "false": 170,
+          "falseFraction": 0.5431309904153354,
+          "coveredPoints": 6393,
+          "referencePoints": 7113,
+          "pointCoverage": 0.8987768873892872,
+          "missedPointFraction": 0.10122311261071282,
+          "framesWithAnySelection": 43,
+          "referenceFramesWithNoSelection": 0
+        },
+        "precisionFirst": {
+          "frames": 43,
+          "selected": 40,
+          "false": 3,
+          "falseFraction": 0.075,
+          "coveredPoints": 2746,
+          "referencePoints": 7113,
+          "pointCoverage": 0.38605370448474624,
+          "missedPointFraction": 0.6139462955152537,
+          "framesWithAnySelection": 30,
+          "referenceFramesWithNoSelection": 12
+        }
+      },
+      "all": {
+        "previous": {
+          "frames": 128,
+          "selected": 1185,
+          "false": 459,
+          "falseFraction": 0.38734177215189874,
+          "coveredPoints": 32762,
+          "referencePoints": 34829,
+          "pointCoverage": 0.9406529041890379,
+          "missedPointFraction": 0.05934709581096209,
+          "framesWithAnySelection": 128,
+          "referenceFramesWithNoSelection": 0
+        },
+        "precisionFirst": {
+          "frames": 128,
+          "selected": 275,
+          "false": 3,
+          "falseFraction": 0.01090909090909091,
+          "coveredPoints": 20317,
+          "referencePoints": 34829,
+          "pointCoverage": 0.5833357259754802,
+          "missedPointFraction": 0.4166642740245198,
+          "framesWithAnySelection": 102,
+          "referenceFramesWithNoSelection": 23
+        }
+      }
+    }
+  },
+  "validation": {
+    "passed": 210,
+    "failed": 0,
+    "incomplete": 0,
+    "rawFrames": 1298,
+    "frozenSelectionsMatch": true,
+    "scoringModelUnchanged": true,
+    "originalReferenceDenominatorsPreserved": true
+  },
+  "allDatasetAndSuffixFalseFractionsBelow10Percent": true,
+  "limitations": "Coverage below 80% is explicitly authorized. Full replay includes fitted prefixes. Suffixes are reused and informed promotion. The <=10% result is aggregate on these recordings, not per-frame, per-block or future-scene assurance; some prefix folds exceed 10%. No new runtime benchmark or localization-accuracy claim."
+}
