@@ -25,10 +25,24 @@ function [evidence,hypotheses]=validatePillarPoleSupport(points,pillarIds,geomet
         if h.meanRatio<cfg.strongMeanRatio || short
             accepted=accepted && (h.isolation>=cfg.weakMinimumIsolation || dense);
         end
+        % Weakly populated shafts and peripheral owners need independently
+        % tight, upright support. Dense shafts retain the original envelope;
+        % sparse genuine shafts can pass without a blanket point-count cutoff.
+        % Sparse distant samples support a less precise axis estimate. Relax
+        % only these extra geometric tolerances over the sensor-range band;
+        % never waive the original continuity, width or hard support gates.
+        band=cfg.sparseRelaxationRange;
+        blend=min(1,max(0,(norm(h.axisXY)-band(1))/(band(2)-band(1))));
+        sparseTilt=cfg.maximumSparseTilt+blend*(cfg.maximumDistantSparseTilt-cfg.maximumSparseTilt);
+        sparseRms=cfg.maximumSparseRms+blend*(cfg.maximumDistantSparseRms-cfg.maximumSparseRms);
+        stableSparse=h.tilt<=sparseTilt && h.radialRms<=sparseRms;
+        accepted=accepted && (h.acceptedCount>=cfg.sparseSupportPointThreshold || stableSparse);
+        if nargout>1,hypotheses(k).geometryAccepted=accepted;end
         if ~accepted,continue;end
         [~,rows]=ismember(h.ownerIds,ids);
         supported=h.ownerCount>=cfg.minimumOwnerPoints & h.ownerHeight>=cfg.minimumOwnerHeight & ...
-            pointScores(rows)>=cfg.minimumPointScore;
+            pointScores(rows)>=cfg.minimumPointScore & ...
+            (h.ownerCount>=cfg.sparseOwnerPointThreshold | stableSparse);
         rows=rows(supported);ownCount=h.ownerCount(supported);
         score=min(1,h.supportHeight/2)*h.meanRatio*h.isolation/(1+(h.radialRms/.10)^2);
         update=score>evidence.score(rows);rows=rows(update);ownCount=ownCount(update);

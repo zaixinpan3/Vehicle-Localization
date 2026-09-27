@@ -1,0 +1,169 @@
+{
+  "reference": "Frozen original offline 0.3 m fine point identities; exact 0.6 m owner projection",
+  "baselineCommit": "cb8c76b80ec22e0c6daca7455e348eb7e8e8e64a",
+  "results": {
+    "Mississippi_full": {
+      "baseline": {
+        "frames": 1170,
+        "finePoints": 194300,
+        "coveredPoints": 185729,
+        "pointCoverage": 0.955887802367473,
+        "pointMissRate": 0.04411219763252705,
+        "targetPillars": 2884,
+        "matchedPillars": 2558,
+        "pillarRecall": 0.8869625520110958,
+        "selectedPillars": 5784,
+        "extraPillars": 3226,
+        "extraFraction": 0.5577455048409405,
+        "pillarPrecision": 0.44225449515905946
+      },
+      "current": {
+        "frames": 1170,
+        "finePoints": 194300,
+        "coveredPoints": 182794,
+        "pointCoverage": 0.9407822954194545,
+        "pointMissRate": 0.05921770458054554,
+        "targetPillars": 2884,
+        "matchedPillars": 2386,
+        "pillarRecall": 0.8273231622746186,
+        "selectedPillars": 4652,
+        "extraPillars": 2266,
+        "extraFraction": 0.4871023215821152,
+        "pillarPrecision": 0.5128976784178848
+      },
+      "extraCountReduction": 0.29758214507129577,
+      "pointCoverageChange": -0.015105506948018488,
+      "pillarRecallChange": -0.0596393897364772
+    },
+    "Mississippi_development": {
+      "baseline": {
+        "frames": 780,
+        "finePoints": 124708,
+        "coveredPoints": 120191,
+        "pointCoverage": 0.9637793886518908,
+        "pointMissRate": 0.036220611348109166,
+        "targetPillars": 1818,
+        "matchedPillars": 1638,
+        "pillarRecall": 0.900990099009901,
+        "selectedPillars": 3395,
+        "extraPillars": 1757,
+        "extraFraction": 0.5175257731958763,
+        "pillarPrecision": 0.4824742268041237
+      },
+      "current": {
+        "frames": 780,
+        "finePoints": 124708,
+        "coveredPoints": 118463,
+        "pointCoverage": 0.9499230201751291,
+        "pointMissRate": 0.050076979824870915,
+        "targetPillars": 1818,
+        "matchedPillars": 1537,
+        "pillarRecall": 0.8454345434543454,
+        "selectedPillars": 2799,
+        "extraPillars": 1262,
+        "extraFraction": 0.45087531261164704,
+        "pillarPrecision": 0.549124687388353
+      },
+      "extraCountReduction": 0.2817302219692658,
+      "pointCoverageChange": -0.013856368476761749,
+      "pillarRecallChange": -0.05555555555555558
+    },
+    "Mississippi_temporal": {
+      "baseline": {
+        "frames": 390,
+        "finePoints": 69592,
+        "coveredPoints": 65538,
+        "pointCoverage": 0.9417461777215772,
+        "pointMissRate": 0.058253822278422795,
+        "targetPillars": 1066,
+        "matchedPillars": 920,
+        "pillarRecall": 0.8630393996247655,
+        "selectedPillars": 2389,
+        "extraPillars": 1469,
+        "extraFraction": 0.6149016324822101,
+        "pillarPrecision": 0.38509836751778986
+      },
+      "current": {
+        "frames": 390,
+        "finePoints": 69592,
+        "coveredPoints": 64331,
+        "pointCoverage": 0.9244022301413956,
+        "pointMissRate": 0.07559776985860445,
+        "targetPillars": 1066,
+        "matchedPillars": 849,
+        "pillarRecall": 0.7964352720450282,
+        "selectedPillars": 1853,
+        "extraPillars": 1004,
+        "extraFraction": 0.5418240690771722,
+        "pillarPrecision": 0.4581759309228278
+      },
+      "extraCountReduction": 0.3165418652144316,
+      "pointCoverageChange": -0.01734394758018165,
+      "pillarRecallChange": -0.06660412757973733
+    },
+    "Downtown": {
+      "baseline": {
+        "frames": 24,
+        "finePoints": 5869,
+        "coveredPoints": 5292,
+        "pointCoverage": 0.9016868291020617,
+        "pointMissRate": 0.09831317089793834,
+        "targetPillars": 132,
+        "matchedPillars": 108,
+        "pillarRecall": 0.8181818181818182,
+        "selectedPillars": 290,
+        "extraPillars": 182,
+        "extraFraction": 0.6275862068965518,
+        "pillarPrecision": 0.3724137931034483
+      },
+      "current": {
+        "frames": 24,
+        "finePoints": 5869,
+        "coveredPoints": 5138,
+        "pointCoverage": 0.8754472652922133,
+        "pointMissRate": 0.12455273470778672,
+        "targetPillars": 132,
+        "matchedPillars": 103,
+        "pillarRecall": 0.7803030303030303,
+        "selectedPillars": 238,
+        "extraPillars": 135,
+        "extraFraction": 0.5672268907563025,
+        "pillarPrecision": 0.4327731092436975
+      },
+      "extraCountReduction": 0.2582417582417582,
+      "pointCoverageChange": -0.026239563809848376,
+      "pillarRecallChange": -0.037878787878787956
+    }
+  },
+  "timing": {
+    "Mississippi": {
+      "1": {
+        "n": 72,
+        "medianMs": 68.951,
+        "meanMs": 71.6055138888889
+      },
+      "2": {
+        "n": 72,
+        "medianMs": 68.33,
+        "meanMs": 71.42330555555556
+      }
+    },
+    "Downtown": {
+      "1": {
+        "n": 72,
+        "medianMs": 80.0755,
+        "meanMs": 79.38708333333334
+      },
+      "2": {
+        "n": 72,
+        "medianMs": 80.1165,
+        "meanMs": 78.97979166666667
+      }
+    }
+  },
+  "tests": {
+    "Passed": 197,
+    "Failed": 0,
+    "Incomplete": 0
+  }
+}

@@ -1,0 +1,9 @@
+metric,lower,upper,target,covered,missed,coverage
+fine points by range (m),0,10,136583,133555,3028,0.977830330275364
+pillars by fine point count,0,10,116,30,86,0.258620689655172
+fine points by range (m),10,20,53043,46819,6224,0.882661237109515
+pillars by fine point count,10,30,1080,752,328,0.696296296296296
+fine points by range (m),20,30,4674,2420,2254,0.517757809157039
+pillars by fine point count,30,100,1109,1034,75,0.932371505861136
+fine points by range (m),30,Inf,0,0,0,NaN
+pillars by fine point count,100,Inf,579,570,9,0.984455958549223

@@ -1,0 +1,28 @@
+|--- ownerCount <= 53.50000
+|   |--- meanRatio <= 0.99921
+|   |   |--- gapVariation <= 1.55844
+|   |   |   |--- gapVariation <= 0.69995
+|   |   |   |   |--- class: True
+|   |   |   |--- gapVariation >  0.69995
+|   |   |   |   |--- class: False
+|   |   |--- gapVariation >  1.55844
+|   |   |   |--- class: True
+|   |--- meanRatio >  0.99921
+|   |   |--- ownerCount <= 23.50000
+|   |   |   |--- class: False
+|   |   |--- ownerCount >  23.50000
+|   |   |   |--- class: True
+|--- ownerCount >  53.50000
+|   |--- aspect <= 1.75463
+|   |   |--- ownerFraction <= 0.44368
+|   |   |   |--- class: True
+|   |   |--- ownerFraction >  0.44368
+|   |   |   |--- class: True
+|   |--- aspect >  1.75463
+|   |   |--- coreMinimumZ <= -1.42259
+|   |   |   |--- peakCeiling60 <= 0.99313
+|   |   |   |   |--- class: False
+|   |   |   |--- peakCeiling60 >  0.99313
+|   |   |   |   |--- class: False
+|   |   |--- coreMinimumZ >  -1.42259
+|   |   |   |--- class: True

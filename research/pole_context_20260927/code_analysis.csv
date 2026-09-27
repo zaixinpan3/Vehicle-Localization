@@ -1,0 +1,4 @@
+file,line,id,message
+perception/offGroundFeatures/measurePillarPoleSupport.m,105,FNDSB,"For array or cell array, performance can be improved using logical indexing instead of 'find'."
+perception/offGroundFeatures/measurePillarPoleSupport.m,105,FNDSB,"For array or cell array, performance can be improved using logical indexing instead of 'find'."
+research/pole_context_20260927/validateContextAlignment.m,6,MSNU,"A Code Analyzer message was once suppressed here, but the message is no longer generated."

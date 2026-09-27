@@ -1,0 +1,10 @@
+{
+  "frozen_at": "2026-09-27T00:14:04.579962-05:00",
+  "baseline": "cb8c76b80ec22e0c6daca7455e348eb7e8e8e64a",
+  "development_frames": "Mississippi 1:10:771; expanded development check 1:780",
+  "sparseSupportPointThreshold": 30,
+  "sparseOwnerPointThreshold": 15,
+  "maximumSparseTilt": 4,
+  "maximumSparseRms": 0.1,
+  "note": "Frozen before evaluating the temporal suffix 781:1170 and the 24 Downtown frames in this iteration. Both datasets have informed previous iterations; these are regression/transfer checks, not pristine held-out data. No model installed. Broader-context measurements remain diagnostics."
+}

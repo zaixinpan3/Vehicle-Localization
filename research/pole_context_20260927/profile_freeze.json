@@ -1,0 +1,16 @@
+{
+  "frozen_at": "2026-09-27T00:24:13.171016-05:00",
+  "baseline": "cb8c76b80ec22e0c6daca7455e348eb7e8e8e64a",
+  "development_frames": "Mississippi 1:10:771; expanded development check 1:780",
+  "sparseSupportPointThreshold": 30,
+  "sparseOwnerPointThreshold": 15,
+  "maximumSparseTilt": 4,
+  "maximumSparseRms": 0.1,
+  "note": "Final profile after distance-stratified validation rejected fixed geometric limits (far coverage collapse) and inverse-square point thresholds (little false-selection benefit). Interpolate only the extra sparse geometric tolerances from 4 deg/0.10 m at <=15 m to 6 deg/0.12 m at >=20 m. Full and Downtown checks are reused; no independent holdout claim.",
+  "sparseRelaxationRange": [
+    15,
+    20
+  ],
+  "maximumDistantSparseTilt": 6,
+  "maximumDistantSparseRms": 0.12
+}

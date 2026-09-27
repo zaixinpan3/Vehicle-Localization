@@ -49,6 +49,55 @@ classdef pillarPoleValidationTest < matlab.unittest.TestCase
             p(:,1)=p(:,1)+tand(8)*p(:,3);
             leaning=t.measure(p,[.3 .3]);t.verifyFalse(leaning.found);
         end
+        function sparseTightUprightShaftRemainsEligible(t)
+            p=t.shaft([.3 .3]);p=p(1:2:end-2,:);
+            e=t.measure(p,[.3 .3]);t.verifyTrue(e.found);
+            t.verifyLessThan(e.ownCount,30);
+        end
+        function sparseDiffuseShaftNeedsStrongerEvidence(t)
+            z=linspace(-1,3,24).';a=(1:24).'*2.399;
+            p=[.3+.13*cos(a),.3+.13*sin(a),z];
+            e=t.measure(p,[.3 .3]);t.verifyFalse(any(e.found));
+            cfg=pillarPoleValidationConfig();cfg.sparseSupportPointThreshold=0;
+            cfg.sparseOwnerPointThreshold=0;
+            old=t.measure(p,[.3 .3],[1 1],true(24,1),cfg);
+            t.verifyTrue(old.found);
+        end
+        function sparseLeaningShaftNeedsStrongerEvidence(t)
+            z=linspace(-1,3,24).';a=(1:24).'*2.399;
+            p=[.3+tand(5)*(z-1)+.01*cos(a),.3+.01*sin(a),z];
+            e=t.measure(p,[.3 .3]);t.verifyFalse(any(e.found));
+            cfg=pillarPoleValidationConfig();cfg.sparseSupportPointThreshold=0;
+            old=t.measure(p,[.3 .3],[1 1],true(24,1),cfg);
+            t.verifyTrue(old.found);
+        end
+        function denseShaftRetainsThePreviousTiltEnvelope(t)
+            p=t.shaft([.3 .3]);p(:,1)=p(:,1)+tand(5)*(p(:,3)-1);
+            e=t.measure(p,[.3 .3]);t.verifyTrue(e.found);
+            t.verifyGreaterThanOrEqual(e.ownCount,30);
+        end
+        function weakPeripheralOwnerCannotBorrowDenseSupport(t)
+            z=linspace(-1,3,60).';a=(1:60).'*2.399;
+            p=[.4+.12*cos(a),.3+.12*sin(a),z];
+            p=[p;repmat([.61 .3],12,1),linspace(-1,3,12).'];
+            e=t.measure(p,[.4 .3],[1 2]);
+            t.verifyTrue(e.found(1));t.verifyFalse(e.found(2));
+            cfg=pillarPoleValidationConfig();cfg.sparseOwnerPointThreshold=0;
+            old=t.measure(p,[.4 .3],[1 2],true(72,1),cfg);
+            t.verifyTrue(all(old.found));
+        end
+        function distantSparseShaftKeepsOriginalEnvelope(t)
+            z=linspace(-1,3,24).';a=(1:24).'*2.399;
+            p=[.3+.11*cos(a),.3+.11*sin(a),z];
+            near=t.measure(p,[.3 .3]);t.verifyFalse(any(near.found));
+            p(:,1)=p(:,1)+19.8;
+            distant=t.measure(p,[20.1 .3],[1 35]);t.verifyTrue(distant.found);
+        end
+        function distanceCannotBypassWideSurfaceRejection(t)
+            [x,z]=meshgrid(.06:.02:.54,-1:.08:3);
+            p=[x(:)+20,.3+.002*sin((1:numel(x)).'),z(:)];
+            e=t.measure(p,[20.3 .3],[1 35]);t.verifyFalse(any(e.found));
+        end
         function emptyCloudIsSupported(t)
             e=t.measure(zeros(0,3),[.3 .3]);t.verifyEmpty(e.found);
         end
@@ -78,15 +127,16 @@ classdef pillarPoleValidationTest < matlab.unittest.TestCase
             z=linspace(-1,3,60).';angle=(1:60).'*2.399;
             p=[center(1)+.025*cos(angle),center(2)+.025*sin(angle),z];
         end
-        function [e,h]=measure(p,center,mapSize,mask)
+        function [e,h]=measure(p,center,mapSize,mask,cfg)
             if nargin<3,mapSize=[1 1];end
             if nargin<4,mask=true(size(p,1),1);end
+            if nargin<5,cfg=pillarPoleValidationConfig();end
             geometry=struct('origin',[0 0],'cellSize',[.6 .6],'mapSize',mapSize);
             bins=floor(p(:,1:2)./.6)+1;ids=sub2ind(mapSize,bins(:,2),bins(:,1));
             occupied=unique(ids);n=numel(occupied);found=false(n,1);if n>0,found(1)=true;end
             modes=struct('pillarIndices',occupied,'found',found, ...
                 'axisXY',repmat(center,n,1),'axisZ',zeros(n,1),'slopeXY',zeros(n,2));
-            [e,h]=validatePillarPoleSupport(p,ids,geometry,modes,pillarPoleValidationConfig(),mask,ones(n,1));
+            [e,h]=validatePillarPoleSupport(p,ids,geometry,modes,cfg,mask,ones(n,1));
         end
     end
 end

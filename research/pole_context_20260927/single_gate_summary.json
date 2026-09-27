@@ -1,0 +1,49 @@
+{
+  "baseline": {
+    "selected": 336,
+    "matched": 171,
+    "extra": 165,
+    "points": 13213,
+    "coverage": 0.9813576945929887,
+    "recall": 0.9293478260869565,
+    "precision": 0.5089285714285714
+  },
+  "best": {
+    "0.9": {
+      "feature": "tilt",
+      "direction": "<=",
+      "threshold": 4.243076158315049,
+      "selected": 242,
+      "matched": 149,
+      "extra": 93,
+      "points": 12602,
+      "coverage": 0.9359774212715389,
+      "recall": 0.8097826086956522,
+      "precision": 0.6157024793388429
+    },
+    "0.93": {
+      "feature": "tilt",
+      "direction": "<=",
+      "threshold": 4.243076158315049,
+      "selected": 242,
+      "matched": 149,
+      "extra": 93,
+      "points": 12602,
+      "coverage": 0.9359774212715389,
+      "recall": 0.8097826086956522,
+      "precision": 0.6157024793388429
+    },
+    "0.95": {
+      "feature": "ownerCount",
+      "direction": ">=",
+      "threshold": 20.0,
+      "selected": 244,
+      "matched": 148,
+      "extra": 96,
+      "points": 12867,
+      "coverage": 0.9556595365418895,
+      "recall": 0.8043478260869565,
+      "precision": 0.6065573770491803
+    }
+  }
+}

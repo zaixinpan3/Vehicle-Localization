@@ -1,0 +1,11 @@
+{
+  "frozen_at": "2026-09-27T00:21:15.111334-05:00",
+  "baseline": "cb8c76b80ec22e0c6daca7455e348eb7e8e8e64a",
+  "development_frames": "Mississippi 1:10:771; expanded development check 1:780",
+  "sparseSupportPointThreshold": 30,
+  "sparseOwnerPointThreshold": 15,
+  "maximumSparseTilt": 4,
+  "maximumSparseRms": 0.1,
+  "note": "Range-aware revision after the first full evaluation exposed 20-30 m point coverage falling from 76.17% to 51.78%. Extra count thresholds scale by min(1,(10/r)^2); all old hard geometric/minimum support gates persist. Original full and Downtown evaluations are reused, not independent holdouts.",
+  "sparseReferenceRange": 10
+}
