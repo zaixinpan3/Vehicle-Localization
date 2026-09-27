@@ -1,0 +1,7 @@
+# Reproducible per-hypothesis data remain local; compact results are versioned.
+__pycache__/
+candidate_features*.csv
+*_hypotheses.csv
+development_classifier_predictions.csv
+development_single_gates.csv
+context_v2/development_single_gates.csv

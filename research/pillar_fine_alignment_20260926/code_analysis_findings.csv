@@ -1,0 +1,12 @@
+File,Line,Id,Message
+perception/offGroundFeatures/measurePillarPoleSupport.m,104,FNDSB,"For array or cell array, performance can be improved using logical indexing instead of 'find'."
+perception/offGroundFeatures/measurePillarPoleSupport.m,104,FNDSB,"For array or cell array, performance can be improved using logical indexing instead of 'find'."
+research/pillar_fine_alignment_20260926/captureDowntownFineReference.m,41,NASGU,"Value assigned to variable might be unused."
+research/pillar_fine_alignment_20260926/captureDowntownFineReference.m,123,MSNU,"A Code Analyzer message was once suppressed here, but the message is no longer generated."
+research/pillar_fine_alignment_20260926/measureShaftContext.m,175,FNDSB,"For array or cell array, performance can be improved using logical indexing instead of 'find'."
+research/pillar_fine_alignment_20260926/measureShaftContext.m,175,FNDSB,"For array or cell array, performance can be improved using logical indexing instead of 'find'."
+research/pillar_fine_alignment_20260926/measureShaftContext.m,192,ISCL,"To improve performance, use 'isscalar' instead of length comparison."
+research/pillar_fine_alignment_20260926/probeContinuousPoleSupport.m,99,NASGU,"Value assigned to variable might be unused."
+research/pillar_fine_alignment_20260926/probeContinuousPoleSupport.m,105,FNDSB,"For array or cell array, performance can be improved using logical indexing instead of 'find'."
+research/pillar_fine_alignment_20260926/probeContinuousPoleSupport.m,105,FNDSB,"For array or cell array, performance can be improved using logical indexing instead of 'find'."
+research/pillar_fine_alignment_20260926/validateFineAlignment.m,6,MSNU,"A Code Analyzer message was once suppressed here, but the message is no longer generated."

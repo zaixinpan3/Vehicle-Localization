@@ -1,0 +1,269 @@
+{
+  "split": "Development only: frame <= 780",
+  "finePointDenominator": 13464,
+  "finePillarDenominator": 184,
+  "developmentFrames": 78,
+  "baseline": {
+    "candidatePillars": 1269,
+    "extraPillars": 1088,
+    "coveredFinePillars": 181,
+    "coveredFinePoints": 13408,
+    "pointCoverage": 0.995840760546643,
+    "pillarRecall": 0.9836956521739131,
+    "extraPillarFraction": 0.8573680063041765
+  },
+  "legacy": {
+    "candidatePillars": 472,
+    "extraPillars": 320,
+    "coveredFinePillars": 152,
+    "coveredFinePoints": 12635,
+    "pointCoverage": 0.9384284016636958,
+    "pillarRecall": 0.8260869565217391,
+    "extraPillarFraction": 0.6779661016949152
+  },
+  "availableSupportCeilings": {
+    "assignedModes": {
+      "candidatePillars": 1142,
+      "extraPillars": 962,
+      "coveredFinePillars": 180,
+      "coveredFinePoints": 13392,
+      "pointCoverage": 0.9946524064171123,
+      "pillarRecall": 0.9782608695652174,
+      "extraPillarFraction": 0.8423817863397548
+    },
+    "contextAvailable": {
+      "candidatePillars": 1142,
+      "extraPillars": 962,
+      "coveredFinePillars": 180,
+      "coveredFinePoints": 13392,
+      "pointCoverage": 0.9946524064171123,
+      "pillarRecall": 0.9782608695652174,
+      "extraPillarFraction": 0.8423817863397548
+    }
+  },
+  "exploratoryBestRules": {
+    "single_coverage0.80": {
+      "conditions": [
+        {
+          "feature": "coreIsolation",
+          "operator": ">=",
+          "threshold": 0.6185789276340454
+        }
+      ],
+      "candidatePillars": 159,
+      "extraPillars": 42,
+      "coveredFinePillars": 117,
+      "coveredFinePoints": 10995,
+      "pointCoverage": 0.8166221033868093,
+      "pillarRecall": 0.6358695652173914,
+      "extraPillarFraction": 0.2641509433962264
+    },
+    "single_coverage0.90": {
+      "conditions": [
+        {
+          "feature": "coreIsolation",
+          "operator": ">=",
+          "threshold": 0.44978260869565234
+        }
+      ],
+      "candidatePillars": 286,
+      "extraPillars": 147,
+      "coveredFinePillars": 139,
+      "coveredFinePoints": 12195,
+      "pointCoverage": 0.9057486631016043,
+      "pillarRecall": 0.7554347826086957,
+      "extraPillarFraction": 0.513986013986014
+    },
+    "single_coverage0.95": {
+      "conditions": [
+        {
+          "feature": "context_longestQualifiedContext3in50",
+          "operator": ">=",
+          "threshold": 1.37650847434998
+        }
+      ],
+      "candidatePillars": 401,
+      "extraPillars": 240,
+      "coveredFinePillars": 161,
+      "coveredFinePoints": 12900,
+      "pointCoverage": 0.9581105169340464,
+      "pillarRecall": 0.875,
+      "extraPillarFraction": 0.5985037406483791
+    },
+    "single_coverage0.90_pillar0.80": {
+      "conditions": [
+        {
+          "feature": "context_longestQualifiedContext3in50",
+          "operator": ">=",
+          "threshold": 1.61983680725098
+        }
+      ],
+      "candidatePillars": 345,
+      "extraPillars": 195,
+      "coveredFinePillars": 150,
+      "coveredFinePoints": 12383,
+      "pointCoverage": 0.9197118241235889,
+      "pillarRecall": 0.8152173913043478,
+      "extraPillarFraction": 0.5652173913043478
+    },
+    "single_coverage0.95_pillar0.80": {
+      "conditions": [
+        {
+          "feature": "context_longestQualifiedContext3in50",
+          "operator": ">=",
+          "threshold": 1.37650847434998
+        }
+      ],
+      "candidatePillars": 401,
+      "extraPillars": 240,
+      "coveredFinePillars": 161,
+      "coveredFinePoints": 12900,
+      "pointCoverage": 0.9581105169340464,
+      "pillarRecall": 0.875,
+      "extraPillarFraction": 0.5985037406483791
+    },
+    "single_coverage0.95_pillar0.90": {
+      "conditions": [
+        {
+          "feature": "context_qualifiedContextHeight3in50",
+          "operator": ">=",
+          "threshold": 1.4988082408905068
+        }
+      ],
+      "candidatePillars": 457,
+      "extraPillars": 290,
+      "coveredFinePillars": 167,
+      "coveredFinePoints": 12852,
+      "pointCoverage": 0.9545454545454546,
+      "pillarRecall": 0.907608695652174,
+      "extraPillarFraction": 0.6345733041575492
+    },
+    "pair_coverage0.80": {
+      "conditions": [
+        {
+          "feature": "coreIsolation",
+          "operator": ">=",
+          "threshold": 0.5601012425218593
+        },
+        {
+          "feature": "assigned_score",
+          "operator": ">=",
+          "threshold": 0.5235330307003858
+        }
+      ],
+      "candidatePillars": 163,
+      "extraPillars": 42,
+      "coveredFinePillars": 121,
+      "coveredFinePoints": 11468,
+      "pointCoverage": 0.8517528223410576,
+      "pillarRecall": 0.657608695652174,
+      "extraPillarFraction": 0.25766871165644173
+    },
+    "pair_coverage0.90": {
+      "conditions": [
+        {
+          "feature": "coreIsolation",
+          "operator": ">=",
+          "threshold": 0.428571428571429
+        },
+        {
+          "feature": "context_coreFraction25_75",
+          "operator": ">=",
+          "threshold": 0.6387083097795366
+        }
+      ],
+      "candidatePillars": 252,
+      "extraPillars": 112,
+      "coveredFinePillars": 140,
+      "coveredFinePoints": 12222,
+      "pointCoverage": 0.9077540106951871,
+      "pillarRecall": 0.7608695652173914,
+      "extraPillarFraction": 0.4444444444444444
+    },
+    "pair_coverage0.95": {
+      "conditions": [
+        {
+          "feature": "pointScore",
+          "operator": ">=",
+          "threshold": 0.7623280882835385
+        },
+        {
+          "feature": "context_coreFraction25_75",
+          "operator": ">=",
+          "threshold": 0.6387083097795366
+        }
+      ],
+      "candidatePillars": 394,
+      "extraPillars": 240,
+      "coveredFinePillars": 154,
+      "coveredFinePoints": 12803,
+      "pointCoverage": 0.9509061200237671,
+      "pillarRecall": 0.8369565217391305,
+      "extraPillarFraction": 0.6091370558375635
+    },
+    "pair_coverage0.90_pillar0.80": {
+      "conditions": [
+        {
+          "feature": "coreIsolation",
+          "operator": ">=",
+          "threshold": 0.369240824534942
+        },
+        {
+          "feature": "context_supportDensityContrast75",
+          "operator": ">=",
+          "threshold": 29.108764054371573
+        }
+      ],
+      "candidatePillars": 313,
+      "extraPillars": 165,
+      "coveredFinePillars": 148,
+      "coveredFinePoints": 12208,
+      "pointCoverage": 0.9067142008318478,
+      "pillarRecall": 0.8043478260869565,
+      "extraPillarFraction": 0.5271565495207667
+    },
+    "pair_coverage0.95_pillar0.80": {
+      "conditions": [
+        {
+          "feature": "pointScore",
+          "operator": ">=",
+          "threshold": 0.7623280882835385
+        },
+        {
+          "feature": "context_coreFraction25_75",
+          "operator": ">=",
+          "threshold": 0.6387083097795366
+        }
+      ],
+      "candidatePillars": 394,
+      "extraPillars": 240,
+      "coveredFinePillars": 154,
+      "coveredFinePoints": 12803,
+      "pointCoverage": 0.9509061200237671,
+      "pillarRecall": 0.8369565217391305,
+      "extraPillarFraction": 0.6091370558375635
+    },
+    "pair_coverage0.95_pillar0.90": {
+      "conditions": [
+        {
+          "feature": "coreIsolation",
+          "operator": ">=",
+          "threshold": 0.3130020003077395
+        },
+        {
+          "feature": "context_balancedMaximumStd25",
+          "operator": "<=",
+          "threshold": 0.160309044335836
+        }
+      ],
+      "candidatePillars": 442,
+      "extraPillars": 276,
+      "coveredFinePillars": 166,
+      "coveredFinePoints": 12893,
+      "pointCoverage": 0.9575906120023767,
+      "pillarRecall": 0.9021739130434783,
+      "extraPillarFraction": 0.6244343891402715
+    }
+  },
+  "limitation": "Exploratory development fitting only; holdout labels were not analyzed."
+}

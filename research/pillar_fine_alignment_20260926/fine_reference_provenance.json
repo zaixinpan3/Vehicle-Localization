@@ -1,0 +1,72 @@
+{
+  "referenceKind": "Frozen original-frame pole indices from offline 0.3 m fine perception",
+  "fineRuntimeRevision": "48d043b083ccc2fb44c19726655223b1d5054484",
+  "preMigrationRevision": "796c737344e6c29c3e7aa8869aab2630dc0ebbb1",
+  "changedPerceptionOrFineStructuralSourcesBetweenRevisions": [],
+  "allPartitionsMatchOriginalHashes": true,
+  "frames": 1170,
+  "finePolePointCountBeforeRoi": 194300,
+  "development": {
+    "firstFrame": 1,
+    "lastFrame": 780,
+    "frames": 780,
+    "finePolePointCountBeforeRoi": 124708
+  },
+  "temporalEvaluation": {
+    "firstFrame": 781,
+    "lastFrame": 1170,
+    "frames": 390,
+    "finePolePointCountBeforeRoi": 69592
+  },
+  "sparseReference": {
+    "path": "output/coarse_lattice_20260924/fine_pole_pillars.mat",
+    "sha256": "46f705a04c3e88c900300731c184647f54354ddc1911d8d43db779ec13aa1d30",
+    "frames": 117,
+    "pointIndexMismatchFrames": [],
+    "comparison": "Exact ordered original-frame point-index equality"
+  },
+  "partitions": [
+    {
+      "path": "output/fine_matching_20260919/inputs_1.mat",
+      "sha256": "07219f01329284cb60e7d394de5ed180f95a0d8ea12b9f03b09a007a882246b8",
+      "matchesOriginalManifest": true,
+      "firstFrame": 1,
+      "lastFrame": 292,
+      "frames": 292,
+      "finePolePoints": 47735
+    },
+    {
+      "path": "output/fine_matching_20260919/inputs_2.mat",
+      "sha256": "625416d29a1a6b0ccdd87b9ffe5a99881e1377a67f759463d4767d470ba3eb08",
+      "matchesOriginalManifest": true,
+      "firstFrame": 293,
+      "lastFrame": 585,
+      "frames": 293,
+      "finePolePoints": 47341
+    },
+    {
+      "path": "output/fine_matching_20260919/inputs_3.mat",
+      "sha256": "e5b229a30cec0795fbbc88802da850575f40ff017fad73b2e832abc9b53c851f",
+      "matchesOriginalManifest": true,
+      "firstFrame": 586,
+      "lastFrame": 877,
+      "frames": 292,
+      "finePolePoints": 46312
+    },
+    {
+      "path": "output/fine_matching_20260919/inputs_4.mat",
+      "sha256": "33a48a9fc66260a2c139330d3da8a22dbf99c9c648d74f3773b6cba13b5e6634",
+      "matchesOriginalManifest": true,
+      "firstFrame": 878,
+      "lastFrame": 1170,
+      "frames": 293,
+      "finePolePoints": 52912
+    }
+  ],
+  "roi": "No ROI filtering is applied by this provenance audit; metrics project original coordinates separately",
+  "limitations": [
+    "Fine labels are the designated algorithmic reference, not independent manual truth",
+    "Temporal evaluation frames have appeared in earlier studies; they are frozen against new tuning only",
+    "Downtown exact point references require an independently frozen point-mask capture"
+  ]
+}

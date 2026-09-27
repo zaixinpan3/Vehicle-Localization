@@ -31,8 +31,9 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     maps.coreFraction=zeros(mapSize); maps.coreHeight=zeros(mapSize); maps.coreIsolation=zeros(mapSize);
     maps.corePeakX=nan(mapSize); maps.corePeakY=nan(mapSize);
     maps.corePointCount=zeros(mapSize);
-    shaftMode=isfield(cfg.pole,'detector') && cfg.pole.detector=="shaft";
-    subsetMode=isfield(cfg.pole,'detector') && any(cfg.pole.detector==["subset","shaft"]);
+    validatedMode=isfield(cfg.pole,'detector') && cfg.pole.detector=="validatedShaft";
+    shaftMode=isfield(cfg.pole,'detector') && any(cfg.pole.detector==["shaft","validatedShaft"]);
+    subsetMode=isfield(cfg.pole,'detector') && any(cfg.pole.detector==["subset","shaft","validatedShaft"]);
     if any(cloudCfg.semanticNames=="pole") && subsetMode
         if shaftMode
             shaftCfg=cfg.pole.shaft;shaftCfg.useNativeKernels=useNative;
@@ -41,6 +42,24 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
             maps.poleModes=findPillarShaftModes(pillars.points,pillars.pointPillarLinIdx,geometry,shaftCfg);
             [maps.poleSubset,maps.poleShaftGroups]=assignPillarShaftSupport( ...
                 pillars.points,pillars.pointPillarLinIdx,geometry,maps.poleModes,shaftCfg);
+            if validatedMode
+                structuralMask=true(size(pillars.points,1),1);
+                if isfield(pillars.pointAttributes,'intensity')
+                    intensity=pillars.pointAttributes.intensity;
+                    structuralMask=~(isfinite(intensity) & intensity>cfg.trafficSignIntensityThreshold);
+                end
+                % Reuse the inexpensive legacy statistic gates only to limit
+                % extra proposals. No legacy label bypasses validation.
+                tall=stats.count>=cfg.pole.minimumPoints & stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.pole.minimumHeight;
+                [maps.coreFraction(ids),maps.coreHeight(ids),maps.coreIsolation(ids),peak,maps.corePointCount(ids)]=computePillarDensityCore( ...
+                    pillars.points,pillars.pointPillarLinIdx,geometry,cfg.pole.densityPeakBinMeters,cfg.pole.coreRadius,cfg.pole.isolationRadius,tall);
+                maps.corePeakX(ids)=peak(:,1);maps.corePeakY(ids)=peak(:,2);
+                proposalCfg=cfg.pole;proposalCfg.detector="pillar";
+                proposalCandidates=detectPolePillars(maps,false(mapSize),proposalCfg);
+                maps.poleValidationProposals=completePoleProposals(maps.poleSubset,stats,cfg.pole,proposalCandidates.candidateMask(ids));
+                maps.poleValidation=validatePillarPoleSupport(pillars.points,pillars.pointPillarLinIdx, ...
+                    geometry,maps.poleValidationProposals,cfg.pole.validation,structuralMask,double(maps.pointScore(ids)));
+            end
         else
             subsetCfg=cfg.pole.subset; subsetCfg.useNativeKernels=useNative;
             maps.poleSubset=findPillarPoleSubsets(pillars.points,pillars.pointPillarLinIdx,geometry,subsetCfg);
@@ -49,7 +68,7 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
         maps.corePointCount(ids)=maps.poleSubset.supportCount;
         maps.corePeakX(ids)=maps.poleSubset.axisXY(:,1); maps.corePeakY(ids)=maps.poleSubset.axisXY(:,2);
     end
-    if any(cloudCfg.semanticNames=="pole") && (~subsetMode || shaftMode)
+    if any(cloudCfg.semanticNames=="pole") && (~subsetMode || (shaftMode && ~validatedMode))
         % The core is measured only where the cheap whole-pillar gates can pass.
         tall=stats.count>=cfg.pole.minimumPoints & stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.pole.minimumHeight;
         [maps.coreFraction(ids),maps.coreHeight(ids),maps.coreIsolation(ids),peak,maps.corePointCount(ids)]=computePillarDensityCore( ...
@@ -86,9 +105,11 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     maps.trafficSignMoments=maps.moments;
     floorProbability=cloudCfg.minimumSemanticProbability;
     poleEvidence=double(maps.pointScore).*(1-double(maps.lineScore));
-    if subsetMode && isfield(maps,'poleSubset') && any(cfg.pole.probabilityEvidence==["subset","shaft"])
+    if validatedMode && isfield(maps,'poleValidation') && cfg.pole.probabilityEvidence=="validatedShaft"
+        poleEvidence=zeros(mapSize);poleEvidence(ids)=maps.poleValidation.score;
+    elseif subsetMode && isfield(maps,'poleSubset') && any(cfg.pole.probabilityEvidence==["subset","shaft"])
         poleEvidence=zeros(mapSize); poleEvidence(ids)=maps.poleSubset.score;
-        if shaftMode && any(candidates.legacyCandidateMask(:))
+        if shaftMode && isfield(candidates,'legacyCandidateMask') && any(candidates.legacyCandidateMask(:))
             peak=[maps.corePeakX(ids),maps.corePeakY(ids)];
             legacyEvidence=scorePolePillarDistributions(pillars.points,pillars.pointPillarLinIdx, ...
                 geometry,peak,candidates.legacyCandidateMask(ids),cfg.pole.distribution);
@@ -108,6 +129,21 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
         'poleCellMask',poleMask,'poleProbability',single(poleMask.*(floorProbability+(1-floorProbability)*poleEvidence)), ...
         'trafficSignCellMask',signMask,'trafficSignProbability',single(signMask.*(floorProbability+(1-floorProbability)*signEvidence)), ...
         'candidates',candidates);
+end
+
+function modes=completePoleProposals(modes,stats,cfg,eligible)
+% Whole-pillar axes rescue search omissions; they still require validation.
+% This is a proposal mechanism, never a union with legacy accepted labels.
+    covariance=stats.covarianceXYZ;
+    slope=covariance(:,4:5)./max(covariance(:,6),eps);
+    variance=max(0,covariance(:,1)+covariance(:,3)- ...
+        sum(covariance(:,4:5).^2,2)./max(covariance(:,6),eps));
+    selected=eligible & ~modes.found & stats.count>=cfg.minimumPoints & ...
+        stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.minimumHeight & ...
+        covariance(:,6)>=cfg.minimumHeightStd^2 & ...
+        vecnorm(slope,2,2)<=tand(cfg.maximumTiltDegrees) & variance<=cfg.maximumRadialStd^2;
+    modes.found(selected)=true;modes.axisXY(selected,:)=stats.meanXYZ(selected,1:2);
+    modes.axisZ(selected)=stats.meanXYZ(selected,3);modes.slopeXY(selected,:)=slope(selected,:);
 end
 
 function moments=projectStatistics(stats,numCells,cfg)

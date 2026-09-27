@@ -1,0 +1,11 @@
+{
+  "frozen_at_utc": "2026-09-27T03:12:51.661946+00:00",
+  "reason": "Two unchanged legacy physical tests exposed missing proposal axes and incorrect support membership for moving-window centers. Both repaired; 25 focused tests pass without altering their assertions. No threshold retuning except 1e-10 numerical comparison tolerance.",
+  "previous_full_capture": "pre_regression_full_frames.csv",
+  "sha256": {
+    "config/pillarPoleValidationConfig.m": "cc60a378f9191e4e20ddecfac6903625ddc7dfd8f52d48213f803f7950646900",
+    "perception/offGroundFeatures/measurePillarPoleSupport.m": "d2232927d854fea07b3976e2d8a9a79c5689742e9d1019283ce4515a4f2967d9",
+    "perception/offGroundFeatures/validatePillarPoleSupport.m": "0136ea6206ce01a4fc4493b3cffc0375212cb8333cd7862f5b26ff1487dd2f91",
+    "perception/offGroundFeatures/analyzeStructuralPillars.m": "35af6e71ec2dfd2fdaa60ddd0c400fe3ab1218e7f305f5fab88bce4961f14062"
+  }
+}

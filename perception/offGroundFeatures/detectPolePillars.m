@@ -1,10 +1,18 @@
 function candidates=detectPolePillars(maps,facadeMask,cfg)
 % detectPolePillars: Select supported poles on the shared pillar lattice.
-% The coarse shaft mode preserves established pillar detections and adds
-% independently supported modes with verified owner contributions. Legacy
-% pillar and experimental subset modes remain available for comparisons.
+% Continuous validation checks the complete support of shaft proposals before
+% assigning labels to owners. Legacy modes remain available for comparisons.
 % All modes share existing XY pillars; none introduces a finer lattice.
     stats=maps.statistics; ids=double(stats.pillarIndices);
+    if isfield(cfg,'detector') && cfg.detector=="validatedShaft"
+        core=false(maps.mapSize);core(ids)=maps.poleValidation.found;
+        evidence=zeros(maps.mapSize);evidence(ids)=maps.poleValidation.score;
+        candidates=struct('eligibleMask',maps.occupiedMask,'coreMask',core,'supportMask',core, ...
+            'footprintCandidateMask',core,'contextCandidateMask',core, ...
+            'contextFraction',double(core),'componentEvidence',evidence, ...
+            'contextEvidence',evidence,'candidateMask',core,'shaftCandidateMask',core);
+        return;
+    end
     if isfield(cfg,'detector') && cfg.detector=="shaft"
         legacyCfg=cfg;legacyCfg.detector="pillar";
         legacy=detectPolePillars(maps,facadeMask,legacyCfg);

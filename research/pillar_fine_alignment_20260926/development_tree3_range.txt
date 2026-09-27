@@ -1,0 +1,19 @@
+|--- coreIsolation <= 0.60627
+|   |--- context_growthDimension25_75 <= 0.29197
+|   |   |--- pointCount <= 34.50000
+|   |   |   |--- class: False
+|   |   |--- pointCount >  34.50000
+|   |   |   |--- class: True
+|   |--- context_growthDimension25_75 >  0.29197
+|   |   |--- pointScore <= 0.78171
+|   |   |   |--- class: False
+|   |   |--- pointScore >  0.78171
+|   |   |   |--- class: False
+|--- coreIsolation >  0.60627
+|   |--- corePointCount <= 20.50000
+|   |   |--- class: False
+|   |--- corePointCount >  20.50000
+|   |   |--- pointCount <= 18.50000
+|   |   |   |--- class: True
+|   |   |--- pointCount >  18.50000
+|   |   |   |--- class: True

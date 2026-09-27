@@ -1,0 +1,18 @@
+{
+  "Mississippi": {
+    "frames": 1170,
+    "fixedReferenceDenominators": true,
+    "countIdentities": true,
+    "exportedRatios": true,
+    "nonPoleChecks": true
+  },
+  "Downtown": {
+    "frames": 24,
+    "fixedReferenceDenominators": true,
+    "countIdentities": true,
+    "exportedRatios": true,
+    "nonPoleChecks": true
+  },
+  "frozenProductionSourcesMatch": true,
+  "pairedTimingCalls": 288
+}

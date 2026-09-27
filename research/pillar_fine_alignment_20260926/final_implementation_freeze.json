@@ -1,0 +1,11 @@
+{
+  "frozen_at_utc": "2026-09-27T03:17:45.676223+00:00",
+  "reason": "Unconditional expansion of every height window reduced coverage and broad whole-column proposals increased latency. Preserve dense interior support; use full qualified windows only when no interior fit exists. Limit covariance fallback to cheap existing pillar-statistic proposals, then require identical continuous validation. All 25 focused tests pass without changed assertions.",
+  "observed_downtown": "24 frames: 90.17% fine point coverage, 81.82% target pillar recall; validation reused.",
+  "sha256": {
+    "config/pillarPoleValidationConfig.m": "cc60a378f9191e4e20ddecfac6903625ddc7dfd8f52d48213f803f7950646900",
+    "perception/offGroundFeatures/measurePillarPoleSupport.m": "4fe606779234d3a188eeb4a4b781b6d51014b61c673c343d680c9fd7cd03695f",
+    "perception/offGroundFeatures/validatePillarPoleSupport.m": "0136ea6206ce01a4fc4493b3cffc0375212cb8333cd7862f5b26ff1487dd2f91",
+    "perception/offGroundFeatures/analyzeStructuralPillars.m": "3569af9e4ec726014daed462cfe01ee042c5a1435a54054f8ff2e98eee052524"
+  }
+}

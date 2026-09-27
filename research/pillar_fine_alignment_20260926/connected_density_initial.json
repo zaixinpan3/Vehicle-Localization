@@ -1,0 +1,122 @@
+{
+  "radius0.2_owner1": {
+    "selected": 359,
+    "matched": 159,
+    "coveredPoints": 12666,
+    "precision": 0.4428969359331476,
+    "pillarRecall": 0.8641304347826086,
+    "pointCoverage": 0.9407308377896613
+  },
+  "radius0.2_owner3": {
+    "selected": 320,
+    "matched": 157,
+    "coveredPoints": 12631,
+    "precision": 0.490625,
+    "pillarRecall": 0.8532608695652174,
+    "pointCoverage": 0.9381313131313131
+  },
+  "radius0.2_owner6": {
+    "selected": 276,
+    "matched": 153,
+    "coveredPoints": 12573,
+    "precision": 0.5543478260869565,
+    "pillarRecall": 0.8315217391304348,
+    "pointCoverage": 0.9338235294117647
+  },
+  "radius0.25_owner1": {
+    "selected": 392,
+    "matched": 158,
+    "coveredPoints": 12567,
+    "precision": 0.4030612244897959,
+    "pillarRecall": 0.8586956521739131,
+    "pointCoverage": 0.9333778966131907
+  },
+  "radius0.25_owner3": {
+    "selected": 346,
+    "matched": 157,
+    "coveredPoints": 12552,
+    "precision": 0.45375722543352603,
+    "pillarRecall": 0.8532608695652174,
+    "pointCoverage": 0.9322638146167558
+  },
+  "radius0.25_owner6": {
+    "selected": 297,
+    "matched": 154,
+    "coveredPoints": 12498,
+    "precision": 0.5185185185185185,
+    "pillarRecall": 0.8369565217391305,
+    "pointCoverage": 0.92825311942959
+  },
+  "radius0.3_owner1": {
+    "selected": 420,
+    "matched": 159,
+    "coveredPoints": 12572,
+    "precision": 0.37857142857142856,
+    "pillarRecall": 0.8641304347826086,
+    "pointCoverage": 0.9337492572786691
+  },
+  "radius0.3_owner3": {
+    "selected": 368,
+    "matched": 159,
+    "coveredPoints": 12572,
+    "precision": 0.4320652173913043,
+    "pillarRecall": 0.8641304347826086,
+    "pointCoverage": 0.9337492572786691
+  },
+  "radius0.3_owner6": {
+    "selected": 317,
+    "matched": 157,
+    "coveredPoints": 12541,
+    "precision": 0.4952681388012618,
+    "pillarRecall": 0.8532608695652174,
+    "pointCoverage": 0.9314468211527035
+  },
+  "radius0.35_owner1": {
+    "selected": 463,
+    "matched": 164,
+    "coveredPoints": 12754,
+    "precision": 0.3542116630669546,
+    "pillarRecall": 0.8913043478260869,
+    "pointCoverage": 0.9472667855020797
+  },
+  "radius0.35_owner3": {
+    "selected": 407,
+    "matched": 164,
+    "coveredPoints": 12754,
+    "precision": 0.40294840294840295,
+    "pillarRecall": 0.8913043478260869,
+    "pointCoverage": 0.9472667855020797
+  },
+  "radius0.35_owner6": {
+    "selected": 353,
+    "matched": 164,
+    "coveredPoints": 12754,
+    "precision": 0.46458923512747874,
+    "pillarRecall": 0.8913043478260869,
+    "pointCoverage": 0.9472667855020797
+  },
+  "radius0_owner1": {
+    "selected": 481,
+    "matched": 172,
+    "coveredPoints": 13067,
+    "precision": 0.3575883575883576,
+    "pillarRecall": 0.9347826086956522,
+    "pointCoverage": 0.970513963161022
+  },
+  "radius0_owner3": {
+    "selected": 425,
+    "matched": 172,
+    "coveredPoints": 13067,
+    "precision": 0.4047058823529412,
+    "pillarRecall": 0.9347826086956522,
+    "pointCoverage": 0.970513963161022
+  },
+  "radius0_owner6": {
+    "selected": 368,
+    "matched": 171,
+    "coveredPoints": 13063,
+    "precision": 0.46467391304347827,
+    "pillarRecall": 0.9293478260869565,
+    "pointCoverage": 0.9702168746286394
+  }
+}

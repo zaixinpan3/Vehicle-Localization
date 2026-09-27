@@ -1,0 +1,19 @@
+{
+  "frozen_at_utc": "2026-09-27T02:56:26.194722+00:00",
+  "development_frames": "Mississippi 1:10:771",
+  "primary": "single radius 0.30 m, owner >=15, height >=0.3 m, isolation >=0.8, tilt <=6 deg, pointScore >=0.7",
+  "development_counts": {
+    "selected": 220,
+    "matched_pillars": 148,
+    "extra": 72,
+    "covered_points": 12630,
+    "fine_points": 13464,
+    "fine_pillars": 184
+  },
+  "evaluation": "Mississippi 781:1170 then Downtown 24 predetermined frames, followed by full 1170",
+  "sha256": {
+    "config/pillarPoleValidationConfig.m": "bbf199bb9b0ed54568bdc3fe53f5accc2d68e12aeb4af09fba06d9963a515d74",
+    "perception/offGroundFeatures/measurePillarPoleSupport.m": "b57241503572bd9e06b3cde382c14be3ed331825cf5cc93b76c03e604d8fdd94",
+    "perception/offGroundFeatures/validatePillarPoleSupport.m": "01272a0ffeafe9bcd16255178ba007664e7f4a45c30ac2adf5958d07184056ea"
+  }
+}

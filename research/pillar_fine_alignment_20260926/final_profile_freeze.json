@@ -1,0 +1,11 @@
+{
+  "frozen_at_utc": "2026-09-27T02:58:23.480734+00:00",
+  "reason": "Strict development profile failed Downtown 80% point coverage; revise once to favor sparse owners and remove coarse shape gate.",
+  "already_examined": "39 sparse temporal Mississippi frames and 24 Downtown frames; these are now validation reused for selection, not untouched test data.",
+  "full_evaluation_pending": "Mississippi full 1170 production frames",
+  "sha256": {
+    "config/pillarPoleValidationConfig.m": "cc60a378f9191e4e20ddecfac6903625ddc7dfd8f52d48213f803f7950646900",
+    "perception/offGroundFeatures/measurePillarPoleSupport.m": "b57241503572bd9e06b3cde382c14be3ed331825cf5cc93b76c03e604d8fdd94",
+    "perception/offGroundFeatures/validatePillarPoleSupport.m": "01272a0ffeafe9bcd16255178ba007664e7f4a45c30ac2adf5958d07184056ea"
+  }
+}

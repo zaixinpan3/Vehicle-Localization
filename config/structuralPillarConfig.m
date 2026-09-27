@@ -82,14 +82,15 @@ function cfg = structuralPillarConfig(spacing)
     cfg.pole.distribution=struct('coreRadius',0.25,'contextRadius',0.75, ...
         'minimumRobustHeight',1.5,'minimumCorePoints',12);
 
-    % Coarse pillars retain established detections and add independently
-    % supported shaft modes. The earlier subset experiment remains selectable
-    % for reproducible comparisons; the offline 0.3 m branch stays unchanged.
+    % Coarse shaft proposals require complete continuous support and actual
+    % owner contributions. Earlier detectors remain selectable for comparison;
+    % the offline 0.3 m branch stays unchanged.
     cfg.pole.detector="pillar";
     cfg.pole.shaft=pillarShaftConfig();
+    cfg.pole.validation=pillarPoleValidationConfig();
     if spacing>0.3
-        cfg.pole.detector="shaft";
-        cfg.pole.probabilityEvidence="shaft";
+        cfg.pole.detector="validatedShaft";
+        cfg.pole.probabilityEvidence="validatedShaft";
     end
     cfg.pole.subset=struct('radii',[0.06 0.10 0.15], ...
         'maximumSeeds',12,'seedSeparation',0.08,'fitRadius',0.15, ...

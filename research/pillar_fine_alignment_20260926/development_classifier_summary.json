@@ -1,0 +1,329 @@
+{
+  "developmentOnly": true,
+  "seed": 6260926,
+  "folds": 5,
+  "purgeRawFrames": 20,
+  "pointDenominator": 13464,
+  "pillarDenominator": 184,
+  "blocks": [
+    {
+      "first": 1,
+      "last": 151
+    },
+    {
+      "first": 161,
+      "last": 311
+    },
+    {
+      "first": 321,
+      "last": 471
+    },
+    {
+      "first": 481,
+      "last": 621
+    },
+    {
+      "first": 631,
+      "last": 771
+    }
+  ],
+  "bestPrimaryByDevelopmentOOF": {
+    "model": "forest4_no_range",
+    "withRange": false,
+    "features": 56,
+    "pointTarget": 0.95,
+    "pillarTarget": 0.8,
+    "threshold": 0.21637525910107724,
+    "selected": 393,
+    "extra": 237,
+    "matchedFinePillars": 156,
+    "coveredFinePoints": 12796,
+    "pointCoverage": 0.9503862150920974,
+    "pillarRecall": 0.8478260869565217,
+    "precision": 0.3969465648854962,
+    "trainingExtra": 210,
+    "trainingPointCoverage": 0.9935383244206774,
+    "trainingPillarRecall": 0.9728260869565217
+  },
+  "featureImportance": [
+    {
+      "feature": "coreIsolation",
+      "importance": 0.49226485950662097
+    },
+    {
+      "feature": "context_densityContrast25_75",
+      "importance": 0.09453348392796602
+    },
+    {
+      "feature": "corePointCount",
+      "importance": 0.06755587259131722
+    },
+    {
+      "feature": "context_coreFraction25_75",
+      "importance": 0.06579500743013358
+    },
+    {
+      "feature": "context_growthDimension25_75",
+      "importance": 0.04256234027723957
+    },
+    {
+      "feature": "pointCount",
+      "importance": 0.03480657014283095
+    },
+    {
+      "feature": "context_minimumQuarterFraction25_75",
+      "importance": 0.022512401619814867
+    },
+    {
+      "feature": "context_supportedFraction25_75",
+      "importance": 0.019968042115605985
+    },
+    {
+      "feature": "coreFraction",
+      "importance": 0.018118413623606614
+    },
+    {
+      "feature": "assigned_supportCount",
+      "importance": 0.01782605264145947
+    },
+    {
+      "feature": "assigned_score",
+      "importance": 0.009828686563370681
+    },
+    {
+      "feature": "assigned_radialRms",
+      "importance": 0.008425998043310946
+    },
+    {
+      "feature": "context_halfAxisDisplacement",
+      "importance": 0.007700250204130755
+    },
+    {
+      "feature": "assigned_height",
+      "importance": 0.006754970683376131
+    },
+    {
+      "feature": "wholeHeightStd",
+      "importance": 0.005979828880249715
+    },
+    {
+      "feature": "wholeRadialStd",
+      "importance": 0.0055065660953520935
+    },
+    {
+      "feature": "pillarZRange",
+      "importance": 0.005262161424101831
+    },
+    {
+      "feature": "pointScore",
+      "importance": 0.005038581607011805
+    },
+    {
+      "feature": "context_supportFraction25",
+      "importance": 0.0047998346967665735
+    },
+    {
+      "feature": "context_tiltDegrees",
+      "importance": 0.004372332444469376
+    },
+    {
+      "feature": "context_minimumHalfFraction25_75",
+      "importance": 0.004286973550136524
+    },
+    {
+      "feature": "coreHeight",
+      "importance": 0.003852580866578727
+    },
+    {
+      "feature": "assigned_ownHeight",
+      "importance": 0.0038042444990281925
+    },
+    {
+      "feature": "assigned_robustHeight",
+      "importance": 0.0037304260218110974
+    },
+    {
+      "feature": "context_ownerSupportFraction25",
+      "importance": 0.0036890532343581564
+    },
+    {
+      "feature": "context_supportDensityContrast75",
+      "importance": 0.003550875793406077
+    },
+    {
+      "feature": "wholeTilt",
+      "importance": 0.003084717809768662
+    },
+    {
+      "feature": "context_maximumSupportGap",
+      "importance": 0.0028423914914409657
+    },
+    {
+      "feature": "assigned_radialSignificance",
+      "importance": 0.00275698065371809
+    },
+    {
+      "feature": "context_wideMaximumStd25",
+      "importance": 0.002746477927133438
+    },
+    {
+      "feature": "assigned_excessCount",
+      "importance": 0.002701150657331045
+    },
+    {
+      "feature": "context_supportFraction75",
+      "importance": 0.0026845823635165576
+    },
+    {
+      "feature": "context_wideMinimumStd25",
+      "importance": 0.0026446432307985065
+    },
+    {
+      "feature": "assigned_heightCoverage",
+      "importance": 0.0020412137817435814
+    },
+    {
+      "feature": "assigned_radius",
+      "importance": 0.00203445473614422
+    },
+    {
+      "feature": "context_ownerSupportHeight",
+      "importance": 0.0018543604439653903
+    },
+    {
+      "feature": "context_balancedAspect25",
+      "importance": 0.0011947368045266788
+    },
+    {
+      "feature": "assigned_maximumGap",
+      "importance": 0.0010898798214113094
+    },
+    {
+      "feature": "context_halfSlopeDifference",
+      "importance": 0.0010255397401503878
+    },
+    {
+      "feature": "context_ownerRadiusFraction",
+      "importance": 0.0010175830174723852
+    },
+    {
+      "feature": "context_ownerCenterOffset",
+      "importance": 0.0009756515536359426
+    },
+    {
+      "feature": "context_halfMaximumRms",
+      "importance": 0.0009645405590181213
+    },
+    {
+      "feature": "context_coreFraction25_40",
+      "importance": 0.0007844902371622451
+    },
+    {
+      "feature": "lineScore",
+      "importance": 0.0006624953423140408
+    },
+    {
+      "feature": "context_densityContrast25_40",
+      "importance": 0.0006411980815595156
+    },
+    {
+      "feature": "context_ownerRadialRms",
+      "importance": 0.0006165188871681868
+    },
+    {
+      "feature": "context_minimumQuarterSupport",
+      "importance": 0.000565732104332949
+    },
+    {
+      "feature": "context_ownerCoverage20",
+      "importance": 0.000564660905583527
+    },
+    {
+      "feature": "context_wideAspect25",
+      "importance": 0.0005436961436111949
+    },
+    {
+      "feature": "context_balancedMaximumStd25",
+      "importance": 0.00041095321946854407
+    },
+    {
+      "feature": "assigned_peakContrast",
+      "importance": 0.00039431659066845726
+    },
+    {
+      "feature": "context_ownerMaximumGap",
+      "importance": 0.0003111641859200517
+    },
+    {
+      "feature": "assigned_ownCount",
+      "importance": 0.00020883252749595801
+    },
+    {
+      "feature": "context_supportCoverage20",
+      "importance": 0.00011062869888599058
+    }
+  ],
+  "features": [
+    "pointScore",
+    "lineScore",
+    "coreFraction",
+    "coreHeight",
+    "coreIsolation",
+    "corePointCount",
+    "pillarZRange",
+    "pointCount",
+    "wholeTilt",
+    "wholeRadialStd",
+    "wholeHeightStd",
+    "assigned_score",
+    "assigned_supportCount",
+    "assigned_ownCount",
+    "assigned_ownHeight",
+    "assigned_height",
+    "assigned_robustHeight",
+    "assigned_radialRms",
+    "assigned_maximumGap",
+    "assigned_radius",
+    "assigned_peakContrast",
+    "assigned_excessCount",
+    "assigned_radialSignificance",
+    "assigned_heightCoverage",
+    "assigned_fitScaleCount",
+    "context_coreFraction25_40",
+    "context_coreFraction25_75",
+    "context_supportFraction25",
+    "context_supportFraction75",
+    "context_densityContrast25_40",
+    "context_densityContrast25_75",
+    "context_supportDensityContrast75",
+    "context_growthDimension25_75",
+    "context_wideMaximumStd25",
+    "context_wideMinimumStd25",
+    "context_wideAspect25",
+    "context_balancedMaximumStd25",
+    "context_balancedAspect25",
+    "context_minimumHalfFraction25_75",
+    "context_minimumQuarterFraction25_75",
+    "context_minimumQuarterSupport",
+    "context_maximumSupportGap",
+    "context_supportCoverage20",
+    "context_supportedFraction25_75",
+    "context_halfAxisDisplacement",
+    "context_halfSlopeDifference",
+    "context_halfMaximumRms",
+    "context_tiltDegrees",
+    "context_ownerSupportCount",
+    "context_ownerSupportHeight",
+    "context_ownerRadialRms",
+    "context_ownerRadiusFraction",
+    "context_ownerCenterOffset",
+    "context_ownerSupportFraction25",
+    "context_ownerCoverage20",
+    "context_ownerMaximumGap"
+  ],
+  "limitations": [
+    "Thresholds and model selection reuse development OOF scores; holdout validation remains necessary.",
+    "Candidate generation misses remain in denominators; models cannot recover absent modes.",
+    "Fine reference is algorithm output, not independently annotated physical-pole truth."
+  ]
+}

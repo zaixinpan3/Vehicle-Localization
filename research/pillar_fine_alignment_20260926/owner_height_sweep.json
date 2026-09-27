@@ -1,0 +1,30 @@
+{
+  "0.9": {
+    "variant": "continuous_structural",
+    "radius": 0.3,
+    "ownerCount": 15,
+    "ownerHeight": 0.3,
+    "iso": 0.8,
+    "tilt": 6,
+    "shape": 0.7,
+    "count": 220,
+    "extra": 72,
+    "precision": 0.6727272727272727,
+    "pointCoverage": 0.9380570409982175,
+    "pillarRecall": 0.8043478260869565
+  },
+  "0.95": {
+    "variant": "continuous_structural",
+    "radius": 0.3,
+    "ownerCount": 15,
+    "ownerHeight": 0.3,
+    "iso": 0.8,
+    "tilt": 6,
+    "shape": 0,
+    "count": 243,
+    "extra": 87,
+    "precision": 0.6419753086419753,
+    "pointCoverage": 0.9500891265597148,
+    "pillarRecall": 0.8478260869565217
+  }
+}

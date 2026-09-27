@@ -1,0 +1,178 @@
+{
+  "reference": "Original offline 0.3 m fine pole point indices",
+  "quality": {
+    "full": {
+      "baseline": {
+        "finePointCountInRoi": 194300,
+        "coveredFinePointCount": 193047,
+        "finePillarCount": 2884,
+        "coveredFinePillarCount": 2829,
+        "candidatePillarCount": 23008,
+        "extraPillarCount": 20179,
+        "frames": 1170,
+        "pointCoverage": 0.993551209469892,
+        "pointMissFraction": 0.006448790530108051,
+        "pillarRecall": 0.9809292649098474,
+        "extraPillarFraction": 0.8770427677329624,
+        "pillarPrecision": 0.12295723226703759,
+        "emptyReferenceFrames": 68,
+        "extraOnEmptyReferenceFrames": 1270
+      },
+      "final": {
+        "finePointCountInRoi": 194300,
+        "coveredFinePointCount": 185729,
+        "finePillarCount": 2884,
+        "coveredFinePillarCount": 2558,
+        "candidatePillarCount": 5784,
+        "extraPillarCount": 3226,
+        "frames": 1170,
+        "pointCoverage": 0.955887802367473,
+        "pointMissFraction": 0.04411219763252705,
+        "pillarRecall": 0.8869625520110958,
+        "extraPillarFraction": 0.5577455048409405,
+        "pillarPrecision": 0.44225449515905946,
+        "emptyReferenceFrames": 68,
+        "extraOnEmptyReferenceFrames": 212
+      },
+      "extraPillarReduction": 0.8401308290797364
+    },
+    "development": {
+      "baseline": {
+        "finePointCountInRoi": 124708,
+        "coveredFinePointCount": 124060,
+        "finePillarCount": 1818,
+        "coveredFinePillarCount": 1788,
+        "candidatePillarCount": 12670,
+        "extraPillarCount": 10882,
+        "frames": 780,
+        "pointCoverage": 0.9948038618212144,
+        "pointMissFraction": 0.005196138178785614,
+        "pillarRecall": 0.9834983498349835,
+        "extraPillarFraction": 0.8588792423046566,
+        "pillarPrecision": 0.14112075769534338,
+        "emptyReferenceFrames": 52,
+        "extraOnEmptyReferenceFrames": 780
+      },
+      "final": {
+        "finePointCountInRoi": 124708,
+        "coveredFinePointCount": 120191,
+        "finePillarCount": 1818,
+        "coveredFinePillarCount": 1638,
+        "candidatePillarCount": 3395,
+        "extraPillarCount": 1757,
+        "frames": 780,
+        "pointCoverage": 0.9637793886518908,
+        "pointMissFraction": 0.036220611348109166,
+        "pillarRecall": 0.900990099009901,
+        "extraPillarFraction": 0.5175257731958763,
+        "pillarPrecision": 0.48247422680412366,
+        "emptyReferenceFrames": 52,
+        "extraOnEmptyReferenceFrames": 145
+      },
+      "extraPillarReduction": 0.8385407094284139
+    },
+    "temporal": {
+      "baseline": {
+        "finePointCountInRoi": 69592,
+        "coveredFinePointCount": 68987,
+        "finePillarCount": 1066,
+        "coveredFinePillarCount": 1041,
+        "candidatePillarCount": 10338,
+        "extraPillarCount": 9297,
+        "frames": 390,
+        "pointCoverage": 0.9913064720082768,
+        "pointMissFraction": 0.008693527991723182,
+        "pillarRecall": 0.9765478424015009,
+        "extraPillarFraction": 0.8993035403366222,
+        "pillarPrecision": 0.10069645966337781,
+        "emptyReferenceFrames": 16,
+        "extraOnEmptyReferenceFrames": 490
+      },
+      "final": {
+        "finePointCountInRoi": 69592,
+        "coveredFinePointCount": 65538,
+        "finePillarCount": 1066,
+        "coveredFinePillarCount": 920,
+        "candidatePillarCount": 2389,
+        "extraPillarCount": 1469,
+        "frames": 390,
+        "pointCoverage": 0.9417461777215772,
+        "pointMissFraction": 0.058253822278422795,
+        "pillarRecall": 0.8630393996247655,
+        "extraPillarFraction": 0.6149016324822101,
+        "pillarPrecision": 0.3850983675177899,
+        "emptyReferenceFrames": 16,
+        "extraOnEmptyReferenceFrames": 67
+      },
+      "extraPillarReduction": 0.8419920404431537
+    },
+    "downtown": {
+      "baseline": {
+        "finePointCountInRoi": 5869,
+        "coveredFinePointCount": 5749,
+        "finePillarCount": 132,
+        "coveredFinePillarCount": 128,
+        "candidatePillarCount": 1956,
+        "extraPillarCount": 1828,
+        "frames": 24,
+        "pointCoverage": 0.9795535866416766,
+        "pointMissFraction": 0.020446413358323423,
+        "pillarRecall": 0.9696969696969697,
+        "extraPillarFraction": 0.934560327198364,
+        "pillarPrecision": 0.06543967280163598,
+        "emptyReferenceFrames": 0,
+        "extraOnEmptyReferenceFrames": 0
+      },
+      "final": {
+        "finePointCountInRoi": 5869,
+        "coveredFinePointCount": 5292,
+        "finePillarCount": 132,
+        "coveredFinePillarCount": 108,
+        "candidatePillarCount": 290,
+        "extraPillarCount": 182,
+        "frames": 24,
+        "pointCoverage": 0.9016868291020617,
+        "pointMissFraction": 0.09831317089793834,
+        "pillarRecall": 0.8181818181818182,
+        "extraPillarFraction": 0.6275862068965518,
+        "pillarPrecision": 0.37241379310344824,
+        "emptyReferenceFrames": 0,
+        "extraOnEmptyReferenceFrames": 0
+      },
+      "extraPillarReduction": 0.9004376367614879
+    }
+  },
+  "runtime": {
+    "Mississippi": {
+      "baseline": {
+        "calls": 72,
+        "medianMs": 58.467,
+        "meanMs": 61.657111111111114
+      },
+      "final": {
+        "calls": 72,
+        "medianMs": 60.367999999999995,
+        "meanMs": 63.05586111111111
+      }
+    },
+    "Downtown": {
+      "baseline": {
+        "calls": 72,
+        "medianMs": 64.67099999999999,
+        "meanMs": 62.473486111111114
+      },
+      "final": {
+        "calls": 72,
+        "medianMs": 71.84049999999999,
+        "meanMs": 70.94591666666666
+      }
+    }
+  },
+  "validation": {
+    "tests": 192,
+    "passed": 192,
+    "failed": 0,
+    "incomplete": 0
+  },
+  "limitation": "Sparse temporal and Downtown checks were reused to select the final coverage profile; not untouched test sets."
+}
