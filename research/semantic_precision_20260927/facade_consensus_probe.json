@@ -1,0 +1,26 @@
+{
+  "prefix": {
+    "selected": 941,
+    "false": 0,
+    "falseFraction": 0.0,
+    "covered": 97643,
+    "reference": 358020,
+    "coverage": 0.2727305737109659
+  },
+  "suffix": {
+    "selected": 18,
+    "false": 0,
+    "falseFraction": 0.0,
+    "covered": 1435,
+    "reference": 88125,
+    "coverage": 0.01628368794326241
+  },
+  "all": {
+    "selected": 959,
+    "false": 0,
+    "falseFraction": 0.0,
+    "covered": 99078,
+    "reference": 446145,
+    "coverage": 0.22207578253706756
+  }
+}

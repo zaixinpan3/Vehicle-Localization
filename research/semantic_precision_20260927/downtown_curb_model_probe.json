@@ -1,0 +1,97 @@
+[
+  {
+    "depth": 2,
+    "leaf": 10,
+    "prefix": {
+      "selected": 65,
+      "false": 2,
+      "covered": 235,
+      "threshold": 0.9466844060751691
+    }
+  },
+  {
+    "depth": 2,
+    "leaf": 25,
+    "prefix": {
+      "selected": 64,
+      "false": 3,
+      "covered": 233,
+      "threshold": 0.9471741347207279
+    }
+  },
+  {
+    "depth": 3,
+    "leaf": 10,
+    "prefix": {
+      "selected": 30,
+      "false": 1,
+      "covered": 111,
+      "threshold": 0.9705671742100614
+    }
+  },
+  {
+    "depth": 3,
+    "leaf": 25,
+    "prefix": {
+      "selected": 44,
+      "false": 2,
+      "covered": 159,
+      "threshold": 0.968763552693928
+    }
+  },
+  {
+    "depth": 4,
+    "leaf": 10,
+    "prefix": {
+      "selected": 67,
+      "false": 3,
+      "covered": 240,
+      "threshold": 0.9731447975751636
+    }
+  },
+  {
+    "depth": 4,
+    "leaf": 25,
+    "prefix": null
+  },
+  {
+    "depth": 5,
+    "leaf": 10,
+    "prefix": {
+      "selected": 44,
+      "false": 2,
+      "covered": 162,
+      "threshold": 0.9881997262593848
+    }
+  },
+  {
+    "depth": 5,
+    "leaf": 25,
+    "prefix": {
+      "selected": 52,
+      "false": 2,
+      "covered": 189,
+      "threshold": 0.984902726168966
+    }
+  },
+  {
+    "depth": 6,
+    "leaf": 10,
+    "prefix": {
+      "selected": 103,
+      "false": 3,
+      "covered": 378,
+      "threshold": 0.9867506025940948
+    }
+  },
+  {
+    "depth": 6,
+    "leaf": 25,
+    "prefix": {
+      "selected": 69,
+      "false": 3,
+      "covered": 249,
+      "threshold": 0.9901974315784906
+    }
+  }
+]

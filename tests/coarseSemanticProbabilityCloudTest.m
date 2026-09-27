@@ -66,7 +66,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
                 ["curb"; "pole"; "trafficSign"]);
         end
 
-        function referenceFramesPreserveGroundPerception(testCase)
+        function legacyProposalsPreserveGroundPerception(testCase)
         % referenceFramesTrackFullPerception: Tuned frames retain the full
         % baseline support after projection to cells and NDT components.
             testCase.assumeMississippiData();
@@ -84,7 +84,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             testCase.verifyGreaterThanOrEqual(metrics.ndt.curb.recall, 0.80);
         end
 
-        function dispersedFramesPreserveGroundRecall(testCase)
+        function legacyProposalsPreserveGroundRecall(testCase)
         % dispersedFramesPreserveHighRecall: Dispersed Mississippi
         % frames retain high feature support against the historical baseline.
             testCase.assumeMississippiData();
@@ -146,6 +146,10 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
         % against the unchanged full perception result.
             matPath = fullfile(dataRoot, "raw", "MissisipiPointClouds.mat");
             cfg = perceptionConfig();
+            % Preserve the historical proposal-recall contract here. The new
+            % precision-first operating policy is checked separately by
+            % semanticPillarPrecisionTest and the complete frozen-label replay.
+            cfg.semanticPrecision.enabled = false;
             % Stored baseline scores use the sensor-origin NDT lattice.
             % Hold its bin boundaries fixed when comparing perception fidelity;
             % reference-point changes are tested by lidarOriginCalibrationTest.

@@ -29,4 +29,5 @@ function cfg = perceptionConfig(dataset, executionMode)
     if dataset ~= "downtown", cfg.featureNames(cfg.featureNames=="facade") = []; end
     cfg.coarseProbabilityCloud = rmfield(cloudCfg,"semanticNames");
     cfg.fine = finePerceptionConfig();
+    cfg.semanticPrecision = semanticPillarPrecisionConfig(spacing,dataset);
 end

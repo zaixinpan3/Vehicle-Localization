@@ -1,0 +1,37 @@
+[
+  {
+    "file": "output/semantic_precision_20260927/mississippi_curb_features.csv",
+    "rows": 99361,
+    "columns": 160,
+    "sha256": "7e35774472ef35fc24e5e74bb26354ae48a8cc168c637293baf06c0c651defe9",
+    "perFrameCandidateCountsVerified": true
+  },
+  {
+    "file": "output/semantic_precision_20260927/mississippi_trafficSign_features.csv",
+    "rows": 4625,
+    "columns": 120,
+    "sha256": "73de3df6bdc87897ecbd0086412f1c20032253271f515b100110e2bf8c5424da",
+    "perFrameCandidateCountsVerified": true
+  },
+  {
+    "file": "output/semantic_precision_20260927/downtown_curb_features.csv",
+    "rows": 5414,
+    "columns": 160,
+    "sha256": "3e7fd4c3c0e1aef736f1edb5b6da71cbeb53213fc080c6a109b193296aff2966",
+    "perFrameCandidateCountsVerified": true
+  },
+  {
+    "file": "output/semantic_precision_20260927/downtown_trafficSign_features.csv",
+    "rows": 1454,
+    "columns": 120,
+    "sha256": "86dca0521e0149c7de08bc478254b2e29461a38c3362a3cd3ff190af456ec3b4",
+    "perFrameCandidateCountsVerified": true
+  },
+  {
+    "file": "output/semantic_precision_20260927/downtown_facade_features.csv",
+    "rows": 12576,
+    "columns": 181,
+    "sha256": "745babfedda94e95d2c751d6abf883d0a3244bfafb901af73c620c4b4ee7a19f",
+    "perFrameCandidateCountsVerified": true
+  }
+]

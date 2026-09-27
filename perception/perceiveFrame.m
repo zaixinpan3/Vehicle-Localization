@@ -47,6 +47,9 @@ function perception = perceiveFrame(frame, cfg)
     if any(ismember(featureNames,["pole","facade","trafficSign"]))
         offGround = analyzeStructuralPillars(offGroundVoxelGrid, cfg.offGroundFeatures, coarseCfg);
     end
+    if mode=="coarseProbabilityCloud" && isfield(cfg,"semanticPrecision")
+        [ground,offGround]=filterSemanticPillarCandidates(ground,offGround,featureNames,cfg.semanticPrecision,groundContext,offGroundVoxelGrid);
+    end
     candidates = buildPerceptionCandidates(voxelGrid, ground, offGround, coarseCfg.semanticNames);
     probabilityCloud = buildCoarseSemanticProbabilityCloud(ground, offGround, coarseCfg);
     perception = struct("executionMode", "coarseProbabilityCloud", ...
@@ -57,7 +60,8 @@ function perception = perceiveFrame(frame, cfg)
         "numGroundPoints", double(size(groundContext.groundPoints, 1)), ...
         "numOffGroundPoints", double(size(offGroundVoxelGrid.points, 1)));
     if logical(coarseCfg.storeDiagnostics)
-        perception.diagnostics = struct("ground", ground, "offGround", offGround, "pillars", voxelGrid.statistics);
+        perception.diagnostics = struct("ground", ground, "offGround", offGround, "pillars", voxelGrid.statistics, ...
+            "groundPointContext",groundContext,"offGroundPointContext",offGroundVoxelGrid);
     end
     if mode == "offline"
         context = struct("voxelGrid", voxelGrid, "groundContext", groundContext, ...

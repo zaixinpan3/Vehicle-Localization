@@ -1,0 +1,17 @@
+{
+  "seed": 927,
+  "limits": {
+    "mississippi": 780,
+    "downtown": 360
+  },
+  "purge": {
+    "mississippi": 20,
+    "downtown": 10
+  },
+  "folds": 5,
+  "selection": "maximize minimum dataset reference-point coverage with profile-specific thresholds at <=5% prefix OOF reference-empty selection and at least 30 selections per dataset",
+  "features": "whole 0.6 m pillar distributions and neighboring raster summaries; no frame identity or absolute XY coordinates",
+  "suffix": "reused recordings; suffix labels are excluded from fitting and operating-point selection",
+  "facadeSelection": "Conjunction of extra-tree probability and 9-neighbor agreement; forest thresholds at nine prefix OOF quantiles, choose maximum point coverage under <=5% false and >=30 selected pillars. 250 extra trees depth 12, leaf 3; robust scaler quantiles 10/90. Selected threshold 0.8504190548553759 and all nine neighbors positive.",
+  "knownLimitations": "Reuse of recordings, many prefix alternatives, sparse Downtown curb/facade selections and poor coverage; observed <=10% suffix errors is not a statistical guarantee."
+}

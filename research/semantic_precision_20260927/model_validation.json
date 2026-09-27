@@ -1,0 +1,246 @@
+{
+  "curb": {
+    "thresholds": {
+      "mississippi": 0.8430520806497812,
+      "downtown": 0.9848661604552142
+    },
+    "depth": 6,
+    "features": 157,
+    "prefixOOF": {
+      "mississippi": {
+        "selected": 19908,
+        "false": 994,
+        "falseFraction": 0.04992967651195499,
+        "coveredPoints": 66649,
+        "referencePoints": 91697,
+        "pointCoverage": 0.7268394822077058
+      },
+      "downtown": {
+        "selected": 65,
+        "false": 3,
+        "falseFraction": 0.046153846153846156,
+        "coveredPoints": 231,
+        "referencePoints": 5257,
+        "pointCoverage": 0.043941411451398134
+      }
+    },
+    "validation": {
+      "downtown": {
+        "prefix": {
+          "selected": 173,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 654,
+          "referencePoints": 5257,
+          "pointCoverage": 0.12440555449876356,
+          "baselineSelected": 4334,
+          "baselineFalse": 2831,
+          "baselineCovered": 4448
+        },
+        "suffix": {
+          "selected": 20,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 73,
+          "referencePoints": 676,
+          "pointCoverage": 0.10798816568047337,
+          "baselineSelected": 1080,
+          "baselineFalse": 905,
+          "baselineCovered": 499
+        },
+        "all": {
+          "selected": 193,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 727,
+          "referencePoints": 5933,
+          "pointCoverage": 0.1225349738749368,
+          "baselineSelected": 5414,
+          "baselineFalse": 3736,
+          "baselineCovered": 4947
+        }
+      },
+      "mississippi": {
+        "prefix": {
+          "selected": 20868,
+          "false": 780,
+          "falseFraction": 0.03737780333525014,
+          "coveredPoints": 70813,
+          "referencePoints": 91697,
+          "pointCoverage": 0.772249910029772,
+          "baselineSelected": 66398,
+          "baselineFalse": 39485,
+          "baselineCovered": 82584
+        },
+        "suffix": {
+          "selected": 9199,
+          "false": 724,
+          "falseFraction": 0.07870420697901946,
+          "coveredPoints": 29333,
+          "referencePoints": 42139,
+          "pointCoverage": 0.6961009990744915,
+          "baselineSelected": 32963,
+          "baselineFalse": 20724,
+          "baselineCovered": 37099
+        },
+        "all": {
+          "selected": 30067,
+          "false": 1504,
+          "falseFraction": 0.05002161838560548,
+          "coveredPoints": 100146,
+          "referencePoints": 133836,
+          "pointCoverage": 0.748274006993634,
+          "baselineSelected": 99361,
+          "baselineFalse": 60209,
+          "baselineCovered": 119683
+        }
+      }
+    }
+  },
+  "trafficSign": {
+    "thresholds": {
+      "mississippi": 0.08927648321052264,
+      "downtown": 0.04845651674672971
+    },
+    "depth": 6,
+    "features": 117,
+    "prefixOOF": {
+      "mississippi": {
+        "selected": 3749,
+        "false": 94,
+        "falseFraction": 0.025073352894105096,
+        "coveredPoints": 58933,
+        "referencePoints": 58938,
+        "pointCoverage": 0.9999151650887373
+      },
+      "downtown": {
+        "selected": 861,
+        "false": 43,
+        "falseFraction": 0.04994192799070848,
+        "coveredPoints": 7480,
+        "referencePoints": 7522,
+        "pointCoverage": 0.9944163786227067
+      }
+    },
+    "validation": {
+      "downtown": {
+        "prefix": {
+          "selected": 822,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 7485,
+          "referencePoints": 7522,
+          "pointCoverage": 0.9950810954533369,
+          "baselineSelected": 875,
+          "baselineFalse": 53,
+          "baselineCovered": 7485
+        },
+        "suffix": {
+          "selected": 575,
+          "false": 9,
+          "falseFraction": 0.01565217391304348,
+          "coveredPoints": 4920,
+          "referencePoints": 4923,
+          "pointCoverage": 0.9993906154783668,
+          "baselineSelected": 579,
+          "baselineFalse": 12,
+          "baselineCovered": 4921
+        },
+        "all": {
+          "selected": 1397,
+          "false": 9,
+          "falseFraction": 0.006442376521116679,
+          "coveredPoints": 12405,
+          "referencePoints": 12445,
+          "pointCoverage": 0.9967858577742065,
+          "baselineSelected": 1454,
+          "baselineFalse": 65,
+          "baselineCovered": 12406
+        }
+      },
+      "mississippi": {
+        "prefix": {
+          "selected": 3651,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 58929,
+          "referencePoints": 58938,
+          "pointCoverage": 0.9998472971597272,
+          "baselineSelected": 3751,
+          "baselineFalse": 96,
+          "baselineCovered": 58933
+        },
+        "suffix": {
+          "selected": 866,
+          "false": 28,
+          "falseFraction": 0.03233256351039261,
+          "coveredPoints": 7839,
+          "referencePoints": 7845,
+          "pointCoverage": 0.9992351816443594,
+          "baselineSelected": 874,
+          "baselineFalse": 33,
+          "baselineCovered": 7842
+        },
+        "all": {
+          "selected": 4517,
+          "false": 28,
+          "falseFraction": 0.006198804516271862,
+          "coveredPoints": 66768,
+          "referencePoints": 66783,
+          "pointCoverage": 0.9997753919410628,
+          "baselineSelected": 4625,
+          "baselineFalse": 129,
+          "baselineCovered": 66775
+        }
+      }
+    }
+  },
+  "facade": {
+    "kind": "forestNeighborConsensus",
+    "features": 178,
+    "thresholds": {
+      "downtown": 0.8504190548553759
+    },
+    "prefixOOF": {
+      "downtown": {
+        "selected": 34,
+        "false": 1,
+        "coveredPoints": 4647,
+        "threshold": 0.8504190548553759,
+        "neighborThreshold": 1.0,
+        "referencePoints": 358020,
+        "pointCoverage": 0.012979721803251215,
+        "falseFraction": 0.029411764705882353
+      }
+    },
+    "validation": {
+      "downtown": {
+        "prefix": {
+          "selected": 941,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 97643,
+          "referencePoints": 358020,
+          "pointCoverage": 0.2727305737109659
+        },
+        "suffix": {
+          "selected": 18,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 1435,
+          "referencePoints": 88125,
+          "pointCoverage": 0.01628368794326241
+        },
+        "all": {
+          "selected": 959,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 99078,
+          "referencePoints": 446145,
+          "pointCoverage": 0.22207578253706756
+        }
+      }
+    },
+    "limitation": "Very sparse suffix selections; 0 observed false selections does not establish a population false-selection rate below 10%."
+  }
+}

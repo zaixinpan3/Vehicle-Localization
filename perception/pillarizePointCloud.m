@@ -17,6 +17,7 @@ function pillars = pillarizePointCloud(frame, cfg)
     keep = keep & all(bins >= 1 & bins <= dims, 2);
     xyz = xyz(keep, :);
     indices = indices(keep);
+    indices = indices(:);
     bins = bins(keep, :);
     names = fieldnames(attributes);
     for k = 1:numel(names), attributes.(names{k}) = attributes.(names{k})(keep); end

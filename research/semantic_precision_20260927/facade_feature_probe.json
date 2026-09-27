@@ -1,0 +1,58 @@
+[
+  {
+    "semantic": "facade",
+    "depth": 4,
+    "features": 147,
+    "choice": null,
+    "log": "output/semantic_precision_20260927/raw_support_training.log"
+  },
+  {
+    "semantic": "facade",
+    "depth": 6,
+    "features": 147,
+    "choice": null,
+    "log": "output/semantic_precision_20260927/raw_support_training.log"
+  },
+  {
+    "semantic": "facade",
+    "depth": 4,
+    "features": 178,
+    "choice": null,
+    "log": "output/semantic_precision_20260927/facade_group_training.log"
+  },
+  {
+    "semantic": "facade",
+    "depth": 6,
+    "features": 178,
+    "choice": null,
+    "log": "output/semantic_precision_20260927/facade_group_training.log"
+  },
+  {
+    "semantic": "facade",
+    "depth": 4,
+    "features": 280,
+    "choice": null,
+    "log": "output/semantic_precision_20260927/facade_wide_training.log"
+  },
+  {
+    "semantic": "facade",
+    "depth": 6,
+    "features": 280,
+    "choice": null,
+    "log": "output/semantic_precision_20260927/facade_wide_training.log"
+  },
+  {
+    "semantic": "facade",
+    "depth": 4,
+    "features": 191,
+    "choice": null,
+    "log": "output/semantic_precision_20260927/facade_placement_training.log"
+  },
+  {
+    "semantic": "facade",
+    "depth": 6,
+    "features": 191,
+    "choice": null,
+    "log": "output/semantic_precision_20260927/facade_placement_training.log"
+  }
+]

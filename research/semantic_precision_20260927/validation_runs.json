@@ -1,0 +1,11 @@
+{
+  "uniqueTests": 249,
+  "passed": 249,
+  "failed": 0,
+  "incomplete": 0,
+  "mainRun": "validateSemanticPrecision: all other tests passed; one scalar-invalid-input failure fixed by normalizing retained pointIndices to a column.",
+  "targetedRerun": "runtests tests/semanticPillarPrecisionTest.m: all six tests passed after the fix; these six latest results replace the same-named earlier rows.",
+  "previousResults": "output/semantic_precision_20260927/tests_before_empty_input_fix.csv",
+  "rerunResults": "output/semantic_precision_20260927/semantic_retest.csv",
+  "initialHarnessRun": "Initial missing root search path was fixed by addpath(root); initial failed run is preserved under output/semantic_precision_20260927/tests_initial_failure.*. An empty-candidate guard fixed the new gate empty raster case."
+}

@@ -1,0 +1,20 @@
+{
+  "prefix": {
+    "selected": 524,
+    "false": 0,
+    "covered": 1904,
+    "reference": 5257
+  },
+  "suffix": {
+    "selected": 40,
+    "false": 4,
+    "covered": 121,
+    "reference": 676
+  },
+  "all": {
+    "selected": 564,
+    "false": 4,
+    "covered": 2025,
+    "reference": 5933
+  }
+}

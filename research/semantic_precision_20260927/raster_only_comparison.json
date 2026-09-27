@@ -1,0 +1,14 @@
+[
+  {
+    "semantic": "curb",
+    "depth": 3,
+    "features": 112,
+    "choice": null
+  },
+  {
+    "semantic": "curb",
+    "depth": 5,
+    "features": 112,
+    "choice": null
+  }
+]

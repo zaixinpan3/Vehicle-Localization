@@ -1,0 +1,107 @@
+[
+  {
+    "semantic": "curb",
+    "depth": 4,
+    "features": 157,
+    "choice": null
+  },
+  {
+    "semantic": "curb",
+    "depth": 6,
+    "features": 157,
+    "choice": {
+      "threshold": {
+        "mississippi": 0.8430520806497812,
+        "downtown": 0.9848661604552142
+      },
+      "metrics": {
+        "mississippi": {
+          "selected": 19908,
+          "false": 994,
+          "falseFraction": 0.04992967651195499,
+          "coveredPoints": 66649,
+          "referencePoints": 91697,
+          "pointCoverage": 0.7268394822077058
+        },
+        "downtown": {
+          "selected": 65,
+          "false": 3,
+          "falseFraction": 0.046153846153846156,
+          "coveredPoints": 231,
+          "referencePoints": 5257,
+          "pointCoverage": 0.043941411451398134
+        }
+      }
+    }
+  },
+  {
+    "semantic": "trafficSign",
+    "depth": 4,
+    "features": 117,
+    "choice": {
+      "threshold": {
+        "mississippi": 0.08641558071145916,
+        "downtown": 0.07526914617683726
+      },
+      "metrics": {
+        "mississippi": {
+          "selected": 3751,
+          "false": 96,
+          "falseFraction": 0.025593175153292454,
+          "coveredPoints": 58933,
+          "referencePoints": 58938,
+          "pointCoverage": 0.9999151650887373
+        },
+        "downtown": {
+          "selected": 858,
+          "false": 41,
+          "falseFraction": 0.047785547785547784,
+          "coveredPoints": 7479,
+          "referencePoints": 7522,
+          "pointCoverage": 0.9942834352565807
+        }
+      }
+    }
+  },
+  {
+    "semantic": "trafficSign",
+    "depth": 6,
+    "features": 117,
+    "choice": {
+      "threshold": {
+        "mississippi": 0.08927648321052264,
+        "downtown": 0.04845651674672971
+      },
+      "metrics": {
+        "mississippi": {
+          "selected": 3749,
+          "false": 94,
+          "falseFraction": 0.025073352894105096,
+          "coveredPoints": 58933,
+          "referencePoints": 58938,
+          "pointCoverage": 0.9999151650887373
+        },
+        "downtown": {
+          "selected": 861,
+          "false": 43,
+          "falseFraction": 0.04994192799070848,
+          "coveredPoints": 7480,
+          "referencePoints": 7522,
+          "pointCoverage": 0.9944163786227067
+        }
+      }
+    }
+  },
+  {
+    "semantic": "facade",
+    "depth": 4,
+    "features": 147,
+    "choice": null
+  },
+  {
+    "semantic": "facade",
+    "depth": 6,
+    "features": 147,
+    "choice": null
+  }
+]

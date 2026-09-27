@@ -1,0 +1,17 @@
+[
+  {
+    "file": "config/curbPillarPrecisionModel.json",
+    "bytes": 563184,
+    "sha256": "69b844b02e2b9544077e2377176a258548f9f042f06bd6ec2734a05088d32dc5"
+  },
+  {
+    "file": "config/trafficSignPillarPrecisionModel.json",
+    "bytes": 330468,
+    "sha256": "ca3c388b73ccf0fae4f13881c2b6cffc0709eb6d909a400d4275729451b37516"
+  },
+  {
+    "file": "config/facadePillarPrecisionModel.json",
+    "bytes": 35900011,
+    "sha256": "e197a44da0404f5b87c4944d8956c26594ab267165ef4727dd4fe886e1666f65"
+  }
+]

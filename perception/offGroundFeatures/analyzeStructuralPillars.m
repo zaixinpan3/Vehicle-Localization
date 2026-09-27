@@ -93,8 +93,12 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
         % vertical spread. Both maps remain one statistic per whole pillar.
         facadeMaps=maps;
         facadeMaps.supportEvidence=single(maps.pillarCounts);
+        if isfield(cfg,'facadeContinuousSupportMinimumPoints')
+            facadeMaps.supportEvidence=continuousPillarHeightSupport(pillars,mapSize,cfg.facadeContinuousSupportMinimumPoints);
+            facadeMaps.occupiedMask=facadeMaps.supportEvidence>0;
+        end
         [~,facadeMaps.lineScore,facadeMaps.normalOrientation]=buildPillarShapeScores( ...
-            facadeMaps.supportEvidence,maps.occupiedMask,cfg,maps.dx,maps.dy);
+            facadeMaps.supportEvidence,facadeMaps.occupiedMask,cfg,maps.dx,maps.dy);
         facade=extractFacadeFeatures(facadeMaps,facadeCfg);
         facade=expandFacadePillarSupport(facade,maps,cfg);
         maps.facadeLineScore=facadeMaps.lineScore;

@@ -1,0 +1,46 @@
+[
+  {
+    "file": "output/semantic_precision_20260927/mississippi_baseline.mat",
+    "sha256": "a8f6d65558696a0a4468f800b74757dd48348c5eb12429f7a322512fe32d6ed2"
+  },
+  {
+    "file": "output/semantic_precision_20260927/downtown_baseline.mat",
+    "sha256": "e0f2e1c8df66f234a05b6fcbacaeb0665668b98b3950a7c0d0aafe6ef4aaebfc"
+  },
+  {
+    "file": "output/semantic_precision_20260927/curb_model.json",
+    "sha256": "69b844b02e2b9544077e2377176a258548f9f042f06bd6ec2734a05088d32dc5"
+  },
+  {
+    "file": "output/semantic_precision_20260927/trafficSign_model.json",
+    "sha256": "ca3c388b73ccf0fae4f13881c2b6cffc0709eb6d909a400d4275729451b37516"
+  },
+  {
+    "file": "output/semantic_precision_20260927/downtown_curb_model.json",
+    "sha256": "91fc9ee4d7e00e13632e01f4ca652a7943a3cdb351afedf1d0f60c6631989d3c"
+  },
+  {
+    "file": "output/semantic_precision_20260927/facade_model.json",
+    "sha256": "e197a44da0404f5b87c4944d8956c26594ab267165ef4727dd4fe886e1666f65"
+  },
+  {
+    "file": "output/semantic_precision_20260927/curb_predictions.csv",
+    "sha256": "268fc6df2acf107d02a4cc6ea1cb94412a0ba1e676cf547e0ed6ecee84c38aff"
+  },
+  {
+    "file": "output/semantic_precision_20260927/trafficSign_predictions.csv",
+    "sha256": "ee991c77c9627590710cb1ad44ccc3476fca97fd69f0f9284469fe52385027b4"
+  },
+  {
+    "file": "output/semantic_precision_20260927/downtown_curb_dedicated_predictions.csv",
+    "sha256": "1c83d5e8825a0ceef01888fc7ab37e250ce14d5e07756c51ed69c37a5f4381d0"
+  },
+  {
+    "file": "output/semantic_precision_20260927/downtown_curb_groups_dedicated_predictions.csv",
+    "sha256": "ad6d0a92bdf8fae2bf241f6e0f1519031becbda3630cbadb3a14c190d1a7569b"
+  },
+  {
+    "file": "output/semantic_precision_20260927/facade_predictions.csv",
+    "sha256": "369111265b1005a0c23933513f106c81633ac6652ae85cc8f528f3181493cc2a"
+  }
+]

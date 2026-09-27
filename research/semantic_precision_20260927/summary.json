@@ -1,0 +1,874 @@
+{
+  "counts": {
+    "mississippi": {
+      "curb": {
+        "prefix": {
+          "baseline": {
+            "candidatePillarCount": 66398,
+            "extraPillarCount": 39485,
+            "finePointCountInRoi": 91697,
+            "coveredFinePointCount": 82584,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.5946715262507907,
+            "referencePointCoverage": 0.9006183408399402,
+            "frames": 780,
+            "framesWithReference": 772,
+            "referenceFramesWithNoSelection": 2,
+            "framesWithFalseSelection": 778
+          },
+          "precision": {
+            "candidatePillarCount": 20868,
+            "extraPillarCount": 780,
+            "finePointCountInRoi": 91697,
+            "coveredFinePointCount": 70813,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.03737780333525014,
+            "referencePointCoverage": 0.772249910029772,
+            "frames": 780,
+            "framesWithReference": 772,
+            "referenceFramesWithNoSelection": 20,
+            "framesWithFalseSelection": 403
+          }
+        },
+        "suffix": {
+          "baseline": {
+            "candidatePillarCount": 32963,
+            "extraPillarCount": 20724,
+            "finePointCountInRoi": 42139,
+            "coveredFinePointCount": 37099,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.6287049115675151,
+            "referencePointCoverage": 0.8803958328389379,
+            "frames": 390,
+            "framesWithReference": 390,
+            "referenceFramesWithNoSelection": 1,
+            "framesWithFalseSelection": 389
+          },
+          "precision": {
+            "candidatePillarCount": 9199,
+            "extraPillarCount": 724,
+            "finePointCountInRoi": 42139,
+            "coveredFinePointCount": 29333,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.07870420697901946,
+            "referencePointCoverage": 0.6961009990744915,
+            "frames": 390,
+            "framesWithReference": 390,
+            "referenceFramesWithNoSelection": 1,
+            "framesWithFalseSelection": 248
+          }
+        },
+        "all": {
+          "baseline": {
+            "candidatePillarCount": 99361,
+            "extraPillarCount": 60209,
+            "finePointCountInRoi": 133836,
+            "coveredFinePointCount": 119683,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.6059620978049738,
+            "referencePointCoverage": 0.8942511730774978,
+            "frames": 1170,
+            "framesWithReference": 1162,
+            "referenceFramesWithNoSelection": 3,
+            "framesWithFalseSelection": 1167
+          },
+          "precision": {
+            "candidatePillarCount": 30067,
+            "extraPillarCount": 1504,
+            "finePointCountInRoi": 133836,
+            "coveredFinePointCount": 100146,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.05002161838560548,
+            "referencePointCoverage": 0.748274006993634,
+            "frames": 1170,
+            "framesWithReference": 1162,
+            "referenceFramesWithNoSelection": 21,
+            "framesWithFalseSelection": 651
+          }
+        }
+      },
+      "pole": {
+        "prefix": {
+          "baseline": {
+            "candidatePillarCount": 825,
+            "extraPillarCount": 10,
+            "finePointCountInRoi": 124708,
+            "coveredFinePointCount": 93532,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.012121212121212121,
+            "referencePointCoverage": 0.7500080187317574,
+            "frames": 780,
+            "framesWithReference": 728,
+            "referenceFramesWithNoSelection": 132,
+            "framesWithFalseSelection": 10
+          },
+          "precision": {
+            "candidatePillarCount": 825,
+            "extraPillarCount": 10,
+            "finePointCountInRoi": 124708,
+            "coveredFinePointCount": 93532,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.012121212121212121,
+            "referencePointCoverage": 0.7500080187317574,
+            "frames": 780,
+            "framesWithReference": 728,
+            "referenceFramesWithNoSelection": 132,
+            "framesWithFalseSelection": 10
+          }
+        },
+        "suffix": {
+          "baseline": {
+            "candidatePillarCount": 397,
+            "extraPillarCount": 20,
+            "finePointCountInRoi": 69592,
+            "coveredFinePointCount": 43411,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.05037783375314862,
+            "referencePointCoverage": 0.6237929647085871,
+            "frames": 390,
+            "framesWithReference": 374,
+            "referenceFramesWithNoSelection": 77,
+            "framesWithFalseSelection": 20
+          },
+          "precision": {
+            "candidatePillarCount": 397,
+            "extraPillarCount": 20,
+            "finePointCountInRoi": 69592,
+            "coveredFinePointCount": 43411,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.05037783375314862,
+            "referencePointCoverage": 0.6237929647085871,
+            "frames": 390,
+            "framesWithReference": 374,
+            "referenceFramesWithNoSelection": 77,
+            "framesWithFalseSelection": 20
+          }
+        },
+        "all": {
+          "baseline": {
+            "candidatePillarCount": 1222,
+            "extraPillarCount": 30,
+            "finePointCountInRoi": 194300,
+            "coveredFinePointCount": 136943,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.024549918166939442,
+            "referencePointCoverage": 0.7048018528049408,
+            "frames": 1170,
+            "framesWithReference": 1102,
+            "referenceFramesWithNoSelection": 209,
+            "framesWithFalseSelection": 30
+          },
+          "precision": {
+            "candidatePillarCount": 1222,
+            "extraPillarCount": 30,
+            "finePointCountInRoi": 194300,
+            "coveredFinePointCount": 136943,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.024549918166939442,
+            "referencePointCoverage": 0.7048018528049408,
+            "frames": 1170,
+            "framesWithReference": 1102,
+            "referenceFramesWithNoSelection": 209,
+            "framesWithFalseSelection": 30
+          }
+        }
+      },
+      "trafficSign": {
+        "prefix": {
+          "baseline": {
+            "candidatePillarCount": 3751,
+            "extraPillarCount": 96,
+            "finePointCountInRoi": 58938,
+            "coveredFinePointCount": 58933,
+            "finePointCountOutsideRoi": 3735,
+            "falseSelectionFraction": 0.025593175153292454,
+            "referencePointCoverage": 0.9999151650887373,
+            "frames": 780,
+            "framesWithReference": 634,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 69
+          },
+          "precision": {
+            "candidatePillarCount": 3651,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 58938,
+            "coveredFinePointCount": 58929,
+            "finePointCountOutsideRoi": 3735,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.9998472971597272,
+            "frames": 780,
+            "framesWithReference": 634,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 0
+          }
+        },
+        "suffix": {
+          "baseline": {
+            "candidatePillarCount": 874,
+            "extraPillarCount": 33,
+            "finePointCountInRoi": 7845,
+            "coveredFinePointCount": 7842,
+            "finePointCountOutsideRoi": 437,
+            "falseSelectionFraction": 0.03775743707093822,
+            "referencePointCoverage": 0.9996175908221797,
+            "frames": 390,
+            "framesWithReference": 283,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 26
+          },
+          "precision": {
+            "candidatePillarCount": 866,
+            "extraPillarCount": 28,
+            "finePointCountInRoi": 7845,
+            "coveredFinePointCount": 7839,
+            "finePointCountOutsideRoi": 437,
+            "falseSelectionFraction": 0.03233256351039261,
+            "referencePointCoverage": 0.9992351816443594,
+            "frames": 390,
+            "framesWithReference": 283,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 21
+          }
+        },
+        "all": {
+          "baseline": {
+            "candidatePillarCount": 4625,
+            "extraPillarCount": 129,
+            "finePointCountInRoi": 66783,
+            "coveredFinePointCount": 66775,
+            "finePointCountOutsideRoi": 4172,
+            "falseSelectionFraction": 0.027891891891891892,
+            "referencePointCoverage": 0.9998802090352336,
+            "frames": 1170,
+            "framesWithReference": 917,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 95
+          },
+          "precision": {
+            "candidatePillarCount": 4517,
+            "extraPillarCount": 28,
+            "finePointCountInRoi": 66783,
+            "coveredFinePointCount": 66768,
+            "finePointCountOutsideRoi": 4172,
+            "falseSelectionFraction": 0.006198804516271862,
+            "referencePointCoverage": 0.9997753919410628,
+            "frames": 1170,
+            "framesWithReference": 917,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 21
+          }
+        }
+      }
+    },
+    "downtown": {
+      "curb": {
+        "prefix": {
+          "baseline": {
+            "candidatePillarCount": 4334,
+            "extraPillarCount": 2831,
+            "finePointCountInRoi": 5257,
+            "coveredFinePointCount": 4448,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.653207198892478,
+            "referencePointCoverage": 0.8461099486399087,
+            "frames": 85,
+            "framesWithReference": 74,
+            "referenceFramesWithNoSelection": 2,
+            "framesWithFalseSelection": 82
+          },
+          "precision": {
+            "candidatePillarCount": 173,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 5257,
+            "coveredFinePointCount": 654,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.12440555449876356,
+            "frames": 85,
+            "framesWithReference": 74,
+            "referenceFramesWithNoSelection": 43,
+            "framesWithFalseSelection": 0
+          }
+        },
+        "suffix": {
+          "baseline": {
+            "candidatePillarCount": 1080,
+            "extraPillarCount": 905,
+            "finePointCountInRoi": 676,
+            "coveredFinePointCount": 499,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.8379629629629629,
+            "referencePointCoverage": 0.7381656804733728,
+            "frames": 43,
+            "framesWithReference": 20,
+            "referenceFramesWithNoSelection": 3,
+            "framesWithFalseSelection": 33
+          },
+          "precision": {
+            "candidatePillarCount": 20,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 676,
+            "coveredFinePointCount": 73,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.10798816568047337,
+            "frames": 43,
+            "framesWithReference": 20,
+            "referenceFramesWithNoSelection": 14,
+            "framesWithFalseSelection": 0
+          }
+        },
+        "all": {
+          "baseline": {
+            "candidatePillarCount": 5414,
+            "extraPillarCount": 3736,
+            "finePointCountInRoi": 5933,
+            "coveredFinePointCount": 4947,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.690062800147765,
+            "referencePointCoverage": 0.833810888252149,
+            "frames": 128,
+            "framesWithReference": 94,
+            "referenceFramesWithNoSelection": 5,
+            "framesWithFalseSelection": 115
+          },
+          "precision": {
+            "candidatePillarCount": 193,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 5933,
+            "coveredFinePointCount": 727,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.1225349738749368,
+            "frames": 128,
+            "framesWithReference": 94,
+            "referenceFramesWithNoSelection": 57,
+            "framesWithFalseSelection": 0
+          }
+        }
+      },
+      "facade": {
+        "prefix": {
+          "baseline": {
+            "candidatePillarCount": 8614,
+            "extraPillarCount": 6078,
+            "finePointCountInRoi": 358020,
+            "coveredFinePointCount": 227476,
+            "finePointCountOutsideRoi": 462,
+            "falseSelectionFraction": 0.7055955421407012,
+            "referencePointCoverage": 0.635372325568404,
+            "frames": 85,
+            "framesWithReference": 85,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 85
+          },
+          "precision": {
+            "candidatePillarCount": 941,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 358020,
+            "coveredFinePointCount": 97643,
+            "finePointCountOutsideRoi": 462,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.2727305737109659,
+            "frames": 85,
+            "framesWithReference": 85,
+            "referenceFramesWithNoSelection": 18,
+            "framesWithFalseSelection": 0
+          }
+        },
+        "suffix": {
+          "baseline": {
+            "candidatePillarCount": 3962,
+            "extraPillarCount": 3022,
+            "finePointCountInRoi": 88125,
+            "coveredFinePointCount": 47994,
+            "finePointCountOutsideRoi": 496,
+            "falseSelectionFraction": 0.7627460878344271,
+            "referencePointCoverage": 0.5446127659574468,
+            "frames": 43,
+            "framesWithReference": 43,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 43
+          },
+          "precision": {
+            "candidatePillarCount": 18,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 88125,
+            "coveredFinePointCount": 1435,
+            "finePointCountOutsideRoi": 496,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.01628368794326241,
+            "frames": 43,
+            "framesWithReference": 43,
+            "referenceFramesWithNoSelection": 41,
+            "framesWithFalseSelection": 0
+          }
+        },
+        "all": {
+          "baseline": {
+            "candidatePillarCount": 12576,
+            "extraPillarCount": 9100,
+            "finePointCountInRoi": 446145,
+            "coveredFinePointCount": 275470,
+            "finePointCountOutsideRoi": 958,
+            "falseSelectionFraction": 0.7236005089058524,
+            "referencePointCoverage": 0.6174450010646763,
+            "frames": 128,
+            "framesWithReference": 128,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 128
+          },
+          "precision": {
+            "candidatePillarCount": 959,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 446145,
+            "coveredFinePointCount": 99078,
+            "finePointCountOutsideRoi": 958,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.22207578253706756,
+            "frames": 128,
+            "framesWithReference": 128,
+            "referenceFramesWithNoSelection": 59,
+            "framesWithFalseSelection": 0
+          }
+        }
+      },
+      "pole": {
+        "prefix": {
+          "baseline": {
+            "candidatePillarCount": 235,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 27716,
+            "coveredFinePointCount": 17571,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.6339659402511185,
+            "frames": 85,
+            "framesWithReference": 83,
+            "referenceFramesWithNoSelection": 11,
+            "framesWithFalseSelection": 0
+          },
+          "precision": {
+            "candidatePillarCount": 235,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 27716,
+            "coveredFinePointCount": 17571,
+            "finePointCountOutsideRoi": 0,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.6339659402511185,
+            "frames": 85,
+            "framesWithReference": 83,
+            "referenceFramesWithNoSelection": 11,
+            "framesWithFalseSelection": 0
+          }
+        },
+        "suffix": {
+          "baseline": {
+            "candidatePillarCount": 40,
+            "extraPillarCount": 3,
+            "finePointCountInRoi": 7113,
+            "coveredFinePointCount": 2746,
+            "finePointCountOutsideRoi": 13,
+            "falseSelectionFraction": 0.075,
+            "referencePointCoverage": 0.38605370448474624,
+            "frames": 43,
+            "framesWithReference": 41,
+            "referenceFramesWithNoSelection": 12,
+            "framesWithFalseSelection": 3
+          },
+          "precision": {
+            "candidatePillarCount": 40,
+            "extraPillarCount": 3,
+            "finePointCountInRoi": 7113,
+            "coveredFinePointCount": 2746,
+            "finePointCountOutsideRoi": 13,
+            "falseSelectionFraction": 0.075,
+            "referencePointCoverage": 0.38605370448474624,
+            "frames": 43,
+            "framesWithReference": 41,
+            "referenceFramesWithNoSelection": 12,
+            "framesWithFalseSelection": 3
+          }
+        },
+        "all": {
+          "baseline": {
+            "candidatePillarCount": 275,
+            "extraPillarCount": 3,
+            "finePointCountInRoi": 34829,
+            "coveredFinePointCount": 20317,
+            "finePointCountOutsideRoi": 13,
+            "falseSelectionFraction": 0.01090909090909091,
+            "referencePointCoverage": 0.5833357259754802,
+            "frames": 128,
+            "framesWithReference": 124,
+            "referenceFramesWithNoSelection": 23,
+            "framesWithFalseSelection": 3
+          },
+          "precision": {
+            "candidatePillarCount": 275,
+            "extraPillarCount": 3,
+            "finePointCountInRoi": 34829,
+            "coveredFinePointCount": 20317,
+            "finePointCountOutsideRoi": 13,
+            "falseSelectionFraction": 0.01090909090909091,
+            "referencePointCoverage": 0.5833357259754802,
+            "frames": 128,
+            "framesWithReference": 124,
+            "referenceFramesWithNoSelection": 23,
+            "framesWithFalseSelection": 3
+          }
+        }
+      },
+      "trafficSign": {
+        "prefix": {
+          "baseline": {
+            "candidatePillarCount": 875,
+            "extraPillarCount": 53,
+            "finePointCountInRoi": 7522,
+            "coveredFinePointCount": 7485,
+            "finePointCountOutsideRoi": 495,
+            "falseSelectionFraction": 0.060571428571428575,
+            "referencePointCoverage": 0.9950810954533369,
+            "frames": 85,
+            "framesWithReference": 85,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 37
+          },
+          "precision": {
+            "candidatePillarCount": 822,
+            "extraPillarCount": 0,
+            "finePointCountInRoi": 7522,
+            "coveredFinePointCount": 7485,
+            "finePointCountOutsideRoi": 495,
+            "falseSelectionFraction": 0.0,
+            "referencePointCoverage": 0.9950810954533369,
+            "frames": 85,
+            "framesWithReference": 85,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 0
+          }
+        },
+        "suffix": {
+          "baseline": {
+            "candidatePillarCount": 579,
+            "extraPillarCount": 12,
+            "finePointCountInRoi": 4923,
+            "coveredFinePointCount": 4921,
+            "finePointCountOutsideRoi": 732,
+            "falseSelectionFraction": 0.02072538860103627,
+            "referencePointCoverage": 0.9995937436522445,
+            "frames": 43,
+            "framesWithReference": 43,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 9
+          },
+          "precision": {
+            "candidatePillarCount": 575,
+            "extraPillarCount": 9,
+            "finePointCountInRoi": 4923,
+            "coveredFinePointCount": 4920,
+            "finePointCountOutsideRoi": 732,
+            "falseSelectionFraction": 0.01565217391304348,
+            "referencePointCoverage": 0.9993906154783668,
+            "frames": 43,
+            "framesWithReference": 43,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 8
+          }
+        },
+        "all": {
+          "baseline": {
+            "candidatePillarCount": 1454,
+            "extraPillarCount": 65,
+            "finePointCountInRoi": 12445,
+            "coveredFinePointCount": 12406,
+            "finePointCountOutsideRoi": 1227,
+            "falseSelectionFraction": 0.04470426409903714,
+            "referencePointCoverage": 0.9968662113298513,
+            "frames": 128,
+            "framesWithReference": 128,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 46
+          },
+          "precision": {
+            "candidatePillarCount": 1397,
+            "extraPillarCount": 9,
+            "finePointCountInRoi": 12445,
+            "coveredFinePointCount": 12405,
+            "finePointCountOutsideRoi": 1227,
+            "falseSelectionFraction": 0.006442376521116679,
+            "referencePointCoverage": 0.9967858577742065,
+            "frames": 128,
+            "framesWithReference": 128,
+            "referenceFramesWithNoSelection": 0,
+            "framesWithFalseSelection": 8
+          }
+        }
+      }
+    }
+  },
+  "modelSelection": {
+    "curb": {
+      "thresholds": {
+        "mississippi": 0.8430520806497812,
+        "downtown": 0.9848661604552142
+      },
+      "depth": 6,
+      "features": 157,
+      "prefixOOF": {
+        "mississippi": {
+          "selected": 19908,
+          "false": 994,
+          "falseFraction": 0.04992967651195499,
+          "coveredPoints": 66649,
+          "referencePoints": 91697,
+          "pointCoverage": 0.7268394822077058
+        },
+        "downtown": {
+          "selected": 65,
+          "false": 3,
+          "falseFraction": 0.046153846153846156,
+          "coveredPoints": 231,
+          "referencePoints": 5257,
+          "pointCoverage": 0.043941411451398134
+        }
+      },
+      "validation": {
+        "downtown": {
+          "prefix": {
+            "selected": 173,
+            "false": 0,
+            "falseFraction": 0.0,
+            "coveredPoints": 654,
+            "referencePoints": 5257,
+            "pointCoverage": 0.12440555449876356,
+            "baselineSelected": 4334,
+            "baselineFalse": 2831,
+            "baselineCovered": 4448
+          },
+          "suffix": {
+            "selected": 20,
+            "false": 0,
+            "falseFraction": 0.0,
+            "coveredPoints": 73,
+            "referencePoints": 676,
+            "pointCoverage": 0.10798816568047337,
+            "baselineSelected": 1080,
+            "baselineFalse": 905,
+            "baselineCovered": 499
+          },
+          "all": {
+            "selected": 193,
+            "false": 0,
+            "falseFraction": 0.0,
+            "coveredPoints": 727,
+            "referencePoints": 5933,
+            "pointCoverage": 0.1225349738749368,
+            "baselineSelected": 5414,
+            "baselineFalse": 3736,
+            "baselineCovered": 4947
+          }
+        },
+        "mississippi": {
+          "prefix": {
+            "selected": 20868,
+            "false": 780,
+            "falseFraction": 0.03737780333525014,
+            "coveredPoints": 70813,
+            "referencePoints": 91697,
+            "pointCoverage": 0.772249910029772,
+            "baselineSelected": 66398,
+            "baselineFalse": 39485,
+            "baselineCovered": 82584
+          },
+          "suffix": {
+            "selected": 9199,
+            "false": 724,
+            "falseFraction": 0.07870420697901946,
+            "coveredPoints": 29333,
+            "referencePoints": 42139,
+            "pointCoverage": 0.6961009990744915,
+            "baselineSelected": 32963,
+            "baselineFalse": 20724,
+            "baselineCovered": 37099
+          },
+          "all": {
+            "selected": 30067,
+            "false": 1504,
+            "falseFraction": 0.05002161838560548,
+            "coveredPoints": 100146,
+            "referencePoints": 133836,
+            "pointCoverage": 0.748274006993634,
+            "baselineSelected": 99361,
+            "baselineFalse": 60209,
+            "baselineCovered": 119683
+          }
+        }
+      }
+    },
+    "trafficSign": {
+      "thresholds": {
+        "mississippi": 0.08927648321052264,
+        "downtown": 0.04845651674672971
+      },
+      "depth": 6,
+      "features": 117,
+      "prefixOOF": {
+        "mississippi": {
+          "selected": 3749,
+          "false": 94,
+          "falseFraction": 0.025073352894105096,
+          "coveredPoints": 58933,
+          "referencePoints": 58938,
+          "pointCoverage": 0.9999151650887373
+        },
+        "downtown": {
+          "selected": 861,
+          "false": 43,
+          "falseFraction": 0.04994192799070848,
+          "coveredPoints": 7480,
+          "referencePoints": 7522,
+          "pointCoverage": 0.9944163786227067
+        }
+      },
+      "validation": {
+        "downtown": {
+          "prefix": {
+            "selected": 822,
+            "false": 0,
+            "falseFraction": 0.0,
+            "coveredPoints": 7485,
+            "referencePoints": 7522,
+            "pointCoverage": 0.9950810954533369,
+            "baselineSelected": 875,
+            "baselineFalse": 53,
+            "baselineCovered": 7485
+          },
+          "suffix": {
+            "selected": 575,
+            "false": 9,
+            "falseFraction": 0.01565217391304348,
+            "coveredPoints": 4920,
+            "referencePoints": 4923,
+            "pointCoverage": 0.9993906154783668,
+            "baselineSelected": 579,
+            "baselineFalse": 12,
+            "baselineCovered": 4921
+          },
+          "all": {
+            "selected": 1397,
+            "false": 9,
+            "falseFraction": 0.006442376521116679,
+            "coveredPoints": 12405,
+            "referencePoints": 12445,
+            "pointCoverage": 0.9967858577742065,
+            "baselineSelected": 1454,
+            "baselineFalse": 65,
+            "baselineCovered": 12406
+          }
+        },
+        "mississippi": {
+          "prefix": {
+            "selected": 3651,
+            "false": 0,
+            "falseFraction": 0.0,
+            "coveredPoints": 58929,
+            "referencePoints": 58938,
+            "pointCoverage": 0.9998472971597272,
+            "baselineSelected": 3751,
+            "baselineFalse": 96,
+            "baselineCovered": 58933
+          },
+          "suffix": {
+            "selected": 866,
+            "false": 28,
+            "falseFraction": 0.03233256351039261,
+            "coveredPoints": 7839,
+            "referencePoints": 7845,
+            "pointCoverage": 0.9992351816443594,
+            "baselineSelected": 874,
+            "baselineFalse": 33,
+            "baselineCovered": 7842
+          },
+          "all": {
+            "selected": 4517,
+            "false": 28,
+            "falseFraction": 0.006198804516271862,
+            "coveredPoints": 66768,
+            "referencePoints": 66783,
+            "pointCoverage": 0.9997753919410628,
+            "baselineSelected": 4625,
+            "baselineFalse": 129,
+            "baselineCovered": 66775
+          }
+        }
+      }
+    },
+    "facade": {
+      "kind": "forestNeighborConsensus",
+      "features": 178,
+      "thresholds": {
+        "downtown": 0.8504190548553759
+      },
+      "prefixOOF": {
+        "downtown": {
+          "selected": 34,
+          "false": 1,
+          "coveredPoints": 4647,
+          "threshold": 0.8504190548553759,
+          "neighborThreshold": 1.0,
+          "referencePoints": 358020,
+          "pointCoverage": 0.012979721803251215,
+          "falseFraction": 0.029411764705882353
+        }
+      },
+      "validation": {
+        "downtown": {
+          "prefix": {
+            "selected": 941,
+            "false": 0,
+            "falseFraction": 0.0,
+            "coveredPoints": 97643,
+            "referencePoints": 358020,
+            "pointCoverage": 0.2727305737109659
+          },
+          "suffix": {
+            "selected": 18,
+            "false": 0,
+            "falseFraction": 0.0,
+            "coveredPoints": 1435,
+            "referencePoints": 88125,
+            "pointCoverage": 0.01628368794326241
+          },
+          "all": {
+            "selected": 959,
+            "false": 0,
+            "falseFraction": 0.0,
+            "coveredPoints": 99078,
+            "referencePoints": 446145,
+            "pointCoverage": 0.22207578253706756
+          }
+        }
+      },
+      "limitation": "Very sparse suffix selections; 0 observed false selections does not establish a population false-selection rate below 10%."
+    }
+  },
+  "definition": "A selected pillar is false iff it contains zero original 0.3 m fine reference points of that class. Denominators include every reference point inside the coarse XY ROI.",
+  "scope": "Full replay includes fitted prefixes. Temporal suffixes are from reused recordings, not new independent recordings.",
+  "allFullAndSuffixFalseFractionsBelow10Percent": true,
+  "runtimeMedianMilliseconds": {
+    "Mississippi": {
+      "baseline": 83.44800000000001,
+      "precision": 117.87200000000001
+    },
+    "Downtown": {
+      "baseline": 106.68950000000001,
+      "precision": 152.375
+    }
+  },
+  "tests": {
+    "Passed": 249,
+    "Failed": 0,
+    "Incomplete": 0
+  }
+}
