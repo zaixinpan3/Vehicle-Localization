@@ -1,0 +1,70 @@
+{
+  "dataset": "Mississippi",
+  "frame": 900,
+  "totalFrames": 1170,
+  "sourcePoints": 65536,
+  "finiteSourcePoints": 65536,
+  "displayedSourcePoints": 65536,
+  "finePolePoints": 96,
+  "selectedPillarIds": 5744,
+  "referencePillarIds": [
+    1643,
+    1644,
+    6568,
+    7372
+  ],
+  "alignment": {
+    "finePointCount": 96,
+    "finePointCountInRoi": 96,
+    "finePointCountOutsideRoi": 0,
+    "coveredFinePointCount": 0,
+    "pointCoverage": 0,
+    "pointCoverageAllFine": 0,
+    "finePillarCount": 4,
+    "coveredFinePillarCount": 0,
+    "pillarRecall": 0,
+    "candidatePillarCount": 1,
+    "extraPillarCount": 1,
+    "extraPillarFraction": 1,
+    "pillarPrecision": 0,
+    "pillarJaccard": 0,
+    "eligibleFinePointCount": null,
+    "coveredEligibleFinePointCount": null
+  },
+  "gridGeometry": {
+    "origin": [
+      -29.9,
+      -29.9
+    ],
+    "cellSize": [
+      0.6,
+      0.6
+    ],
+    "mapSize": [
+      100,
+      100
+    ],
+    "layout": "NyNx"
+  },
+  "displayGridZ": -40.025089263916016,
+  "displayXYBounds": [
+    [
+      -86.184333801269531,
+      -147.08460998535156
+    ],
+    [
+      156.15621948242188,
+      69.689666748046875
+    ]
+  ],
+  "highlightRGB": [
+    1,
+    0.43,
+    0.1
+  ],
+  "markerSize": 4,
+  "featureOverlay": false,
+  "cameraZoomStyle": "camera",
+  "scoreThreshold": 0.93712091516744767,
+  "referenceSource": "Frozen original fine point indices from output/pole_precision_20260927/mississippi.mat"
+}

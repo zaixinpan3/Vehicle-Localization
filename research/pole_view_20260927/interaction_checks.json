@@ -1,0 +1,23 @@
+{
+  "frame": 900,
+  "sourcePoints": 65536,
+  "fineReferencePoints": 96,
+  "singleSourceScatter": true,
+  "uniformMarkerSize": 4,
+  "referenceOnlyFrame": 500,
+  "referenceOnlyPoints": 65536,
+  "referenceOnlyHighlightedPoints": 296,
+  "cameraZoomStyle": "camera",
+  "magnifierSteps": 6,
+  "initialCameraAngle": 11.22927056253306,
+  "zoomedCameraAngle": 0.98897765565042184,
+  "unchangedXYZ": true,
+  "unchangedRGB": true,
+  "unchangedGrid": true,
+  "unchangedDataLimits": true,
+  "pointerTargetsOriginalReturn": true,
+  "fullSceneReset": true,
+  "poleRegionButton": true,
+  "wheelCallback": true,
+  "scope": "Programmatic public zoom and live callbacks; not a physical mouse-injection test"
+}
