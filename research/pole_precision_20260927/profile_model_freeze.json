@@ -1,0 +1,32 @@
+{
+  "Mississippi": {
+    "dataset": "Mississippi",
+    "model": "profile_mississippi_d3",
+    "threshold": 0.6541462530148772,
+    "metrics": {
+      "selected": 1115,
+      "matched": 1004,
+      "extra": 111,
+      "extraFraction": 0.09955156950672646,
+      "coveredPoints": 101513,
+      "finePoints": 124708,
+      "pointCoverage": 0.814005516887449,
+      "pillarRecall": 0.5522552255225522
+    }
+  },
+  "Downtown": {
+    "dataset": "Downtown",
+    "model": "profile_downtown_d3",
+    "threshold": 0.8375036823540774,
+    "metrics": {
+      "selected": 237,
+      "matched": 214,
+      "extra": 23,
+      "extraFraction": 0.0970464135021097,
+      "coveredPoints": 15496,
+      "finePoints": 27716,
+      "pointCoverage": 0.5590994371482176,
+      "pillarRecall": 0.34683954619124796
+    }
+  }
+}

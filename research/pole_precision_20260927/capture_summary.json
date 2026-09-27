@@ -1,0 +1,21 @@
+{
+  "mississippi": {
+    "frames": 1170,
+    "rows": 6809,
+    "owners": 5784,
+    "matched": 2558,
+    "coveredPoints": 185729,
+    "finePoints": 194300,
+    "featureSha256": "6e8f5dcf1e22107714df7914569add3eaadc6671155f9af960805f0022999c9b"
+  },
+  "downtown": {
+    "frames": 128,
+    "rows": 1901,
+    "owners": 1611,
+    "matched": 674,
+    "coveredPoints": 31781,
+    "finePoints": 34829,
+    "featureSha256": "d04dad417cf72846a65640a8d5b06fa637f65f041c4ccb37e6b0efa9566d1c91"
+  },
+  "capturedAt": "2026-09-27T03:49:36.678137-05:00"
+}

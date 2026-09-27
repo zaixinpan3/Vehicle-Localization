@@ -1,0 +1,2 @@
+stage,x,y,count,height,supportedHeight,supportedCount,meanRatio,massRatio,tilt,radialRms,maximumStd,aspect,longestRun,isolation,contrast,accepted,frame,coarsePillar
+short_continuity_tilt,11.4913834374526,8.56369761762948,58,4.7635817527771,1.5,27,0.9,0.9,0.978330929207959,0.0665912545192536,0.0600216422871243,1.8958234725572,1,NaN,NaN,0,118,6964

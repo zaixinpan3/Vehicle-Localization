@@ -1,0 +1,59 @@
+[
+  {
+    "feature": "ownerCount",
+    "threshold": 122.0,
+    "direction": 1,
+    "pointCoverage": 0.6119281045751634,
+    "extraFraction": 0.09090909090909091,
+    "selected": 44,
+    "tp": 40
+  },
+  null,
+  null,
+  null,
+  null,
+  {
+    "feature": "tilt",
+    "threshold": 0.403240582146274,
+    "direction": -1,
+    "pointCoverage": 0.09269162210338681,
+    "extraFraction": 0.07692307692307693,
+    "selected": 13,
+    "tp": 12
+  },
+  {
+    "feature": "radialRms",
+    "threshold": 0.0386096849981277,
+    "direction": -1,
+    "pointCoverage": 0.002599524658348188,
+    "extraFraction": 0.0,
+    "selected": 2,
+    "tp": 2
+  },
+  null,
+  null,
+  {
+    "model": "forest",
+    "threshold": 0.6859979842460419,
+    "pointCoverage": 0.7340314913844326,
+    "extraFraction": 0.0967741935483871,
+    "selected": 93,
+    "tp": 84
+  },
+  {
+    "model": "boost2",
+    "threshold": 0.6631075412361289,
+    "pointCoverage": 0.7826797385620915,
+    "extraFraction": 0.0970873786407767,
+    "selected": 103,
+    "tp": 93
+  },
+  {
+    "model": "boost3",
+    "threshold": 0.6803324793065468,
+    "pointCoverage": 0.7901069518716578,
+    "extraFraction": 0.09345794392523364,
+    "selected": 107,
+    "tp": 97
+  }
+]

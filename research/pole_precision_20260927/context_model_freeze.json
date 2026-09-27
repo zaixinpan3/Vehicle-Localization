@@ -1,0 +1,69 @@
+{
+  "winner": {
+    "model": "context_p1_d3_w1.0",
+    "best": {
+      "threshold": 0.7047407872190024,
+      "minimumCoverage": 0.6195338432674268,
+      "metrics": {
+        "Mississippi": {
+          "selected": 1045,
+          "matched": 941,
+          "extra": 104,
+          "extraFraction": 0.09952153110047847,
+          "coveredPoints": 98897,
+          "finePoints": 124708,
+          "pointCoverage": 0.7930285146101292,
+          "pillarRecall": 0.5176017601760176
+        },
+        "Downtown": {
+          "selected": 282,
+          "matched": 254,
+          "extra": 28,
+          "extraFraction": 0.09929078014184398,
+          "coveredPoints": 17171,
+          "finePoints": 27716,
+          "pointCoverage": 0.6195338432674268,
+          "pillarRecall": 0.41166936790923825
+        }
+      }
+    },
+    "at80": {
+      "threshold": 0.2879994464370707,
+      "worstExtraFraction": 0.32081911262798635,
+      "metrics": {
+        "Mississippi": {
+          "selected": 1778,
+          "matched": 1314,
+          "extra": 464,
+          "extraFraction": 0.2609673790776153,
+          "coveredPoints": 112958,
+          "finePoints": 124708,
+          "pointCoverage": 0.9057799018507233,
+          "pillarRecall": 0.7227722772277227
+        },
+        "Downtown": {
+          "selected": 586,
+          "matched": 398,
+          "extra": 188,
+          "extraFraction": 0.32081911262798635,
+          "coveredPoints": 22175,
+          "finePoints": 27716,
+          "pointCoverage": 0.8000793765334103,
+          "pillarRecall": 0.6450567260940032
+        }
+      }
+    }
+  },
+  "inputs": {
+    "mississippi_features.csv": "6e8f5dcf1e22107714df7914569add3eaadc6671155f9af960805f0022999c9b",
+    "downtown_features.csv": "d04dad417cf72846a65640a8d5b06fa637f65f041c4ccb37e6b0efa9566d1c91",
+    "mississippi_vertical_features.csv": "6268bfc05589b1ae45745ad79f7c11bb4a147019826e301d159499b8054e61da",
+    "mississippi_placement_features.csv": "f6a6f3ce6c71b83d6e8af31120ab0b44ed7271a0c2470ee20ab3e7577f3f5dea",
+    "downtown_vertical_features.csv": "37f233d6bfdae5dd9eafb9d119b5aa21bd0c4d9e9df0acb3248f57ba1b3c1bec",
+    "downtown_placement_features.csv": "b5137237b17da27354e35445ac74b867e5e45bd4e6b29bfcaef8ef9538e2a63a",
+    "mississippi_whole_features.csv": "e8b11748f3a50fa60a5454f2ccde53e58f47d35ef00ef32d197d9d542590160e",
+    "downtown_whole_features.csv": "49d0226649efc9528192472c67d39e786bbd26409ff95f660fc9fbf06165bf59"
+  },
+  "split": "Mississippi <=780 and Downtown <=360; 5 proportional blocked folds; purge 20/10 frames; seed 927",
+  "exclusions": "No dataset, frame, pillar, hypothesis identity or global XY coordinate; no 0.3 m online partition"
+}

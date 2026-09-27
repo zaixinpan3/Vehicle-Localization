@@ -1,0 +1,62 @@
+[
+  {
+    "dataset": "Mississippi",
+    "model": "profile_mississippi_d3",
+    "threshold": 0.6541462530148772,
+    "metrics": {
+      "selected": 1115,
+      "matched": 1004,
+      "extra": 111,
+      "extraFraction": 0.09955156950672646,
+      "coveredPoints": 101513,
+      "finePoints": 124708,
+      "pointCoverage": 0.814005516887449,
+      "pillarRecall": 0.5522552255225522
+    }
+  },
+  {
+    "dataset": "Mississippi",
+    "model": "profile_mississippi_d5",
+    "threshold": 0.7580966822177371,
+    "metrics": {
+      "selected": 1110,
+      "matched": 999,
+      "extra": 111,
+      "extraFraction": 0.1,
+      "coveredPoints": 99997,
+      "finePoints": 124708,
+      "pointCoverage": 0.801849119543253,
+      "pillarRecall": 0.5495049504950495
+    }
+  },
+  {
+    "dataset": "Downtown",
+    "model": "profile_downtown_d3",
+    "threshold": 0.8375036823540774,
+    "metrics": {
+      "selected": 237,
+      "matched": 214,
+      "extra": 23,
+      "extraFraction": 0.0970464135021097,
+      "coveredPoints": 15496,
+      "finePoints": 27716,
+      "pointCoverage": 0.5590994371482176,
+      "pillarRecall": 0.34683954619124796
+    }
+  },
+  {
+    "dataset": "Downtown",
+    "model": "profile_downtown_d5",
+    "threshold": 0.9330197458065419,
+    "metrics": {
+      "selected": 232,
+      "matched": 209,
+      "extra": 23,
+      "extraFraction": 0.09913793103448276,
+      "coveredPoints": 14720,
+      "finePoints": 27716,
+      "pointCoverage": 0.5311011689998557,
+      "pillarRecall": 0.3387358184764992
+    }
+  }
+]

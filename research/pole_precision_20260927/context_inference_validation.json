@@ -1,0 +1,8 @@
+{
+  "rows": 8710,
+  "features": 159,
+  "maximumAbsoluteProbabilityError": 2.2204460492503131E-16,
+  "sameSelections": true,
+  "rawFrames": 24,
+  "passedTests": 10
+}

@@ -1,0 +1,11 @@
+Name,Passed,Failed,Incomplete,Duration,Details
+precisionStudyTest/isolatedShaftHasNoCompetingVerticalSupport,1,0,0,0.010475,
+precisionStudyTest/neighboringShaftReducesContextDominance,1,0,0,0.002717,
+precisionStudyTest/verticalTranslationDoesNotIntroducePhase,1,0,0,0.009416,
+precisionStudyTest/emptyStructuralSupportIsFinite,1,0,0,0.00386,
+precisionStudyTest/wholeHeightContextIncludesStructureAboveShaft,1,0,0,0.002118,
+pillarFineAlignmentTest/pointCoverageDoesNotCountPillarsAsPoints(fineLabels=indices),1,0,0,0.251432,
+pillarFineAlignmentTest/pointCoverageDoesNotCountPillarsAsPoints(fineLabels=logicalMask),1,0,0,0.006129,
+pillarFineAlignmentTest/filteringCannotShrinkTheFineReferenceDenominator,1,0,0,0.01122,
+pillarFineAlignmentTest/outsideRoiPointsRemainExplicitDiagnostics,1,0,0,0.0105,
+pillarFineAlignmentTest/emptyFineReferenceStillCountsExtraCandidates,1,0,0,0.033429,
