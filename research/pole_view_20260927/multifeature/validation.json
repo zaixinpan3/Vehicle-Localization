@@ -1,0 +1,27 @@
+{
+  "frame": 500,
+  "sourcePoints": 65536,
+  "referencePointCounts": [
+    296,
+    507,
+    64
+  ],
+  "selectedCellCounts": [
+    2,
+    12,
+    81
+  ],
+  "sharedCells": 2,
+  "singleSourceScatter": true,
+  "uniformMarkerSize": 4,
+  "sourceXYZPreserved": true,
+  "colorCachesPreserved": true,
+  "gridMembershipPreserved": true,
+  "zoomAndWheelCallbacksPassed": true,
+  "featureRegionAndResetPassed": true,
+  "codeAnalyzer": [
+    [],
+    [],
+    []
+  ]
+}

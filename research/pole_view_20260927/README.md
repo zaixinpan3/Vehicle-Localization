@@ -54,9 +54,12 @@ Its native `pcviewer` tag and XYZ/RGB restoration caches are preserved.
 
 Magnifier pre-actions and inward wheel actions aim the camera at an original
 return nearest the pointer ray. They translate camera position and target
-together; they do not shrink data limits or delete points. The lowered grid
-is five meters below the minimum source Z and keeps the exact production XY
-origin, spacing and selected cells. Its vertical offset is for display only.
+together; they do not shrink data limits or delete points. The grid keeps the exact production XY origin, spacing and selected cells.
+Its vertical offset is for display only. The initial exports used five meters
+below the minimum source Z. After inspection, the live viewer was adjusted
+to one meter below the fifth percentile of source Z inside the grid footprint,
+so low outliers no longer create a large visual gap. All source points remain
+displayed, including the few that may lie below this display plane.
 
 `validatePolePillarView` exercises six public magnifier zoom operations, the
 installed wheel callback, source-point targeting, both view buttons and exact

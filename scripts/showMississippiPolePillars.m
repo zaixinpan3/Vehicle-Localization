@@ -3,7 +3,7 @@ function result=showMississippiPolePillars(frameIndex,exportFolder)
 % Orange points are frozen original 0.3 m fine pole references. Orange
 % floor cells are current 0.6 m coarse pole selections, independently drawn.
 % All finite original XYZ points are displayed without ROI cropping or
-% downsampling. The grid is moved below the cloud for display only; its XY
+% downsampling. The grid is moved below the main cloud for display only; its XY
 % origin, spacing, extent and selected cells retain their actual geometry.
 % Native camera zoom targets source points instead of cropping data limits.
 % Drag to rotate and use the scroll wheel to zoom. The optional exportFolder
@@ -31,9 +31,13 @@ function result=showMississippiPolePillars(frameIndex,exportFolder)
 
     orange=[1 .43 .10];background=[.055 .065 .085];foreground=[.87 .90 .94];
     points=xyz(finite,:);low=min(points,[],1);high=max(points,[],1);
-    floorZ=low(3)-5;
     origin=double(geometry.origin);spacing=double(geometry.cellSize);dims=double(geometry.mapSize);
     xEdges=origin(1)+(0:dims(2))*spacing(1);yEdges=origin(2)+(0:dims(1))*spacing(2);
+    % Keep the display grid close to the main cloud despite low outliers.
+    inGrid=points(:,1)>=xEdges(1) & points(:,1)<xEdges(end) & ...
+        points(:,2)>=yEdges(1) & points(:,2)<yEdges(end);
+    displayZ=points(inGrid,3);if isempty(displayZ),displayZ=points(:,3);end
+    floorZ=prctile(displayZ,5)-1;
     fig=figure('Name',sprintf('Mississippi %d | fine pole points and coarse pillars',frameIndex), ...
         'NumberTitle','off','Color',background,'Position',[80 80 1500 1000],'WindowStyle','normal');
     ax=axes(fig,'Position',[.06 .10 .90 .79],'Color',background, ...
