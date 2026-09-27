@@ -1,0 +1,247 @@
+{
+  "model": "stable_moments_compact_d5_w1.0",
+  "threshold": 0.1488746496646483,
+  "featureCount": 143,
+  "trees": 250,
+  "featureScale": 100000000.0,
+  "reference": "Original offline 0.3 m fine pole points; exact any-point ownership in 0.6 m pillars; fixed denominator",
+  "baseline": {
+    "development": {
+      "Mississippi": {
+        "selected": 3024,
+        "matched": 1586,
+        "extra": 1438,
+        "extraFraction": 0.4755291005291005,
+        "coveredPoints": 119336,
+        "finePoints": 124708,
+        "pointCoverage": 0.9569233729993264,
+        "pillarRecall": 0.8723872387238724
+      },
+      "Downtown": {
+        "selected": 1115,
+        "matched": 515,
+        "extra": 600,
+        "extraFraction": 0.5381165919282511,
+        "coveredPoints": 25086,
+        "finePoints": 27716,
+        "pointCoverage": 0.9051089623322268,
+        "pillarRecall": 0.8346839546191248
+      }
+    },
+    "suffix": {
+      "Mississippi": {
+        "selected": 2021,
+        "matched": 878,
+        "extra": 1143,
+        "extraFraction": 0.5655616031667491,
+        "coveredPoints": 64841,
+        "finePoints": 69592,
+        "pointCoverage": 0.9317306586964019,
+        "pillarRecall": 0.8236397748592871
+      },
+      "Downtown": {
+        "selected": 389,
+        "matched": 144,
+        "extra": 245,
+        "extraFraction": 0.6298200514138818,
+        "coveredPoints": 6377,
+        "finePoints": 7113,
+        "pointCoverage": 0.896527484886827,
+        "pillarRecall": 0.8228571428571428
+      }
+    },
+    "all": {
+      "Mississippi": {
+        "selected": 5045,
+        "matched": 2464,
+        "extra": 2581,
+        "extraFraction": 0.511595639246779,
+        "coveredPoints": 184177,
+        "finePoints": 194300,
+        "pointCoverage": 0.9479001544004118,
+        "pillarRecall": 0.8543689320388349
+      },
+      "Downtown": {
+        "selected": 1504,
+        "matched": 659,
+        "extra": 845,
+        "extraFraction": 0.5618351063829787,
+        "coveredPoints": 31463,
+        "finePoints": 34829,
+        "pointCoverage": 0.9033563984036291,
+        "pillarRecall": 0.8320707070707071
+      }
+    }
+  },
+  "actual": {
+    "prefixOOF": {
+      "Mississippi": {
+        "selected": 2600,
+        "matched": 1602,
+        "extra": 998,
+        "extraFraction": 0.38384615384615384,
+        "coveredPoints": 120273,
+        "finePoints": 124708,
+        "pointCoverage": 0.9644369246559964,
+        "pillarRecall": 0.8811881188118812
+      },
+      "Downtown": {
+        "selected": 947,
+        "matched": 516,
+        "extra": 431,
+        "extraFraction": 0.4551214361140444,
+        "coveredPoints": 25142,
+        "finePoints": 27716,
+        "pointCoverage": 0.9071294559099438,
+        "pillarRecall": 0.8363047001620746
+      }
+    },
+    "suffix": {
+      "Mississippi": {
+        "selected": 1810,
+        "matched": 900,
+        "extra": 910,
+        "extraFraction": 0.5027624309392266,
+        "coveredPoints": 65732,
+        "finePoints": 69592,
+        "pointCoverage": 0.9445338544660306,
+        "pillarRecall": 0.8442776735459663
+      },
+      "Downtown": {
+        "selected": 313,
+        "matched": 143,
+        "extra": 170,
+        "extraFraction": 0.5431309904153354,
+        "coveredPoints": 6393,
+        "finePoints": 7113,
+        "pointCoverage": 0.8987768873892872,
+        "pillarRecall": 0.8171428571428572
+      }
+    },
+    "all": {
+      "Mississippi": {
+        "selected": 4466,
+        "matched": 2642,
+        "extra": 1824,
+        "extraFraction": 0.4084191670398567,
+        "coveredPoints": 189286,
+        "finePoints": 194300,
+        "pointCoverage": 0.9741945445187854,
+        "pillarRecall": 0.9160887656033287
+      },
+      "Downtown": {
+        "selected": 1185,
+        "matched": 726,
+        "extra": 459,
+        "extraFraction": 0.38734177215189874,
+        "coveredPoints": 32762,
+        "finePoints": 34829,
+        "pointCoverage": 0.9406529041890379,
+        "pillarRecall": 0.9166666666666666
+      }
+    }
+  },
+  "transitions": [
+    {
+      "dataset": "Mississippi",
+      "partition": "development",
+      "addedPositivePillars": 164,
+      "removedPositivePillars": 8,
+      "addedFalsePillars": 177,
+      "removedFalsePillars": 701,
+      "gainedPoints": 4306,
+      "lostPoints": 88
+    },
+    {
+      "dataset": "Mississippi",
+      "partition": "suffix",
+      "addedPositivePillars": 64,
+      "removedPositivePillars": 42,
+      "addedFalsePillars": 282,
+      "removedFalsePillars": 515,
+      "gainedPoints": 2200,
+      "lostPoints": 1309
+    },
+    {
+      "dataset": "Mississippi",
+      "partition": "all",
+      "addedPositivePillars": 228,
+      "removedPositivePillars": 50,
+      "addedFalsePillars": 459,
+      "removedFalsePillars": 1216,
+      "gainedPoints": 6506,
+      "lostPoints": 1397
+    },
+    {
+      "dataset": "Downtown",
+      "partition": "development",
+      "addedPositivePillars": 68,
+      "removedPositivePillars": 0,
+      "addedFalsePillars": 32,
+      "removedFalsePillars": 343,
+      "gainedPoints": 1283,
+      "lostPoints": 0
+    },
+    {
+      "dataset": "Downtown",
+      "partition": "suffix",
+      "addedPositivePillars": 13,
+      "removedPositivePillars": 14,
+      "addedFalsePillars": 36,
+      "removedFalsePillars": 111,
+      "gainedPoints": 288,
+      "lostPoints": 272
+    },
+    {
+      "dataset": "Downtown",
+      "partition": "all",
+      "addedPositivePillars": 81,
+      "removedPositivePillars": 14,
+      "addedFalsePillars": 68,
+      "removedFalsePillars": 454,
+      "gainedPoints": 1571,
+      "lostPoints": 272
+    }
+  ],
+  "runtime": {
+    "Mississippi": {
+      "previous": {
+        "samples": 72,
+        "medianMs": 61.6535,
+        "meanMs": 64.675625
+      },
+      "jointDistribution": {
+        "samples": 72,
+        "medianMs": 79.2045,
+        "meanMs": 86.14984722222222
+      }
+    },
+    "Downtown": {
+      "previous": {
+        "samples": 72,
+        "medianMs": 72.3415,
+        "meanMs": 72.33268055555556
+      },
+      "jointDistribution": {
+        "samples": 72,
+        "medianMs": 108.577,
+        "meanMs": 115.53368055555555
+      }
+    }
+  },
+  "validation": {
+    "passed": 210,
+    "failed": 0,
+    "incomplete": 0,
+    "rawReplayFrames": 1298,
+    "inference": {
+      "rows": 17317,
+      "features": 143,
+      "maximumAbsoluteProbabilityError": 5.551115123125783e-16,
+      "sameSelections": true,
+      "rawFrames": 24
+    }
+  },
+  "jointTargetMet": false,
+  "limitations": "Full replay contains training prefixes. Prefix OOF and reused temporal suffixes improve both objectives, but <=10% false selection is not established. No independent new recording or manual object truth is claimed."
+}

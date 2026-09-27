@@ -1,0 +1,7 @@
+dataset,partition,addedPositivePillars,removedPositivePillars,addedFalsePillars,removedFalsePillars,gainedPoints,lostPoints
+Mississippi,development,164,8,177,701,4306,88
+Mississippi,suffix,64,42,282,515,2200,1309
+Mississippi,all,228,50,459,1216,6506,1397
+Downtown,development,68,0,32,343,1283,0
+Downtown,suffix,13,14,36,111,288,272
+Downtown,all,81,14,68,454,1571,272

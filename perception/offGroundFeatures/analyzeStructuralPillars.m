@@ -32,13 +32,18 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     maps.corePeakX=nan(mapSize); maps.corePeakY=nan(mapSize);
     maps.corePointCount=zeros(mapSize);
     validatedMode=isfield(cfg.pole,'detector') && cfg.pole.detector=="validatedShaft";
+    jointMode=validatedMode && isfield(cfg.pole,'distributionValidation') && cfg.pole.distributionValidation.enabled;
     shaftMode=isfield(cfg.pole,'detector') && any(cfg.pole.detector==["shaft","validatedShaft"]);
     subsetMode=isfield(cfg.pole,'detector') && any(cfg.pole.detector==["subset","shaft","validatedShaft"]);
     if any(cloudCfg.semanticNames=="pole") && subsetMode
         if shaftMode
+            polePointScore=maps.pointScore;poleLineScore=maps.lineScore;
+            if jointMode
+                [polePointScore,poleLineScore]=originalLatticeShape(pillars,maps,cfg);
+            end
             shaftCfg=cfg.pole.shaft;shaftCfg.useNativeKernels=useNative;
             shaftCfg.columnMinimumScores=min(shaftCfg.strongScore, ...
-                shaftCfg.minimumShapeProduct./max(double(maps.pointScore(ids)),eps));
+                shaftCfg.minimumShapeProduct./max(double(polePointScore(ids)),eps));
             maps.poleModes=findPillarShaftModes(pillars.points,pillars.pointPillarLinIdx,geometry,shaftCfg);
             [maps.poleSubset,maps.poleShaftGroups]=assignPillarShaftSupport( ...
                 pillars.points,pillars.pointPillarLinIdx,geometry,maps.poleModes,shaftCfg);
@@ -57,8 +62,14 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
                 proposalCfg=cfg.pole;proposalCfg.detector="pillar";
                 proposalCandidates=detectPolePillars(maps,false(mapSize),proposalCfg);
                 maps.poleValidationProposals=completePoleProposals(maps.poleSubset,stats,cfg.pole,proposalCandidates.candidateMask(ids));
-                maps.poleValidation=validatePillarPoleSupport(pillars.points,pillars.pointPillarLinIdx, ...
-                    geometry,maps.poleValidationProposals,cfg.pole.validation,structuralMask,double(maps.pointScore(ids)));
+                if jointMode
+                    maps.poleValidation=classifyPillarPoleSupport(pillars.points,pillars.pointPillarLinIdx, ...
+                        geometry,maps.poleValidationProposals,cfg.pole.validation,structuralMask, ...
+                        polePointScore,poleLineScore,cfg.pole.distributionValidation);
+                else
+                    maps.poleValidation=validatePillarPoleSupport(pillars.points,pillars.pointPillarLinIdx, ...
+                        geometry,maps.poleValidationProposals,cfg.pole.validation,structuralMask,double(maps.pointScore(ids)));
+                end
             end
         else
             subsetCfg=cfg.pole.subset; subsetCfg.useNativeKernels=useNative;
@@ -129,6 +140,21 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
         'poleCellMask',poleMask,'poleProbability',single(poleMask.*(floorProbability+(1-floorProbability)*poleEvidence)), ...
         'trafficSignCellMask',signMask,'trafficSignProbability',single(signMask.*(floorProbability+(1-floorProbability)*signEvidence)), ...
         'candidates',candidates);
+end
+
+function [point,line]=originalLatticeShape(pillars,maps,cfg)
+% Empty-margin cropping must not change the model's spatial context boundary.
+% Padding restores only the original coarse raster; no finer grid is created.
+    point=maps.pointScore;line=maps.lineScore;
+    if ~isfield(pillars,'sourcePillarGeometry'),return;end
+    original=pillars.sourcePillarGeometry;g=pillars.pillarGeometry;
+    if isequal(original.origin,g.origin)&&isequal(original.mapSize,g.mapSize),return;end
+    offset=round((g.origin-original.origin)./g.cellSize);
+    rows=(1:g.mapSize(1))+offset(2);cols=(1:g.mapSize(2))+offset(1);
+    support=zeros(original.mapSize,'single');occupied=false(original.mapSize);
+    support(rows,cols)=maps.supportEvidence;occupied(rows,cols)=maps.occupiedMask;
+    [fullPoint,fullLine]=buildPillarShapeScores(support,occupied,cfg,g.cellSize(1),g.cellSize(2));
+    point=fullPoint(rows,cols);line=fullLine(rows,cols);
 end
 
 function modes=completePoleProposals(modes,stats,cfg,eligible)

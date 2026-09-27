@@ -216,6 +216,7 @@ function pillars = subsetOffGroundPillars(source, selected)
 % subsetOffGroundPillars: Retain branch members on the original XY lattice.
 % Crop empty XY margins only; never create a vertical index or a finer cell.
     pillars = source;
+    pillars.sourcePillarGeometry=source.pillarGeometry;
     pillars.points=source.points(selected,:);
     pillars.pointIndices=source.pointIndices(selected);
     pillars.pointAttributes=filterPerceptionAttributes(source.pointAttributes,find(selected));

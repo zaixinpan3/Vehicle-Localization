@@ -1,0 +1,90 @@
+{
+  "winner": {
+    "model": "moments_compact_d5_w1.0",
+    "features": 143,
+    "pareto": {
+      "threshold": 0.14434324492015807,
+      "worstExtraFraction": 0.45493107104984093,
+      "minimumCoverage": 0.907345937364699,
+      "metrics": {
+        "Mississippi": {
+          "selected": 2598,
+          "matched": 1593,
+          "extra": 1005,
+          "extraFraction": 0.38683602771362585,
+          "coveredPoints": 120075,
+          "finePoints": 124708,
+          "pointCoverage": 0.9628492157680342,
+          "pillarRecall": 0.8762376237623762
+        },
+        "Downtown": {
+          "selected": 943,
+          "matched": 514,
+          "extra": 429,
+          "extraFraction": 0.45493107104984093,
+          "coveredPoints": 25148,
+          "finePoints": 27716,
+          "pointCoverage": 0.907345937364699,
+          "pillarRecall": 0.833063209076175
+        }
+      }
+    },
+    "at80": {
+      "threshold": 0.48485531339654,
+      "worstExtraFraction": 0.28442028985507245,
+      "minimumCoverage": 0.8003680184730841,
+      "metrics": {
+        "Mississippi": {
+          "selected": 1655,
+          "matched": 1299,
+          "extra": 356,
+          "extraFraction": 0.21510574018126888,
+          "coveredPoints": 111607,
+          "finePoints": 124708,
+          "pointCoverage": 0.8949465952464958,
+          "pillarRecall": 0.7145214521452146
+        },
+        "Downtown": {
+          "selected": 552,
+          "matched": 395,
+          "extra": 157,
+          "extraFraction": 0.28442028985507245,
+          "coveredPoints": 22183,
+          "finePoints": 27716,
+          "pointCoverage": 0.8003680184730841,
+          "pillarRecall": 0.640194489465154
+        }
+      }
+    },
+    "at10": {
+      "threshold": 0.8944102154068893,
+      "worstExtraFraction": 0.1,
+      "minimumCoverage": 0.4914489825371626,
+      "metrics": {
+        "Mississippi": {
+          "selected": 946,
+          "matched": 887,
+          "extra": 59,
+          "extraFraction": 0.06236786469344609,
+          "coveredPoints": 95206,
+          "finePoints": 124708,
+          "pointCoverage": 0.7634313756936203,
+          "pillarRecall": 0.4878987898789879
+        },
+        "Downtown": {
+          "selected": 210,
+          "matched": 189,
+          "extra": 21,
+          "extraFraction": 0.1,
+          "coveredPoints": 13621,
+          "finePoints": 27716,
+          "pointCoverage": 0.4914489825371626,
+          "pillarRecall": 0.3063209076175041
+        }
+      }
+    }
+  },
+  "seed": 927,
+  "split": "Mississippi <=780; Downtown <=360; five blocks; purge 20/10 frames",
+  "objective": "Minimize worst false selection while both prefix OOF point coverages exceed production by at least 0.2 percentage points"
+}

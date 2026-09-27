@@ -1,0 +1,24 @@
+[
+  {
+    "dataset": "mississippi",
+    "falseOwners": 3226,
+    "falseOwnersOnPositiveShaft": 306,
+    "missedOwnerGatePillars": 55,
+    "missedGeometryPillars": 191,
+    "missedProposalPillars": 80,
+    "missedOwnerGatePoints": 562,
+    "missedGeometryPoints": 6210,
+    "missedProposalPoints": 1799
+  },
+  {
+    "dataset": "downtown",
+    "falseOwners": 937,
+    "falseOwnersOnPositiveShaft": 67,
+    "missedOwnerGatePillars": 29,
+    "missedGeometryPillars": 46,
+    "missedProposalPillars": 43,
+    "missedOwnerGatePoints": 342,
+    "missedGeometryPoints": 1033,
+    "missedProposalPoints": 1673
+  }
+]

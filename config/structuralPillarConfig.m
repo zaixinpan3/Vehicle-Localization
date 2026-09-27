@@ -91,6 +91,8 @@ function cfg = structuralPillarConfig(spacing)
     if spacing>0.3
         cfg.pole.detector="validatedShaft";
         cfg.pole.probabilityEvidence="validatedShaft";
+        cfg.pole.distributionValidation=pillarPoleDistributionConfig();
+        cfg.pole.distributionValidation.enabled=abs(spacing-.6)<1e-12;
     end
     cfg.pole.subset=struct('radii',[0.06 0.10 0.15], ...
         'maximumSeeds',12,'seedSeparation',0.08,'fitRadius',0.15, ...

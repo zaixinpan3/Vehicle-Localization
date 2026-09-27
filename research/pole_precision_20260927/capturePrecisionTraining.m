@@ -7,6 +7,11 @@ function T=capturePrecisionTraining(dataset,frames,label)
     out=fullfile(root,'output','pole_precision_20260927');old=fullfile(root,'output','pillar_fine_alignment_20260926');
     cfg=perceptionConfig(dataset);cfg.voxel.useNativeKernels=true;cfg.groundSegmentation.useNativeKernels=true;
     cfg.offGroundFeatures.useNativeKernels=true;
+    % Keep this capture on the original broad proposal profile after a newer
+    % production distribution validator is installed.
+    if isfield(cfg.offGroundFeatures.pole,'distributionValidation')
+        cfg.offGroundFeatures.pole.distributionValidation.enabled=false;
+    end
     cfg.offGroundFeatures.pole.validation.sparseSupportPointThreshold=0;
     cfg.offGroundFeatures.pole.validation.sparseOwnerPointThreshold=0;
     cloud=coarseSemanticProbabilityCloudConfig(cfg.voxel);cloud.semanticNames="pole";

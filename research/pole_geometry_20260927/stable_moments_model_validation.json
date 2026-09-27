@@ -1,0 +1,68 @@
+{
+  "development": {
+    "Mississippi": {
+      "selected": 2656,
+      "matched": 1742,
+      "extra": 914,
+      "extraFraction": 0.3441265060240964,
+      "coveredPoints": 123554,
+      "finePoints": 124708,
+      "pointCoverage": 0.9907463835519774,
+      "pillarRecall": 0.9581958195819582
+    },
+    "Downtown": {
+      "selected": 872,
+      "matched": 583,
+      "extra": 289,
+      "extraFraction": 0.33142201834862384,
+      "coveredPoints": 26369,
+      "finePoints": 27716,
+      "pointCoverage": 0.9513999134074181,
+      "pillarRecall": 0.9448946515397083
+    }
+  },
+  "suffix": {
+    "Mississippi": {
+      "selected": 1810,
+      "matched": 900,
+      "extra": 910,
+      "extraFraction": 0.5027624309392266,
+      "coveredPoints": 65732,
+      "finePoints": 69592,
+      "pointCoverage": 0.9445338544660306,
+      "pillarRecall": 0.8442776735459663
+    },
+    "Downtown": {
+      "selected": 313,
+      "matched": 143,
+      "extra": 170,
+      "extraFraction": 0.5431309904153354,
+      "coveredPoints": 6393,
+      "finePoints": 7113,
+      "pointCoverage": 0.8987768873892872,
+      "pillarRecall": 0.8171428571428572
+    }
+  },
+  "all": {
+    "Mississippi": {
+      "selected": 4466,
+      "matched": 2642,
+      "extra": 1824,
+      "extraFraction": 0.4084191670398567,
+      "coveredPoints": 189286,
+      "finePoints": 194300,
+      "pointCoverage": 0.9741945445187854,
+      "pillarRecall": 0.9160887656033287
+    },
+    "Downtown": {
+      "selected": 1185,
+      "matched": 726,
+      "extra": 459,
+      "extraFraction": 0.38734177215189874,
+      "coveredPoints": 32762,
+      "finePoints": 34829,
+      "pointCoverage": 0.9406529041890379,
+      "pillarRecall": 0.9166666666666666
+    }
+  }
+}
