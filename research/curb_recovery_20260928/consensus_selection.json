@@ -1,0 +1,103 @@
+{
+  "prefixCap": 0.055,
+  "prefixChoice": {
+    "oldMinimumScore": 0.2,
+    "newMinimumScore": 0.850929706763814,
+    "selected": 21445,
+    "false": 1179,
+    "coveredPoints": 70917,
+    "falseFraction": 0.054977850314758686
+  },
+  "validation": {
+    "prefix": {
+      "selected": 21921,
+      "false": 859,
+      "falseFraction": 0.03918616851421012,
+      "coveredPoints": 73224,
+      "referencePoints": 91697,
+      "pointCoverage": 0.7985430275799644
+    },
+    "suffix": {
+      "selected": 10330,
+      "false": 1071,
+      "falseFraction": 0.10367860600193611,
+      "coveredPoints": 31676,
+      "referencePoints": 42139,
+      "pointCoverage": 0.7517026982130568
+    },
+    "all": {
+      "selected": 32251,
+      "false": 1930,
+      "falseFraction": 0.05984310564013519,
+      "coveredPoints": 104900,
+      "referencePoints": 133836,
+      "pointCoverage": 0.7837950925012702
+    },
+    "frame500": {
+      "selected": 17,
+      "false": 0,
+      "falseFraction": 0.0,
+      "coveredPoints": 44,
+      "referencePoints": 64,
+      "pointCoverage": 0.6875
+    }
+  },
+  "alternatives": [
+    {
+      "oldMinimumScore": 0.2,
+      "newMinimumScore": 0.850929706763814,
+      "selected": 21445,
+      "false": 1179,
+      "coveredPoints": 70917,
+      "falseFraction": 0.054977850314758686
+    },
+    {
+      "oldMinimumScore": 0.3,
+      "newMinimumScore": 0.8502515529507452,
+      "selected": 21399,
+      "false": 1176,
+      "coveredPoints": 70750,
+      "falseFraction": 0.0549558390578999
+    },
+    {
+      "oldMinimumScore": 0.4,
+      "newMinimumScore": 0.849508866751736,
+      "selected": 21310,
+      "false": 1172,
+      "coveredPoints": 70403,
+      "falseFraction": 0.05499765368371656
+    },
+    {
+      "oldMinimumScore": 0.5,
+      "newMinimumScore": 0.8484703201688548,
+      "selected": 21228,
+      "false": 1166,
+      "coveredPoints": 70095,
+      "falseFraction": 0.05492745430563407
+    },
+    {
+      "oldMinimumScore": 0.6,
+      "newMinimumScore": 0.846826310913058,
+      "selected": 21113,
+      "false": 1161,
+      "coveredPoints": 69685,
+      "falseFraction": 0.054989816700611
+    },
+    {
+      "oldMinimumScore": 0.7,
+      "newMinimumScore": 0.8355970994330606,
+      "selected": 20970,
+      "false": 1153,
+      "coveredPoints": 69137,
+      "falseFraction": 0.05498330948974726
+    },
+    {
+      "oldMinimumScore": 0.75,
+      "newMinimumScore": 0.8230728825586235,
+      "selected": 20820,
+      "false": 1145,
+      "coveredPoints": 68614,
+      "falseFraction": 0.05499519692603266
+    }
+  ]
+}

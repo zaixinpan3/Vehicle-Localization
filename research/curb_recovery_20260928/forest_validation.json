@@ -1,0 +1,42 @@
+{
+  "prefixOOF": {
+    "threshold": 0.7503924254836816,
+    "selected": 20490,
+    "false": 1024,
+    "coveredPoints": 68635
+  },
+  "validation": {
+    "prefix": {
+      "selected": 26006,
+      "false": 136,
+      "falseFraction": 0.005229562408674921,
+      "coveredPoints": 81294,
+      "referencePoints": 91697,
+      "pointCoverage": 0.8865502688201359
+    },
+    "suffix": {
+      "selected": 10045,
+      "false": 924,
+      "falseFraction": 0.09198606271777003,
+      "coveredPoints": 31210,
+      "referencePoints": 42139,
+      "pointCoverage": 0.7406440589477681
+    },
+    "all": {
+      "selected": 36051,
+      "false": 1060,
+      "falseFraction": 0.02940279049124851,
+      "coveredPoints": 112504,
+      "referencePoints": 133836,
+      "pointCoverage": 0.8406108969186168
+    },
+    "frame500": {
+      "selected": 24,
+      "false": 0,
+      "falseFraction": 0.0,
+      "coveredPoints": 58,
+      "referencePoints": 64,
+      "pointCoverage": 0.90625
+    }
+  }
+}

@@ -4,7 +4,7 @@ function score=scoreSemanticPillarModel(features,model,threshold)
 % A conservative facade vote also requires agreement of nearby distributions
 % in the offline training bank. The bank contains no frame/point/pillar IDs.
 % Scores rank reference agreement; they are not physical class probabilities.
-    if ~isfield(model,'kind') || string(model.kind)~="forestNeighborConsensus"
+    if ~isfield(model,'kind') || ~any(string(model.kind)==["forestNeighborConsensus","probabilityForest"])
         score=scorePillarPoleModel(features,model);return;
     end
     x=double(features);x(~isfinite(x))=0;
@@ -21,6 +21,7 @@ function score=scoreSemanticPillarModel(features,model,threshold)
         pending=~reshape(model.leaf(node),size(node));
     end
     score=mean(reshape(model.value(node),size(node)),2);
+    if string(model.kind)=="probabilityForest",return;end
     % Skip the neighbor query for candidates already rejected by the forest.
     query=find(score>=threshold);if isempty(query),return;end
     scaled=(x(query,:)-model.neighborCenter(:).')./model.neighborScale(:).';

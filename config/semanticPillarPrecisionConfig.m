@@ -10,5 +10,10 @@ function cfg=semanticPillarPrecisionConfig(spacing,profile)
     profile=lower(string(profile));
     if profile=="missisipi",profile="mississippi";end
     cfg=struct('profile',lower(string(profile)),'enabled',abs(spacing-.6)<1e-12,'classes',["curb","trafficSign","facade"], ...
-        'modelDirectory',fileparts(mfilename('fullpath')));
+        'modelDirectory',fileparts(mfilename('fullpath')),'modelFiles',struct());
+    % Mississippi recovery uses the same whole-pillar descriptors with a
+    % profile-specific forest. Other profiles retain their calibrated models.
+    if profile=="mississippi"
+        cfg.modelFiles.curb="mississippiCurbPillarPrecisionModel.json";
+    end
 end

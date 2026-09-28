@@ -1,0 +1,46 @@
+{
+  "choice": {
+    "label": "raw",
+    "features": 157,
+    "depth": 6,
+    "threshold": 0.8188853731677389,
+    "selected": 21046,
+    "false": 1052,
+    "coveredPoints": 70303,
+    "referencePoints": 91697
+  },
+  "validation": {
+    "prefix": {
+      "selected": 21711,
+      "false": 663,
+      "falseFraction": 0.030537515545115378,
+      "coveredPoints": 73219,
+      "referencePoints": 91697,
+      "pointCoverage": 0.7984885001690349
+    },
+    "suffix": {
+      "selected": 10371,
+      "false": 1077,
+      "falseFraction": 0.1038472664159676,
+      "coveredPoints": 31819,
+      "referencePoints": 42139,
+      "pointCoverage": 0.7550962291463964
+    },
+    "all": {
+      "selected": 32082,
+      "false": 1740,
+      "falseFraction": 0.054236020198242,
+      "coveredPoints": 105038,
+      "referencePoints": 133836,
+      "pointCoverage": 0.784826205206372
+    },
+    "frame500": {
+      "selected": 17,
+      "false": 0,
+      "falseFraction": 0.0,
+      "coveredPoints": 43,
+      "referencePoints": 64,
+      "pointCoverage": 0.671875
+    }
+  }
+}

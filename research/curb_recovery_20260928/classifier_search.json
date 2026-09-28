@@ -1,0 +1,32 @@
+[
+  {
+    "label": "raw",
+    "features": 157,
+    "depth": 6,
+    "threshold": 0.8188853731677389,
+    "selected": 21046,
+    "false": 1052,
+    "coveredPoints": 70303,
+    "referencePoints": 91697
+  },
+  {
+    "label": "groups",
+    "features": 174,
+    "depth": 6,
+    "threshold": 0.8263755235823095,
+    "selected": 21045,
+    "false": 1051,
+    "coveredPoints": 70237,
+    "referencePoints": 91697
+  },
+  {
+    "label": "groups_deeper",
+    "features": 174,
+    "depth": 8,
+    "threshold": 0.8360603756074944,
+    "selected": 20809,
+    "false": 1038,
+    "coveredPoints": 69697,
+    "referencePoints": 91697
+  }
+]

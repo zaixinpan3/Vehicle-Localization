@@ -23,7 +23,11 @@ function [ground,offGround]=filterSemanticPillarCandidates(ground,offGround,name
             [groupFeatures,groupNames]=measureFacadeGroupEvidence(offGround,offGroundPillars);
             x=[x,groupFeatures];features=[features,groupNames]; %#ok<AGROW>
         end
-        model=readModel(fullfile(cfg.modelDirectory,name+"PillarPrecisionModel.json"));
+        modelFile=name+"PillarPrecisionModel.json";
+        if isfield(cfg,'modelFiles') && isfield(cfg.modelFiles,name)
+            modelFile=cfg.modelFiles.(name);
+        end
+        model=readModel(fullfile(cfg.modelDirectory,modelFile));
         assert(isequal(features(:),string(model.featureNames(:))), ...
             'perception:SemanticFeatureSchema','Semantic precision feature schema mismatch.');
         threshold=model.decisionThreshold;

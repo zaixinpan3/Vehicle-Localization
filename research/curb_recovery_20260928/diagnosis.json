@@ -1,0 +1,8 @@
+{
+  "frame": 500,
+  "referencePoints": 64,
+  "coveredByPreviousPrecision": 38,
+  "referencePointsInCoarseGround": 64,
+  "oldProposalCoverage": 62,
+  "diagnosis": "All reference curb points survive coarse ground routing. Strict class acceptance removes most of the additional missed points; proposal generation misses two. Fixed-neighbor recovery was evaluated as a bounded supplement, not arbitrary mask dilation."
+}

@@ -1,0 +1,158 @@
+{
+  "prefixCap": 0.05,
+  "prefixChoice": {
+    "model": "new",
+    "edges": [
+      8,
+      16,
+      24
+    ],
+    "thresholds": [
+      0.7278568327528816,
+      0.8412094868487673,
+      1.0,
+      1.0
+    ],
+    "selected": 20885,
+    "false": 1043,
+    "coveredPoints": 70175
+  },
+  "validation": {
+    "prefix": {
+      "selected": 21485,
+      "false": 660,
+      "falseFraction": 0.030719106353269722,
+      "coveredPoints": 72853,
+      "referencePoints": 91697,
+      "pointCoverage": 0.7944970936889975
+    },
+    "suffix": {
+      "selected": 10290,
+      "false": 1073,
+      "falseFraction": 0.1042759961127308,
+      "coveredPoints": 31665,
+      "referencePoints": 42139,
+      "pointCoverage": 0.7514416573720306
+    },
+    "all": {
+      "selected": 31775,
+      "false": 1733,
+      "falseFraction": 0.05453973249409914,
+      "coveredPoints": 104518,
+      "referencePoints": 133836,
+      "pointCoverage": 0.7809408529842494
+    },
+    "frame500": {
+      "selected": 16,
+      "false": 0,
+      "falseFraction": 0.0,
+      "coveredPoints": 42,
+      "referencePoints": 64,
+      "pointCoverage": 0.65625
+    }
+  },
+  "alternatives": [
+    {
+      "model": "old",
+      "edges": [
+        10,
+        20
+      ],
+      "thresholds": [
+        0.6521262061079677,
+        0.902326148654776,
+        1.0
+      ],
+      "selected": 19587,
+      "false": 979,
+      "coveredPoints": 66664
+    },
+    {
+      "model": "old",
+      "edges": [
+        8,
+        16,
+        24
+      ],
+      "thresholds": [
+        0.7320583437888833,
+        0.8594134720809359,
+        1.0,
+        1.0
+      ],
+      "selected": 19861,
+      "false": 991,
+      "coveredPoints": 66810
+    },
+    {
+      "model": "old",
+      "edges": [
+        10,
+        15,
+        20,
+        25
+      ],
+      "thresholds": [
+        0.6521262061079677,
+        0.8818161400894504,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selected": 19807,
+      "false": 990,
+      "coveredPoints": 67264
+    },
+    {
+      "model": "new",
+      "edges": [
+        10,
+        20
+      ],
+      "thresholds": [
+        0.6451605299436659,
+        0.8978383327050974,
+        1.0
+      ],
+      "selected": 20402,
+      "false": 1020,
+      "coveredPoints": 69483
+    },
+    {
+      "model": "new",
+      "edges": [
+        8,
+        16,
+        24
+      ],
+      "thresholds": [
+        0.7278568327528816,
+        0.8412094868487673,
+        1.0,
+        1.0
+      ],
+      "selected": 20885,
+      "false": 1043,
+      "coveredPoints": 70175
+    },
+    {
+      "model": "new",
+      "edges": [
+        10,
+        15,
+        20,
+        25
+      ],
+      "thresholds": [
+        0.6451605299436659,
+        0.894462317237909,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selected": 20428,
+      "false": 1021,
+      "coveredPoints": 69541
+    }
+  ]
+}

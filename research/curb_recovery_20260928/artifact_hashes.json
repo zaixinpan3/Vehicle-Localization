@@ -1,0 +1,27 @@
+[
+  {
+    "path": "config/mississippiCurbPillarPrecisionModel.json",
+    "bytes": 41862098,
+    "sha256": "7d967ff83f971b99718c761d419705fdcaf21b98994b92a7dccba00fc3cfe7ad"
+  },
+  {
+    "path": "config/curbPillarPrecisionModel.json",
+    "bytes": 563184,
+    "sha256": "69b844b02e2b9544077e2377176a258548f9f042f06bd6ec2734a05088d32dc5"
+  },
+  {
+    "path": "output/semantic_precision_20260927/mississippi_baseline.mat",
+    "bytes": 19870004,
+    "sha256": "a8f6d65558696a0a4468f800b74757dd48348c5eb12429f7a322512fe32d6ed2"
+  },
+  {
+    "path": "output/semantic_precision_20260927/mississippi_curb_features.csv",
+    "bytes": 119548231,
+    "sha256": "7e35774472ef35fc24e5e74bb26354ae48a8cc168c637293baf06c0c651defe9"
+  },
+  {
+    "path": "output/curb_recovery_20260928/forest_predictions.csv",
+    "bytes": 4549422,
+    "sha256": "a80dc98e0508f407f2a0e485249909cb89e61b1f69286fddf916918e418e278a"
+  }
+]

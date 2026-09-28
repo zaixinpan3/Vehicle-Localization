@@ -1,0 +1,22 @@
+{
+  "files": [
+    "config/semanticPillarPrecisionConfig.m",
+    "perception/filterSemanticPillarCandidates.m",
+    "perception/scoreSemanticPillarModel.m",
+    "tests/mississippiCurbRecoveryTest.m",
+    "research/curb_recovery_20260928/benchmarkCurbRecovery.m",
+    "research/curb_recovery_20260928/diagnoseCurbFrame.m",
+    "research/curb_recovery_20260928/replayCurbRecovery.m",
+    "research/curb_recovery_20260928/validateCurbRecovery.m"
+  ],
+  "findings": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    []
+  ]
+}
