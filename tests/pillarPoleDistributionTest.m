@@ -61,7 +61,14 @@ classdef pillarPoleDistributionTest < matlab.unittest.TestCase
             model=loadPillarPoleModel(v.modelFile);names=string(model.featureNames);
             t.verifyFalse(any(ismember(names,["dataset","frame","pillar","hypothesis","finePointCount"])));
             t.verifyTrue(any(startsWith(names,"moment")));
-            t.verifyEqual(v.minimumScore,model.decisionThreshold,'AbsTol',0);t.verifyEqual(model.featureScale,1e8);
+            t.verifyEqual(v.minimumScore,model.decisionThresholds.mississippi,'AbsTol',0);t.verifyEqual(model.featureScale,1e8);
+        end
+        function profileCalibrationPreservesDowntownAndFineModes(t)
+            m=perceptionConfig('Mississippi');alias=perceptionConfig('Missisipi');d=perceptionConfig('Downtown');
+            t.verifyEqual(m.offGroundFeatures.pole.distributionValidation,alias.offGroundFeatures.pole.distributionValidation);
+            t.verifyEqual(d.offGroundFeatures.pole.distributionValidation,pillarPoleDistributionConfig());
+            t.verifyLessThan(m.offGroundFeatures.pole.distributionValidation.minimumScore,d.offGroundFeatures.pole.distributionValidation.minimumScore);
+            fine=perceptionConfig('Mississippi','offline');t.verifyFalse(isfield(fine.offGroundFeatures.pole,'distributionValidation'));
         end
         function emptyMarginCroppingPreservesPoleContext(t)
             root=fileparts(fileparts(mfilename('fullpath')));file=fullfile(root,'data','raw','downTownPointClouds.mat');

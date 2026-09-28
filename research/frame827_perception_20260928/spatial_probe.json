@@ -1,0 +1,70 @@
+{
+  "choice": {
+    "threshold": 0.8239653313340893,
+    "selected": 21395,
+    "false": 1069,
+    "covered": 71016,
+    "fields": [
+      "ground_heightMap",
+      "ground_roughnessMap",
+      "energy_relativeHeightMeters",
+      "energy_heightStepMeters",
+      "energy_totalBase",
+      "raw_planeRms",
+      "raw_stepOwnMiddleFraction",
+      "raw_ownerContextQ50",
+      "raw_zQ50"
+    ],
+    "offsets": [
+      [
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0
+      ],
+      [
+        -1,
+        1
+      ],
+      [
+        0,
+        -1
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        -1
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  },
+  "results": {
+    "prefixOOF": {
+      "selected": 21395,
+      "false": 1069,
+      "covered": 71016
+    },
+    "suffix": {
+      "selected": 10416,
+      "false": 1062,
+      "covered": 31957
+    },
+    "frame827": {
+      "selected": 28,
+      "false": 9,
+      "covered": 51
+    }
+  }
+}

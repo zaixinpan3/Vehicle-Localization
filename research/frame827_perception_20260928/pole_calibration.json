@@ -1,0 +1,65 @@
+{
+  "threshold": 0.8701683227450074,
+  "prefixOOF": {
+    "selected": 1002,
+    "false": 74,
+    "falseFraction": 0.07385229540918163,
+    "coveredPoints": 97395,
+    "referencePoints": 124708
+  },
+  "validation": {
+    "before": {
+      "suffix": {
+        "selected": 397,
+        "false": 20,
+        "falseFraction": 0.05037783375314862,
+        "coveredPoints": 43411,
+        "referencePoints": 69592,
+        "coverage": 0.6237929647085871
+      },
+      "all": {
+        "selected": 1222,
+        "false": 30,
+        "falseFraction": 0.024549918166939442,
+        "coveredPoints": 136943,
+        "referencePoints": 194300,
+        "coverage": 0.7048018528049408
+      },
+      "frame827": {
+        "selected": 0,
+        "false": 0,
+        "falseFraction": null,
+        "coveredPoints": 0,
+        "referencePoints": 192,
+        "coverage": 0.0
+      }
+    },
+    "after": {
+      "suffix": {
+        "selected": 505,
+        "false": 39,
+        "falseFraction": 0.07722772277227723,
+        "coveredPoints": 49034,
+        "referencePoints": 69592,
+        "coverage": 0.7045924818944707
+      },
+      "all": {
+        "selected": 1533,
+        "false": 64,
+        "falseFraction": 0.04174820613176777,
+        "coveredPoints": 151658,
+        "referencePoints": 194300,
+        "coverage": 0.7805352547606793
+      },
+      "frame827": {
+        "selected": 2,
+        "false": 0,
+        "falseFraction": 0.0,
+        "coveredPoints": 125,
+        "referencePoints": 192,
+        "coverage": 0.6510416666666666
+      }
+    }
+  },
+  "policy": "Mississippi only; maximize reference coverage at <=7.5% prefix OOF reference-empty fraction. Other profiles keep previous threshold. Reused suffix and frame827 are development checks, not independent testing."
+}

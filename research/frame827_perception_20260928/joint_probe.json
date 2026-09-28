@@ -1,0 +1,25 @@
+{
+  "choice": {
+    "threshold": 0.8107876302157236,
+    "selected": 21493,
+    "false": 1074,
+    "covered": 71295
+  },
+  "results": {
+    "prefixOOF": {
+      "selected": 21493,
+      "false": 1074,
+      "covered": 71295
+    },
+    "suffix": {
+      "selected": 10297,
+      "false": 1015,
+      "covered": 31774
+    },
+    "frame827": {
+      "selected": 28,
+      "false": 9,
+      "covered": 51
+    }
+  }
+}

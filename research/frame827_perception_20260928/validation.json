@@ -1,0 +1,10 @@
+{
+  "rawFrames": 1170,
+  "passedTests": 30,
+  "cleanMatlabFiles": 8,
+  "poleModelWeightsUnchanged": true,
+  "rawReplayMatchesCalibration": true,
+  "curbProductionChanged": false,
+  "curbFrame827Resolved": false,
+  "fullMatchingRerun": false
+}

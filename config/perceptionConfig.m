@@ -24,6 +24,9 @@ function cfg = perceptionConfig(dataset, executionMode)
     cfg.groundSegmentation = groundSegmentationConfig(spacing);
     cfg.groundFeatures = groundFeatureConfig(spacing);
     cfg.offGroundFeatures = structuralPillarConfig(spacing);
+    if abs(spacing-.6)<1e-12
+        cfg.offGroundFeatures.pole.distributionValidation=pillarPoleDistributionConfig(dataset);
+    end
     cloudCfg = coarseSemanticProbabilityCloudConfig(cfg.voxel);
     cfg.featureNames = cloudCfg.semanticNames;
     if dataset ~= "downtown", cfg.featureNames(cfg.featureNames=="facade") = []; end

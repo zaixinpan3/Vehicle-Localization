@@ -1,0 +1,53 @@
+{
+  "baselineCommit": "46b832fcdd510c4118081dd61dec84f44c51bbf2",
+  "inputs": {
+    "data/raw/MissisipiPointClouds.mat": "75c4842872acb3a5cfaf25fa52c37572a0653c544ff6d275adad21b189218f1d",
+    "output/pole_precision_20260927/mississippi.mat": "56087454c296e04765263f609d1520b3df5f559b30ff05699c7a967d7d5c62b7",
+    "output/semantic_precision_20260927/mississippi_baseline.mat": "a8f6d65558696a0a4468f800b74757dd48348c5eb12429f7a322512fe32d6ed2",
+    "output/pole_geometry_20260927/stable_moments_compact_d5_w1.0_oof.npy": "8121a27c25575d6f03312f0350fbb524d19cc1ee67124298f4b7a5f0f53e1f9d",
+    "output/pole_geometry_20260927/mississippi_features.csv": "e0cf20cadb2e2bebbb1e26dc7bf6c14abee56c62139ffab4ab42a2965f7489e2",
+    "output/pole_geometry_20260927/downtown_features.csv": "646f75ba9bf12d7b540402725e7044dbf85577e566129ba21f97bb510bedfa2b",
+    "research/pole_geometry_20260927/stable_moments_model_predictions.csv": "0e81f658ce2e4353f1e450c85909982520c51297311f46b91e71fd8ff763928e",
+    "output/semantic_precision_20260927/mississippi_curb_features.csv": "7e35774472ef35fc24e5e74bb26354ae48a8cc168c637293baf06c0c651defe9",
+    "output/curb_recovery_20260928/forest_predictions.csv": "a80dc98e0508f407f2a0e485249909cb89e61b1f69286fddf916918e418e278a",
+    "output/frame827_perception_20260928/joint_features.csv": "959f288e1a9588315c3e58cf7b79e819d854ca6d41c795a713337a9a1cc97bd7",
+    "output/frame827_perception_20260928/spatial_predictions.csv": "c4836ad9fda56260ccffb383070a0a16fa1e2db10103fc8f5e078f4d3bd0fee4",
+    "output/frame827_perception_20260928/joint_predictions.csv": "657e61480683052eebf02c11da9145b91fe107217b33a0f3a9adbf445413606e",
+    "output/frame827_perception_20260928/consensus_predictions.csv": "856fd3afc4552dcc26e5fe0f4faa10fa7fd0c866ef3f392b609aa5983f8182f9"
+  },
+  "implementation": {
+    "config/perceptionConfig.m": "dec9753a9275f1b603629c55170d42c02b14e9649d65e910a0b5f1598356b359",
+    "config/pillarPoleDistributionConfig.m": "6e02680de3f3f9a2a3360c318a07e4c0898c02cd3f9ae6b39dd95ef1426523f9",
+    "config/polePillarDistributionModel.json": "659a2c6f11043f26f65a3da09aeb3a1c59ed10d5a0f4dea0d857814db55c0b5a",
+    "tests/pillarPoleDistributionTest.m": "6d90bf2e31740918aaa2b4af9d94f90fc32c6ab5b7bb854fa1b3ea410a26ae8b"
+  },
+  "artifacts": {
+    "research/frame827_perception_20260928/README.md": "61b6d09f4c14caf5a644fd2af3ebf58b66d9544f113291c17affaea179c3ffd3",
+    "research/frame827_perception_20260928/captureCurbJointMoments.m": "b310cc6f10b1dbcafecbe74c133ddce782074d7658bb74ff6cc4b7121d7ba92a",
+    "research/frame827_perception_20260928/code_analysis.json": "9d549ccd964b4847e6eec682b23572ea1d133f8a98d500daf381d815a3d0c764",
+    "research/frame827_perception_20260928/consensus_probe.json": "b6e8f6f1391afd1c754bfa709c61ec4b0db7b6162429769d41dc32712085f705",
+    "research/frame827_perception_20260928/curb_cells.csv": "a311b5ade4c788c3baef5f8ea6f3f07a13f9b8a15ddb8d600a5af25d8617ba18",
+    "research/frame827_perception_20260928/diagnosePerception827.m": "3c3e9e32fadef1b3fc8954fd19ee66fbebe9d36c0cfd6591d92adeb257ed325b",
+    "research/frame827_perception_20260928/features_0827.json": "07d8883c07288066133f965e54549e3be6d1528d9fa3a7d71fc4c659325e1f4a",
+    "research/frame827_perception_20260928/features_0827.png": "2aa11adbb574ef92189340043395067f5ab3e124ba854e4c85806e353baf5dcb",
+    "research/frame827_perception_20260928/features_0827_focus.png": "c8b6e5317311045055908936cfbd10b6cef0deb00aa3c88e79cfd81e336475bf",
+    "research/frame827_perception_20260928/frame827_comparison.csv": "c1ddda1a8214f9434137d4b45ca5fbcac90e42b16149a7b02d2302c52f23f9e2",
+    "research/frame827_perception_20260928/inflection_probe.csv": "607db6e926e5e4c636f4c7714e108d34e532830685626164582e13bd05daefc3",
+    "research/frame827_perception_20260928/joint_probe.json": "3c14cb3dc638f3782358648784652479cafd2dc7aa8b40aea5d4dab823e6742a",
+    "research/frame827_perception_20260928/measureCurbJointMoments.m": "3ddd73bd5d9cf6a82d2c747127fe87f2b2c95137c9958d8f4bccb1157ec4fb62",
+    "research/frame827_perception_20260928/neighbor_probe.json": "7f9c613a76e1a4020b60c3518ee06563f73a66ddc39e36fb89d593b78d8a921b",
+    "research/frame827_perception_20260928/pole_calibration.json": "bde9ebadba41f1385f5be1ce50388d63130310ec19d681befda4f51a48df7938",
+    "research/frame827_perception_20260928/pole_replay.csv": "77fc5dca628d4740f280c56cb7d35c1f3deb8670c95295a4af9fd2b3968d08c5",
+    "research/frame827_perception_20260928/probeCurbConsensus.py": "b1b43c0af03f5cc02d6bcb122760de87cbbf999caab43ba0ddeaca1b90af4a35",
+    "research/frame827_perception_20260928/probeCurbInflection.py": "964dc8c41436d2fdec1a4d174636cdae1b1d70d8a31df1e7891e85943d77f60e",
+    "research/frame827_perception_20260928/probeJointCurb.py": "3f4bd390f0a26d1b2b12fafba9029d00ddb056342e32ae5b01f55d20b61a8d66",
+    "research/frame827_perception_20260928/probeNeighborCurb.py": "1f8f4d045e32cd5626663cc8e052f121665afbefa40ee13e93e170b55da23d24",
+    "research/frame827_perception_20260928/probeSpatialCurb.py": "91d7b4483876127f2283d0da47c20dafd1d81878838d46451c20be152031211a",
+    "research/frame827_perception_20260928/replayPoleCalibration.m": "f8cf973cdfa012a4af6f3008d889635c71578aef064960cc738879b70e7d8cad",
+    "research/frame827_perception_20260928/selectMississippiPole.py": "780bd668eb9b46e8eaead767c0917855a6c2bdd06833fc62ca260967f534add6",
+    "research/frame827_perception_20260928/spatial_probe.json": "820cd28a393f6f82eba0f07f2bdc6557bee60cb1bb82cd08efc55821e6d72a84",
+    "research/frame827_perception_20260928/tests.csv": "c0c558443d0d5c5ab3b8aaae677e50bd1135861bc2b47acf420342a3a00dd72a",
+    "research/frame827_perception_20260928/validatePerception827.m": "dc1af1efb0fec1eb9c45ac282b37a3e5ada5f1d7201005876f530e0208d1250a",
+    "research/frame827_perception_20260928/validation.json": "865650090a64032cf49582415788b2dfd89f9b522f695a06c0d46f1bcc0a489f"
+  }
+}

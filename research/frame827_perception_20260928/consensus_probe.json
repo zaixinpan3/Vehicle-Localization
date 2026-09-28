@@ -1,0 +1,146 @@
+[
+  {
+    "minimumAgreement": 0,
+    "prefixOOF": {
+      "selected": 20490,
+      "false": 1024,
+      "covered": 68635
+    },
+    "suffix": {
+      "selected": 10045,
+      "false": 924,
+      "covered": 31210
+    },
+    "frame827": {
+      "selected": 28,
+      "false": 9,
+      "covered": 50
+    }
+  },
+  {
+    "minimumAgreement": 0.5,
+    "prefixOOF": {
+      "selected": 19954,
+      "false": 943,
+      "covered": 67399
+    },
+    "suffix": {
+      "selected": 9493,
+      "false": 803,
+      "covered": 29968
+    },
+    "frame827": {
+      "selected": 27,
+      "false": 9,
+      "covered": 47
+    }
+  },
+  {
+    "minimumAgreement": 0.7,
+    "prefixOOF": {
+      "selected": 19003,
+      "false": 806,
+      "covered": 65106
+    },
+    "suffix": {
+      "selected": 8521,
+      "false": 594,
+      "covered": 27821
+    },
+    "frame827": {
+      "selected": 25,
+      "false": 7,
+      "covered": 47
+    }
+  },
+  {
+    "minimumAgreement": 0.8,
+    "prefixOOF": {
+      "selected": 17929,
+      "false": 679,
+      "covered": 62280
+    },
+    "suffix": {
+      "selected": 7765,
+      "false": 453,
+      "covered": 26064
+    },
+    "frame827": {
+      "selected": 25,
+      "false": 7,
+      "covered": 47
+    }
+  },
+  {
+    "minimumAgreement": 0.9,
+    "prefixOOF": {
+      "selected": 15899,
+      "false": 460,
+      "covered": 56860
+    },
+    "suffix": {
+      "selected": 6638,
+      "false": 296,
+      "covered": 23122
+    },
+    "frame827": {
+      "selected": 23,
+      "false": 6,
+      "covered": 46
+    }
+  },
+  {
+    "minimumAgreement": 0.95,
+    "prefixOOF": {
+      "selected": 13319,
+      "false": 260,
+      "covered": 49059
+    },
+    "suffix": {
+      "selected": 5348,
+      "false": 144,
+      "covered": 19243
+    },
+    "frame827": {
+      "selected": 17,
+      "false": 3,
+      "covered": 40
+    }
+  },
+  {
+    "minimumAgreement": 0.97,
+    "prefixOOF": {
+      "selected": 10049,
+      "false": 164,
+      "covered": 37775
+    },
+    "suffix": {
+      "selected": 4201,
+      "false": 83,
+      "covered": 15510
+    },
+    "frame827": {
+      "selected": 10,
+      "false": 1,
+      "covered": 23
+    }
+  },
+  {
+    "minimumAgreement": 1,
+    "prefixOOF": {
+      "selected": 10049,
+      "false": 164,
+      "covered": 37775
+    },
+    "suffix": {
+      "selected": 4201,
+      "false": 83,
+      "covered": 15510
+    },
+    "frame827": {
+      "selected": 10,
+      "false": 1,
+      "covered": 23
+    }
+  }
+]
