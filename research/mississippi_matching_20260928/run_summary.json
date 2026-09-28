@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "rawFramesPerMode": 1170,
+    "perceptionMode": "coarseProbabilityCloud",
+    "finePerceptionUsed": false,
+    "registrationMethod": "geometricD2D",
+    "sourceWindow": {
+      "maximumFrames": 5,
+      "maximumAgeSeconds": 0.45,
+      "minimumDetectionFrames": 2,
+      "maximumAssociationDistance": 0.75,
+      "maximumStandardizedDistance": 3,
+      "associationNoiseStandardDeviation": 0.1
+    },
+    "globalFusionObserverUsed": false,
+    "mapRebuilt": false,
+    "mapFile": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+    "primaryMode": "recursive",
+    "reference": "INSPVA interpolated pose at the declared LiDAR header epoch",
+    "referenceControl": "Every frame starts at reference plus [0.5 m,-0.4 m,2 degrees]; diagnostic only",
+    "evaluation": "Direct map-frame XY and wrapped yaw discrepancies at acquisition time; no trajectory alignment",
+    "rejectedHandling": "Absent matching measurements; propagated/seeded outputs scored separately",
+    "mapOverlap": "same sequence used for mapping and query; includes query observations",
+    "randomness": "None"
+  },
+  "metrics": [
+    {
+      "mode": "recursive",
+      "population": "accepted_matching_measurements",
+      "samples": 1150,
+      "positionRmseM": 0.16297092875867691,
+      "positionMedianM": 0.10691402695988522,
+      "positionP95M": 0.32519149414082571,
+      "positionMaximumM": 0.85158799079459491,
+      "headingRmseDeg": 0.60967876958542078,
+      "mapXRmseM": 0.11875363282502785,
+      "mapYRmseM": 0.11161137178318442
+    },
+    {
+      "mode": "recursive",
+      "population": "all_outputs_with_prediction",
+      "samples": 1170,
+      "positionRmseM": 0.16609296553476802,
+      "positionMedianM": 0.10858205806847203,
+      "positionP95M": 0.33736644227558482,
+      "positionMaximumM": 0.85158799079459491,
+      "headingRmseDeg": 0.62408347318839064,
+      "mapXRmseM": 0.12127971845540275,
+      "mapYRmseM": 0.11348173021024967
+    },
+    {
+      "mode": "referenceSeed",
+      "population": "accepted_matching_measurements",
+      "samples": 1150,
+      "positionRmseM": 0.16281642771142735,
+      "positionMedianM": 0.10776251452458233,
+      "positionP95M": 0.32519149415283838,
+      "positionMaximumM": 0.851587981461682,
+      "headingRmseDeg": 0.60899866833764937,
+      "mapXRmseM": 0.11859974420846699,
+      "mapYRmseM": 0.1115494948728888
+    },
+    {
+      "mode": "referenceSeed",
+      "population": "all_outputs_with_prediction",
+      "samples": 1170,
+      "positionRmseM": 0.17827916224601173,
+      "positionMedianM": 0.10963695274678786,
+      "positionP95M": 0.38465318281562194,
+      "positionMaximumM": 0.851587981461682,
+      "headingRmseDeg": 0.63656923639651708,
+      "mapXRmseM": 0.13149193672107581,
+      "mapYRmseM": 0.12038824804971775
+    }
+  ]
+}

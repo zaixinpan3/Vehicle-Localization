@@ -1,0 +1,71 @@
+{
+  "inputs": [
+    {
+      "path": "data/raw/MissisipiPointClouds.mat",
+      "bytes": 1273317517,
+      "sha256": "75c4842872acb3a5cfaf25fa52c37572a0653c544ff6d275adad21b189218f1d"
+    },
+    {
+      "path": "output/mississippi_mapping_calibrated/probability_cloud.mat",
+      "bytes": 270306,
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_front_lidar_synchronized_pose_1_1170.csv",
+      "bytes": 386537,
+      "sha256": "c0998dee5ba1c33b0890e943347c0eacbce937a500f5947fa2c13bcb08b012a4"
+    },
+    {
+      "path": "output/mncav_wheel_only_20260916/sensors/wheel_speed_report.csv",
+      "bytes": 645932,
+      "sha256": "aa3bca4fedbfcbb79239ec09b71ecf130d9ba5c4d86fca51bb6aee007ded8424"
+    },
+    {
+      "path": "output/mncav_wheel_only_20260916/sensors/imu.csv",
+      "bytes": 518357,
+      "sha256": "52efb34d5815f46e1d1e02c7cdc94ae420666d6c49be49336761771d2d821701"
+    },
+    {
+      "path": "output/mncav_wheel_only_20260916/sensors/steering.csv",
+      "bytes": 906572,
+      "sha256": "edbb5905529d203dacbbe4b6858f5b8192c2bd0acfd331e4654f6661398bee52"
+    },
+    {
+      "path": "output/mncav_wheel_only_20260916/sensors/corrimu.csv",
+      "bytes": 2282070,
+      "sha256": "6f40989b22ac65bff7cec791464df248d14d8942c0ee23a2d3567f82480bfbe7"
+    },
+    {
+      "path": "output/mncav_wheel_only_20260916/sensors/inspva.csv",
+      "bytes": 1342433,
+      "sha256": "8e4de8eefc2fa471f1699fe3142fa2848acbd83cb6c195c1a173abec835627a5"
+    },
+    {
+      "path": "output/mncav_wheel_only_20260916/sensors/manifest.json",
+      "bytes": 8250,
+      "sha256": "713e97d03a077f894c8331c60ba6567a83d9a8737b4969af2b985f4396d1896d"
+    },
+    {
+      "path": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.clock.json",
+      "bytes": 18406,
+      "sha256": "806f109ddabf662cabf6e50a15c4cc8e87837425cce9e4741ead6145892371d5"
+    }
+  ],
+  "externalDependencies": {
+    "YALMIP": {
+      "path": "/home/zai/Downloads/ResearchProjects/RobustVehicleLocalization/external/YALMIP",
+      "gitHead": "a30979f7e883c9042766d9e71f4c384d3971fef6",
+      "entryPointSha256": "2209eb13d8d734c05f762076de41203bb2fb34919c85b715247c9fee24a12f02"
+    },
+    "sedumi": {
+      "path": "/home/zai/Downloads/ResearchProjects/RobustVehicleLocalization/external/sedumi",
+      "gitHead": "daef0b7ee87c727a6d97bc1ca892f48b599166d7",
+      "entryPointSha256": "89bed3e4c9aec9de9d72c84692d59f354813ba2aaaf37bb5d95428b421e909bf"
+    }
+  },
+  "excludedWorkingTreePatch": {
+    "path": "output/mississippi_matching_20260928/working_tree_before.patch",
+    "sha256": "9a00c3f68d38debab4a5c966895c47a6a67703ce98f24bfcd5a6352aabaef071",
+    "purpose": "Local snapshot of pre-existing source changes executed by this experiment; not included in study commit."
+  }
+}

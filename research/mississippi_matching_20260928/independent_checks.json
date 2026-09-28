@@ -1,0 +1,42 @@
+{
+  "recursive": {
+    "accepted": 1150,
+    "rejected": 1,
+    "directionalAccepted": 19,
+    "reasons": {
+      "accepted": 1022,
+      "coarseRetainedByTrustRadius": 128,
+      "acceptedDirectional": 19,
+      "insufficientComponents": 1
+    },
+    "minimumAcceptedInformationEigenvalue": 0.4729596334259047,
+    "predictionAudit": {
+      "maximumPredictionCoordinateResidualM": 1.7695128917694092e-08,
+      "maximumPredictionHeadingResidualRad": 1.021405182655144e-14,
+      "rejectedOutputsEqualInitialGuesses": true
+    }
+  },
+  "referenceSeed": {
+    "accepted": 1150,
+    "rejected": 8,
+    "directionalAccepted": 12,
+    "reasons": {
+      "accepted": 1022,
+      "coarseRetainedByTrustRadius": 128,
+      "acceptedDirectional": 12,
+      "notConverged": 7,
+      "insufficientComponents": 1
+    },
+    "minimumAcceptedInformationEigenvalue": 0.4729596249415146,
+    "predictionAudit": {
+      "maximumPredictionCoordinateResidualM": 9.313225746154785e-09,
+      "maximumPredictionHeadingResidualRad": 6.8833827526759706e-15,
+      "rejectedOutputsEqualInitialGuesses": true
+    }
+  },
+  "metricRowsVerified": 4,
+  "maximumMetricResidual": 3.3015343237075e-09,
+  "jointlyAcceptedFrames": 1150,
+  "csvPoseToleranceM": 1e-08,
+  "percentileMethod": "Hazen (MATLAB prctile); per-mode replay summaries use linear percentiles"
+}
