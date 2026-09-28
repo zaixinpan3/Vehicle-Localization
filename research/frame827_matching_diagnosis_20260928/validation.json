@@ -1,0 +1,13 @@
+{
+  "mapModesSeparationM": 0.9644834841548797,
+  "source17ToOriginal1263M": 0.010588766764957633,
+  "source17ToMergedTargetM": 0.48383399813588174,
+  "originalGoodTarget": 1263,
+  "originalBadTarget": 1264,
+  "reproducedPoseMaxAbs": 5.820766091346741e-11,
+  "neighborhoodFramesReproduced": 16,
+  "fullRouteAlternativeTested": false,
+  "productionChanged": false,
+  "codeAnalysisCleanFiles": 2,
+  "viewerAllPointsColoredWithoutOverlay": true
+}
