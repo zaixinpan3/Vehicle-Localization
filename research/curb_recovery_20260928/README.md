@@ -11,7 +11,7 @@ and was not replayed or retuned in this study.
 
 ## Diagnosis and evaluation
 
-Frame 500 contains 64 frozen fine curb points in 27 coarse cells. All 64
+Frame 500 contains 64 frozen fine curb points in 29 coarse cells. All 64
 survive coarse ground routing. Original proposals cover 62; the previous
 precision gate covers only 38. Thus most additional misses arise from the
 final acceptance gate, not from ground segmentation. Some real-reference
