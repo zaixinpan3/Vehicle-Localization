@@ -4,7 +4,8 @@ function cfg=semanticPillarPrecisionConfig(spacing,profile)
 % Pole retains its independent continuous-support distribution validator.
 % Fine references enter offline training/evaluation, never online inference.
 % The Downtown curb/facade operating points sacrifice substantial coverage.
-% See research/semantic_precision_20260927/README.md for calibration limits.
+% See research/semantic_precision_20260927/README.md and the Mississippi
+% recovery studies of 2026-09-28 for calibration and review limitations.
     if nargin<1,spacing=.6;end
     if nargin<2,profile="mississippi";end
     profile=lower(string(profile));
@@ -15,5 +16,6 @@ function cfg=semanticPillarPrecisionConfig(spacing,profile)
     % profile-specific forest. Other profiles retain their calibrated models.
     if profile=="mississippi"
         cfg.modelFiles.curb="mississippiCurbPillarPrecisionModel.json";
+        cfg.modelFiles.curbRecovery="mississippiCurbRecoveryModel.json";
     end
 end

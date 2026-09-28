@@ -1,0 +1,29 @@
+[
+  {
+    "kind": "boosted",
+    "raw": false,
+    "feasible": true,
+    "threshold": 0.9845521548207087,
+    "selected": 671,
+    "false": 33,
+    "coveredPoints": 2225
+  },
+  {
+    "kind": "boosted",
+    "raw": true,
+    "feasible": true,
+    "threshold": 0.9914730373277324,
+    "selected": 470,
+    "false": 23,
+    "coveredPoints": 1564
+  },
+  {
+    "kind": "forest",
+    "raw": true,
+    "feasible": true,
+    "threshold": 0.9849859035710955,
+    "selected": 449,
+    "false": 21,
+    "coveredPoints": 1537
+  }
+]

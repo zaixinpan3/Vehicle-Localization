@@ -52,6 +52,8 @@ function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg
     end
     coarseGround.curbCellMask = curbCellMask;
     coarseGround.curbProbability = single(curbProbability);
+    coarseGround.curbProbabilityParameters = struct('minimumEnergy',minimumEnergy, ...
+        'minimumProbability',max(0,min(1,double(coarseCfg.minimumSemanticProbability))));
     coarseGround.roadCellMask = logical(road.roadCellMask);
     coarseGround.stats = cellStats;
     % Convert the internal [Nx Ny] ground indexing to the public [Ny Nx] layout.

@@ -1,0 +1,23 @@
+{
+  "recordedAt": "2026-09-28T07:09:20.091993-05:00",
+  "method": "MATLAB R2026a batch auditFrame900 and factory checkcode; independent Python JSON assertions",
+  "outcome": "passed",
+  "factoryCodeAnalyzerFindings": 0,
+  "reviewUnit": "one pillar occupancy judgment supplied by the user",
+  "modifiedFineReference": false,
+  "modifiedClassifier": false,
+  "artifacts": [
+    {
+      "path": "research/pole_reference_audit_20260928/auditFrame900.m",
+      "sha256": "de4c7ed93fff58306e872b009fb2c8e17329b47d111b7e11af7567c0eff5aba7"
+    },
+    {
+      "path": "research/pole_reference_audit_20260928/frame900_audit.json",
+      "sha256": "03b3d423d70fa1e2085a9fbfd87da038478f44551dd31e8e463ca402f77d7872"
+    },
+    {
+      "path": "output/pole_precision_20260927/mississippi.mat",
+      "sha256": "56087454c296e04765263f609d1520b3df5f559b30ff05699c7a967d7d5c62b7"
+    }
+  ]
+}

@@ -1,0 +1,306 @@
+{
+  "dataset": "Mississippi",
+  "splits": {
+    "all": {
+      "curb": {
+        "before": {
+          "selected": 36051,
+          "false": 1060,
+          "falseFraction": 0.02940279049124851,
+          "coveredPoints": 112504,
+          "referencePoints": 133836,
+          "pointCoverage": 0.8406108969186168
+        },
+        "after": {
+          "selected": 38030,
+          "false": 1302,
+          "falseFraction": 0.034236129371548775,
+          "coveredPoints": 118451,
+          "referencePoints": 133836,
+          "pointCoverage": 0.8850458770435459
+        }
+      },
+      "pole": {
+        "before": {
+          "selected": 1222,
+          "false": 30,
+          "falseFraction": 0.024549918166939442,
+          "coveredPoints": 136943,
+          "referencePoints": 194300,
+          "pointCoverage": 0.7048018528049408
+        },
+        "after": {
+          "selected": 1222,
+          "false": 30,
+          "falseFraction": 0.024549918166939442,
+          "coveredPoints": 136943,
+          "referencePoints": 194300,
+          "pointCoverage": 0.7048018528049408
+        }
+      },
+      "trafficSign": {
+        "before": {
+          "selected": 4517,
+          "false": 28,
+          "falseFraction": 0.006198804516271862,
+          "coveredPoints": 66768,
+          "referencePoints": 66783,
+          "pointCoverage": 0.9997753919410628
+        },
+        "after": {
+          "selected": 4517,
+          "false": 28,
+          "falseFraction": 0.006198804516271862,
+          "coveredPoints": 66768,
+          "referencePoints": 66783,
+          "pointCoverage": 0.9997753919410628
+        }
+      }
+    },
+    "prefix": {
+      "curb": {
+        "before": {
+          "selected": 26006,
+          "false": 136,
+          "falseFraction": 0.005229562408674921,
+          "coveredPoints": 81294,
+          "referencePoints": 91697,
+          "pointCoverage": 0.8865502688201359
+        },
+        "after": {
+          "selected": 27496,
+          "false": 297,
+          "falseFraction": 0.010801571137620017,
+          "coveredPoints": 85676,
+          "referencePoints": 91697,
+          "pointCoverage": 0.9343380917587271
+        }
+      },
+      "pole": {
+        "before": {
+          "selected": 825,
+          "false": 10,
+          "falseFraction": 0.012121212121212121,
+          "coveredPoints": 93532,
+          "referencePoints": 124708,
+          "pointCoverage": 0.7500080187317574
+        },
+        "after": {
+          "selected": 825,
+          "false": 10,
+          "falseFraction": 0.012121212121212121,
+          "coveredPoints": 93532,
+          "referencePoints": 124708,
+          "pointCoverage": 0.7500080187317574
+        }
+      },
+      "trafficSign": {
+        "before": {
+          "selected": 3651,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 58929,
+          "referencePoints": 58938,
+          "pointCoverage": 0.9998472971597272
+        },
+        "after": {
+          "selected": 3651,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 58929,
+          "referencePoints": 58938,
+          "pointCoverage": 0.9998472971597272
+        }
+      }
+    },
+    "suffix": {
+      "curb": {
+        "before": {
+          "selected": 10045,
+          "false": 924,
+          "falseFraction": 0.09198606271777003,
+          "coveredPoints": 31210,
+          "referencePoints": 42139,
+          "pointCoverage": 0.7406440589477681
+        },
+        "after": {
+          "selected": 10534,
+          "false": 1005,
+          "falseFraction": 0.0954053540915132,
+          "coveredPoints": 32775,
+          "referencePoints": 42139,
+          "pointCoverage": 0.7777830513301217
+        }
+      },
+      "pole": {
+        "before": {
+          "selected": 397,
+          "false": 20,
+          "falseFraction": 0.05037783375314862,
+          "coveredPoints": 43411,
+          "referencePoints": 69592,
+          "pointCoverage": 0.6237929647085871
+        },
+        "after": {
+          "selected": 397,
+          "false": 20,
+          "falseFraction": 0.05037783375314862,
+          "coveredPoints": 43411,
+          "referencePoints": 69592,
+          "pointCoverage": 0.6237929647085871
+        }
+      },
+      "trafficSign": {
+        "before": {
+          "selected": 866,
+          "false": 28,
+          "falseFraction": 0.03233256351039261,
+          "coveredPoints": 7839,
+          "referencePoints": 7845,
+          "pointCoverage": 0.9992351816443594
+        },
+        "after": {
+          "selected": 866,
+          "false": 28,
+          "falseFraction": 0.03233256351039261,
+          "coveredPoints": 7839,
+          "referencePoints": 7845,
+          "pointCoverage": 0.9992351816443594
+        }
+      }
+    },
+    "frame500": {
+      "curb": {
+        "before": {
+          "selected": 24,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 58,
+          "referencePoints": 64,
+          "pointCoverage": 0.90625
+        },
+        "after": {
+          "selected": 24,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 58,
+          "referencePoints": 64,
+          "pointCoverage": 0.90625
+        }
+      },
+      "pole": {
+        "before": {
+          "selected": 2,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 296,
+          "referencePoints": 296,
+          "pointCoverage": 1.0
+        },
+        "after": {
+          "selected": 2,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 296,
+          "referencePoints": 296,
+          "pointCoverage": 1.0
+        }
+      },
+      "trafficSign": {
+        "before": {
+          "selected": 12,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 495,
+          "referencePoints": 495,
+          "pointCoverage": 1.0
+        },
+        "after": {
+          "selected": 12,
+          "false": 0,
+          "falseFraction": 0.0,
+          "coveredPoints": 495,
+          "referencePoints": 495,
+          "pointCoverage": 1.0
+        }
+      }
+    },
+    "frame900": {
+      "curb": {
+        "before": {
+          "selected": 19,
+          "false": 2,
+          "falseFraction": 0.10526315789473684,
+          "coveredPoints": 51,
+          "referencePoints": 99,
+          "pointCoverage": 0.5151515151515151
+        },
+        "after": {
+          "selected": 28,
+          "false": 2,
+          "falseFraction": 0.07142857142857142,
+          "coveredPoints": 83,
+          "referencePoints": 99,
+          "pointCoverage": 0.8383838383838383
+        }
+      },
+      "pole": {
+        "before": {
+          "selected": 1,
+          "false": 1,
+          "falseFraction": 1.0,
+          "coveredPoints": 0,
+          "referencePoints": 96,
+          "pointCoverage": 0.0
+        },
+        "after": {
+          "selected": 1,
+          "false": 1,
+          "falseFraction": 1.0,
+          "coveredPoints": 0,
+          "referencePoints": 96,
+          "pointCoverage": 0.0
+        }
+      },
+      "trafficSign": {
+        "before": {
+          "selected": 2,
+          "false": 2,
+          "falseFraction": 1.0,
+          "coveredPoints": 0,
+          "referencePoints": 0,
+          "pointCoverage": null
+        },
+        "after": {
+          "selected": 2,
+          "false": 2,
+          "falseFraction": 1.0,
+          "coveredPoints": 0,
+          "referencePoints": 0,
+          "pointCoverage": null
+        }
+      }
+    }
+  },
+  "runtime": {
+    "curbRecovery": {
+      "samples": 30,
+      "medianMilliseconds": 140.15699999999998,
+      "meanMilliseconds": 136.86266666666663,
+      "p95Milliseconds": 164.71689999999998
+    },
+    "previousPrecision": {
+      "samples": 30,
+      "medianMilliseconds": 127.5325,
+      "meanMilliseconds": 125.0724,
+      "p95Milliseconds": 158.06124999999997
+    },
+    "pairedMedianDifferenceMilliseconds": 12.835999999999991
+  },
+  "tests": {
+    "Passed": 12,
+    "Failed": 0,
+    "Incomplete": 0
+  },
+  "limitations": "Prefix is fitted. Suffix and frame900 labels were reused to select the chain policy; these are development/validation results, not an untouched test. False fractions are pooled over selected pillars, not per-frame guarantees."
+}

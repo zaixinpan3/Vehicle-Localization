@@ -1,0 +1,184 @@
+{
+  "prefixChoice": {
+    "kind": "boosted",
+    "raw": false,
+    "feasible": true,
+    "threshold": 0.9845521548207087,
+    "selected": 671,
+    "false": 33,
+    "coveredPoints": 2225
+  },
+  "alternatives": {
+    "boosted_raster": {
+      "prefix": {
+        "added": 1408,
+        "addedFalse": 129,
+        "addedPoints": 4253,
+        "selected": 27414,
+        "false": 265,
+        "falseFraction": 0.00966659371124243,
+        "coveredPoints": 85547,
+        "referencePoints": 91697,
+        "pointCoverage": 0.9329312845567467
+      },
+      "suffix": {
+        "added": 345,
+        "addedFalse": 39,
+        "addedPoints": 1175,
+        "selected": 10390,
+        "false": 963,
+        "falseFraction": 0.09268527430221367,
+        "coveredPoints": 32385,
+        "referencePoints": 42139,
+        "pointCoverage": 0.7685279669664681
+      },
+      "all": {
+        "added": 1753,
+        "addedFalse": 168,
+        "addedPoints": 5428,
+        "selected": 37804,
+        "false": 1228,
+        "falseFraction": 0.032483335096815155,
+        "coveredPoints": 117932,
+        "referencePoints": 133836,
+        "pointCoverage": 0.8811679966526196
+      },
+      "frame900": {
+        "added": 0,
+        "addedFalse": 0,
+        "addedPoints": 0,
+        "selected": 19,
+        "false": 2,
+        "falseFraction": 0.10526315789473684,
+        "coveredPoints": 51,
+        "referencePoints": 99,
+        "pointCoverage": 0.5151515151515151
+      },
+      "frame500": {
+        "added": 0,
+        "addedFalse": 0,
+        "addedPoints": 0,
+        "selected": 24,
+        "false": 0,
+        "falseFraction": 0.0,
+        "coveredPoints": 58,
+        "referencePoints": 64,
+        "pointCoverage": 0.90625
+      }
+    },
+    "boosted_raw": {
+      "prefix": {
+        "added": 1220,
+        "addedFalse": 64,
+        "addedPoints": 3938,
+        "selected": 27226,
+        "false": 200,
+        "falseFraction": 0.007345919341805627,
+        "coveredPoints": 85232,
+        "referencePoints": 91697,
+        "pointCoverage": 0.9294960576681898
+      },
+      "suffix": {
+        "added": 248,
+        "addedFalse": 13,
+        "addedPoints": 932,
+        "selected": 10293,
+        "false": 937,
+        "falseFraction": 0.09103274069756145,
+        "coveredPoints": 32142,
+        "referencePoints": 42139,
+        "pointCoverage": 0.7627613374783455
+      },
+      "all": {
+        "added": 1468,
+        "addedFalse": 77,
+        "addedPoints": 4870,
+        "selected": 37519,
+        "false": 1137,
+        "falseFraction": 0.030304645646205924,
+        "coveredPoints": 117374,
+        "referencePoints": 133836,
+        "pointCoverage": 0.8769987148450342
+      },
+      "frame900": {
+        "added": 0,
+        "addedFalse": 0,
+        "addedPoints": 0,
+        "selected": 19,
+        "false": 2,
+        "falseFraction": 0.10526315789473684,
+        "coveredPoints": 51,
+        "referencePoints": 99,
+        "pointCoverage": 0.5151515151515151
+      },
+      "frame500": {
+        "added": 0,
+        "addedFalse": 0,
+        "addedPoints": 0,
+        "selected": 24,
+        "false": 0,
+        "falseFraction": 0.0,
+        "coveredPoints": 58,
+        "referencePoints": 64,
+        "pointCoverage": 0.90625
+      }
+    },
+    "forest_raw": {
+      "prefix": {
+        "added": 1620,
+        "addedFalse": 56,
+        "addedPoints": 4871,
+        "selected": 27626,
+        "false": 192,
+        "falseFraction": 0.006949974661550713,
+        "coveredPoints": 86165,
+        "referencePoints": 91697,
+        "pointCoverage": 0.9396708725476297
+      },
+      "suffix": {
+        "added": 255,
+        "addedFalse": 16,
+        "addedPoints": 936,
+        "selected": 10300,
+        "false": 940,
+        "falseFraction": 0.0912621359223301,
+        "coveredPoints": 32146,
+        "referencePoints": 42139,
+        "pointCoverage": 0.7628562614205368
+      },
+      "all": {
+        "added": 1875,
+        "addedFalse": 72,
+        "addedPoints": 5807,
+        "selected": 37926,
+        "false": 1132,
+        "falseFraction": 0.029847597953910246,
+        "coveredPoints": 118311,
+        "referencePoints": 133836,
+        "pointCoverage": 0.8839998206760513
+      },
+      "frame900": {
+        "added": 0,
+        "addedFalse": 0,
+        "addedPoints": 0,
+        "selected": 19,
+        "false": 2,
+        "falseFraction": 0.10526315789473684,
+        "coveredPoints": 51,
+        "referencePoints": 99,
+        "pointCoverage": 0.5151515151515151
+      },
+      "frame500": {
+        "added": 0,
+        "addedFalse": 0,
+        "addedPoints": 0,
+        "selected": 24,
+        "false": 0,
+        "falseFraction": 0.0,
+        "coveredPoints": 58,
+        "referencePoints": 64,
+        "pointCoverage": 0.90625
+      }
+    }
+  }
+}

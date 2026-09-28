@@ -1,8 +1,11 @@
 function [ground,offGround]=filterSemanticPillarCandidates(ground,offGround,names,cfg,groundContext,offGroundPillars)
 % filterSemanticPillarCandidates: Require class-specific distribution evidence.
-% Filter masks before both candidate publication and Gaussian construction.
+% Filter masks and recover validated raw curb proposals before publication.
 % Ground segmentation, reference labels and complete-cell moments are unchanged.
     if ~cfg.enabled,return;end
+    recovery=any(string(names)=="curb") && any(cfg.classes=="curb") ...
+        && isfield(cfg,'modelFiles') && isfield(cfg.modelFiles,'curbRecovery');
+    if recovery,originalCurbMask=ground.curbCellMask;end
     for name=string(names(:)).'
         if ~any(cfg.classes==name),continue;end
         if name=="curb"
@@ -45,6 +48,10 @@ function [ground,offGround]=filterSemanticPillarCandidates(ground,offGround,name
             offGround.(probabilityKey)(ids(~accepted))=0;
             offGround.precision.(name)=diagnostic;
         end
+    end
+    if recovery
+        model=readModel(fullfile(cfg.modelDirectory,cfg.modelFiles.curbRecovery));
+        ground=recoverCurbRawProposals(ground,originalCurbMask,model);
     end
 end
 

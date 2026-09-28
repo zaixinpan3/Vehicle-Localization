@@ -4,6 +4,8 @@ function [metrics,detail] = measureFinePoleAlignment(frame,finePointIndices,cand
 % the published coarse geometry; never infer targets from old coarse labels.
 % Only the finite XY region of interest limits the primary denominator.
 % Optional retained-point indices diagnose filtering without changing targets.
+% Reference-empty cells are detector disagreements, not confirmed physical
+% false detections: the original fine detector can miss real features.
     count=numel(frame.x);
     assert(numel(frame.y)==count,'Frame coordinate arrays must have equal lengths.');
     if islogical(finePointIndices)

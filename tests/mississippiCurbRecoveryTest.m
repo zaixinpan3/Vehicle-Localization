@@ -14,7 +14,7 @@ classdef mississippiCurbRecoveryTest < matlab.unittest.TestCase
         function overrideIsRestrictedToMississippi(testCase)
             cfg=perceptionConfig('Mississippi');alias=perceptionConfig('Missisipi');urban=perceptionConfig('Downtown');
             testCase.verifyEqual(cfg.semanticPrecision.modelFiles,alias.semanticPrecision.modelFiles);
-            testCase.verifyEqual(string(fieldnames(cfg.semanticPrecision.modelFiles)),"curb");
+            testCase.verifyEqual(string(fieldnames(cfg.semanticPrecision.modelFiles)),["curb";"curbRecovery"]);
             testCase.verifyEmpty(fieldnames(urban.semanticPrecision.modelFiles));
             offline=perceptionConfig('Mississippi','offline');testCase.verifyFalse(offline.semanticPrecision.enabled);
         end
@@ -33,15 +33,31 @@ classdef mississippiCurbRecoveryTest < matlab.unittest.TestCase
             for name=["pole","trafficSign"]
                 k=after.candidates.semanticNames==name;testCase.verifyEqual(after.candidates.pillarIndices{k},before.candidates.pillarIndices{k});
             end
-            unfiltered=cfg;unfiltered.semanticPrecision.enabled=false;proposals=perceiveFrame(frame,unfiltered);
+            unfiltered=cfg;unfiltered.semanticPrecision.enabled=false;unfiltered.coarseProbabilityCloud.storeDiagnostics=true;
+            proposals=perceiveFrame(frame,unfiltered);g=proposals.diagnostics.ground;
+            allowed=g.curbCellMask | (g.energyMaps.rawExtractedMask & g.energyMaps.totalBase>=.25);
+            [r,c]=find(allowed);xy=g.cellOrigin+([c r]-.5).*g.cellSize;
+            geometry=proposals.candidates.geometry;bin=floor((xy-geometry.origin)./geometry.cellSize)+1;
+            allowedIds=sub2ind(geometry.mapSize,bin(:,2),bin(:,1));
             selected=after.candidates.pillarIndices{after.candidates.semanticNames=="curb"};
-            testCase.verifyTrue(all(ismember(selected,proposals.candidates.pillarIndices{proposals.candidates.semanticNames=="curb"})));
+            testCase.verifyTrue(all(ismember(selected,allowedIds)));
         end
         function singleChannelAndMatlabBackendAgree(testCase)
-            frame=recordedFrame(testCase,500);cfg=perceptionConfig('Mississippi');all=perceiveFrame(frame,cfg);
+            frame=recordedFrame(testCase,900);cfg=perceptionConfig('Mississippi');all=perceiveFrame(frame,cfg);
             cfg.featureNames="curb";single=perceiveFrame(frame,cfg);cfg.executionBackend="matlab";fallback=perceiveFrame(frame,cfg);
             expected=all.candidates.pillarIndices{all.candidates.semanticNames=="curb"};
             testCase.verifyEqual(single.candidates.pillarIndices{1},expected);testCase.verifyEqual(fallback.candidates.pillarIndices{1},expected);
+        end
+        function recoveryPreservesExistingSelectionsAndAddsGeometricSupport(testCase)
+            frame=recordedFrame(testCase,900);cfg=perceptionConfig('Mississippi');cfg.coarseProbabilityCloud.storeDiagnostics=true;
+            old=cfg;old.semanticPrecision.modelFiles=rmfield(old.semanticPrecision.modelFiles,'curbRecovery');
+            before=perceiveFrame(frame,old);after=perceiveFrame(frame,cfg);
+            a=before.diagnostics.ground;b=after.diagnostics.ground;added=b.curbCellMask & ~a.curbCellMask;
+            testCase.verifyTrue(all(b.curbCellMask(a.curbCellMask)));
+            testCase.verifyTrue(any(added,'all'));
+            testCase.verifyTrue(all(b.energyMaps.rawExtractedMask(added)));
+            testCase.verifyGreaterThanOrEqual(b.curbProbability(added),single(cfg.coarseProbabilityCloud.minimumSemanticProbability));
+            testCase.verifyEqual(b.moments,a.moments);
         end
         function emptyMississippiInputStaysEmpty(testCase)
             p=perceiveFrame(struct('x',NaN,'y',NaN,'z',NaN),perceptionConfig('Mississippi'));

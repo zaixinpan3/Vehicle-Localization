@@ -1,0 +1,34 @@
+{
+  "files": [
+    "config/semanticPillarPrecisionConfig.m",
+    "perception/filterSemanticPillarCandidates.m",
+    "perception/scoreSemanticPillarModel.m",
+    "perception/recoverCurbRawProposals.m",
+    "perception/groundFeatures/analyzeGroundPillars.m",
+    "tests/mississippiCurbRecoveryTest.m",
+    "research/pillar_fine_alignment_20260926/measureFinePoleAlignment.m",
+    "research/pole_reference_audit_20260928/auditFrame900.m",
+    "research/curb_proposal_recovery_20260928/benchmarkCurbProposalRecovery.m",
+    "research/curb_proposal_recovery_20260928/captureCurbRecoveryCandidates.m",
+    "research/curb_proposal_recovery_20260928/checkCurbProposalCode.m",
+    "research/curb_proposal_recovery_20260928/diagnoseCurbProposals.m",
+    "research/curb_proposal_recovery_20260928/replayCurbProposalRecovery.m",
+    "research/curb_proposal_recovery_20260928/validateCurbProposalRecovery.m"
+  ],
+  "findings": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    []
+  ]
+}

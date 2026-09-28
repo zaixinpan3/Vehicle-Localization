@@ -1,0 +1,27 @@
+[
+  {
+    "path": "config/mississippiCurbRecoveryModel.json",
+    "bytes": 464976,
+    "sha256": "8194ad5c2a2b9e6e07246596ccafd71eececae378a327be32ff735557bf9193f"
+  },
+  {
+    "path": "output/semantic_precision_20260927/mississippi_baseline.mat",
+    "bytes": 19870004,
+    "sha256": "a8f6d65558696a0a4468f800b74757dd48348c5eb12429f7a322512fe32d6ed2"
+  },
+  {
+    "path": "output/curb_proposal_recovery_20260928/extra_features.csv",
+    "bytes": 440988267,
+    "sha256": "ea0aecba9e36f02bc717910d520dec6bc633de6defc05c667194dadbe9c32867"
+  },
+  {
+    "path": "output/curb_proposal_recovery_20260928/reviewed_chain_predictions.csv",
+    "bytes": 6405596,
+    "sha256": "e17e0d9986f5a8da44edd9ffb6424a761e2a1e5d8dc43009bb808e50002aba43"
+  },
+  {
+    "path": "research/pole_reference_audit_20260928/frame900_audit.json",
+    "bytes": 5340,
+    "sha256": "03b3d423d70fa1e2085a9fbfd87da038478f44551dd31e8e463ca402f77d7872"
+  }
+]
