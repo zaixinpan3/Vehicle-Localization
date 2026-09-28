@@ -1,0 +1,37 @@
+[
+  {
+    "path": "output/fine_matching_20260919/inputs_1.mat",
+    "bytes": 24964696,
+    "sha256": "07219f01329284cb60e7d394de5ed180f95a0d8ea12b9f03b09a007a882246b8"
+  },
+  {
+    "path": "output/fine_matching_20260919/inputs_3.mat",
+    "bytes": 24699334,
+    "sha256": "e5b229a30cec0795fbbc88802da850575f40ff017fad73b2e832abc9b53c851f"
+  },
+  {
+    "path": "output/fine_matching_20260919/inputs_2.mat",
+    "bytes": 25741956,
+    "sha256": "625416d29a1a6b0ccdd87b9ffe5a99881e1377a67f759463d4767d470ba3eb08"
+  },
+  {
+    "path": "output/fine_matching_20260919/inputs_4.mat",
+    "bytes": 25135279,
+    "sha256": "33a48a9fc66260a2c139330d3da8a22dbf99c9c648d74f3773b6cba13b5e6634"
+  },
+  {
+    "path": "output/mississippi_matching_20260928/recursive/report.mat",
+    "bytes": 282104,
+    "sha256": "ea16488e8ad1c1d25e21c8061d305b7bae6d794ceaf151ea9b68a4d66db26260"
+  },
+  {
+    "path": "output/mississippi_mapping_calibrated/feature_observations.mat",
+    "bytes": 11091945,
+    "sha256": "0c5fc38d0ff0079c8e40f81f9d96758c93f238006e306440e53cc2f5c474efce"
+  },
+  {
+    "path": "output/mississippi_mapping_calibrated/probability_cloud_map.mat",
+    "bytes": 491523320,
+    "sha256": "1f43c3d860b982cefe28f5b6d904d8303dcedfd2a233aac050960394de1ae187"
+  }
+]

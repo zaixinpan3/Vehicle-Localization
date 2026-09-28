@@ -1,0 +1,53 @@
+{
+  "frame": 601,
+  "reproductionMaxAbs": 2.7333690866271354E-12,
+  "seedErrorM": 0.65690914204091511,
+  "seedYawErrorDeg": 3.5686825720862041,
+  "window": {
+    "frameCount": 5,
+    "oldestTimestamp": 59.605267335209895,
+    "newestTimestamp": 60.005868377176562,
+    "spanSeconds": 0.40060104196666657,
+    "componentCount": 9,
+    "currentComponentCount": 11,
+    "unfilteredComponentCount": 41,
+    "trackCount": 19,
+    "rejectedSingletons": 10,
+    "rejectedTracks": 10,
+    "minimumDetectionFrames": 2,
+    "minimumSupport": 2,
+    "meanStability": 0.68888888888888888,
+    "motionSource": "separately supplied cumulative wheel/gyro odometry",
+    "informationCalibrated": false,
+    "dimension": 2
+  },
+  "pyramid": {
+    "coarsePoseXYTheta": [
+      484336.849309811,
+      4.9768732955311816E+6,
+      -1.2600122024157547
+    ],
+    "coarseAccepted": true,
+    "coarseSimilarity": 0.62761955548318715,
+    "coarseReason": "accepted",
+    "coarseComponents": 188,
+    "fineSeedXYTheta": [
+      484336.849309811,
+      4.9768732955311816E+6,
+      -1.2600122024157547
+    ],
+    "refinementShiftM": 5.7389620302835188E-5,
+    "coarseRetained": false,
+    "mapMergeRadius": 1.5,
+    "sourceMergeRadius": 0.5,
+    "trustRadius": 0.15,
+    "planarOnlyRefinement": true,
+    "semantics": "coarse solve on moment-matched canonical clouds seeds the fine solve; trust radius applies to planar-only refinement"
+  },
+  "curvatureEigenvalues": [
+    0.50445160702911118,
+    5.3202616742709061,
+    22.915758569140728
+  ],
+  "productionChanged": false
+}

@@ -1,0 +1,27 @@
+{
+  "globalTarget": 1046,
+  "componentId": "pole:60542:622107:1",
+  "mean": [
+    484336.941644003,
+    4.9768600433988813E+6
+  ],
+  "covariance": [
+    [
+      0.03315755228661308,
+      0.006504835606603635
+    ],
+    [
+      0.006504835606603635,
+      0.039664992271583051
+    ]
+  ],
+  "repeatability": 1,
+  "mixtureWeight": 0.00041918455971579088,
+  "supportedFramesOverHalfPoint": 26,
+  "firstSupportedFrame": 597,
+  "lastSupportedFrame": 622,
+  "currentFineGlobalCenter": [
+    484336.70103486587,
+    4.9768598013279429E+6
+  ]
+}

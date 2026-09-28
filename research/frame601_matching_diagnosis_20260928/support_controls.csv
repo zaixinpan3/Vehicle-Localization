@@ -1,0 +1,3 @@
+variant,accepted,reason,errorM,forwardErrorM,leftErrorM,yawErrorDeg
+restore_curb_only,1,accepted,0.273776888158674,-0.272284650058411,-0.0285456447188682,1.48165171708982
+restore_curb_and_map_center_pole_oracle,1,accepted,0.0304434553217851,-0.0302990910354333,0.00296125891405085,0.319523249848208

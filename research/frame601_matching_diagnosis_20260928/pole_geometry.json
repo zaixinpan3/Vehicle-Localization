@@ -1,0 +1,38 @@
+{
+  "coarseWindowCenter": [
+    12.647479793805003,
+    -3.9943909358228185
+  ],
+  "coarseCurrentCenters": [
+    12.642337368485965,
+    -3.989176505453798
+  ],
+  "mapCenterInReferenceBody": [
+    12.471735581657459,
+    -3.6776098330453215
+  ],
+  "finePoleTotalPoints": 72,
+  "nearbyFinePoleCount": 72,
+  "nearbyFinePoleCenter": [
+    12.65209076043649,
+    -3.9673737123942345,
+    -1.090676356593544
+  ],
+  "nearbyFinePoleMin": [
+    12.481659926627374,
+    -4.1368741633418891,
+    -2.6160438980607785
+  ],
+  "nearbyFinePoleMax": [
+    12.805239715912254,
+    -3.8000782924326768,
+    0.6422255968411178
+  ],
+  "scaledEigenRatio": 0.022013306062162209,
+  "minimumRequiredRatio": 0.01,
+  "weakScaledBodyDirection": [
+    0.24330267782031534,
+    0.70531407912776034,
+    -0.6658347067776077
+  ]
+}

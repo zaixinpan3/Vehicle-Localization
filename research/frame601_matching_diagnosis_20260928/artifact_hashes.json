@@ -1,0 +1,102 @@
+[
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/README.md",
+    "sha256": "f1d8289f7219031b4020bfa346b10befc8a4a3b0ccdd810521c2a7022ad13159"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/analyze_diagnosis.py",
+    "sha256": "55b1fbc20727333728a342b978767c66c2c38c1f3d7df8d559db4b451ad1db0a"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/auditMap601.m",
+    "sha256": "40f5e57c758d1af5276c951c967ba7be0491a7942892041c24f81f1ded300a02"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/class_costs.csv",
+    "sha256": "b5e81c6ecfe698727902bf69c5c2ff635223384c64474988ca113417b4e1f81a"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/class_diagnostics.csv",
+    "sha256": "98482fd57832375ebb84f8c8bce7e15e884817cd63952f9a50cde185d2bdd538"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/code_analysis.json",
+    "sha256": "93365711358f7f602256bf9aa23f42e880308560a7a3dda80a8517e3aae7e69c"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/controls.csv",
+    "sha256": "1f65d95b9a2a4c5513ea877629f2fbccb429af1915559f36b54ad956e9c05d8c"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/correspondences.csv",
+    "sha256": "b2927932cdf99c684fe5dc7fb153dca81532df00e3821b3b600807a8a29b082a"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/diagnoseFrame601.m",
+    "sha256": "80680a3773cec8cd107252cc13a33a74d5c2a96ec2ba71f8f29150f653d75979"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/diagnosis.pdf",
+    "sha256": "fb3370d5944e921758f4d86a2ec900263ce5b57a67be75306a6d8e234b7c2dfb"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/diagnosis.png",
+    "sha256": "3b13987354556158d426d23a9480eac9b155a25d4c73b96a362914d135270886"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/geometry_controls.csv",
+    "sha256": "4d69ffb07eb98d7456fcf39967cc508d434b9de176071eac567da227a2f3185a"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/input_hashes.json",
+    "sha256": "2cf3ddb534e7256717056d3e024944f7457c8e610894c7ce024dead8c50046ee"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/inspectGeometry601.m",
+    "sha256": "06980abed67300983233f032b09d9e28a98c4811a7d9a5a03a3096720a82b2f0"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/map_pole_observed_centers.csv",
+    "sha256": "57dcdbe3f7f444d8b2002dfd5925f3ee3f9c0e1f08397a221a83cf06871b15b1"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/map_pole_summary.json",
+    "sha256": "7498fef14f6bca4ded3dcfcf166f3f5da5ed14e4972614d0841dd95a4b15ccac"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/map_pole_support.csv",
+    "sha256": "a4786f2a2509cc8ea5fcf646d8fad89002a413e3322723fe0c5e37f601fe28d7"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/map_targets.csv",
+    "sha256": "7dbbd94d27c17f14ec5182b4c3dd9274c8a842cdb3f3bc29e1b3ea0ad87e7da5"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/neighborhood.csv",
+    "sha256": "8a4a0dd9bb0f2f3ccc80e4421968de63d61f118d3507bebf55576c4fb9b80be9"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/pole_geometry.json",
+    "sha256": "d4d6c982f3fcfb4d66e85b66372ae49a1f03b0cf3815bf84c79619e4a7117aaf"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/source_geometry.csv",
+    "sha256": "aef81acafa9e0ce1f81fe5b91c21e6805f3c3ba9804a850a3f15d3442a6fd942"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/source_neighborhood.csv",
+    "sha256": "c74440207b6823c8bdde40b116c8809b1787a02bb4bb7d970569f5a2e7ab5545"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/summary.json",
+    "sha256": "5ed62a28bd4b3652b1b4fe2c97e9f375d828986420003ba361d9e6f3e2968f5c"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/support_controls.csv",
+    "sha256": "7a81ca8ebaef81145980a63c7b12167053b3a0b4441884ef1d899ed9c50360d4"
+  },
+  {
+    "path": "research/frame601_matching_diagnosis_20260928/validation.json",
+    "sha256": "66552525e07ac3021ba774f278a924c3a34926137985d32064d0e9d246183771"
+  }
+]

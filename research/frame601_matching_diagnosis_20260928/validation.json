@@ -1,0 +1,29 @@
+{
+  "frame": 601,
+  "positionErrorM": 0.8515879900772707,
+  "bodyErrorM": [
+    -0.4474592620903851,
+    -0.7245566324404006
+  ],
+  "headingErrorDeg": 4.532017797061312,
+  "maximumNeighborhoodReproductionResidual": 9.31322574615479e-10,
+  "mapPoleFineCenterOffsetM": 0.341307919784001,
+  "mapPoleCoarseWindowOffsetM": 0.362265503712799,
+  "finePointAndMapObservationCenterAgree": true,
+  "mapPoleObservationCenterMaximumSeparationM": 0.9175947494348001,
+  "poleRobustWeightFraction": 0.4637425054959815,
+  "referenceObjective": 0.666649641599209,
+  "fittedObjective": 0.055772305589427494,
+  "recordedProductionSourceHashesUnchanged": true,
+  "originalRunInputHashesVerified": 10,
+  "checkedNeighborhoodFrames": [
+    585,
+    610
+  ],
+  "qualifications": [
+    "Same-drive detector/map/reference consistency; no surveyed physical pole position.",
+    "Fine labels, exact reference motion and pole-at-map controls are offline diagnostics.",
+    "Restoring curb support relaxes precision filtering and is not a deployable precision claim.",
+    "Underlying physical cause of cross-scan landmark displacement is unresolved."
+  ]
+}
