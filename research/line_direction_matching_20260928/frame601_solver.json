@@ -1,0 +1,36 @@
+{
+  "pyramid": {
+    "coarsePoseXYTheta": [
+      484337.57104311453,
+      4.9768732127993973E+6,
+      -1.3255821564528574
+    ],
+    "coarseAccepted": true,
+    "coarseSimilarity": 0.47706528493202427,
+    "coarseReason": "accepted",
+    "coarseComponents": 188,
+    "fineSeedXYTheta": [
+      484337.57104311453,
+      4.9768732127993973E+6,
+      -1.3255821564528574
+    ],
+    "refinementShiftM": 4.9036742917795028E-5,
+    "coarseRetained": false,
+    "mapMergeRadius": 1.5,
+    "sourceMergeRadius": 0.5,
+    "trustRadius": 0.15,
+    "planarOnlyRefinement": true,
+    "semantics": "coarse solve on moment-matched canonical clouds seeds the fine solve; trust radius applies to planar-only refinement"
+  },
+  "lineDirection": {
+    "enabled": true,
+    "radius": 4,
+    "minimumComponents": 3,
+    "minimumAnisotropy": 9,
+    "minimumSpan": 2.4,
+    "standardDeviation": 0.017453292519943295
+  },
+  "directionsUsed": 8,
+  "referenceUsedBySolver": false,
+  "poseReproductionMaxAbs": 5.8207660913467407E-11
+}

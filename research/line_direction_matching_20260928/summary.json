@@ -1,0 +1,59 @@
+{
+  "baseline": {
+    "frames": 1170,
+    "accepted": 1150,
+    "directional": 19,
+    "noUpdate": 1,
+    "rmseM": 0.16609296561080872,
+    "p95M": 0.33732781152738095,
+    "maximumM": 0.8515879900772707,
+    "maximumAfterStartupM": 0.8515879900772707,
+    "yawRmseDeg": 0.6240834731883831,
+    "totalMedianMs": 143.6675,
+    "totalP95Ms": 179.9426,
+    "perceptionMedianMs": 131.635,
+    "registrationMedianMs": 11.431000000000001
+  },
+  "production": {
+    "frames": 1170,
+    "accepted": 1148,
+    "directional": 15,
+    "noUpdate": 7,
+    "rmseM": 0.14078759475162408,
+    "p95M": 0.2637499856014654,
+    "maximumM": 0.6403124239760019,
+    "maximumAfterStartupM": 0.5630378831582015,
+    "yawRmseDeg": 0.4333501853745365,
+    "totalMedianMs": 143.63799999999998,
+    "totalP95Ms": 183.58205,
+    "perceptionMedianMs": 130.754,
+    "registrationMedianMs": 12.471499999999999
+  },
+  "frame601": {
+    "beforeM": 0.851587990794595,
+    "afterM": 0.205379736648165,
+    "beforeYawDeg": 4.5320177970615,
+    "afterYawDeg": 0.775234366525276,
+    "accepted": true,
+    "errorReductionFraction": 0.7588273450679707
+  },
+  "tests": {
+    "passed": 79,
+    "failed": 0,
+    "incomplete": 0
+  },
+  "validation": {
+    "prototypeProductionMaximumPoseDifference": 1.0244548320770264e-08,
+    "executedSourceHashesUnchanged": true,
+    "unchangedPerceptionMappingAndConfigurationFiles": 124,
+    "originalInputFilesVerified": 10,
+    "positionReferenceUsedOnlineAfterInitialization": false,
+    "knownInsTiltUsed": true,
+    "perceptionPrecisionGatesUnchanged": true
+  },
+  "frameChanges": {
+    "improved": 547,
+    "worsened": 586
+  },
+  "qualification": "Same-drive tuning and validation; map includes query observations. No independent physical accuracy or new-drive test. No fine labels or reference positions supplied to the new matching factor."
+}

@@ -1,0 +1,30 @@
+{
+  "frames": 1170,
+  "accepted": 1148,
+  "directionalAccepted": 15,
+  "measurementEvents": 1163,
+  "acceptanceFraction": 0.98119658119658115,
+  "allFramePositionRmseM": 0.14078759465293667,
+  "acceptedPositionRmseM": 0.13995346009386297,
+  "positionMedianM": 0.10332122596349833,
+  "positionP95M": 0.26374998857411741,
+  "positionMaximumM": 0.64031242397600185,
+  "yawRmseDeg": 0.43335018537453851,
+  "yawMaximumAbsDeg": 2.3343102079359306,
+  "deadReckoningPositionRmseM": 15.543454721712083,
+  "deadReckoningFinalErrorM": 24.555646942816228,
+  "totalMedianMs": 143.638,
+  "totalP95Ms": 183.58205,
+  "totalP99Ms": 201.97158999999988,
+  "totalMaximumMs": 2438.56,
+  "callsOver100ms": 1155,
+  "perceptionMedianMs": 130.754,
+  "registrationMedianMs": 12.4715,
+  "reasons": {
+    "accepted": 1031,
+    "acceptedDirectional": 15,
+    "coarseRetainedByTrustRadius": 117,
+    "inconsistentClasses": 6,
+    "insufficientComponents": 1
+  }
+}

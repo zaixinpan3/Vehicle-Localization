@@ -2,6 +2,8 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
 % registerSemanticProbabilityCloud: Semantic Gaussian geometry registration.
 % The default GICP-style residuals use both covariances. Elongated ground
 % components constrain their normal direction; poles constrain horizontal XY.
+% Straight neighborhoods optionally add unoriented line-direction residuals
+% that constrain yaw without constraining position along the line.
 % Stored map mixture weights are priors in same-class Gaussian association.
 % They already contain temporal stability; do not multiply repeatability again.
 % Source temporal stability scales influence after semantic class balancing.

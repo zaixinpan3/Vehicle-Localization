@@ -1,0 +1,7 @@
+Name,Passed,Failed,Incomplete,Duration,Details
+directionPrototypeTest/ignoresSparseOrNonlinearNeighborhoods,1,0,0,0.328654,
+directionPrototypeTest/roadDirectionCannotInventAlongRoadInformation,1,0,0,0.381305,
+directionPrototypeTest/recoversRigidTransform,1,0,0,0.082713,
+directionPrototypeTest/directionPreventsBiasedPoleFromRotatingRoad,0,1,0,0.55083,
+directionPrototypeTest/frozenCostGradientMatchesFiniteDifferences,1,0,0,0.03868,
+directionPrototypeTest/directionIsInvariantToAxisSign,1,0,0,0.019282,

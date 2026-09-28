@@ -14,6 +14,12 @@ function cfg = distributionRegistrationConfig()
     % association-ambiguity scale of the Mississippi map.
     cfg.pyramid = struct('mapMergeRadius',1.5,'sourceMergeRadius',0.5, ...
         'trustRadius',0.15,'pointClasses',["pole","trafficSign"]);
+    % Align reliable local line directions as well as line-normal positions.
+    % Several distinct selected means must span a straight neighborhood; no
+    % raw points or additional perception candidates enter this factor. The
+    % angular scale is an engineering setting, not calibrated sensor noise.
+    cfg.lineDirection = struct('enabled',true,'radius',4,'minimumComponents',3, ...
+        'minimumAnisotropy',9,'minimumSpan',2.4,'standardDeviation',deg2rad(1));
     cfg.maximumIterationsPerScale = 40;
     cfg.maximumPoseCorrection = [3 3 deg2rad(12)];
     cfg.yawLeverArm = 10;

@@ -2,12 +2,15 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
 % prepareSemanticRegistrationGeometry Shared Gaussian association and residual model.
 % The target coordinates are relative to initialPose XY. Geometry information
 % uses spatial scatter and class-balanced weights, not calibrated pose noise.
+% Locally straight source curb/facade neighborhoods also constrain line direction.
+% This adds yaw information without inventing a line-tangent position residual.
     [f,m,height]=registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
     initialPose=double(initialPose(:).');
     assert(numel(initialPose)==3 && all(isfinite(initialPose)),'Expected finite [x y yaw].');
     gcfg=cfg.geometric;
     validateParameters(cfg,gcfg);
     m.quality=quality(m);
+
     m.temporalStability=ones(m.numComponents,1);
     if isfield(movingCloud.components,'temporalStability')
         m.temporalStability=double(movingCloud.components.temporalStability(:));
@@ -18,6 +21,12 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
     end
     % Height/tilt uncertainty belongs to the compatibility calculation. Keep
     % the planar metric identical when only height mode/reference changes.
+    m.lineTangent=zeros(m.numComponents,2);m.lineDirectionValid=false(m.numComponents,1);
+    m.lineDirectionSigma=1;
+    if isfield(cfg,'lineDirection') && cfg.lineDirection.enabled
+        [m.lineTangent,m.lineDirectionValid]=sourceLineDirections(m,cfg.lineDirection);
+        m.lineDirectionSigma=cfg.lineDirection.standardDeviation;
+    end
     m.planarCovariance=movingCloud.components.covariance(1:2,1:2,:);
     f.mean(:,1:2)=f.mean(:,1:2)-initialPose(1:2);
     if height.heightUsed
@@ -89,6 +98,9 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
                 dt=-dx.*normal(:,2)+dy.*normal(:,1);
                 variance=a.*normal(:,1).^2+2*b.*normal(:,1).*normal(:,2)+d.*normal(:,2).^2;
                 distance=dn.^2./variance+dt.^2./(f.majorVariance(targets)+cfg.maximumMatchDistance^2);
+                tangent=m.lineTangent(source,:)*r.';
+                angular=(normal*tangent.').^2.*double(m.lineDirectionValid(source)).'/m.lineDirectionSigma^2;
+                distance=distance+angular;
                 valid=abs(dn)<=cfg.maximumMatchDistance & ...
                     abs(dt)<=3*sqrt(f.majorVariance(targets))+cfg.maximumMatchDistance;
             else
@@ -146,6 +158,15 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
     jacobian(2,3,:)=(w21.*yawDerivative(:,1)+w22.*yawDerivative(:,2))*scale(3);
     delta=means(source,:)-f.mean(target,1:2);
     residual=[w11.*delta(:,1)+w12.*delta(:,2),w21.*delta(:,1)+w22.*delta(:,2)].';
+    tangent=m.lineTangent(source,:);normals=f.normal(target,:);
+    directionValid=line & m.lineDirectionValid(source);
+    directionScale=double(directionValid)/m.lineDirectionSigma;
+    rotatedTangent=tangent*r.';
+    directionResidual=sum(rotatedTangent.*normals,2).*directionScale;
+    if any(directionValid)
+        residual(3,:)=directionResidual.';
+        jacobian(3,3,:)=sum((tangent*[r(:,2),-r(:,1)].').*normals,2).*directionScale*scale(3);
+    end
     weights=m.quality(source);
     qvalue=sum(residual.^2,1).'; zResidual=chosenZ(source);
     names=m.semanticName(source); classes=intersect(unique(f.semanticName),unique(m.semanticName));
@@ -162,17 +183,19 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
     robust=1./(1+qvalue/cfg.robustStandardizedDistance^2);
     stacked=reshape(permute(jacobian,[1 3 2]),[],3);
     % Preserve a column even when exactly one correspondence remains.
-    rowWeights=repelem(weights.*robust,2,1);
+    rowWeights=repelem(weights.*robust,size(residual,1),1);
     h=stacked.'*(stacked.*rowWeights);
     gradient=stacked.'*(residual(:).*rowWeights);
     pairs=struct('source',source,'target',target,'semanticName',names, ...
         'squaredStandardizedResidual',qvalue,'heightResidual',zResidual(1:rows), ...
         'heightAssociationCost',chosenHeightCost(source), ...
         'mapMixtureWeight',f.mixtureWeight(target),'temporalStability',m.temporalStability(source), ...
-        'weight',weights,'robustWeight',weights.*robust);
+        'weight',weights,'robustWeight',weights.*robust, ...
+        'lineDirectionUsed',directionValid,'lineDirectionResidual',directionResidual);
     system=struct('H',h,'gradient',gradient,'numPairs',rows,'pairs',pairs, ...
         'J',jacobian,'residual',residual,'weights',weights,'robust',robust, ...
         'precision',precision(:,:,1:rows),'targetMean',f.mean(target,1:2), ...
+        'directionNormal',normals,'directionScale',directionScale, ...
         'cost',sum(weights.*cfg.robustStandardizedDistance^2.*log1p(qvalue/cfg.robustStandardizedDistance^2)), ...
         'similarity',similarity);
 end
@@ -183,7 +206,8 @@ function q=squaredResidual(system,m,pose)
     p=system.precision;
     rx=reshape(p(1,1,:),[],1).*delta(:,1)+reshape(p(1,2,:),[],1).*delta(:,2);
     ry=reshape(p(2,1,:),[],1).*delta(:,1)+reshape(p(2,2,:),[],1).*delta(:,2);
-    q=rx.^2+ry.^2;
+    direction=sum((m.lineTangent(system.pairs.source,:)*r.').*system.directionNormal,2).*system.directionScale;
+    q=rx.^2+ry.^2+direction.^2;
 end
 
 function [normal,major,eligible]=normalGeometry(f,cfg)
