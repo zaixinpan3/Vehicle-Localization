@@ -1,0 +1,14 @@
+{
+  "research/frame827_revised_matching_20260928/evaluateRevised827.m": "bc4c5b6e4f84d66959f4535f26730fba7d653fd661c2fc79997b1d625d4428b6",
+  "research/frame827_revised_matching_20260928/inspectRevised827.m": "6f846f22575878f44db00497140237e97c0fca7baa4fcdd363be51ef236a102d",
+  "research/frame827_revised_matching_20260928/causal_prefix.csv": "a205329ae20571b66b5a6a0677c7b655e45d3d568e39944355d1f8d706e98fbb",
+  "research/frame827_revised_matching_20260928/comparison.csv": "e7469b5001dc6bc1be8b4493cf7457a344cbc49c1a1422532cd013bf2e433baf",
+  "research/frame827_revised_matching_20260928/class_diagnostics.csv": "69370293bcbba1462c780e96360512d109c087529658eadc1a9c3be90bef9691",
+  "research/frame827_revised_matching_20260928/solution_pairs.csv": "07c2f17b98f2d1e0699e1d324815d8ecdca5c23beef2d3c1167ce1565aa9f1e2",
+  "research/frame827_revised_matching_20260928/summary.json": "26a0a15b564480f2c23b80febf7e2c6670c7895f0c49927fe0f6184e9afb597c",
+  "research/frame827_revised_matching_20260928/README.md": "c9658b5e1ca6208455edd41e6bf5378d95bdf060a8bf8ac2fd3f4777fdfcaf49",
+  "config/perceptionConfig.m": "dec9753a9275f1b603629c55170d42c02b14e9649d65e910a0b5f1598356b359",
+  "config/pillarPoleDistributionConfig.m": "6e02680de3f3f9a2a3360c318a07e4c0898c02cd3f9ae6b39dd95ef1426523f9",
+  "config/distributionRegistrationConfig.m": "9fbd32437d85a3dafff6cfe1b2a3f14c05935e8942d1d481adbfaf380ee2b39f",
+  "output/frame827_revised_matching_20260928/results.mat": "27e9fbbc35491e444051368c8944b1a14687fc35e119ad285f4cc048ff975d35"
+}

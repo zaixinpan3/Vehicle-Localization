@@ -1,0 +1,15 @@
+{
+  "frame": 827,
+  "rawFramesReplayed": 827,
+  "positionErrorM": 0.093794451335817541,
+  "bodyErrorM": [
+    -0.05767436307471456,
+    -0.073966661039369941
+  ],
+  "predictionErrorM": 0.23378856939592549,
+  "predictionYawErrorDeg": -0.51946342500100939,
+  "matchingMs": 11.465,
+  "matchedPairs": 29,
+  "codeAnalyzerFindings": 0,
+  "productionChanged": false
+}

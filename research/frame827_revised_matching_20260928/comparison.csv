@@ -1,0 +1,4 @@
+variant,errorM,yawErrorDeg,accepted,reason,rank,coarseRetained,refinementShiftM
+previous,0.563037887031449,-1.05073990364841,1,coarseRetainedByTrustRadius,3,1,0.279356255454782
+revised_same_seed,0.0937944513358175,0.00792331908647586,1,accepted,3,0,0.109326963192036
+revised_causal,0.0937944513358175,0.00792331912087674,1,accepted,3,0,0.109326825140393
