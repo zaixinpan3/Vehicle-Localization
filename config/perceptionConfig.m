@@ -33,4 +33,6 @@ function cfg = perceptionConfig(dataset, executionMode)
     cfg.coarseProbabilityCloud = rmfield(cloudCfg,"semanticNames");
     cfg.fine = finePerceptionConfig();
     cfg.semanticPrecision = semanticPillarPrecisionConfig(spacing,dataset);
+    cfg.curbBoundary=curbBoundaryGeometryConfig();
+    cfg.curbBoundary.enabled=dataset~="downtown" && cfg.executionMode=="coarseProbabilityCloud";
 end

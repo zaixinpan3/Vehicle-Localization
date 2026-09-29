@@ -1,0 +1,6 @@
+{
+  "frames": 1170,
+  "totalPoints": 399086,
+  "maximumReconstructionErrorMeters": 1.3868351437328124E-9,
+  "scope": "offline inverse SE(3) reconstruction, raw-point identity lookup; original map annotations preserved"
+}

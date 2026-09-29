@@ -121,7 +121,7 @@ function [H,g,cost,system]=unary(node,pose,cfg)
     system=node.model.linearize(pose,ones(3,1));
     [rho,w]=featureLoss(system.pairs.squaredStandardizedResidual,cfg);
     weights=cfg.lidarInformationScale*system.weights;
-    A=reshape(permute(system.J,[1 3 2]),[],3);W=repelem(weights.*w,2,1);
+    A=reshape(permute(system.J,[1 3 2]),[],3);W=repelem(weights.*w,size(system.residual,1),1);
     H=A.'*(A.*W);g=A.'*(system.residual(:).*W);cost=sum(weights.*rho);
     [h,b,c]=gnss(node.aid,pose,cfg);
     H=H+h;g=g+b;cost=cost+c;

@@ -1,0 +1,61 @@
+diff --git a/localization/prepareSemanticRegistrationGeometry.m b/localization/prepareSemanticRegistrationGeometry.m
+index feebec0..f4d1a14 100644
+--- a/localization/prepareSemanticRegistrationGeometry.m
++++ b/localization/prepareSemanticRegistrationGeometry.m
+@@ -42,6 +42,10 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
+     height.strategy="conditionalDistributionCompatibility";
+     height.planarForce=false;
+     [f.normal,f.majorVariance,f.lineEligible]=normalGeometry(f,gcfg);
++    f.surfaceEligible=false(f.numComponents,1);
++    if isfield(cfg,'pointSurfaceClasses')
++        f.surfaceEligible=f.lineEligible & ismember(f.semanticName,cfg.pointSurfaceClasses);
++    end
+     if height.heightUsed, f=prepareConditionalHeight(f); end
+     groups=correspondenceGroups(f,m);
+     association=[];
+@@ -143,13 +147,15 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
+             linear=index(keep)+(find(keep)-1)*numel(targets);
+             chosenZ(selected)=dz(linear);
+             chosenHeightCost(selected)=heightCost(linear);
+-            lineSource(selected)=group.line;
+-            if ~group.line && ~isempty(association)
++            lineSource(selected)=group.line | f.surfaceEligible(chosen(selected));
++            if ~group.line && ~isempty(association) && ...
++                    (~isfield(association,'semanticNames') || any(m.semanticName(source(1))==association.semanticNames))
+                 for col=find(keep)
+                     sourceId=source(col);
++                    if lineSource(sourceId),continue;end
+                     [mu,scatter,count]=softPointAssociationTarget( ...
+                         f.mean(targets,1:2),f.covariance(1:2,1:2,targets), ...
+-                        distance(:,col),group.priorCost+heightCost(:,col),index(col),association);
++                        distance(:,col),group.priorCost+heightCost(:,col),index(col),association,cm(:,:,col)+cfg.noiseStandardDeviation^2*eye(2));
+                     softMean(sourceId,:)=mu;softCov(:,:,sourceId)=scatter;
+                     softUsed(sourceId)=true;softCount(sourceId)=count;
+                 end
+diff --git a/localization/softPointAssociationTarget.m b/localization/softPointAssociationTarget.m
+index 0d5d53e..c075979 100644
+--- a/localization/softPointAssociationTarget.m
++++ b/localization/softPointAssociationTarget.m
+@@ -1,4 +1,4 @@
+-function [mu,covariance,count]=softPointAssociationTarget(means,covariances,cost,priorCost,closest,cfg)
++function [mu,covariance,count]=softPointAssociationTarget(means,covariances,cost,priorCost,closest,cfg,sourceCovariance)
+ % softPointAssociationTarget Moment-match nearby ambiguous map components.
+ % Compatibility costs include priors and optional height penalties. Temper only
+ % the geometry,
+@@ -15,6 +15,16 @@ function [mu,covariance,count]=softPointAssociationTarget(means,covariances,cost
+     if confidence>=cfg.minimumPosterior && ids(mode)==closest
+         mu=means(closest,:);covariance=covariances(:,:,closest);count=1;return;
+     end
++    if isfield(cfg,'method') && string(cfg.method)=="precisionMixture"
++        information=zeros(2);rhs=zeros(2,1);
++        for k=1:numel(ids)
++            precision=(covariances(:,:,ids(k))+sourceCovariance)\eye(2);
++            information=information+probability(k)*precision;
++            rhs=rhs+probability(k)*precision*means(ids(k),:).';
++        end
++        mu=(information\rhs).';covariance=information\eye(2)-sourceCovariance;
++        covariance=(covariance+covariance.')/2;count=numel(ids);return;
++    end
+     mu=sum(means(ids,:).*probability,1);covariance=zeros(2);count=numel(ids);
+     for k=1:count
+         delta=means(ids(k),:)-mu;

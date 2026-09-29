@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+boundedDeskew100Consensus,135,0.372978682052548,0.124753275125797,0.233402382882283,1153,15,10.6535,13.300193

@@ -7,7 +7,8 @@ function [evidence,diagnostic]=classifyPillarPoleSupport(points,pillarIds,geomet
         'perception:PoleModelLattice','The distribution model requires the shared 0.6 m lattice.');
     ids=double(modes.pillarIndices(:));n=numel(ids);
     evidence=struct('pillarIndices',ids,'found',false(n,1),'score',zeros(n,1), ...
-        'ownCount',zeros(n,1),'height',zeros(n,1),'radialRms',zeros(n,1),'isolation',zeros(n,1));
+        'ownCount',zeros(n,1),'height',zeros(n,1),'radialRms',zeros(n,1),'isolation',zeros(n,1), ...
+        'axisXY',nan(n,2),'axisZ',nan(n,1),'slopeXY',nan(n,2),'minimumZ',nan(n,1),'maximumZ',nan(n,1));
     hypotheses=measurePillarPoleSupport(points,pillarIds,geometry,modes,validation,structural);
     model=loadPillarPoleModel(cfg.modelFile);
     [features,owners,which]=measurePillarPoleFeatures(points,pillarIds,geometry,hypotheses, ...
@@ -38,6 +39,8 @@ function [evidence,diagnostic]=classifyPillarPoleSupport(points,pillarIds,geomet
         if score(k)<=evidence.score(row),continue;end
         at=find(h.ownerIds==owners(k),1);
         evidence.found(row)=true;evidence.score(row)=score(k);evidence.ownCount(row)=h.ownerCount(at);
+        evidence.axisXY(row,:)=h.axisXY;evidence.axisZ(row)=h.axisZ;evidence.slopeXY(row,:)=h.slopeXY;
+        evidence.minimumZ(row)=h.minimumZ;evidence.maximumZ(row)=h.maximumZ;
         evidence.height(row)=h.supportHeight;evidence.radialRms(row)=h.radialRms;evidence.isolation(row)=h.isolation;
     end
     if nargout>1

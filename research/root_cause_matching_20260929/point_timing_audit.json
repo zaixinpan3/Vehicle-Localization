@@ -1,0 +1,13 @@
+{
+  "frames": 1170,
+  "pointsPerFrame": 65536,
+  "xyzEquality": "Stored-axis rotation and organized point order verified against every frame",
+  "maximumXyzDifferenceMeters": 1.52587890625e-05,
+  "relativeTimeUnit": "seconds from PointCloud2 t nanoseconds",
+  "relativeSpanRangeSeconds": [
+    0.09974995,
+    0.10002621
+  ],
+  "maximumHeaderDifferenceSeconds": 0.0,
+  "absoluteHeaderToScanOffsetCalibrated": false
+}

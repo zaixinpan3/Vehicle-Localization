@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+curb3Precision,1029,0.428641865089109,0.132645760003185,0.243613116524708,1151,10,21.6445,27.798235

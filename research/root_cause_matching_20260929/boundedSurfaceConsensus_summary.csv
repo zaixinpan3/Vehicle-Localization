@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+boundedSurfaceConsensus,829,0.312182021752792,0.122022642291023,0.211204450232247,1159,10,11.4945,13.949399

@@ -6,6 +6,19 @@ classdef robustPoseGraphTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function curbDirectionResidualsUseMatchingWeightRows(testCase)
+            [packet,map,cfg]=fixture();
+            map.components.mean=[0 2;1 2;2 2;3 2;0 -2;3 -2];
+            map.components.semanticName=[repmat("curb",4,1);repmat("pole",2,1)];
+            map.components.covariance=cat(3,repmat(diag([1 .01]),1,1,4),repmat(.02*eye(2),1,1,2));
+            packet.source.components=map.components;packet.positionAid.valid=false;
+            [first,state]=updateRobustPoseGraph([],packet,map,cfg);
+            packet.time=.1;packet.source.acquisitionTime=.1;packet.seed=[.1 -.1 .02];
+            [actual,~]=updateRobustPoseGraph(state,packet,map,cfg);
+            testCase.verifyTrue(any(first.correspondences.lineDirectionUsed));
+            testCase.verifyLessThan(norm(actual.poseXYTheta),1e-4);
+            testCase.verifyTrue(all(isfinite(actual.information),'all'));
+        end
         function exactGeometryAndMotionRemainExact(testCase)
             [r,s]=sequence("switchable",false,5,false);
             testCase.verifyEqual(r.poseXYTheta,[0 0 0],AbsTol=1e-10);

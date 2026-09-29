@@ -1,7 +1,9 @@
 function perception = perceiveFrame(frame, cfg)
 % perceiveFrame: Shared pillar analysis for online localization and mapping.
 % coarseProbabilityCloud (default) returns semantic pillar candidates and
-% empirical planar Gaussian components, without point feature refinement.
+% planar Gaussian components, without point feature labeling. The optional
+% curb boundary model replaces biased full-pillar centers for matching;
+% diagnostics retain the original empirical whole-pillar statistics.
 % offline independently reconstructs detailed structural
 % candidates and explicitly evaluates their points for mapping. Its featureMasks
 % address the original input point order. Ground segmentation is common
@@ -51,7 +53,17 @@ function perception = perceiveFrame(frame, cfg)
         [ground,offGround]=filterSemanticPillarCandidates(ground,offGround,featureNames,cfg.semanticPrecision,groundContext,offGroundVoxelGrid);
     end
     candidates = buildPerceptionCandidates(voxelGrid, ground, offGround, coarseCfg.semanticNames);
-    probabilityCloud = buildCoarseSemanticProbabilityCloud(ground, offGround, coarseCfg);
+    geometryGround=ground;boundaryDetails=table();
+    useBoundary=mode=="coarseProbabilityCloud" && any(featureNames=="curb") && ...
+        isfield(cfg,'curbBoundary') && cfg.curbBoundary.enabled;
+    if useBoundary
+        [geometryGround.moments,boundaryDetails]=estimateCurbBoundaryGeometry(ground,groundContext, ...
+            coarseCfg.projectionRotation,coarseCfg.projectionTranslation,cfg.curbBoundary);
+    end
+    probabilityCloud = buildCoarseSemanticProbabilityCloud(geometryGround, offGround, coarseCfg);
+    if useBoundary
+        probabilityCloud=applyCurbBoundaryScatter(probabilityCloud,cfg.curbBoundary);
+    end
     perception = struct("executionMode", "coarseProbabilityCloud", ...
         "probabilityCloud", probabilityCloud, "candidates", candidates, ...
         "featureNames",featureNames);
@@ -62,6 +74,7 @@ function perception = perceiveFrame(frame, cfg)
     if logical(coarseCfg.storeDiagnostics)
         perception.diagnostics = struct("ground", ground, "offGround", offGround, "pillars", voxelGrid.statistics, ...
             "groundPointContext",groundContext,"offGroundPointContext",offGroundVoxelGrid);
+        if useBoundary,perception.diagnostics.curbBoundaryFit=boundaryDetails;end
     end
     if mode == "offline"
         context = struct("voxelGrid", voxelGrid, "groundContext", groundContext, ...

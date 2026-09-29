@@ -1,0 +1,44 @@
+{
+  "baseline": {
+    "frames": 1170,
+    "maximumFrameAfterInitialization": 178,
+    "maximumErrorM": 0.300607690564316,
+    "initializationErrorM": 0.6403124239760019,
+    "rmseM": 0.12603426805898058,
+    "p95M": 0.22397946188670934,
+    "fullUpdates": 1153,
+    "directionalUpdates": 10
+  },
+  "final": {
+    "variant": "finalSurface",
+    "maximumFrame": 829,
+    "maximumErrorM": 0.298605469094454,
+    "rmseM": 0.121321550156126,
+    "p95M": 0.204444699656051,
+    "full": 1149,
+    "directional": 10,
+    "medianMs": 11.649,
+    "elapsedSeconds": 14.581147
+  },
+  "completedReplayLabels": 76,
+  "frames": 1170,
+  "maximumPolicy": "Exclude configured first frame only; RMSE/P95 include all 1170 frames.",
+  "unchangedDetectionFrames": 1170,
+  "testsPassed": 235,
+  "staticAnalysisFiles": 11,
+  "geometryValidation": {
+    "maximumMeanDifference": 0.0062786031912991,
+    "maximumCovarianceDifference": 0.0011294878941999
+  },
+  "runtime": {
+    "baselinePerceptionMedianMs": 126.969,
+    "finalPerceptionMedianMs": 169.7885,
+    "pairedMedianExtraMs": 40.916000000000004,
+    "note": "Alternating execution order on this machine; other validation processes can affect timings."
+  },
+  "limitations": [
+    "Reused development route/map, not independent-drive validation.",
+    "Original fine annotations and INSPVA are comparison references, not surveyed truth.",
+    "No substantial stable peak-error reduction established; no physical lower-bound claim."
+  ]
+}

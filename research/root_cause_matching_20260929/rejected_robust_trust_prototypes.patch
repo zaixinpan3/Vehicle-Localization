@@ -1,0 +1,111 @@
+diff --git a/localization/prepareSemanticRegistrationGeometry.m b/localization/prepareSemanticRegistrationGeometry.m
+index feebec0..ccfbd41 100644
+--- a/localization/prepareSemanticRegistrationGeometry.m
++++ b/localization/prepareSemanticRegistrationGeometry.m
+@@ -57,11 +57,15 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
+         relative=prepareRelativeHeightAssociation(fixedCloud,movingCloud,initialPose,initial.pairs,cfg.relativeHeight);
+         height.relativeAssociation=relative.details;
+     end
++    if isfield(gcfg,'robustLoss'),assert(isscalar(string(gcfg.robustLoss)) && ismember(string(gcfg.robustLoss),["cauchy","switchable"]),'VehicleLocalization:InvalidRobustLoss','Use cauchy or switchable geometry loss.');end
+     model=struct('fixed',f,'moving',m,'height',height,'origin',initialPose(1:2));
+     model.linearize=@(pose,scale) linearize(f,m,pose,gcfg,scale,groups,relative,association);
+     model.squaredResidual=@(system,pose) squaredResidual(system,m,pose);
+     model.frozenCost=@(system,pose) sum(system.weights.*gcfg.robustStandardizedDistance^2.* ...
+         log1p(squaredResidual(system,m,pose)/gcfg.robustStandardizedDistance^2));
++    if isfield(gcfg,'robustLoss') && string(gcfg.robustLoss)=="switchable"
++        model.frozenCost=@(system,pose) switchableCost(system.weights,squaredResidual(system,m,pose),gcfg.robustStandardizedDistance^2,boundedMask(system.pairs.semanticName,gcfg));
++    end
+ end
+
+ function groups=correspondenceGroups(f,m)
+@@ -204,6 +208,8 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
+         similarity=similarity+coverage*sum(weights(selected).*exp(-qvalue(selected)/2));
+     end
+     robust=1./(1+qvalue/cfg.robustStandardizedDistance^2);
++    bounded=isfield(cfg,'robustLoss') && string(cfg.robustLoss)=="switchable";
++    if bounded,mask=boundedMask(names,cfg);robust(mask)=robust(mask).^2;end
+     stacked=reshape(permute(jacobian,[1 3 2]),[],3);
+     % Preserve a column even when exactly one correspondence remains.
+     rowWeights=repelem(weights.*robust,size(residual,1),1);
+@@ -225,6 +231,7 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
+         'directionNormal',normals,'directionScale',directionScale, ...
+         'cost',sum(weights.*cfg.robustStandardizedDistance^2.*log1p(qvalue/cfg.robustStandardizedDistance^2)), ...
+         'similarity',similarity);
++    if bounded,system.cost=switchableCost(weights,qvalue,cfg.robustStandardizedDistance^2,boundedMask(names,cfg));end
+ end
+
+ function q=squaredResidual(system,m,pose)
+@@ -285,6 +292,21 @@ end
+ function validateParameters(cfg,g)
+     assert(isscalar(cfg.yawLeverArm)&&isfinite(cfg.yawLeverArm)&&cfg.yawLeverArm>0);
+     assert(numel(cfg.maximumPoseCorrection)==3&&all(isfinite(cfg.maximumPoseCorrection)&cfg.maximumPoseCorrection>0));
++    if isfield(g,'classGateNormalization')
++        assert(isscalar(string(g.classGateNormalization)) && ismember(string(g.classGateNormalization),["class","global"]), ...
++            'VehicleLocalization:InvalidRobustLoss','Class gate normalization must be class or global.');
++    end
++    g=rmfield(g,intersect(fieldnames(g),{'robustLoss','classGateNormalization','boundedClasses'}));
+     values=struct2array(g); assert(all(isfinite(values)&values>0),'Invalid geometric configuration.');
+     assert(g.minimumObservabilityRatio<1&&g.minimumMatchFraction<=1&&g.minimumLineAnisotropy>1);
+ end
++
++function cost=switchableCost(weights,q,a,mask)
++% Eliminating a quadratic switch yields bounded influence for gross outliers.
++    cost=sum(weights(mask).*a.*q(mask)./(a+q(mask)))+sum(weights(~mask).*a.*log1p(q(~mask)/a));
++end
++
++function mask=boundedMask(names,cfg)
++    mask=true(size(names));
++    if isfield(cfg,'boundedClasses'),mask=ismember(names,string(cfg.boundedClasses));end
++end
+diff --git a/localization/registerSemanticProbabilityCloud.m b/localization/registerSemanticProbabilityCloud.m
+index 57f542f..996b8cf 100644
+--- a/localization/registerSemanticProbabilityCloud.m
++++ b/localization/registerSemanticProbabilityCloud.m
+@@ -50,7 +50,13 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
+         trustSupported=isfield(coarse,'correspondences') && ...
+             any(ismember(coarse.correspondences.semanticName,pyramid.trustClasses));
+     end
+-    retained=planarOnly && trustSupported && coarse.accepted && result.accepted && shift>pyramid.trustRadius;
++    trustDistance=shift;
++    if isfield(pyramid,'trustMetric') && string(pyramid.trustMetric)=="information"
++        scaling=diag([1 1 1/cfg.yawLeverArm]);h=scaling*coarse.information*scaling;
++        delta=result.poseXYTheta-coarse.poseXYTheta;delta(3)=atan2(sin(delta(3)),cos(delta(3)))*cfg.yawLeverArm;
++        trustDistance=sqrt(max(0,delta*h*delta.')/max(max(eig(h)),eps));
++    end
++    retained=planarOnly && trustSupported && coarse.accepted && result.accepted && trustDistance>pyramid.trustRadius;
+     if retained
+         % Report the coarse solution in original component indices so callers
+         % resolve the same global targets as for a fine solution.
+@@ -66,7 +72,7 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
+     result.pyramid=struct('coarsePoseXYTheta',coarse.poseXYTheta,'coarseAccepted',coarse.accepted, ...
+         'coarseSimilarity',coarse.similarity,'coarseReason',coarse.reason, ...
+         'coarseComponents',coarseFixed.components.numComponents,'fineSeedXYTheta',fineSeed, ...
+-        'refinementShiftM',shift,'coarseRetained',retained,'mapMergeRadius',pyramid.mapMergeRadius, ...
++        'refinementShiftM',shift,'trustDistanceM',trustDistance,'coarseRetained',retained,'mapMergeRadius',pyramid.mapMergeRadius, ...
+         'sourceMergeRadius',pyramid.sourceMergeRadius,'trustRadius',pyramid.trustRadius,'planarOnlyRefinement',planarOnly, ...
+         'trustSupported',trustSupported, ...
+         'unmergedAnchors',independentAnchors,'softFineAssociation',isfield(fineCfg,'softPointAssociation'), ...
+@@ -88,6 +94,10 @@ function pyramid=validatePyramid(cfg)
+     assert(isfield(cfg,'pyramid') && all(isfield(cfg.pyramid,{'mapMergeRadius','sourceMergeRadius','trustRadius','pointClasses'})), ...
+         'VehicleLocalization:MissingPyramidConfiguration','Use the current distributionRegistrationConfig with a pyramid group.');
+     pyramid=cfg.pyramid;
++    if isfield(pyramid,'trustMetric')
++        assert(isscalar(string(pyramid.trustMetric)) && any(string(pyramid.trustMetric)==["euclidean","information"]), ...
++            'VehicleLocalization:InvalidPyramidConfiguration','Unknown trust metric.');
++    end
+     if isfield(pyramid,'trustClasses')
+         assert(isstring(pyramid.trustClasses) && all(ismember(pyramid.trustClasses,pyramid.pointClasses)), ...
+             'VehicleLocalization:InvalidPyramidConfiguration','Trust classes must be canonical point classes.');
+@@ -228,7 +238,11 @@ function diagnostics=classDiagnostics(system,cfg)
+         % in a weak class direction must not veto the other classes. The
+         % largest eigenvalue keeps this engineering score in scaled meters;
+         % it is not a chi-square statistic or a calibrated confidence.
+-        weighted(c)=sqrt(max(0,step'*h*step)/max(max(eig(h)),eps));
++        denominator=max(max(eig(h)),eps);
++        if isfield(cfg,'classGateNormalization') && string(cfg.classGateNormalization)=="global"
++            denominator=max(max(eig(system.H)),eps);
++        end
++        weighted(c)=sqrt(max(0,step'*h*step)/denominator);
+     end
+     diagnostics=table(classes,matches,ranks,correction,weighted, ...
+         'VariableNames',{'semanticName','matchedComponents','observableRank','observableCorrection','informationWeightedCorrection'});

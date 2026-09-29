@@ -1,0 +1,4 @@
+semanticName,matchedComponents,observableRank,observableCorrection,informationWeightedCorrection
+curb,23,2,0.103366422624417,0.0522448791923301
+pole,1,2,0.275089161318313,0.0922286960100302
+trafficSign,4,3,0.172756985423475,0.0510114268152594

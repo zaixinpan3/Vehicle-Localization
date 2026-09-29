@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+boundedBaseline,1028,0.341770246855641,0.127316092586629,0.225622444686157,1148,10,11.9805,15.192627

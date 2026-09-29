@@ -1,0 +1,74 @@
+[
+  {
+    "model": "phaseOnly",
+    "originCorrectionXYM": [
+      0.0,
+      0.0
+    ],
+    "scanPhaseSeconds": 0.0946363815082005,
+    "singularValues": [
+      30.000993440863276
+    ],
+    "training": {
+      "observations": 1031,
+      "tracks": 58,
+      "originalRmsM": 0.21776689326247586,
+      "correctedRmsM": 0.17140538583406648
+    },
+    "heldOut": {
+      "observations": 972,
+      "tracks": 63,
+      "originalRmsM": 0.23162439056869352,
+      "correctedRmsM": 0.18347341890817662
+    }
+  },
+  {
+    "model": "originAtMidScan",
+    "originCorrectionXYM": [
+      -0.09554717611706613,
+      0.1368296839826852
+    ],
+    "scanPhaseSeconds": 0.05,
+    "singularValues": [
+      3.5980634754828467,
+      3.578056645822107
+    ],
+    "training": {
+      "observations": 1031,
+      "tracks": 58,
+      "originalRmsM": 0.21776689326247586,
+      "correctedRmsM": 0.17615195626593486
+    },
+    "heldOut": {
+      "observations": 972,
+      "tracks": 63,
+      "originalRmsM": 0.23162439056869352,
+      "correctedRmsM": 0.18882389718693282
+    }
+  },
+  {
+    "model": "joint",
+    "originCorrectionXYM": [
+      0.022331124468499663,
+      -0.10041007317812593
+    ],
+    "scanPhaseSeconds": 0.10375764470985048,
+    "singularValues": [
+      30.482924041712828,
+      3.90468728736191,
+      2.722798245029461
+    ],
+    "training": {
+      "observations": 1031,
+      "tracks": 58,
+      "originalRmsM": 0.21776689326247586,
+      "correctedRmsM": 0.1711200163732741
+    },
+    "heldOut": {
+      "observations": 972,
+      "tracks": 63,
+      "originalRmsM": 0.23162439056869352,
+      "correctedRmsM": 0.1815420841000064
+    }
+  }
+]
