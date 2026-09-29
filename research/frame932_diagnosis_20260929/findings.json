@@ -1,0 +1,24 @@
+{
+  "frame": 932,
+  "productionErrorM": 0.159861269865301,
+  "productionYawErrorDeg": 0.672590029848768,
+  "productionLateralErrorM": -0.159086986730636,
+  "referenceMotionPoolErrorM": 0.0576068800517852,
+  "referenceTranslationPoolErrorM": 0.062526543659082,
+  "referenceYawPoolErrorM": 0.155123989810634,
+  "dropCurb711ErrorM": 0.106102910072661,
+  "restoredCurrentPoleErrorM": 0.160269834966074,
+  "productionChanged": false,
+  "interpretation": "History translation disagreement and conflicting curb geometry bias the objective; current near-pole recovery alone does not improve this frame.",
+  "scope": "Offline single-frame controls on overlapping mapping/query recording; reference interventions cannot run online.",
+  "validation": {
+    "recordedMaximumReproduced": true,
+    "sourceHistoryReconstructedExactly": true,
+    "referenceSeedConvergesBackToBiasedPose": true,
+    "translationAndYawControlsSeparated": true,
+    "curb711OtherWeightsAndResidualsPreserved": true,
+    "currentPoleReinstatementDoesNotImprovePose": true,
+    "productionCodeChanged": false,
+    "validationScope": "Saved-data assertions and diagnostic code analysis; no new full-route regression"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "recordedMaximumReproduced": true,
+  "sourceHistoryReconstructedExactly": true,
+  "referenceSeedConvergesBackToBiasedPose": true,
+  "translationAndYawControlsSeparated": true,
+  "curb711OtherWeightsAndResidualsPreserved": true,
+  "currentPoleReinstatementDoesNotImprovePose": true,
+  "productionCodeChanged": false,
+  "validationScope": "Saved-data assertions and diagnostic code analysis; no new full-route regression"
+}

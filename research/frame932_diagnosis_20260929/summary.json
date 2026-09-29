@@ -1,0 +1,18 @@
+{
+  "frame": 932,
+  "positionErrorM": 0.15986126986530053,
+  "bodyErrorM": [
+    -0.01571484189907181,
+    -0.1590869867306362
+  ],
+  "yawErrorDeg": 0.6725900298487677,
+  "predictionErrorM": 0.15533407297971363,
+  "predictionYawErrorDeg": 0.51706313523330516,
+  "currentPoles": 0,
+  "confirmedPoles": 1,
+  "confirmedCurbs": 15,
+  "maximumTransportErrorM": 0.10868248100577281,
+  "sourceReconstructionExact": true,
+  "productionPoseReproduced": true,
+  "sourceCodeCommit": "5411244a2294848bb92431a40c2fed44f73d6d53"
+}
