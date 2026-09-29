@@ -13,6 +13,10 @@ function [evidence,diagnostic]=classifyPillarPoleSupport(points,pillarIds,geomet
     [features,owners,which]=measurePillarPoleFeatures(points,pillarIds,geometry,hypotheses, ...
         structural,pointScore,lineScore,cfg,model.featureNames);
     score=scorePillarPoleModel(features,model);
+    if isfield(cfg,'minorityShaftProtection')
+        protected=protectMinorityPoleShaft(features,model.featureNames,cfg.minorityShaftProtection);
+        score(protected)=max(score(protected),cfg.minimumScore);
+    end
     % Training excludes the central vehicle square with a 3 m half-width.
     % Preserve geometric behavior for near-field inputs when callers widen
     % that ROI, instead of extrapolating an untrained learned decision there.

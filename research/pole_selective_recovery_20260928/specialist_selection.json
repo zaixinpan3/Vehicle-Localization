@@ -1,0 +1,76 @@
+{
+  "chosen": {
+    "depth": 5,
+    "leaf": 10,
+    "power": 1,
+    "threshold": 0.8747229048074372,
+    "selected": 992,
+    "empty": 74,
+    "covered": 96924,
+    "falseFraction": 0.07459677419354839
+  },
+  "alternatives": [
+    {
+      "depth": 3,
+      "leaf": 20,
+      "power": 0.5,
+      "threshold": 0.8736508923538123,
+      "selected": 989,
+      "empty": 73,
+      "covered": 95812,
+      "falseFraction": 0.07381193124368049
+    },
+    {
+      "depth": 5,
+      "leaf": 20,
+      "power": 0.5,
+      "threshold": 0.8928473284036001,
+      "selected": 979,
+      "empty": 73,
+      "covered": 95121,
+      "falseFraction": 0.0745658835546476
+    },
+    {
+      "depth": 5,
+      "leaf": 10,
+      "power": 1,
+      "threshold": 0.8747229048074372,
+      "selected": 992,
+      "empty": 74,
+      "covered": 96924,
+      "falseFraction": 0.07459677419354839
+    },
+    {
+      "depth": 7,
+      "leaf": 20,
+      "power": 1,
+      "threshold": 0.8974467012666644,
+      "selected": 990,
+      "empty": 73,
+      "covered": 96149,
+      "falseFraction": 0.07373737373737374
+    },
+    {
+      "depth": 3,
+      "leaf": 10,
+      "power": 1,
+      "threshold": 0.8694084742073043,
+      "selected": 941,
+      "empty": 69,
+      "covered": 95059,
+      "falseFraction": 0.07332624867162593
+    },
+    {
+      "depth": 5,
+      "leaf": 20,
+      "power": 1,
+      "threshold": 0.8856803092845245,
+      "selected": 967,
+      "empty": 72,
+      "covered": 95913,
+      "falseFraction": 0.07445708376421924
+    }
+  ],
+  "seed": 928,
+  "split": "Mississippi1:780, five contiguous folds,20-frame purge; maximize covered points under7.5% OOF reference-empty selections"
+}

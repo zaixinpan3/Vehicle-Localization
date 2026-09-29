@@ -40,6 +40,12 @@ classdef pillarPoleDistributionTest < matlab.unittest.TestCase
             r=t.detect([shaft;clutter]);t.verifyTrue(any(r.poleCellMask,'all'));
             t.verifyEqual(sum(r.columnMaps.statistics.count),860);
         end
+        function separatedMinorityBlobsDoNotBorrowClutterContinuity(t)
+            z=[linspace(-1,-.6,30),linspace(2.6,3,30)].';a=(1:60).'*2.399;
+            blobs=[10.12+.025*cos(a),2.16+.025*sin(a),z];rng(14);
+            clutter=[10.04+.52*rand(800,1),1.9+.52*rand(800,1),3.6+.5*rand(800,1)];
+            r=t.detect([blobs;clutter]);t.verifyFalse(any(r.poleCellMask,'all'));
+        end
         function extendedWallIsNotACollectionOfPoles(t)
             [x,z]=meshgrid(8:.04:12,-1:.08:3);p=[x(:),ones(numel(x),1)*2,z(:)];
             r=t.detect(p);t.verifyFalse(any(r.poleCellMask,'all'));
@@ -67,8 +73,18 @@ classdef pillarPoleDistributionTest < matlab.unittest.TestCase
             m=perceptionConfig('Mississippi');alias=perceptionConfig('Missisipi');d=perceptionConfig('Downtown');
             t.verifyEqual(m.offGroundFeatures.pole.distributionValidation,alias.offGroundFeatures.pole.distributionValidation);
             t.verifyEqual(d.offGroundFeatures.pole.distributionValidation,pillarPoleDistributionConfig());
+            t.verifyNotEqual(m.offGroundFeatures.pole.distributionValidation.modelFile,d.offGroundFeatures.pole.distributionValidation.modelFile);
             t.verifyLessThan(m.offGroundFeatures.pole.distributionValidation.minimumScore,d.offGroundFeatures.pole.distributionValidation.minimumScore);
             fine=perceptionConfig('Mississippi','offline');t.verifyFalse(isfield(fine.offGroundFeatures.pole,'distributionValidation'));
+        end
+        function sparseMississippiShaftSurvivesSpecialistDecision(t)
+            root=fileparts(fileparts(mfilename('fullpath')));file=fullfile(root,'data/raw/MissisipiPointClouds.mat');
+            t.assumeTrue(isfile(file));frame=loadPointCloudFrame(file,857);
+            p=perceiveFrame(frame,perceptionConfig('Mississippi'));g=p.candidates.geometry;
+            cellXY=floor(([16.97 -3.71]-g.origin)./g.cellSize)+1;
+            owner=sub2ind(g.mapSize,cellXY(2),cellXY(1));
+            selected=p.candidates.pillarIndices{p.candidates.semanticNames=="pole"};
+            t.verifyTrue(ismember(owner,selected),'The sparse continuous shaft must survive final classification.');
         end
         function emptyMarginCroppingPreservesPoleContext(t)
             root=fileparts(fileparts(mfilename('fullpath')));file=fullfile(root,'data','raw','downTownPointClouds.mat');

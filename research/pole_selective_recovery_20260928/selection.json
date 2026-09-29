@@ -1,0 +1,54 @@
+{
+  "chosen": {
+    "floor": 0.84,
+    "height": 3,
+    "radial": 0.08,
+    "isolation": 0.7,
+    "continuity": 0.5,
+    "added": 11,
+    "addedEmpty": 1,
+    "addedPoints": 231,
+    "total": 1013,
+    "empty": 75
+  },
+  "eligible": 3,
+  "selection": "Prefix <=780 existing five-block20-frame-purged OOF; incremental false <=10%, pooled false <=8%; maximize reference points; no suffix selection",
+  "alternatives": [
+    {
+      "floor": 0.84,
+      "height": 3,
+      "radial": 0.08,
+      "isolation": 0.7,
+      "continuity": 0.5,
+      "added": 11,
+      "addedEmpty": 1,
+      "addedPoints": 231,
+      "total": 1013,
+      "empty": 75
+    },
+    {
+      "floor": 0.84,
+      "height": 3,
+      "radial": 0.08,
+      "isolation": 0.85,
+      "continuity": 0.5,
+      "added": 11,
+      "addedEmpty": 1,
+      "addedPoints": 231,
+      "total": 1013,
+      "empty": 75
+    },
+    {
+      "floor": 0.84,
+      "height": 3,
+      "radial": 0.08,
+      "isolation": 0.95,
+      "continuity": 0.5,
+      "added": 11,
+      "addedEmpty": 1,
+      "addedPoints": 231,
+      "total": 1013,
+      "empty": 75
+    }
+  ]
+}

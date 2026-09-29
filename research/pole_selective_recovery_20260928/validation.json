@@ -1,0 +1,45 @@
+{
+  "rawFrames": 1170,
+  "testsPassed": 32,
+  "cleanMatlabFiles": 8,
+  "frame857BeforeM": 0.473865024705953,
+  "frame857AfterM": 0.0779773190189357,
+  "maxAfterFrame": 856,
+  "maxBeforeM": 0.473865024705953,
+  "maxAfterM": 0.410501028782604,
+  "rmseBeforeM": 0.13464981265581508,
+  "rmseAfterM": 0.1329031968503523,
+  "medianPerceptionBeforeMs": 141.21499999999997,
+  "medianPerceptionAfterMs": 140.59550000000002,
+  "wholePillarStatistics": true,
+  "matchingParametersChanged": false,
+  "allMetrics": [
+    {
+      "part": "all",
+      "selected": 1536,
+      "empty": 36,
+      "covered": 153325,
+      "fine": 194300,
+      "falseFraction": 0.0234375,
+      "coverage": 0.7891147709727226
+    },
+    {
+      "part": "prefix",
+      "selected": 1065,
+      "empty": 1,
+      "covered": 105965,
+      "fine": 124708,
+      "falseFraction": 0.0009389671361502,
+      "coverage": 0.8497049106713283
+    },
+    {
+      "part": "suffix",
+      "selected": 471,
+      "empty": 35,
+      "covered": 47360,
+      "fine": 69592,
+      "falseFraction": 0.0743099787685774,
+      "coverage": 0.680537992872744
+    }
+  ]
+}

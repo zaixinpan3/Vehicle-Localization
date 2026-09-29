@@ -1,0 +1,299 @@
+{
+  "chosen": {
+    "floor": 1.0,
+    "selected": 992,
+    "empty": 74,
+    "covered": 96924,
+    "falseFraction": 0.07459677419354839
+  },
+  "alternatives": [
+    {
+      "floor": 0.0,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.025,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.05,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.07500000000000001,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.1,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.125,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.15000000000000002,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.17500000000000002,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.2,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.225,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.25,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.275,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.30000000000000004,
+      "selected": 1072,
+      "empty": 94,
+      "covered": 99862,
+      "falseFraction": 0.08768656716417911
+    },
+    {
+      "floor": 0.325,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.35000000000000003,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.375,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.4,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.42500000000000004,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.45,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.47500000000000003,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.5,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.525,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.55,
+      "selected": 1071,
+      "empty": 93,
+      "covered": 99862,
+      "falseFraction": 0.08683473389355742
+    },
+    {
+      "floor": 0.5750000000000001,
+      "selected": 1070,
+      "empty": 93,
+      "covered": 99836,
+      "falseFraction": 0.08691588785046729
+    },
+    {
+      "floor": 0.6000000000000001,
+      "selected": 1069,
+      "empty": 92,
+      "covered": 99836,
+      "falseFraction": 0.08606173994387278
+    },
+    {
+      "floor": 0.625,
+      "selected": 1069,
+      "empty": 92,
+      "covered": 99836,
+      "falseFraction": 0.08606173994387278
+    },
+    {
+      "floor": 0.65,
+      "selected": 1068,
+      "empty": 91,
+      "covered": 99836,
+      "falseFraction": 0.0852059925093633
+    },
+    {
+      "floor": 0.675,
+      "selected": 1065,
+      "empty": 91,
+      "covered": 99719,
+      "falseFraction": 0.08544600938967137
+    },
+    {
+      "floor": 0.7000000000000001,
+      "selected": 1063,
+      "empty": 91,
+      "covered": 99657,
+      "falseFraction": 0.08560677328316087
+    },
+    {
+      "floor": 0.7250000000000001,
+      "selected": 1061,
+      "empty": 91,
+      "covered": 99595,
+      "falseFraction": 0.08576814326107446
+    },
+    {
+      "floor": 0.75,
+      "selected": 1056,
+      "empty": 91,
+      "covered": 99434,
+      "falseFraction": 0.08617424242424243
+    },
+    {
+      "floor": 0.775,
+      "selected": 1048,
+      "empty": 88,
+      "covered": 99289,
+      "falseFraction": 0.08396946564885496
+    },
+    {
+      "floor": 0.8,
+      "selected": 1042,
+      "empty": 87,
+      "covered": 99125,
+      "falseFraction": 0.08349328214971209
+    },
+    {
+      "floor": 0.8250000000000001,
+      "selected": 1030,
+      "empty": 85,
+      "covered": 98694,
+      "falseFraction": 0.0825242718446602
+    },
+    {
+      "floor": 0.8500000000000001,
+      "selected": 1014,
+      "empty": 80,
+      "covered": 98039,
+      "falseFraction": 0.07889546351084813
+    },
+    {
+      "floor": 0.875,
+      "selected": 992,
+      "empty": 74,
+      "covered": 96924,
+      "falseFraction": 0.07459677419354839
+    },
+    {
+      "floor": 0.9,
+      "selected": 992,
+      "empty": 74,
+      "covered": 96924,
+      "falseFraction": 0.07459677419354839
+    },
+    {
+      "floor": 0.925,
+      "selected": 992,
+      "empty": 74,
+      "covered": 96924,
+      "falseFraction": 0.07459677419354839
+    },
+    {
+      "floor": 0.9500000000000001,
+      "selected": 992,
+      "empty": 74,
+      "covered": 96924,
+      "falseFraction": 0.07459677419354839
+    },
+    {
+      "floor": 0.9750000000000001,
+      "selected": 992,
+      "empty": 74,
+      "covered": 96924,
+      "falseFraction": 0.07459677419354839
+    },
+    {
+      "floor": 1.0,
+      "selected": 992,
+      "empty": 74,
+      "covered": 96924,
+      "falseFraction": 0.07459677419354839
+    }
+  ],
+  "method": "max prefix OOF coverage under7.5% false; specialist strong OR shared strong with specialist floor"
+}
