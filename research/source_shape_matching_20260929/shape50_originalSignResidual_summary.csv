@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianWindowMs,medianMatchingMs,shapeRejectedPairs,totalComponents,frame178ErrorM
+shape50_originalSignResidual,178,0.162239963749922,0.0610189596871495,0.104464373157195,1148,11,1.2065,7.456,238,31152,0.162239963749922

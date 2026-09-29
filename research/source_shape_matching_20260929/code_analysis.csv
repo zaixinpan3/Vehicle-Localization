@@ -1,0 +1,4 @@
+file,findings
+config/localizationSourceWindowConfig.m,0
+localization/updateLocalizationSourceWindow.m,0
+tests/sourceWindowShapeTest.m,0

@@ -5,6 +5,8 @@ function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow
 % Same-class distributions are associated one-to-one per scan, then merged
 % by equal-scan mixture moments. Only repeated tracks enter matching. A track
 % receives one vote per acquisition, never per point or neighboring pillar.
+% Center compatibility and covariance shape are both required. Shape must
+% agree with each original observation, not only a broadened pooled Gaussian.
 % Stability is detection count / configured horizon, with no startup exemption.
 % Covariance is spatial scatter, not covariance of an independent sample mean.
 % The pooled product is XY only: vertical ego motion is not supplied here.
@@ -24,7 +26,11 @@ function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow
         isfinite(cfg.maximumAgeSeconds) && cfg.maximumAgeSeconds>=0 && ...
         isfinite(cfg.maximumAssociationDistance) && cfg.maximumAssociationDistance>0 && ...
         isfinite(cfg.maximumStandardizedDistance) && cfg.maximumStandardizedDistance>0 && ...
-        isfinite(cfg.associationNoiseStandardDeviation) && cfg.associationNoiseStandardDeviation>0, ...
+        isfinite(cfg.associationNoiseStandardDeviation) && cfg.associationNoiseStandardDeviation>0 && ...
+        isnumeric(cfg.maximumShapeDistance)&&isreal(cfg.maximumShapeDistance)&&isscalar(cfg.maximumShapeDistance)&& ...
+        cfg.maximumShapeDistance>0 && ...
+        isnumeric(cfg.shapeVarianceFloor)&&isreal(cfg.shapeVarianceFloor)&&isscalar(cfg.shapeVarianceFloor)&& ...
+        isfinite(cfg.shapeVarianceFloor)&&cfg.shapeVarianceFloor>0, ...
         'VehicleLocalization:InvalidWindowConfiguration','Invalid source-window bounds.');
     assert(isempty(history.time)||timestamp>history.time(end), ...
         'VehicleLocalization:NonmonotonicWindowTime','Reset the source window before rewinding time.');
@@ -72,6 +78,9 @@ function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow
         'trackCount',statistics.tracks,'rejectedSingletons',statistics.singletons, ...
         'rejectedTracks',statistics.rejected,'minimumDetectionFrames',cfg.minimumDetectionFrames, ...
         'minimumSupport',statistics.minimumSupport,'meanStability',statistics.meanStability, ...
+        'positionCompatiblePairs',statistics.positionPairs,'shapeRejectedPairs',statistics.shapeRejectedPairs, ...
+        'maximumShapeDistance',cfg.maximumShapeDistance, ...
+        'shapeCompatibility',"covariance Bhattacharyya distance to every original acquisition", ...
         'motionSource',"separately supplied cumulative wheel/gyro odometry", ...
         'informationCalibrated',false,'dimension',2);
 end
@@ -94,7 +103,8 @@ function [c,statistics,currentIndices,currentStability,pooledIndices]=stableTrac
     total=sum(cellfun(@(s)size(s.mean,1),sets));horizon=numel(sets);
     meanXY=zeros(total,2);scatter=zeros(2,2,total);names=strings(total,1);
     count=zeros(total,1);semantic=zeros(total,1);occupancy=zeros(total,1);
-    support=false(total,horizon);tracks=0;
+    support=false(total,horizon);tracks=0;ownership=cell(horizon,1);
+    positionPairs=0;shapeRejectedPairs=0;
     for frame=1:horizon
         observation=sets{frame};n=size(observation.mean,1);assignment=zeros(n,1);
         % Compare one semantic class at a time. A track and an observation
@@ -108,8 +118,25 @@ function [c,statistics,currentIndices,currentStability,pooledIndices]=stableTrac
             xy=reshape(ca(1,2,:),[],1)+reshape(cb(1,2,:),1,[]);
             yy=reshape(ca(2,2,:),[],1)+reshape(cb(2,2,:),1,[])+cfg.associationNoiseStandardDeviation^2;
             distance=(yy.*dx.^2-2*xy.*dx.*dy+xx.*dy.^2)./(xx.*yy-xy.^2);
-            eligible=find(dx.^2+dy.^2<=cfg.maximumAssociationDistance^2 & distance<=cfg.maximumStandardizedDistance^2);
-            [~,order]=sort(distance(eligible));eligible=eligible(order);
+            positionCompatible=dx.^2+dy.^2<=cfg.maximumAssociationDistance^2 & distance<=cfg.maximumStandardizedDistance^2;
+            shape=zeros(size(distance));
+            if isfinite(cfg.maximumShapeDistance)
+                lookup=zeros(tracks,1);lookup(a)=1:numel(a);
+                for acquisition=1:frame-1
+                    previous=find(ownership{acquisition}>0);
+                    rows=lookup(ownership{acquisition}(previous));previous=previous(rows>0);rows=rows(rows>0);
+                    if isempty(rows),continue;end
+                    d=covarianceShapeDistance(sets{acquisition}.covariance(:,:,previous),cb,cfg.shapeVarianceFloor);
+                    shape(rows,:)=max(shape(rows,:),d);
+                end
+            end
+            positionPairs=positionPairs+nnz(positionCompatible);
+            shapeRejectedPairs=shapeRejectedPairs+nnz(positionCompatible & shape>cfg.maximumShapeDistance);
+            eligible=find(positionCompatible & shape<=cfg.maximumShapeDistance);
+            % Scale the Gaussian shape term to the center-distance score;
+            % positional odometry noise remains separate from shape scatter.
+            score=distance+4*shape;
+            [~,order]=sort(score(eligible));eligible=eligible(order);
             used=false(numel(a),1);
             for candidate=1:numel(eligible)
                 index=eligible(candidate);
@@ -134,6 +161,7 @@ function [c,statistics,currentIndices,currentStability,pooledIndices]=stableTrac
             support(id,frame)=true;
             assignment(j)=id;
         end
+        ownership{frame}=assignment;
     end
     currentIndices=find(assignment>0);
     currentIndices=currentIndices(count(assignment(currentIndices))>=cfg.minimumDetectionFrames);
@@ -151,4 +179,17 @@ function [c,statistics,currentIndices,currentStability,pooledIndices]=stableTrac
     if any(keep),minimumSupport=min(count(keep));meanStability=mean(stability);end
     statistics=struct('inputComponents',total,'tracks',tracks,'singletons',nnz(count==1), ...
         'rejected',tracks-nnz(keep),'minimumSupport',minimumSupport,'meanStability',meanStability);
+    statistics.positionPairs=positionPairs;statistics.shapeRejectedPairs=shapeRejectedPairs;
+end
+
+function distance=covarianceShapeDistance(a,b,varianceFloor)
+% Covariance-only Bhattacharyya distance, invariant to a common XY rotation.
+% Add the same small spatial floor; do not normalize away real scale changes.
+    ax=reshape(a(1,1,:),[],1)+varianceFloor;ay=reshape(a(2,2,:),[],1)+varianceFloor;
+    ac=reshape(a(1,2,:),[],1);
+    bx=reshape(b(1,1,:),1,[])+varianceFloor;by=reshape(b(2,2,:),1,[])+varianceFloor;
+    bc=reshape(b(1,2,:),1,[]);
+    determinant=((ax+bx).*(ay+by)-(ac+bc).^2)/4;
+    logRatio=log(determinant)-.5*(log(ax.*ay-ac.^2)+log(bx.*by-bc.^2));
+    distance=max(0,.5*logRatio);
 end
