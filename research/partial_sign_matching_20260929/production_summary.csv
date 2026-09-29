@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+production,932,0.159861269865301,0.0610626557167938,0.104537830210477,1147,11,8.466,11.231252

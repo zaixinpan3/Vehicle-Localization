@@ -1,0 +1,10 @@
+Name,Passed,Failed,Incomplete,Duration,Details
+partialSignMatchingTest/intrinsicShapeExcludesBetweenViewCenterDrift,1,0,0,0.316278,
+partialSignMatchingTest/coherentCenterAndDisplacedPatchUseDifferentConstraints,1,0,0,0.129246,
+partialSignMatchingTest/noMajorityPreservesOriginalPointInformation,1,0,0,0.024349,
+partialSignMatchingTest/inconsistentNormalDoesNotBecomeAPartialPanel,1,0,0,0.021002,
+partialSignMatchingTest/partialObservationReducesCenterBias,1,0,0,0.218721,
+partialSignMatchingTest/frozenObjectiveGradientMatchesFiniteDifferences,1,0,0,0.018392,
+partialSignMatchingTest/cropAndProjectionPreserveIntrinsicShape,1,0,0,0.019064,
+partialSignMatchingTest/rejectsInvalidShape,1,0,0,0.043676,
+partialSignMatchingTest/emptyMapCropRejectsCleanly,1,0,0,0.030185,

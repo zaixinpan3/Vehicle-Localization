@@ -1,6 +1,8 @@
 function [cloud,details]=conditionSemanticMapOnView(cloud,predicted)
 % conditionSemanticMapOnView Evaluate a frozen map at the predicted origin.
 % Relative kernel weights determine mean and within-plus-between scatter.
+% Intrinsic scatter retains within-acquisition shape separately from drift
+% between acquisition centers, for partial sign surface compatibility.
 % Absolute nearest-view distance continuously reduces influence where the
 % mapping drive supplies little view support. It is not a pose observation.
 % The solver freezes these map moments for its solve. Reported information
@@ -15,6 +17,7 @@ function [cloud,details]=conditionSemanticMapOnView(cloud,predicted)
     assert(model.schemaVersion==1 && iscell(model.observations)&&numel(model.observations)==n, ...
         'VehicleLocalization:InvalidLandmarkViews','Map view arrays must align with component indices.');
     cloud.components.viewReliability=ones(n,1);modeled=ismember(cloud.components.semanticName,cfg.pointClasses);
+    cloud.components.intrinsicCovariance=zeros(2,2,n);
     cloud.components.viewReliability(modeled)=0;
     for id=find(modeled).'
         o=model.observations{id};if isempty(o),continue;end
@@ -25,7 +28,9 @@ function [cloud,details]=conditionSemanticMapOnView(cloud,predicted)
         d2=sum((o(:,1:2)-predicted(1:2)).^2,2);minimum=min(d2);
         w=exp(-.5*(d2-minimum)/cfg.bandwidth^2);w=w/sum(w);
         mu=sum(o(:,4:5).*w,1);delta=o(:,4:5)-mu;
-        S=[sum(w.*o(:,6)),sum(w.*o(:,7));sum(w.*o(:,7)),sum(w.*o(:,8))]+delta.'*(delta.*w);
+        intrinsic=[sum(w.*o(:,6)),sum(w.*o(:,7));sum(w.*o(:,7)),sum(w.*o(:,8))];
+        cloud.components.intrinsicCovariance(:,:,id)=intrinsic;
+        S=intrinsic+delta.'*(delta.*w);
         [V,E]=eig((S+S.')/2,'vector');S=V*diag(max(E,cfg.varianceFloor))*V.';
         cloud.components.mean(id,:)=mu;cloud.components.covariance(:,:,id)=(S+S.')/2;
         cloud.components.viewReliability(id)=exp(-.5*minimum/cfg.coverageScale^2);

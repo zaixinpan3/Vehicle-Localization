@@ -1,0 +1,34 @@
+--- a/localization/prepareSemanticRegistrationGeometry.m
++++ b/localization/prepareSemanticRegistrationGeometry.m
+@@ -50,6 +50,11 @@
+     height.strategy="conditionalDistributionCompatibility";
+     height.planarForce=false;
+     [f.normal,f.majorVariance,f.lineEligible]=normalGeometry(f,gcfg);
++    f.directionScatter=sqrt(max(0,(reshape(f.covariance(1,1,:)+f.covariance(2,2,:),[],1)-f.majorVariance)./max(f.majorVariance,1e-8)));
++    f.directionScatterScale=0;
++    if isfield(cfg,'lineDirection') && isfield(cfg.lineDirection,'mapScatterScale')
++        f.directionScatterScale=cfg.lineDirection.mapScatterScale;
++    end
+     f.surfaceEligible=false(f.numComponents,1);
+     if isfield(cfg,'partialSign'),validatePartialSign(cfg.partialSign);end
+     if isfield(cfg,'partialSign') && cfg.partialSign.enabled && isfield(f,'intrinsicCovariance')
+@@ -170,7 +175,8 @@
+                 variance=a.*normal(:,1).^2+2*b.*normal(:,1).*normal(:,2)+d.*normal(:,2).^2;
+                 distance=dn.^2./variance+dt.^2./(f.majorVariance(targets)+cfg.maximumMatchDistance^2);
+                 tangent=m.lineTangent(source,:)*r.';
+-                angular=(normal*tangent.').^2.*(double(m.lineDirectionValid(source))./m.lineDirectionSigma(source).^2).';
++                angularVariance=m.lineDirectionSigma(source).'.^2+(f.directionScatterScale*f.directionScatter(targets)).^2;
++                angular=(normal*tangent.').^2.*double(m.lineDirectionValid(source)).'./angularVariance;
+                 distance=distance+angular;
+                 valid=abs(dn)<=cfg.maximumMatchDistance & ...
+                     abs(dt)<=3*sqrt(f.majorVariance(targets))+cfg.maximumMatchDistance;
+@@ -246,7 +252,8 @@
+     residual=[w11.*delta(:,1)+w12.*delta(:,2),w21.*delta(:,1)+w22.*delta(:,2)].';
+     tangent=m.lineTangent(source,:);normals=f.normal(target,:);
+     directionValid=line & m.lineDirectionValid(source);
+-    directionScale=double(directionValid)./m.lineDirectionSigma(source);
++    directionSigma=hypot(m.lineDirectionSigma(source),f.directionScatterScale*f.directionScatter(target));
++    directionScale=double(directionValid)./directionSigma;
+     rotatedTangent=tangent*r.';
+     directionResidual=sum(rotatedTangent.*normals,2).*directionScale;
+     if any(directionValid)

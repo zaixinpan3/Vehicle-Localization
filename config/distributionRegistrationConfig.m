@@ -15,6 +15,11 @@ function cfg = distributionRegistrationConfig()
     % anchors restore the hard fine solve, avoiding bias from nearby aliases.
     cfg.softPointAssociation = struct('temperature',2.5,'radius',1.5, ...
         'minimumPosterior',0.9,'hardWithUnmergedAnchors',2);
+    % Repeated partial patches establish sign existence, but their centers
+    % need not equal the complete landmark center. Preserve a strict majority
+    % of coherent centers; off-center portions retain only panel-normal force.
+    cfg.partialSign=struct('enabled',true,'minimumAnisotropy',5, ...
+        'minimumVariance',.01,'consensusRadius',.15,'maximumNormalDifference',.20);
     % Align reliable local line directions as well as line-normal positions.
     % Several distinct selected means must span a straight neighborhood; no
     % raw points or additional perception candidates enter this factor. The

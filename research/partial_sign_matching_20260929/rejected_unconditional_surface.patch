@@ -1,0 +1,26 @@
+--- a/localization/prepareSemanticRegistrationGeometry.m
++++ b/localization/prepareSemanticRegistrationGeometry.m
+@@ -202,10 +202,11 @@
+             linear=index(keep)+(find(keep)-1)*numel(targets);
+             chosenZ(selected)=dz(linear);
+             chosenHeightCost(selected)=heightCost(linear);
+-            lineSource(selected)=group.line;
++            lineSource(selected)=group.line | f.surfaceEligible(chosen(selected));
+             if ~group.line && ~isempty(association)
+                 for col=find(keep)
+                     sourceId=source(col);
++                    if lineSource(sourceId),continue;end
+                     [mu,scatter,count]=softPointAssociationTarget( ...
+                         f.mean(targets,1:2),f.covariance(1:2,1:2,targets), ...
+                         distance(:,col),group.priorCost+heightCost(:,col),index(col),association);
+@@ -214,10 +215,6 @@
+                 end
+             end
+         end
+-    end
+-    if isfield(f,'partialSignConfig')
+-        partial=partialSignSources(f,m,means,chosen);
+-        lineSource(partial)=true;softUsed(partial)=false;
+     end
+     source=find(chosen); target=chosen(source); rows=numel(source);
+     cm=rotated(:,:,source); cf=f.covariance(1:2,1:2,target);targetMean=f.mean(target,1:2);

@@ -50,6 +50,22 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
     height.strategy="conditionalDistributionCompatibility";
     height.planarForce=false;
     [f.normal,f.majorVariance,f.lineEligible]=normalGeometry(f,gcfg);
+    f.surfaceEligible=false(f.numComponents,1);
+    if isfield(cfg,'partialSign'),validatePartialSign(cfg.partialSign);end
+    if isfield(cfg,'partialSign') && cfg.partialSign.enabled && isfield(f,'intrinsicCovariance')
+        S=f.intrinsicCovariance;
+        assert(isnumeric(S)&&isreal(S)&&size(S,1)==2&&size(S,2)==2&&size(S,3)==f.numComponents && ...
+            all(isfinite(S),'all')&&all(abs(S-permute(S,[2 1 3]))<1e-9,'all'), ...
+            'VehicleLocalization:InvalidIntrinsicShape','Intrinsic XY scatter must be finite, symmetric and aligned.');
+        f.partialSignConfig=cfg.partialSign;
+        for id=find(f.semanticName=="trafficSign").'
+            [v,e]=eig(f.intrinsicCovariance(:,:,id),'vector');[minor,j]=min(e);major=max(e);
+            assert(minor>=-1e-10,'VehicleLocalization:InvalidIntrinsicShape','Intrinsic scatter must be positive semidefinite.');
+            if major>=cfg.partialSign.minimumVariance && major>=cfg.partialSign.minimumAnisotropy*max(minor,1e-8)
+                f.normal(id,:)=v(:,j).';f.majorVariance(id)=major;f.surfaceEligible(id)=true;
+            end
+        end
+    end
     if height.heightUsed, f=prepareConditionalHeight(f); end
     groups=correspondenceGroups(f,m);
     association=[];
@@ -70,6 +86,41 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
     model.squaredResidual=@(system,pose) squaredResidual(system,m,pose);
     model.frozenCost=@(system,pose) sum(system.weights.*gcfg.robustStandardizedDistance^2.* ...
         log1p(squaredResidual(system,m,pose)/gcfg.robustStandardizedDistance^2));
+end
+
+function validatePartialSign(cfg)
+    fields=["minimumAnisotropy","minimumVariance","consensusRadius","maximumNormalDifference"];
+    valid=isstruct(cfg)&&isscalar(cfg)&&all(isfield(cfg,[fields,"enabled"]));
+    if valid
+        valid=isscalar(cfg.enabled)&&islogical(cfg.enabled);
+        for field=fields
+            value=cfg.(field);valid=valid&&isnumeric(value)&&isscalar(value)&&isreal(value)&&isfinite(value)&&value>0;
+        end
+        valid=valid&&cfg.minimumAnisotropy>1;
+    end
+    assert(valid,'VehicleLocalization:InvalidPartialSignConfig','Require a logical switch and finite positive partial-sign geometry scales.');
+end
+
+function partial=partialSignSources(f,m,means,chosen)
+% A coherent cluster retains center constraints; displaced portions constrain
+% only the known panel normal. Repetition establishes existence, not center.
+    partial=false(m.numComponents,1);cfg=f.partialSignConfig;
+    for target=find(f.surfaceEligible).'
+        ids=find(chosen==target);
+        if numel(ids)<3,continue;end
+        normal=f.normal(target,:);tangent=[-normal(2),normal(1)];
+        positions=means(ids,:)*tangent.';normalPositions=means(ids,:)*normal.';
+        neighbors=abs(positions-positions.')<=cfg.consensusRadius;
+        quality=m.quality(ids).*m.temporalStability(ids);
+        mass=neighbors*quality;mass(sum(neighbors,2)<2)=0;
+        [support,best]=max(mass);if support<=0,continue;end
+        coherent=neighbors(best,:).';
+        if support<=sum(quality(~coherent)),continue;end
+        center=sum(normalPositions(coherent).*quality(coherent))/sum(quality(coherent));
+        delta=abs(normalPositions-center);
+        compatible=delta<=cfg.maximumNormalDifference;
+        partial(ids(~coherent & compatible))=true;
+    end
 end
 
 function groups=correspondenceGroups(f,m)
@@ -164,6 +215,10 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
             end
         end
     end
+    if isfield(f,'partialSignConfig')
+        partial=partialSignSources(f,m,means,chosen);
+        lineSource(partial)=true;softUsed(partial)=false;
+    end
     source=find(chosen); target=chosen(source); rows=numel(source);
     cm=rotated(:,:,source); cf=f.covariance(1:2,1:2,target);targetMean=f.mean(target,1:2);
     soft=softUsed(source);cf(:,:,soft)=softCov(:,:,source(soft));targetMean(soft,:)=softMean(source(soft),:);
@@ -227,6 +282,7 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
         'weight',weights,'robustWeight',weights.*robust, ...
         'lineDirectionUsed',directionValid,'lineDirectionResidual',directionResidual);
     pairs.associationComponents=softCount(source);
+    pairs.partialSignSurface=f.surfaceEligible(target) & line;
     pairs.sourceMeanXY=m.mean(source,1:2);
     pairs.targetMeanXY=targetMean;
     pairs.targetCovarianceXY=[reshape(cf(1,1,:),[],1),reshape(cf(1,2,:),[],1),reshape(cf(2,2,:),[],1)];

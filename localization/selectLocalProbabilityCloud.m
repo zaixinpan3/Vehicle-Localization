@@ -19,6 +19,7 @@ function [fixed,indices]=selectLocalProbabilityCloud(map,seed,radius)
         if isfield(c,name),fixed.components.(name)=c.(name)(keep,:);end
     end
     if isfield(c,'covarianceXYZ'),fixed.components.covarianceXYZ=c.covarianceXYZ(:,:,keep);end
+    if isfield(c,'intrinsicCovariance'),fixed.components.intrinsicCovariance=c.intrinsicCovariance(:,:,keep);end
     if isfield(map,'heightEvidence')
         e=map.heightEvidence;fixed.heightEvidence=e;
         fixed.heightEvidence.mean=e.mean(keep,:);

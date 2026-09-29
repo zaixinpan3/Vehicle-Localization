@@ -66,6 +66,7 @@ classdef registrationSupport
                 if isfield(source,name), components.(name)=source.(name); end
             end
             projected = struct('components',components,'dimension',dimension);
+            if isfield(source,'intrinsicCovariance'),projected.components.intrinsicCovariance=source.intrinsicCovariance;end
             if isfield(cloud,'frameCalibration'), projected.frameCalibration=cloud.frameCalibration; end
             if isfield(cloud,'coordinateFrame'), projected.coordinateFrame=cloud.coordinateFrame; end
             if dimension==2 && isfield(cloud,'landmarkViews'),projected.landmarkViews=cloud.landmarkViews;end

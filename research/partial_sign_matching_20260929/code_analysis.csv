@@ -1,0 +1,7 @@
+file,findings
+config/distributionRegistrationConfig.m,0
+localization/conditionSemanticMapOnView.m,0
+localization/prepareSemanticRegistrationGeometry.m,0
+localization/registrationSupport.m,0
+localization/selectLocalProbabilityCloud.m,0
+tests/partialSignMatchingTest.m,0

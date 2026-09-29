@@ -1,0 +1,56 @@
+{
+  "baseline": {
+    "maximumFrame": 178,
+    "maximumM": 0.162239826855578,
+    "rmseM": 0.06100566202032323,
+    "p95M": 0.104537830210477,
+    "frame178M": 0.162239826855578
+  },
+  "adopted": {
+    "maximumFrame": 932,
+    "maximumM": 0.159861269865301,
+    "rmseM": 0.06106265571679385,
+    "p95M": 0.104537830210477,
+    "frame178M": 0.0277642071353246
+  },
+  "frames": 1170,
+  "frame178ReductionPercent": 82.88693493241975,
+  "fullUpdates": 1147,
+  "directionalUpdates": 11,
+  "unchangedCurrentClouds": 1170,
+  "unchangedWindowClouds": 1170,
+  "rawCachedMaximumPoseDifference": 4.65661287307739e-09,
+  "legacyMapMaximumPoseDifference": 0.0,
+  "uniquePassingTests": 312,
+  "completeSuiteRunTests": 311,
+  "finalTargetedTests": 9,
+  "codeAnalyzerFiles": 6,
+  "codeAnalyzerFindings": 0,
+  "sign22RetainedNormalConstraint": true,
+  "queryFineLabelsUsed": false,
+  "maximumReductionPercent": 1.4660746601969254,
+  "evenPointMapExcludedOddQueries": {
+    "count": 584,
+    "baseline": {
+      "maximumFrame": 1147,
+      "maximumM": 0.153606774839526,
+      "rmseM": 0.05912039600034271,
+      "p95M": 0.1069672561666379,
+      "frame178M": null
+    },
+    "adopted": {
+      "maximumFrame": 1147,
+      "maximumM": 0.153606774839526,
+      "rmseM": 0.05938850596031851,
+      "p95M": 0.10720016703251098,
+      "frame178M": null
+    }
+  },
+  "pairedTiming": {
+    "legacyMedianMs": 8.8845,
+    "adoptedMedianMs": 9.035,
+    "pairedMedianDifferenceMs": 0.153,
+    "legacyP95Ms": 12.659,
+    "adoptedP95Ms": 12.934
+  }
+}
