@@ -19,12 +19,25 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
     if nargin<5,positionAid=[];end
     if nargin<6,additionalSeeds=zeros(0,3);end
     initialPose=double(initialPose(:).');pyramid=validatePyramid(cfg);
+    if isfield(cfg,'softPointAssociation'),validateSoftPointAssociation(cfg.softPointAssociation);end
     [coarseFixed,groups]=canonicalizeSemanticCloud(fixedCloud,pyramid.mapMergeRadius,pyramid.pointClasses);
-    coarseMoving=canonicalizeSemanticCloud(movingCloud,pyramid.sourceMergeRadius,pyramid.pointClasses);
+    [coarseMoving,sourceGroups]=canonicalizeSemanticCloud(movingCloud,pyramid.sourceMergeRadius,pyramid.pointClasses);
     coarse=solveGeometry(coarseFixed,coarseMoving,initialPose,cfg);
+    independentAnchors=0;
+    if isfield(coarse,'correspondences')
+        targets=unique(coarse.correspondences.target(coarse.correspondences.semanticName=="pole"));
+        independentAnchors=nnz(cellfun(@numel,groups(targets))==1);
+    end
     fineSeed=initialPose;
     if coarse.accepted || coarse.directionalAccepted,fineSeed=coarse.poseXYTheta;end
-    solve=@(pose) solveGeometry(fixedCloud,movingCloud,pose,cfg);
+    fineCfg=cfg;
+    % Independent pole anchors or explicit position-aid hypotheses can resolve
+    % aliases. Keep their fine solve sharp; aid still adds no residual force.
+    if isfield(cfg,'softPointAssociation') && ...
+            (independentAnchors>=cfg.softPointAssociation.hardWithUnmergedAnchors || informativePositionAid(positionAid,cfg.positionAid))
+        fineCfg=rmfield(fineCfg,'softPointAssociation');
+    end
+    solve=@(pose) solveGeometry(fixedCloud,movingCloud,pose,fineCfg);
     result=selectPositionAidedRegistration(solve,fineSeed,positionAid,cfg,additionalSeeds);
     % A refinement informed by evidence beyond planar geometry, position aid
     % or relative-height association, may legitimately move to another
@@ -32,28 +45,54 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
     heightInformed=isfield(result.height,'relativeAssociation') && result.height.relativeAssociation.enabled;
     planarOnly=~result.positionAiding.used && ~heightInformed;
     shift=norm(result.poseXYTheta(1:2)-coarse.poseXYTheta(1:2));
-    retained=planarOnly && coarse.accepted && result.accepted && shift>pyramid.trustRadius;
+    trustSupported=true;
+    if isfield(pyramid,'trustClasses')
+        trustSupported=isfield(coarse,'correspondences') && ...
+            any(ismember(coarse.correspondences.semanticName,pyramid.trustClasses));
+    end
+    retained=planarOnly && trustSupported && coarse.accepted && result.accepted && shift>pyramid.trustRadius;
     if retained
         % Report the coarse solution in original component indices so callers
         % resolve the same global targets as for a fine solution.
         representative=cellfun(@(g)g(1),groups);
         retainedResult=coarse;retainedResult.positionAiding=result.positionAiding;
         retainedResult.correspondences.target=representative(coarse.correspondences.target);
+        sourceRepresentative=cellfun(@(g)g(1),sourceGroups);
+        retainedResult.correspondences.source=sourceRepresentative(coarse.correspondences.source);
         retainedResult.reason="coarseRetainedByTrustRadius";result=retainedResult;
     end
     result.initialPoseXYTheta=initialPose;
+    result.configuredSoftAssociation=isfield(cfg,'softPointAssociation');
     result.pyramid=struct('coarsePoseXYTheta',coarse.poseXYTheta,'coarseAccepted',coarse.accepted, ...
         'coarseSimilarity',coarse.similarity,'coarseReason',coarse.reason, ...
         'coarseComponents',coarseFixed.components.numComponents,'fineSeedXYTheta',fineSeed, ...
         'refinementShiftM',shift,'coarseRetained',retained,'mapMergeRadius',pyramid.mapMergeRadius, ...
         'sourceMergeRadius',pyramid.sourceMergeRadius,'trustRadius',pyramid.trustRadius,'planarOnlyRefinement',planarOnly, ...
+        'trustSupported',trustSupported, ...
+        'unmergedAnchors',independentAnchors,'softFineAssociation',isfield(fineCfg,'softPointAssociation'), ...
         'semantics',"coarse solve on moment-matched canonical clouds seeds the fine solve; trust radius applies to planar-only refinement");
+end
+
+function available=informativePositionAid(aid,cfg)
+% An unavailable/uncertain aid must leave the LiDAR-only objective unchanged.
+% selectPositionAidedRegistration remains responsible for input validation.
+    available=false;
+    if isempty(aid) || (isfield(aid,'valid') && ~aid.valid) || ~isfield(aid,'covariance'),return;end
+    C=double(aid.covariance);
+    if ~isequal(size(C),[2 2]) || ~isreal(C) || any(~isfinite(C),'all') || norm(C-C.','fro')>=1e-9,return;end
+    eigenvalues=eig(C);
+    available=min(eigenvalues)>0 && sqrt(max(eigenvalues))<=cfg.maximumStandardDeviation;
 end
 
 function pyramid=validatePyramid(cfg)
     assert(isfield(cfg,'pyramid') && all(isfield(cfg.pyramid,{'mapMergeRadius','sourceMergeRadius','trustRadius','pointClasses'})), ...
         'VehicleLocalization:MissingPyramidConfiguration','Use the current distributionRegistrationConfig with a pyramid group.');
-    pyramid=cfg.pyramid;radii=[pyramid.mapMergeRadius,pyramid.sourceMergeRadius,pyramid.trustRadius];
+    pyramid=cfg.pyramid;
+    if isfield(pyramid,'trustClasses')
+        assert(isstring(pyramid.trustClasses) && all(ismember(pyramid.trustClasses,pyramid.pointClasses)), ...
+            'VehicleLocalization:InvalidPyramidConfiguration','Trust classes must be canonical point classes.');
+    end
+    radii=[pyramid.mapMergeRadius,pyramid.sourceMergeRadius,pyramid.trustRadius];
     assert(isreal(radii) && all(isfinite(radii)) && all(radii>=0) && pyramid.trustRadius>0 && isstring(pyramid.pointClasses), ...
         'VehicleLocalization:InvalidPyramidConfiguration','Pyramid radii must be finite and nonnegative with a positive trust radius.');
 end
@@ -145,6 +184,7 @@ function result=solveGeometry(fixedCloud,movingCloud,initialPose,cfg)
     result.directionalInformation=inverseScale*supported*inverseScale;
     result.directionalInformation=(result.directionalInformation+result.directionalInformation.')/2;
     result.correspondences=struct2table(system.pairs);
+    result.correspondences.targetMeanXY=result.correspondences.targetMeanXY+model.origin;
     result.matchedFraction=system.numPairs/max(1,m.numComponents);
     result.classDiagnostics=classDiagnostics(system,gcfg);
     result.height.medianConditionalResidual=median(system.pairs.heightResidual,'omitnan');

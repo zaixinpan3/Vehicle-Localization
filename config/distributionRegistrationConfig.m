@@ -5,21 +5,24 @@ function cfg = distributionRegistrationConfig()
     cfg = struct();
     cfg.method = "geometricD2D";
     cfg.localMapRadius = 100;
-    % Canonical map pyramid. Same-class point components closer than the merge
-    % radii are moment-matched into one Gaussian for a first, seed-independent
-    % solve; the original clouds then refine that pose. Without position aid a
-    % refinement that leaves the coarse pose by more than trustRadius is a new
-    % search rather than a refinement and the coarse pose is kept. The map
-    % radius is the smallest that leaves no same-class structure at the
-    % association-ambiguity scale of the Mississippi map.
+    % Canonical point clouds seed the fine solve. A matched pole can protect
+    % the coarse basin; sign-only merged centroids cannot veto refinement.
     cfg.pyramid = struct('mapMergeRadius',1.5,'sourceMergeRadius',0.5, ...
-        'trustRadius',0.15,'pointClasses',["pole","trafficSign"]);
+        'trustRadius',0.15,'pointClasses',["pole","trafficSign"],'trustClasses',"pole");
+    % Ambiguous neighboring point landmarks contribute a mean and total
+    % covariance, including between-mode scatter. Temper geometry only; retain
+    % stored map priors and confident associations. Two distinct unmerged pole
+    % anchors restore the hard fine solve, avoiding bias from nearby aliases.
+    cfg.softPointAssociation = struct('temperature',2.5,'radius',1.5, ...
+        'minimumPosterior',0.9,'hardWithUnmergedAnchors',2);
     % Align reliable local line directions as well as line-normal positions.
     % Several distinct selected means must span a straight neighborhood; no
     % raw points or additional perception candidates enter this factor. The
     % angular scale is an engineering setting, not calibrated sensor noise.
+    % Local minor/major scatter increases angular uncertainty on bent lines.
     cfg.lineDirection = struct('enabled',true,'radius',4,'minimumComponents',3, ...
-        'minimumAnisotropy',9,'minimumSpan',2.4,'standardDeviation',deg2rad(1));
+        'minimumAnisotropy',9,'minimumSpan',2.4,'standardDeviation',deg2rad(1), ...
+        'scatterScale',0.25);
     cfg.maximumIterationsPerScale = 40;
     cfg.maximumPoseCorrection = [3 3 deg2rad(12)];
     cfg.yawLeverArm = 10;

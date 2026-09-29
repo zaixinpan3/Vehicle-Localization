@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+confidentSoft200,1028,0.317262423378505,0.125020898237435,0.2225932764701,1147,10,12.3425,15.478538

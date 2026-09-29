@@ -1,0 +1,78 @@
+{
+  "method": "geometricD2D",
+  "localMapRadius": 100,
+  "pyramid": {
+    "mapMergeRadius": 1.5,
+    "sourceMergeRadius": 0.5,
+    "trustRadius": 0.15,
+    "pointClasses": [
+      "pole",
+      "trafficSign"
+    ],
+    "trustClasses": "pole"
+  },
+  "softPointAssociation": {
+    "temperature": 2.5,
+    "radius": 1.5,
+    "minimumPosterior": 0.9,
+    "hardWithUnmergedAnchors": 2
+  },
+  "lineDirection": {
+    "enabled": true,
+    "radius": 4,
+    "minimumComponents": 3,
+    "minimumAnisotropy": 9,
+    "minimumSpan": 2.4,
+    "standardDeviation": 0.017453292519943295,
+    "scatterScale": 0.25
+  },
+  "maximumIterationsPerScale": 40,
+  "maximumPoseCorrection": [
+    3,
+    3,
+    0.20943951023931956
+  ],
+  "yawLeverArm": 10,
+  "gradientTolerance": 1E-5,
+  "stepTolerance": 1E-5,
+  "minimumSimilarity": 0.15,
+  "minimumComponents": 3,
+  "minimumScaledCurvature": 1E-5,
+  "minimumCurvatureRatio": 0.0001,
+  "heightMode": "xy",
+  "heightTranslation": null,
+  "positionAid": {
+    "maximumStandardDeviation": 2,
+    "standardDeviationFloor": 0.1,
+    "minimumSeedSeparation": 0.05,
+    "hypothesisSeparation": 0.02,
+    "maximumSquaredInnovation": 9.21
+  },
+  "heightStandardDeviation": 0.2,
+  "tiltStandardDeviation": 0.0087266462599716477,
+  "relativeHeight": {
+    "enabled": false,
+    "minimumAnchors": 4,
+    "minimumAnchorSpan": 3,
+    "maximumAnchorDistance": 0.75,
+    "noiseStandardDeviation": 0.2,
+    "tiltStandardDeviation": 0.0087266462599716477,
+    "weight": 1,
+    "maximumPenalty": 9,
+    "candidateModel": "marginal",
+    "semanticNames": [
+      "pole",
+      "trafficSign"
+    ]
+  },
+  "geometric": {
+    "maximumMatchDistance": 2.5,
+    "minimumLineAnisotropy": 3,
+    "noiseStandardDeviation": 0.1,
+    "robustStandardizedDistance": 2.5,
+    "minimumMatchFraction": 0.1,
+    "minimumObservabilityRatio": 0.01,
+    "maximumClassCorrection": 0.5,
+    "heightCompatibilitySigma": 3
+  }
+}

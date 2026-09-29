@@ -73,6 +73,7 @@ classdef canonicalPyramidTest < matlab.unittest.TestCase
         function pyramidRecoversTheTrueBasinOfASplitLandmark(testCase)
             [fixed,moving,cfg]=canonicalPyramidTest.aliasRegistrationScene();
             flat=cfg;flat.pyramid.mapMergeRadius=0;flat.pyramid.sourceMergeRadius=0;
+            if isfield(flat,'softPointAssociation'),flat=rmfield(flat,'softPointAssociation');end
             single=registerSemanticProbabilityCloud(fixed,moving,[.7 0 0],flat);
             pyramid=registerSemanticProbabilityCloud(fixed,moving,[.7 0 0],cfg);
             testCase.verifyGreaterThan(abs(single.poseXYTheta(1)),.3,"A single-level solve locks onto the split sub-components.");
@@ -86,6 +87,9 @@ classdef canonicalPyramidTest < matlab.unittest.TestCase
         end
         function trustRadiusRetainsTheCoarsePoseForPlanarOnlyRefinement(testCase)
             [fixed,moving,cfg]=canonicalPyramidTest.fullyAliasedScene();
+            % Exercise the hard-refinement trust gate explicitly. Soft
+            % ambiguity matching legitimately stays at the midpoint.
+            if isfield(cfg,'softPointAssociation'),cfg=rmfield(cfg,'softPointAssociation');end
             r=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
             testCase.verifyTrue(r.accepted);
             testCase.verifyTrue(r.pyramid.coarseRetained);

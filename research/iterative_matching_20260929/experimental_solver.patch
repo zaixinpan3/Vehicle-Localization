@@ -1,0 +1,277 @@
+diff --git a/localization/prepareSemanticRegistrationGeometry.m b/localization/prepareSemanticRegistrationGeometry.m
+index 5d51236..73618a3 100644
+--- a/localization/prepareSemanticRegistrationGeometry.m
++++ b/localization/prepareSemanticRegistrationGeometry.m
+@@ -22,10 +22,25 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
+     % Height/tilt uncertainty belongs to the compatibility calculation. Keep
+     % the planar metric identical when only height mode/reference changes.
+     m.lineTangent=zeros(m.numComponents,2);m.lineDirectionValid=false(m.numComponents,1);
+-    m.lineDirectionSigma=1;
++    m.lineDirectionSigma=ones(m.numComponents,1);
++    m.lineDirectionLocality=Inf;
+     if isfield(cfg,'lineDirection') && cfg.lineDirection.enabled
+-        [m.lineTangent,m.lineDirectionValid]=sourceLineDirections(m,cfg.lineDirection);
+-        m.lineDirectionSigma=cfg.lineDirection.standardDeviation;
++        [m.lineTangent,m.lineDirectionValid,scatter]=sourceLineDirections(m,cfg.lineDirection);
++        if isfield(cfg.lineDirection,'currentAcquisition') && cfg.lineDirection.currentAcquisition
++            evidence=registrationSupport.getHeightEvidence(movingCloud);
++            current=m;current.mean(:,1:2)=evidence.mean(:,1:2);current.mixtureWeight(~evidence.available)=0;
++            [direction,available,currentScatter]=sourceLineDirections(current,cfg.lineDirection);
++            if isfield(cfg.lineDirection,'currentOnly') && cfg.lineDirection.currentOnly
++                m.lineDirectionValid(:)=false;
++            end
++            m.lineTangent(available,:)=direction(available,:);m.lineDirectionValid(available)=true;
++            scatter(available)=currentScatter(available);
++        end
++        m.lineDirectionSigma(:)=cfg.lineDirection.standardDeviation;
++        if isfield(cfg.lineDirection,'scatterScale')
++            m.lineDirectionSigma=hypot(m.lineDirectionSigma,cfg.lineDirection.scatterScale*scatter);
++        end
++        if isfield(cfg.lineDirection,'localityScale'),m.lineDirectionLocality=cfg.lineDirection.localityScale;end
+     end
+     m.planarCovariance=movingCloud.components.covariance(1:2,1:2,:);
+     f.mean(:,1:2)=f.mean(:,1:2)-initialPose(1:2);
+@@ -37,23 +52,29 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
+     height.planarForce=false;
+     [f.normal,f.majorVariance,f.lineEligible]=normalGeometry(f,gcfg);
+     if height.heightUsed, f=prepareConditionalHeight(f); end
+-    groups=correspondenceGroups(f,m);
++    priorExponent=1;
++    if isfield(cfg,'mapPriorExponent'),priorExponent=cfg.mapPriorExponent;end
++    assert(isscalar(priorExponent)&&isfinite(priorExponent)&&priorExponent>=0&&priorExponent<=1, ...
++        'VehicleLocalization:InvalidMapPriorExponent','Map prior exponent must be in [0,1].');
++    groups=correspondenceGroups(f,m,priorExponent);
++    association=[];
++    if isfield(cfg,'softPointAssociation'),association=cfg.softPointAssociation;end
+     relative=[];
+     if isfield(cfg,'relativeHeight') && cfg.relativeHeight.enabled
+         assert(~height.heightUsed,'VehicleLocalization:ConflictingHeightModes', ...
+             'Choose relative-height evidence or externally referenced XYZ compatibility.');
+-        initial=linearize(f,m,[0 0 initialPose(3)],gcfg,[1;1;1/cfg.yawLeverArm],groups,[]);
++        initial=linearize(f,m,[0 0 initialPose(3)],gcfg,[1;1;1/cfg.yawLeverArm],groups,[],association);
+         relative=prepareRelativeHeightAssociation(fixedCloud,movingCloud,initialPose,initial.pairs,cfg.relativeHeight);
+         height.relativeAssociation=relative.details;
+     end
+     model=struct('fixed',f,'moving',m,'height',height,'origin',initialPose(1:2));
+-    model.linearize=@(pose,scale) linearize(f,m,pose,gcfg,scale,groups,relative);
++    model.linearize=@(pose,scale) linearize(f,m,pose,gcfg,scale,groups,relative,association);
+     model.squaredResidual=@(system,pose) squaredResidual(system,m,pose);
+     model.frozenCost=@(system,pose) sum(system.weights.*gcfg.robustStandardizedDistance^2.* ...
+         log1p(squaredResidual(system,m,pose)/gcfg.robustStandardizedDistance^2));
+ end
+
+-function groups=correspondenceGroups(f,m)
++function groups=correspondenceGroups(f,m,priorExponent)
+ % Class membership and eligible targets are invariant during one solve.
+     names=intersect(unique(f.semanticName),unique(m.semanticName));
+     groups=repmat(struct('source',[],'target',[],'priorCost',[],'line',false),numel(names),1);
+@@ -66,11 +87,11 @@ function groups=correspondenceGroups(f,m)
+         prior=f.mixtureWeight(keep);
+         % Subtracting a common log mass preserves the MAP assignment while
+         % making global map-weight scaling immaterial. No new stability score.
+-        groups(k).priorCost=-2*(log(prior)-log(max(prior)));
++        groups(k).priorCost=-2*priorExponent*(log(prior)-log(max(prior)));
+     end
+ end
+
+-function system=linearize(f,m,pose,cfg,scale,groups,relative)
++function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
+ % Compare each semantic class in a matrix, preserving first-target tie order.
+ % Workspace scales with one class rather than the full all-class product.
+     r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
+@@ -78,6 +99,7 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
+     n=m.numComponents;
+     rotated=pagemtimes(pagemtimes(r,m.planarCovariance),r.');
+     chosen=zeros(n,1); chosenZ=nan(n,1); chosenHeightCost=zeros(n,1);lineSource=false(n,1);
++    softMean=zeros(n,2);softCov=zeros(2,2,n);softUsed=false(n,1);softCount=zeros(n,1);
+     for group=groups.'
+         source=group.source; targets=group.target;
+         if isempty(source) || isempty(targets), continue; end
+@@ -99,7 +121,10 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
+                 variance=a.*normal(:,1).^2+2*b.*normal(:,1).*normal(:,2)+d.*normal(:,2).^2;
+                 distance=dn.^2./variance+dt.^2./(f.majorVariance(targets)+cfg.maximumMatchDistance^2);
+                 tangent=m.lineTangent(source,:)*r.';
+-                angular=(normal*tangent.').^2.*double(m.lineDirectionValid(source)).'/m.lineDirectionSigma^2;
++                angular=(normal*tangent.').^2.*(double(m.lineDirectionValid(source))./m.lineDirectionSigma(source).^2).';
++                if isfinite(m.lineDirectionLocality)
++                    angular=angular.*exp(-dt.^2./(2*m.lineDirectionLocality^2*max(f.majorVariance(targets),cfg.noiseStandardDeviation^2)));
++                end
+                 distance=distance+angular;
+                 valid=abs(dn)<=cfg.maximumMatchDistance & ...
+                     abs(dt)<=3*sqrt(f.majorVariance(targets))+cfg.maximumMatchDistance;
+@@ -132,10 +157,34 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
+             chosenZ(selected)=dz(linear);
+             chosenHeightCost(selected)=heightCost(linear);
+             lineSource(selected)=group.line;
++            if ~group.line && ~isempty(association)
++                for col=find(keep)
++                    sourceId=source(col);closest=targets(index(col));
++                    nearby=sum((f.mean(targets,1:2)-f.mean(closest,1:2)).^2,2)<=association.radius^2;
++                    cost=(distance(:,col)-best(col))/association.temperature;
++                    if isfield(association,'preservePrior') && association.preservePrior
++                        cost=(distance(:,col)-group.priorCost)/association.temperature+group.priorCost;
++                        cost=cost-min(cost);
++                    end
++                    active=nearby & isfinite(cost) & cost<=9;
++                    targetIds=targets(active);prob=exp(-.5*cost(active));prob=prob/sum(prob);
++                    if isfield(association,'minimumPosterior')
++                        [confidence,mode]=max(prob);
++                        if confidence>=association.minimumPosterior && targetIds(mode)==closest,continue;end
++                    end
++                    mu=sum(f.mean(targetIds,1:2).*prob,1);scatter=zeros(2);
++                    for j=1:numel(targetIds)
++                        delta=f.mean(targetIds(j),1:2)-mu;
++                        scatter=scatter+prob(j)*(f.covariance(1:2,1:2,targetIds(j))+delta.'*delta);
++                    end
++                    softMean(sourceId,:)=mu;softCov(:,:,sourceId)=scatter;softUsed(sourceId)=true;softCount(sourceId)=numel(targetIds);
++                end
++            end
+         end
+     end
+     source=find(chosen); target=chosen(source); rows=numel(source);
+-    cm=rotated(:,:,source); cf=f.covariance(1:2,1:2,target);
++    cm=rotated(:,:,source); cf=f.covariance(1:2,1:2,target);targetMean=f.mean(target,1:2);
++    soft=softUsed(source);cf(:,:,soft)=softCov(:,:,source(soft));targetMean(soft,:)=softMean(source(soft),:);
+     a=reshape(cf(1,1,:)+cm(1,1,:),[],1)+cfg.noiseStandardDeviation^2;
+     b=reshape(cf(1,2,:)+cm(1,2,:),[],1);
+     d=reshape(cf(2,2,:)+cm(2,2,:),[],1)+cfg.noiseStandardDeviation^2;
+@@ -156,11 +205,15 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
+     jacobian(2,1,:)=w21*scale(1); jacobian(2,2,:)=w22*scale(2);
+     jacobian(1,3,:)=(w11.*yawDerivative(:,1)+w12.*yawDerivative(:,2))*scale(3);
+     jacobian(2,3,:)=(w21.*yawDerivative(:,1)+w22.*yawDerivative(:,2))*scale(3);
+-    delta=means(source,:)-f.mean(target,1:2);
++    delta=means(source,:)-targetMean;
+     residual=[w11.*delta(:,1)+w12.*delta(:,2),w21.*delta(:,1)+w22.*delta(:,2)].';
+     tangent=m.lineTangent(source,:);normals=f.normal(target,:);
+     directionValid=line & m.lineDirectionValid(source);
+-    directionScale=double(directionValid)/m.lineDirectionSigma;
++    directionScale=double(directionValid)./m.lineDirectionSigma(source);
++    if isfinite(m.lineDirectionLocality)
++        along=-delta(:,1).*normals(:,2)+delta(:,2).*normals(:,1);
++        directionScale=directionScale.*exp(-along.^2./(4*m.lineDirectionLocality^2*max(f.majorVariance(target),cfg.noiseStandardDeviation^2)));
++    end
+     rotatedTangent=tangent*r.';
+     directionResidual=sum(rotatedTangent.*normals,2).*directionScale;
+     if any(directionValid)
+@@ -192,9 +245,10 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
+         'mapMixtureWeight',f.mixtureWeight(target),'temporalStability',m.temporalStability(source), ...
+         'weight',weights,'robustWeight',weights.*robust, ...
+         'lineDirectionUsed',directionValid,'lineDirectionResidual',directionResidual);
++    pairs.associationComponents=softCount(source);
+     system=struct('H',h,'gradient',gradient,'numPairs',rows,'pairs',pairs, ...
+         'J',jacobian,'residual',residual,'weights',weights,'robust',robust, ...
+-        'precision',precision(:,:,1:rows),'targetMean',f.mean(target,1:2), ...
++        'precision',precision(:,:,1:rows),'targetMean',targetMean, ...
+         'directionNormal',normals,'directionScale',directionScale, ...
+         'cost',sum(weights.*cfg.robustStandardizedDistance^2.*log1p(qvalue/cfg.robustStandardizedDistance^2)), ...
+         'similarity',similarity);
+diff --git a/localization/registerSemanticProbabilityCloud.m b/localization/registerSemanticProbabilityCloud.m
+index 6bf92c1..2c64210 100644
+--- a/localization/registerSemanticProbabilityCloud.m
++++ b/localization/registerSemanticProbabilityCloud.m
+@@ -22,9 +22,19 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
+     [coarseFixed,groups]=canonicalizeSemanticCloud(fixedCloud,pyramid.mapMergeRadius,pyramid.pointClasses);
+     coarseMoving=canonicalizeSemanticCloud(movingCloud,pyramid.sourceMergeRadius,pyramid.pointClasses);
+     coarse=solveGeometry(coarseFixed,coarseMoving,initialPose,cfg);
++    independentAnchors=0;
++    if isfield(coarse,'correspondences')
++        targets=unique(coarse.correspondences.target(coarse.correspondences.semanticName=="pole"));
++        independentAnchors=nnz(cellfun(@numel,groups(targets))==1);
++    end
+     fineSeed=initialPose;
+     if coarse.accepted || coarse.directionalAccepted,fineSeed=coarse.poseXYTheta;end
+-    solve=@(pose) solveGeometry(fixedCloud,movingCloud,pose,cfg);
++    fineCfg=cfg;
++    if isfield(cfg,'softPointAssociation') && isfield(cfg.softPointAssociation,'hardWithUnmergedAnchors') && ...
++            independentAnchors>=cfg.softPointAssociation.hardWithUnmergedAnchors
++        fineCfg=rmfield(fineCfg,'softPointAssociation');
++    end
++    solve=@(pose) solveGeometry(fixedCloud,movingCloud,pose,fineCfg);
+     result=selectPositionAidedRegistration(solve,fineSeed,positionAid,cfg,additionalSeeds);
+     % A refinement informed by evidence beyond planar geometry, position aid
+     % or relative-height association, may legitimately move to another
+@@ -32,7 +42,20 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
+     heightInformed=isfield(result.height,'relativeAssociation') && result.height.relativeAssociation.enabled;
+     planarOnly=~result.positionAiding.used && ~heightInformed;
+     shift=norm(result.poseXYTheta(1:2)-coarse.poseXYTheta(1:2));
+-    retained=planarOnly && coarse.accepted && result.accepted && shift>pyramid.trustRadius;
++    trustSupported=true;
++    if isfield(pyramid,'trustClasses')
++        trustSupported=isfield(coarse,'correspondences') && ...
++            any(ismember(coarse.correspondences.semanticName,pyramid.trustClasses));
++    end
++    trustRadius=pyramid.trustRadius;unmergedAnchors=0;
++    if isfield(pyramid,'minimumUnmergedAnchors') && isfield(coarse,'correspondences')
++        targets=unique(coarse.correspondences.target(coarse.correspondences.semanticName=="pole"));
++        unmergedAnchors=nnz(cellfun(@numel,groups(targets))==1);
++        if unmergedAnchors>=pyramid.minimumUnmergedAnchors
++            trustRadius=max(trustRadius,pyramid.unmergedAnchorTrustRadius);
++        end
++    end
++    retained=planarOnly && trustSupported && coarse.accepted && result.accepted && shift>trustRadius;
+     if retained
+         % Report the coarse solution in original component indices so callers
+         % resolve the same global targets as for a fine solution.
+@@ -47,6 +70,8 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
+         'coarseComponents',coarseFixed.components.numComponents,'fineSeedXYTheta',fineSeed, ...
+         'refinementShiftM',shift,'coarseRetained',retained,'mapMergeRadius',pyramid.mapMergeRadius, ...
+         'sourceMergeRadius',pyramid.sourceMergeRadius,'trustRadius',pyramid.trustRadius,'planarOnlyRefinement',planarOnly, ...
++        'trustSupported',trustSupported, ...
++        'effectiveTrustRadius',trustRadius,'unmergedAnchors',unmergedAnchors, ...
+         'semantics',"coarse solve on moment-matched canonical clouds seeds the fine solve; trust radius applies to planar-only refinement");
+ end
+
+diff --git a/localization/sourceLineDirections.m b/localization/sourceLineDirections.m
+index ec2cb97..0bbb621 100644
+--- a/localization/sourceLineDirections.m
++++ b/localization/sourceLineDirections.m
+@@ -1,4 +1,4 @@
+-function [tangent,valid]=sourceLineDirections(c,cfg)
++function [tangent,valid,angularScatter]=sourceLineDirections(c,cfg)
+ % sourceLineDirections Estimate local unoriented curb axes from selected means.
+ % A direction requires multiple spatially separated, nearly collinear means.
+ % No reference pose, map geometry, point labels or frame index is used.
+@@ -7,7 +7,7 @@ function [tangent,valid]=sourceLineDirections(c,cfg)
+         && cfg.minimumComponents==fix(cfg.minimumComponents) && cfg.minimumAnisotropy>1 ...
+         && cfg.standardDeviation<pi/2,'VehicleLocalization:InvalidLineDirectionConfiguration', ...
+         'Line-direction neighborhoods and angular scale must be finite and positive.');
+-    n=c.numComponents;tangent=zeros(n,2);valid=false(n,1);
++    n=c.numComponents;tangent=zeros(n,2);valid=false(n,1);angularScatter=zeros(n,1);
+     for name=["curb","facade"]
+         eligible=c.semanticName==name & c.mixtureWeight>0;
+         if isfield(c,'quality'),eligible=eligible & c.quality>0;end
+@@ -19,6 +19,7 @@ function [tangent,valid]=sourceLineDirections(c,cfg)
+             axis=v(:,j);along=d*axis;
+             if major<cfg.minimumAnisotropy*max(min(e),1e-6) || (max(along)-min(along))<cfg.minimumSpan,continue;end
+             tangent(ids(k),:)=axis.';valid(ids(k))=true;
++            angularScatter(ids(k))=sqrt(max(0,min(e))/max(major,eps));
+         end
+     end
+ end
+diff --git a/localization/updateLocalizationSourceWindow.m b/localization/updateLocalizationSourceWindow.m
+index 9050286..f0c9bb1 100644
+--- a/localization/updateLocalizationSourceWindow.m
++++ b/localization/updateLocalizationSourceWindow.m
+@@ -65,6 +65,22 @@ function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow
+     confirmedCurrent.observationScope="confirmedCurrentAcquisition";
+     confirmedCurrent.heightEvidence=selectHeightEvidence(heightEvidence,currentIndices, ...
+         (1:numel(currentIndices)).',numel(currentIndices));
++    if isfield(cfg,'currentGeometryClasses') && ~isempty(cfg.currentGeometryClasses)
++        use=ismember(raw.semanticName(currentIndices),cfg.currentGeometryClasses);
++        target=pooledIndices(use);source=currentIndices(use);
++        c.mean(target,:)=raw.mean(source,:);c.covariance(:,:,target)=raw.covariance(:,:,source);
++        c.semanticProbability(target)=raw.semanticProbability(source);
++        c.occupancyProbability(target)=raw.occupancyProbability(source);
++        keep=~ismember(c.semanticName,cfg.currentGeometryClasses) | ismember((1:c.numComponents).',target);
++        for field=string(fieldnames(c)).'
++            v=c.(field);
++            if field=="covariance",c.(field)=v(:,:,keep);
++            elseif size(v,1)==c.numComponents && field~="numComponents",c.(field)=v(keep,:);end
++        end
++        c.numComponents=nnz(keep);mass=c.semanticProbability.*c.occupancyProbability.*c.temporalStability;
++        c.mixtureWeight=mass/max(sum(mass),realmin);cloud.components=c;
++        h=cloud.heightEvidence;h.mean=h.mean(keep,:);h.covariance=h.covariance(:,:,keep);h.available=h.available(keep);cloud.heightEvidence=h;
++    end
+     details=struct('frameCount',numel(history.time),'oldestTimestamp',history.time(1), ...
+         'newestTimestamp',timestamp,'spanSeconds',timestamp-history.time(1), ...
+         'componentCount',c.numComponents,'currentComponentCount',current.components.numComponents, ...

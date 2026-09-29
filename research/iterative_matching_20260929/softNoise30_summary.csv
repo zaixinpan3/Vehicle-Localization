@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+softNoise30,854,0.38086933374007,0.134178524871077,0.239750725170192,1152,10,16.086,20.643017

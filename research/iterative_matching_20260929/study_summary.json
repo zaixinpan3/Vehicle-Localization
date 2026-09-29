@@ -1,0 +1,13 @@
+{
+  "recordedReplayLabels": 99,
+  "framesPerReplay": 1170,
+  "maximumExcludesConfiguredInitialization": true,
+  "initializationErrorM": 0.640312423976002,
+  "beforeMaximumM": 0.396434602168247,
+  "afterMaximumM": 0.300607690564316,
+  "peakReductionFraction": 0.2417218655481087,
+  "rawReplayAgreesWithCachedReplay": true,
+  "beforeRmseM": 0.13239051921289485,
+  "afterRmseM": 0.12603426805898058,
+  "note": "Replay labels include cleanup controls and repeated profiles, not independent datasets. MATLAB prctile P95 is in final_summary.json."
+}

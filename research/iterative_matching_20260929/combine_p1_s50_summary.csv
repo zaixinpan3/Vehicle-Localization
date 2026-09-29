@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+combine_p1_s50,178,0.357670775733957,0.131251754473862,0.231585444228309,1156,10,12.143,15.200295

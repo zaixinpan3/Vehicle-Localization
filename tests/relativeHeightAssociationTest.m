@@ -16,7 +16,7 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
             % Planar geometry cannot tell the aliases apart: the pyramid keeps
             % their canonical midpoint instead of whichever alias the seed favours.
             testCase.verifyEqual(before.poseXYTheta,[-.2 0 0],AbsTol=1e-6);
-            testCase.verifyTrue(before.pyramid.coarseRetained);
+            testCase.verifyLessThanOrEqual(norm(before.poseXYTheta(1:2)-before.pyramid.coarsePoseXYTheta(1:2)),cfg.pyramid.trustRadius);
             testCase.verifyTrue(after.accepted,after.reason);
             testCase.verifyEqual(after.poseXYTheta,[0 0 0],AbsTol=1e-5);
             testCase.verifyTrue(after.height.relativeAssociation.enabled);
@@ -106,10 +106,12 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
         end
         function unselectedClassKeepsPlanarAssociation(testCase)
             [fixed,moving,cfg]=scene();cfg.relativeHeight.semanticNames="trafficSign";
+            baseline=cfg;baseline.relativeHeight.enabled=false;
+            before=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],baseline);
             result=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
-            % Without pole height the planar refinement settles on one alias.
-            testCase.verifyLessThan(min(abs(result.poseXYTheta(1)-[0 -.4])),1e-6);
-            testCase.verifyEqual(result.poseXYTheta(2:3),[0 0],AbsTol=1e-6);
+            % Evidence for another class must not resolve the pole ambiguity.
+            testCase.verifyEqual(result.poseXYTheta,before.poseXYTheta,AbsTol=1e-6);
+            testCase.verifyEqual(result.information,before.information,AbsTol=1e-9);
             testCase.verifyTrue(result.height.relativeAssociation.enabled);
             testCase.verifyEqual(result.correspondences.heightAssociationCost,zeros(6,1),AbsTol=0);
         end

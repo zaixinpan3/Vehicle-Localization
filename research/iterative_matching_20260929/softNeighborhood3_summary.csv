@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+softNeighborhood3,854,0.34182996720316,0.126979149926554,0.224896337552136,1155,10,10.587,12.627187

@@ -1,0 +1,10 @@
+{
+  "frames": 1170,
+  "maximumFrameAfterInitialization": 178,
+  "maximumErrorM": 0.300607690564316,
+  "initializationErrorM": 0.64031242397600185,
+  "rmseM": 0.12603426805898058,
+  "p95M": 0.22397946188670934,
+  "fullUpdates": 1153,
+  "directionalUpdates": 10
+}

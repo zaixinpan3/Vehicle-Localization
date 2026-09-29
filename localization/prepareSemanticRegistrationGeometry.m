@@ -22,10 +22,16 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
     % Height/tilt uncertainty belongs to the compatibility calculation. Keep
     % the planar metric identical when only height mode/reference changes.
     m.lineTangent=zeros(m.numComponents,2);m.lineDirectionValid=false(m.numComponents,1);
-    m.lineDirectionSigma=1;
+    m.lineDirectionSigma=ones(m.numComponents,1);
     if isfield(cfg,'lineDirection') && cfg.lineDirection.enabled
-        [m.lineTangent,m.lineDirectionValid]=sourceLineDirections(m,cfg.lineDirection);
-        m.lineDirectionSigma=cfg.lineDirection.standardDeviation;
+        [m.lineTangent,m.lineDirectionValid,scatter]=sourceLineDirections(m,cfg.lineDirection);
+        m.lineDirectionSigma(:)=cfg.lineDirection.standardDeviation;
+        if isfield(cfg.lineDirection,'scatterScale')
+            assert(isscalar(cfg.lineDirection.scatterScale) && isreal(cfg.lineDirection.scatterScale) && ...
+                isfinite(cfg.lineDirection.scatterScale) && cfg.lineDirection.scatterScale>=0, ...
+                'VehicleLocalization:InvalidLineDirectionConfiguration','Scatter scale must be finite and nonnegative.');
+            m.lineDirectionSigma=hypot(m.lineDirectionSigma,cfg.lineDirection.scatterScale*scatter);
+        end
     end
     m.planarCovariance=movingCloud.components.covariance(1:2,1:2,:);
     f.mean(:,1:2)=f.mean(:,1:2)-initialPose(1:2);
@@ -38,16 +44,21 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
     [f.normal,f.majorVariance,f.lineEligible]=normalGeometry(f,gcfg);
     if height.heightUsed, f=prepareConditionalHeight(f); end
     groups=correspondenceGroups(f,m);
+    association=[];
+    if isfield(cfg,'softPointAssociation')
+        association=cfg.softPointAssociation;
+        validateSoftPointAssociation(association);
+    end
     relative=[];
     if isfield(cfg,'relativeHeight') && cfg.relativeHeight.enabled
         assert(~height.heightUsed,'VehicleLocalization:ConflictingHeightModes', ...
             'Choose relative-height evidence or externally referenced XYZ compatibility.');
-        initial=linearize(f,m,[0 0 initialPose(3)],gcfg,[1;1;1/cfg.yawLeverArm],groups,[]);
+        initial=linearize(f,m,[0 0 initialPose(3)],gcfg,[1;1;1/cfg.yawLeverArm],groups,[],association);
         relative=prepareRelativeHeightAssociation(fixedCloud,movingCloud,initialPose,initial.pairs,cfg.relativeHeight);
         height.relativeAssociation=relative.details;
     end
     model=struct('fixed',f,'moving',m,'height',height,'origin',initialPose(1:2));
-    model.linearize=@(pose,scale) linearize(f,m,pose,gcfg,scale,groups,relative);
+    model.linearize=@(pose,scale) linearize(f,m,pose,gcfg,scale,groups,relative,association);
     model.squaredResidual=@(system,pose) squaredResidual(system,m,pose);
     model.frozenCost=@(system,pose) sum(system.weights.*gcfg.robustStandardizedDistance^2.* ...
         log1p(squaredResidual(system,m,pose)/gcfg.robustStandardizedDistance^2));
@@ -70,7 +81,7 @@ function groups=correspondenceGroups(f,m)
     end
 end
 
-function system=linearize(f,m,pose,cfg,scale,groups,relative)
+function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
 % Compare each semantic class in a matrix, preserving first-target tie order.
 % Workspace scales with one class rather than the full all-class product.
     r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
@@ -78,6 +89,7 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
     n=m.numComponents;
     rotated=pagemtimes(pagemtimes(r,m.planarCovariance),r.');
     chosen=zeros(n,1); chosenZ=nan(n,1); chosenHeightCost=zeros(n,1);lineSource=false(n,1);
+    softMean=zeros(n,2);softCov=zeros(2,2,n);softUsed=false(n,1);softCount=ones(n,1);
     for group=groups.'
         source=group.source; targets=group.target;
         if isempty(source) || isempty(targets), continue; end
@@ -99,7 +111,7 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
                 variance=a.*normal(:,1).^2+2*b.*normal(:,1).*normal(:,2)+d.*normal(:,2).^2;
                 distance=dn.^2./variance+dt.^2./(f.majorVariance(targets)+cfg.maximumMatchDistance^2);
                 tangent=m.lineTangent(source,:)*r.';
-                angular=(normal*tangent.').^2.*double(m.lineDirectionValid(source)).'/m.lineDirectionSigma^2;
+                angular=(normal*tangent.').^2.*(double(m.lineDirectionValid(source))./m.lineDirectionSigma(source).^2).';
                 distance=distance+angular;
                 valid=abs(dn)<=cfg.maximumMatchDistance & ...
                     abs(dt)<=3*sqrt(f.majorVariance(targets))+cfg.maximumMatchDistance;
@@ -132,10 +144,21 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
             chosenZ(selected)=dz(linear);
             chosenHeightCost(selected)=heightCost(linear);
             lineSource(selected)=group.line;
+            if ~group.line && ~isempty(association)
+                for col=find(keep)
+                    sourceId=source(col);
+                    [mu,scatter,count]=softPointAssociationTarget( ...
+                        f.mean(targets,1:2),f.covariance(1:2,1:2,targets), ...
+                        distance(:,col),group.priorCost+heightCost(:,col),index(col),association);
+                    softMean(sourceId,:)=mu;softCov(:,:,sourceId)=scatter;
+                    softUsed(sourceId)=true;softCount(sourceId)=count;
+                end
+            end
         end
     end
     source=find(chosen); target=chosen(source); rows=numel(source);
-    cm=rotated(:,:,source); cf=f.covariance(1:2,1:2,target);
+    cm=rotated(:,:,source); cf=f.covariance(1:2,1:2,target);targetMean=f.mean(target,1:2);
+    soft=softUsed(source);cf(:,:,soft)=softCov(:,:,source(soft));targetMean(soft,:)=softMean(source(soft),:);
     a=reshape(cf(1,1,:)+cm(1,1,:),[],1)+cfg.noiseStandardDeviation^2;
     b=reshape(cf(1,2,:)+cm(1,2,:),[],1);
     d=reshape(cf(2,2,:)+cm(2,2,:),[],1)+cfg.noiseStandardDeviation^2;
@@ -156,11 +179,11 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
     jacobian(2,1,:)=w21*scale(1); jacobian(2,2,:)=w22*scale(2);
     jacobian(1,3,:)=(w11.*yawDerivative(:,1)+w12.*yawDerivative(:,2))*scale(3);
     jacobian(2,3,:)=(w21.*yawDerivative(:,1)+w22.*yawDerivative(:,2))*scale(3);
-    delta=means(source,:)-f.mean(target,1:2);
+    delta=means(source,:)-targetMean;
     residual=[w11.*delta(:,1)+w12.*delta(:,2),w21.*delta(:,1)+w22.*delta(:,2)].';
     tangent=m.lineTangent(source,:);normals=f.normal(target,:);
     directionValid=line & m.lineDirectionValid(source);
-    directionScale=double(directionValid)/m.lineDirectionSigma;
+    directionScale=double(directionValid)./m.lineDirectionSigma(source);
     rotatedTangent=tangent*r.';
     directionResidual=sum(rotatedTangent.*normals,2).*directionScale;
     if any(directionValid)
@@ -192,9 +215,13 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative)
         'mapMixtureWeight',f.mixtureWeight(target),'temporalStability',m.temporalStability(source), ...
         'weight',weights,'robustWeight',weights.*robust, ...
         'lineDirectionUsed',directionValid,'lineDirectionResidual',directionResidual);
+    pairs.associationComponents=softCount(source);
+    pairs.sourceMeanXY=m.mean(source,1:2);
+    pairs.targetMeanXY=targetMean;
+    pairs.targetCovarianceXY=[reshape(cf(1,1,:),[],1),reshape(cf(1,2,:),[],1),reshape(cf(2,2,:),[],1)];
     system=struct('H',h,'gradient',gradient,'numPairs',rows,'pairs',pairs, ...
         'J',jacobian,'residual',residual,'weights',weights,'robust',robust, ...
-        'precision',precision(:,:,1:rows),'targetMean',f.mean(target,1:2), ...
+        'precision',precision(:,:,1:rows),'targetMean',targetMean, ...
         'directionNormal',normals,'directionScale',directionScale, ...
         'cost',sum(weights.*cfg.robustStandardizedDistance^2.*log1p(qvalue/cfg.robustStandardizedDistance^2)), ...
         'similarity',similarity);

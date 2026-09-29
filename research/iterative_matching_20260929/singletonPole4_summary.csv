@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+singletonPole4,893,0.313161872342635,0.12492413377778,0.222107812979217,1156,7,12.6565,15.44477

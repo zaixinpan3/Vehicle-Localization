@@ -1,0 +1,10 @@
+file,findings
+config/distributionRegistrationConfig.m,0
+localization/registerSemanticProbabilityCloud.m,0
+localization/prepareSemanticRegistrationGeometry.m,0
+localization/sourceLineDirections.m,0
+localization/softPointAssociationTarget.m,0
+localization/validateSoftPointAssociation.m,0
+tests/softPointAssociationTest.m,0
+tests/relativeHeightAssociationTest.m,0
+tests/canonicalPyramidTest.m,0

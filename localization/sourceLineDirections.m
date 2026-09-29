@@ -1,4 +1,4 @@
-function [tangent,valid]=sourceLineDirections(c,cfg)
+function [tangent,valid,angularScatter]=sourceLineDirections(c,cfg)
 % sourceLineDirections Estimate local unoriented curb axes from selected means.
 % A direction requires multiple spatially separated, nearly collinear means.
 % No reference pose, map geometry, point labels or frame index is used.
@@ -7,7 +7,7 @@ function [tangent,valid]=sourceLineDirections(c,cfg)
         && cfg.minimumComponents==fix(cfg.minimumComponents) && cfg.minimumAnisotropy>1 ...
         && cfg.standardDeviation<pi/2,'VehicleLocalization:InvalidLineDirectionConfiguration', ...
         'Line-direction neighborhoods and angular scale must be finite and positive.');
-    n=c.numComponents;tangent=zeros(n,2);valid=false(n,1);
+    n=c.numComponents;tangent=zeros(n,2);valid=false(n,1);angularScatter=zeros(n,1);
     for name=["curb","facade"]
         eligible=c.semanticName==name & c.mixtureWeight>0;
         if isfield(c,'quality'),eligible=eligible & c.quality>0;end
@@ -19,6 +19,7 @@ function [tangent,valid]=sourceLineDirections(c,cfg)
             axis=v(:,j);along=d*axis;
             if major<cfg.minimumAnisotropy*max(min(e),1e-6) || (max(along)-min(along))<cfg.minimumSpan,continue;end
             tangent(ids(k),:)=axis.';valid(ids(k))=true;
+            angularScatter(ids(k))=sqrt(max(0,min(e))/max(major,eps));
         end
     end
 end
