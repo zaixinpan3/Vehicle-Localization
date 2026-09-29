@@ -1,0 +1,20 @@
+{
+  "minimumHeight": 1.5,
+  "minimumContinuousFraction": 0.9,
+  "maximumRadialRms": 0.1,
+  "minimumIsolation": 0.95,
+  "minimumQuarterCount": 3,
+  "minimumCoreFraction": 0.9,
+  "maximumQuarterCenterStep": 0.05,
+  "maximumGap": 0.3,
+  "maximumAspect": 2,
+  "maximumTilt": 5,
+  "minimumOwnerCount": 5,
+  "minimumOwnerHeight": 1,
+  "minimumOwnerFraction": 0.2,
+  "minimumOwnerSupportFraction": 0.3,
+  "maximumOwnerSupportFraction": 0.8,
+  "maximumOwnerHeightFraction": 0.8,
+  "maximumAxisOwnerDistance": 0.1,
+  "minimumOwners": 2
+}

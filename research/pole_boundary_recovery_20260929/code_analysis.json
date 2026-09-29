@@ -1,0 +1,24 @@
+{
+  "files": [
+    "perception/offGroundFeatures/recoverSplitPoleShaft.m",
+    "perception/offGroundFeatures/classifyPillarPoleSupport.m",
+    "config/pillarPoleDistributionConfig.m",
+    "tests/pillarPoleDistributionTest.m",
+    "/home/zai/Downloads/ResearchProjects/vehicleLocalization/research/pole_boundary_recovery_20260929/verifyRecovery.m",
+    "/home/zai/Downloads/ResearchProjects/vehicleLocalization/research/pole_boundary_recovery_20260929/replayRecoveryRoute.m",
+    "/home/zai/Downloads/ResearchProjects/vehicleLocalization/research/pole_boundary_recovery_20260929/validateRecovery.m",
+    "/home/zai/Downloads/ResearchProjects/vehicleLocalization/research/pole_boundary_recovery_20260929/finishRecovery.m",
+    "/home/zai/Downloads/ResearchProjects/vehicleLocalization/research/pole_boundary_recovery_20260929/checkRecovery.m"
+  ],
+  "findings": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    []
+  ]
+}

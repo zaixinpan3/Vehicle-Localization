@@ -1,0 +1,19 @@
+{
+  "rawCloudsChangedFrames": [
+    685,
+    820,
+    856
+  ],
+  "allNonPoleMeansCovariancesEvidenceUnchanged": true,
+  "independentErrorCheck": true,
+  "frame856": {
+    "frame": 856,
+    "previousErrorM": 0.41050102878260386,
+    "currentErrorM": 0.0722107970897536,
+    "sourcePoles": 1,
+    "matchedPoles": 1,
+    "accepted": true,
+    "reason": "accepted",
+    "fineShiftM": 0.084142231878796145
+  }
+}

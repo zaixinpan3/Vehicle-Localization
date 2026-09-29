@@ -1,0 +1,44 @@
+[
+  {
+    "definition": "any",
+    "depth": 5,
+    "threshold": 0.9896204955613571,
+    "oofAddedPoints": 486,
+    "oofAddedEmpty": 1,
+    "oofAdded": 13,
+    "target856": [
+      0.2869569986710282,
+      0.2869569986710282
+    ],
+    "targetSelected": [
+      false,
+      false
+    ],
+    "metrics": [
+      {
+        "part": "prefix",
+        "selected": 1067,
+        "empty": 1,
+        "covered": 106004,
+        "added": 2,
+        "addedEmpty": 0
+      },
+      {
+        "part": "suffix",
+        "selected": 472,
+        "empty": 36,
+        "covered": 47360,
+        "added": 1,
+        "addedEmpty": 1
+      },
+      {
+        "part": "all",
+        "selected": 1539,
+        "empty": 37,
+        "covered": 153364,
+        "added": 3,
+        "addedEmpty": 1
+      }
+    ]
+  }
+]

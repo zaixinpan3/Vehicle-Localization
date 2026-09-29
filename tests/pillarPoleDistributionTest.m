@@ -86,6 +86,41 @@ classdef pillarPoleDistributionTest < matlab.unittest.TestCase
             selected=p.candidates.pillarIndices{p.candidates.semanticNames=="pole"};
             t.verifyTrue(ismember(owner,selected),'The sparse continuous shaft must survive final classification.');
         end
+        function splitMississippiShaftRetainsBothOwners(t)
+            root=fileparts(fileparts(mfilename('fullpath')));file=fullfile(root,'data/raw/MissisipiPointClouds.mat');
+            t.assumeTrue(isfile(file));frame=loadPointCloudFrame(file,856);
+            cfg=perceptionConfig('Mississippi');cfg.coarseProbabilityCloud.storeDiagnostics=true;
+            current=perceiveFrame(frame,cfg);
+            cfg.offGroundFeatures.pole.distributionValidation=rmfield(cfg.offGroundFeatures.pole.distributionValidation,'splitShaftRecovery');
+            old=perceiveFrame(frame,cfg);
+            ids=current.candidates.pillarIndices{current.candidates.semanticNames=="pole"};
+            t.verifyEqual(sort(double(ids(:))),[7944;7945]);
+            t.verifyEmpty(old.candidates.pillarIndices{old.candidates.semanticNames=="pole"});
+            t.verifyEqual(current.diagnostics.offGround.columnMaps.statistics,old.diagnostics.offGround.columnMaps.statistics);
+            for name=["curb","trafficSign"]
+                a=current.candidates;b=old.candidates;
+                t.verifyEqual(a.pillarIndices{a.semanticNames==name},b.pillarIndices{b.semanticNames==name});
+            end
+        end
+        function splitRecoveryCannotBorrowOtherHypothesisOrUnsupportedOwner(t)
+            cfg=pillarPoleDistributionConfig('Mississippi');cfg=cfg.splitShaftRecovery;
+            names=["supportHeight","longestHeight","radialRms","isolation", ...
+                "minimumQuarterCount","fraction015","quarterCenterStep","maximumGap", ...
+                "aspect","tilt","ownerCount","ownerHeight","ownerFraction", ...
+                "ownerSupportFraction","ownerTotalHeight","axisOwnerDistance"];
+            shaft=[2 2 .07 1 3 .95 .02 .17 1.2 3 10 1.4 .6 .7 3.5 0];
+            x=[shaft;shaft];x(2,[11 12 13 14 16])=[5 1.1 .3 .4 .02];
+            t.verifyEqual(recoverSplitPoleShaft(x,names,[1;1],cfg),[true;true]);
+            t.verifyEqual(recoverSplitPoleShaft(x,names,[1;2],cfg),[false;false]);
+            weak=x;weak(2,11)=2;
+            t.verifyFalse(any(recoverSplitPoleShaft(weak,names,[1;1],cfg)));
+            broken=x;broken(:,8)=.8;
+            t.verifyFalse(any(recoverSplitPoleShaft(broken,names,[1;1],cfg)));
+            flat=x;flat(:,9)=4;
+            t.verifyFalse(any(recoverSplitPoleShaft(flat,names,[1;1],cfg)));
+            t.verifyEqual(recoverSplitPoleShaft(flipud(x),names,[7;7],cfg),[true;true]);
+            t.verifyEmpty(recoverSplitPoleShaft(zeros(0,numel(names)),names,zeros(0,1),cfg));
+        end
         function emptyMarginCroppingPreservesPoleContext(t)
             root=fileparts(fileparts(mfilename('fullpath')));file=fullfile(root,'data','raw','downTownPointClouds.mat');
             t.assumeTrue(isfile(file));frame=loadPointCloudFrame(file,375);cfg=perceptionConfig('Downtown');
