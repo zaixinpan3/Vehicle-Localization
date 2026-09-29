@@ -1,0 +1,29 @@
+{
+  "mapSignGlobalComponent": 1074,
+  "mapCenterBody": [
+    7.2217813305405585,
+    -3.4344014174054895
+  ],
+  "frame178AllFineSignCount": 159,
+  "frame178LocalFineSignCount": 158,
+  "frame178LocalFineMeanBody": [
+    7.2722733858163409,
+    -3.4047579754460808
+  ],
+  "frame178LocalFineBoundsBody": [
+    [
+      7.0348547820026424,
+      -3.696458325094409
+    ],
+    [
+      7.4999227769228538,
+      -3.087529133441187
+    ]
+  ],
+  "frame178LocalFineToConditionalMapM": 0.058550672901116138,
+  "source22Mean": [
+    7.4323718644255505,
+    -3.0674920304287645
+  ],
+  "source22AllFramesFineFraction": 0.56734693877551023
+}

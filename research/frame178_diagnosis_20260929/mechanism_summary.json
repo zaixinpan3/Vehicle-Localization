@@ -1,0 +1,14 @@
+{
+  "predictionErrorM": 0.16820866882946539,
+  "predictionBodyErrorM": [
+    -0.04680719232863087,
+    -0.161564980783867
+  ],
+  "predictionYawErrorDeg": 0.052855833034827687,
+  "weightPreservingAblationVerified": true,
+  "sign22FineCenterOracle": [
+    7.404387058681122,
+    -3.1763973975240725
+  ],
+  "maximumPoseChangeWith400Iterations": 0
+}

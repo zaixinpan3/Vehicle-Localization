@@ -1,0 +1,29 @@
+{
+  "baselineCommit": "4985af121073f32d659df49a67c751167fbd0c05",
+  "frame": 178,
+  "errorM": 0.162239826855578,
+  "bodyErrorM": [
+    -0.0946611038810141,
+    -0.131761287296974
+  ],
+  "incomingPredictionErrorM": 0.1682086688294654,
+  "sign22DisplacementM": 0.4230494902651487,
+  "sign22FineSubsetDisplacementM": 0.31608689663558664,
+  "sign22FineFractionAcrossFiveScans": 0.5673469387755102,
+  "sign22CauchyInfluenceAtReference": 0.7377047319437998,
+  "sign22CauchyInfluenceAtProduction": 0.8691592975570992,
+  "weightPreservingAblationErrorM": 0.0182425526773547,
+  "ordinaryRemovalErrorM": 0.0087795895617676,
+  "fineSubsetCenterOracleErrorM": 0.145987057485118,
+  "poleFullWeightDiagnosticErrorM": 0.0221969808082641,
+  "referenceMotionPoolErrorM": 0.0837384925775888,
+  "referenceSeedFixedMapErrorM": 0.101751084463912,
+  "curbSourcesChangingTargetAcrossBasins": [
+    2,
+    11,
+    17,
+    18
+  ],
+  "productionChanged": false,
+  "scope": "Fixed-frame same-recording diagnostic interventions, not deployable frame-specific rules or an independent-drive validation."
+}

@@ -1,0 +1,15 @@
+{
+  "baselinePoseParity": true,
+  "sourceWindowExactReconstruction": true,
+  "rawCurrentCloudsExactlyReproduced": 5,
+  "rawComponentCountsAndMeansReproduced": true,
+  "signTrackMeansAndCovariancesExactlyReproduced": true,
+  "otherResidualWeightsPreserved": true,
+  "currentFineLandmarkMembershipVerified": true,
+  "controlledRegistrations": 31,
+  "codeAnalyzerFiles": 4,
+  "codeAnalyzerFindings": 0,
+  "productionAlgorithmChanged": false,
+  "fullRouteRerun": false,
+  "guiOpened": false
+}
