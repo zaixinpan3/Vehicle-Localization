@@ -39,6 +39,7 @@ function [result,state]=updateRobustPoseGraph(state,packet,map,cfg)
         state.containsGnss=true;
     end
     [local,indices]=selectLocalProbabilityCloud(map,packet.seed,cfg.registration.localMapRadius);
+    local=conditionSemanticMapOnView(local,packet.seed);
     model=prepareSemanticRegistrationGeometry(local,packet.source,[state.origin 0],cfg.registration);
     node=struct('model',model,'globalIndices',indices,'aid',aid, ...
         'motion',packet.relativeMotion,'motionCovariance',packet.motionCovariance, ...

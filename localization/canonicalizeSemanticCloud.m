@@ -16,6 +16,8 @@ function [cloud,groups]=canonicalizeSemanticCloud(cloud,radius,classes)
     end
     c=cloud.components;n=c.numComponents;groups=num2cell((1:n).');
     if radius<=0 || n<2,return;end
+    assert(~isfield(cloud,'landmarkViews'),'VehicleLocalization:ViewMapAlreadyCanonical', ...
+        'View-conditioned maps have already grouped point landmarks offline.');
     % Only relative weights matter, so a common scale of the stored prior
     % cannot change the grouping or the merged statistics.
     names=string(c.semanticName(:));w=double(c.mixtureWeight(:));w=max(w/max(max(w),realmin),eps);

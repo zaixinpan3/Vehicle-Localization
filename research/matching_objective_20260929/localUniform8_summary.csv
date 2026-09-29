@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+localUniform8,600,0.557951052564876,0.15078479301634,0.2717922454265,1157,10,69.6295,82.35804

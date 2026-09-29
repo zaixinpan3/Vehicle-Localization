@@ -1,0 +1,141 @@
+diff --git a/localization/prepareSemanticRegistrationGeometry.m b/localization/prepareSemanticRegistrationGeometry.m
+index feebec0..b3c04d9 100644
+--- a/localization/prepareSemanticRegistrationGeometry.m
++++ b/localization/prepareSemanticRegistrationGeometry.m
+@@ -42,6 +42,10 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
+     height.strategy="conditionalDistributionCompatibility";
+     height.planarForce=false;
+     [f.normal,f.majorVariance,f.lineEligible]=normalGeometry(f,gcfg);
++    f.surfaceEligible=false(f.numComponents,1);
++    if isfield(cfg,'pointSurfaceClasses')
++        f.surfaceEligible=f.lineEligible & ismember(f.semanticName,cfg.pointSurfaceClasses);
++    end
+     if height.heightUsed, f=prepareConditionalHeight(f); end
+     groups=correspondenceGroups(f,m);
+     association=[];
+@@ -89,7 +93,7 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
+     n=m.numComponents;
+     rotated=pagemtimes(pagemtimes(r,m.planarCovariance),r.');
+     chosen=zeros(n,1); chosenZ=nan(n,1); chosenHeightCost=zeros(n,1);lineSource=false(n,1);
+-    softMean=zeros(n,2);softCov=zeros(2,2,n);softUsed=false(n,1);softCount=ones(n,1);
++    softMean=zeros(n,2);softCov=zeros(2,2,n);softUsed=false(n,1);softCount=ones(n,1);between=zeros(2,2,n);
+     for group=groups.'
+         source=group.source; targets=group.target;
+         if isempty(source) || isempty(targets), continue; end
+@@ -143,15 +147,17 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
+             linear=index(keep)+(find(keep)-1)*numel(targets);
+             chosenZ(selected)=dz(linear);
+             chosenHeightCost(selected)=heightCost(linear);
+-            lineSource(selected)=group.line;
++            lineSource(selected)=group.line | f.surfaceEligible(chosen(selected));
+             if ~group.line && ~isempty(association)
+                 for col=find(keep)
+                     sourceId=source(col);
+-                    [mu,scatter,count]=softPointAssociationTarget( ...
++                    if lineSource(sourceId),continue;end
++                    [mu,scatter,count,ambiguity]=softPointAssociationTarget( ...
+                         f.mean(targets,1:2),f.covariance(1:2,1:2,targets), ...
+                         distance(:,col),group.priorCost+heightCost(:,col),index(col),association);
+                     softMean(sourceId,:)=mu;softCov(:,:,sourceId)=scatter;
+                     softUsed(sourceId)=true;softCount(sourceId)=count;
++                    between(:,:,sourceId)=ambiguity;
+                 end
+             end
+         end
+@@ -170,6 +176,15 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
+     % Explicit 2-by-2 Cholesky whitening for positive definite summed scatter.
+     l11=sqrt(a(point)); l21=b(point)./l11; l22=sqrt(d(point)-l21.^2);
+     w11(point)=1./l11; w21(point)=-l21./l11./l22; w22(point)=1./l22;
++    ambiguityRank=zeros(rows,1);
++    if ~isempty(association) && isfield(association,'ambiguityVarianceFraction')
++        for id=find(point & softCount(source)>1).'
++            W=[w11(id) w12(id);w21(id) w22(id)];B=W*between(:,:,source(id))*W.';
++            [V,E]=eig((B+B.')/2,'vector');lost=E>association.ambiguityVarianceFraction;
++            W=V(:,~lost)*V(:,~lost).'*W;ambiguityRank(id)=nnz(lost);
++            w11(id)=W(1,1);w12(id)=W(1,2);w21(id)=W(2,1);w22(id)=W(2,2);
++        end
++    end
+     precision=zeros(2,2,rows);
+     precision(1,1,:)=w11; precision(1,2,:)=w12;
+     precision(2,1,:)=w21; precision(2,2,:)=w22;
+@@ -200,6 +215,7 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
+         % Apply after class balancing: sparse temporal evidence must not be
+         % normalized back to the influence of a fully repeated class.
+         weights(selected)=weights(selected).*m.temporalStability(source(selected));
++        if isfield(f,'viewReliability'),weights(selected)=weights(selected).*f.viewReliability(target(selected));end
+         coverage=nnz(selected)/max(1,nnz(possible));
+         similarity=similarity+coverage*sum(weights(selected).*exp(-qvalue(selected)/2));
+     end
+@@ -216,6 +232,7 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
+         'weight',weights,'robustWeight',weights.*robust, ...
+         'lineDirectionUsed',directionValid,'lineDirectionResidual',directionResidual);
+     pairs.associationComponents=softCount(source);
++    pairs.ambiguityRank=ambiguityRank;
+     pairs.sourceMeanXY=m.mean(source,1:2);
+     pairs.targetMeanXY=targetMean;
+     pairs.targetCovarianceXY=[reshape(cf(1,1,:),[],1),reshape(cf(1,2,:),[],1),reshape(cf(2,2,:),[],1)];
+diff --git a/localization/registrationSupport.m b/localization/registrationSupport.m
+index 7ca6f5e..ad55cee 100644
+--- a/localization/registrationSupport.m
++++ b/localization/registrationSupport.m
+@@ -62,7 +62,7 @@ classdef registrationSupport
+             components = struct('semanticName',source.semanticName,'mean',means, ...
+                 'covariance',covariance,'mixtureWeight',source.mixtureWeight,'numComponents',source.numComponents);
+             for name=["semanticProbability","occupancyProbability","supportAmplitude","repeatability", ...
+-                    "temporalStability","detectionFrameCount"]
++                    "temporalStability","detectionFrameCount","viewReliability"]
+                 if isfield(source,name), components.(name)=source.(name); end
+             end
+             projected = struct('components',components,'dimension',dimension);
+diff --git a/localization/selectLocalProbabilityCloud.m b/localization/selectLocalProbabilityCloud.m
+index 88f8364..1a13252 100644
+--- a/localization/selectLocalProbabilityCloud.m
++++ b/localization/selectLocalProbabilityCloud.m
+@@ -11,7 +11,7 @@ function [fixed,indices]=selectLocalProbabilityCloud(map,seed,radius)
+     fixed.components.covariance=c.covariance(:,:,keep);
+     fixed.components.numComponents=nnz(keep);indices=find(keep);
+     for name=["semanticName","mixtureWeight","repeatability","semanticProbability","occupancyProbability", ...
+-            "supportAmplitude","meanXYZ","heightAvailable","componentId"]
++            "supportAmplitude","meanXYZ","heightAvailable","componentId","viewReliability"]
+         if isfield(c,name),fixed.components.(name)=c.(name)(keep,:);end
+     end
+     if isfield(c,'covarianceXYZ'),fixed.components.covarianceXYZ=c.covarianceXYZ(:,:,keep);end
+diff --git a/localization/softPointAssociationTarget.m b/localization/softPointAssociationTarget.m
+index 0d5d53e..8eded26 100644
+--- a/localization/softPointAssociationTarget.m
++++ b/localization/softPointAssociationTarget.m
+@@ -1,4 +1,4 @@
+-function [mu,covariance,count]=softPointAssociationTarget(means,covariances,cost,priorCost,closest,cfg)
++function [mu,covariance,count,between]=softPointAssociationTarget(means,covariances,cost,priorCost,closest,cfg)
+ % softPointAssociationTarget Moment-match nearby ambiguous map components.
+ % Compatibility costs include priors and optional height penalties. Temper only
+ % the geometry,
+@@ -12,6 +12,7 @@ function [mu,covariance,count]=softPointAssociationTarget(means,covariances,cost
+     keep=value<=9;ids=ids(keep);value=value(keep);
+     probability=exp(-.5*value);probability=probability/sum(probability);
+     [confidence,mode]=max(probability);
++    between=zeros(2);
+     if confidence>=cfg.minimumPosterior && ids(mode)==closest
+         mu=means(closest,:);covariance=covariances(:,:,closest);count=1;return;
+     end
+@@ -19,5 +20,6 @@ function [mu,covariance,count]=softPointAssociationTarget(means,covariances,cost
+     for k=1:count
+         delta=means(ids(k),:)-mu;
+         covariance=covariance+probability(k)*(covariances(:,:,ids(k))+delta.'*delta);
++        between=between+probability(k)*(delta.'*delta);
+     end
+ end
+diff --git a/localization/validateSoftPointAssociation.m b/localization/validateSoftPointAssociation.m
+index 4b2e62e..962dd3c 100644
+--- a/localization/validateSoftPointAssociation.m
++++ b/localization/validateSoftPointAssociation.m
+@@ -12,4 +12,9 @@ function validateSoftPointAssociation(cfg)
+     end
+     assert(valid,'VehicleLocalization:InvalidSoftPointAssociation', ...
+         'Use positive temperature/radius, posterior in (0.5,1], and at least two integer anchors.');
++    if isfield(cfg,'ambiguityVarianceFraction')
++        a=cfg.ambiguityVarianceFraction;
++        assert(isnumeric(a)&&isscalar(a)&&isreal(a)&&isfinite(a)&&a>0&&a<1, ...
++            'VehicleLocalization:InvalidSoftPointAssociation','Ambiguity fraction must be in (0,1).');
++    end
+ end

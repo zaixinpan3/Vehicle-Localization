@@ -1,0 +1,37 @@
+{
+  "scope": "Local technical inputs and generated conditional map; raw recordings/MAT files are not published. No weekly or monthly report hashes.",
+  "files": {
+    "data/raw/MissisipiPointClouds.mat": {
+      "bytes": 1273317517,
+      "sha256": "75c4842872acb3a5cfaf25fa52c37572a0653c544ff6d275adad21b189218f1d"
+    },
+    "output/mississippi_mapping_calibrated/probability_cloud.mat": {
+      "bytes": 270306,
+      "sha256": "b729bec1c07bb4612c69bc873b715f45b52489231d6d0be7b54af0d3d22ff7ee"
+    },
+    "output/mississippi_mapping_calibrated/feature_observations.mat": {
+      "bytes": 11091945,
+      "sha256": "0c5fc38d0ff0079c8e40f81f9d96758c93f238006e306440e53cc2f5c474efce"
+    },
+    "output/mississippi_mapping_calibrated/view_conditioned_cloud.mat": {
+      "bytes": 931929,
+      "sha256": "90d51b3ad43e8e96e057fd654199bde43920146817da4a8e2f13d9ad91184dbf"
+    },
+    "output/line_direction_matching_20260928/sources.mat": {
+      "bytes": 86474483,
+      "sha256": "5e5d564b7f5cf8190dff49147e6897033ebaa226277de7b54cc01263c05d729a"
+    },
+    "output/line_direction_matching_20260928/production/report.mat": {
+      "bytes": 281943,
+      "sha256": "674e517f60b12bce6f3d71f8ed4ac0acc4a4859d2ea1aede22fe25825900371c"
+    },
+    "output/root_cause_matching_20260929/finalSurface_sources.mat": {
+      "bytes": 84540208,
+      "sha256": "08a22f44c40de3ce0ac34941dc3c2294fbdb1556976b2c21405c949f0bbe0c35"
+    },
+    "output/root_cause_matching_20260929/point_timing.mat": {
+      "bytes": 4349561,
+      "sha256": "3ae4e93da143934d851d55fc82612ca7ca22236f05e05a8522d92b70e8149ef8"
+    }
+  }
+}

@@ -17,7 +17,10 @@ function cfg = featureMapBuildConfig()
     cfg.poseMatchCsvPath = fullfile("raw", "Missisipi", "gnss", "raw_data_2024-06-07-12-09-31_0_front_lidar_synchronized_pose_1_1170.csv");
     cfg.mapOutputPath = "missisipiCalibratedTemporalStabilityProbabilityCloudMap.mat";
     cfg.frameCalibration = lidarFrameCalibrationConfig("Mississippi");
-    cfg.probabilityCloudPath = "output/mississippi_mapping_calibrated/probability_cloud.mat";
+    cfg.baseProbabilityCloudPath = "output/mississippi_mapping_calibrated/probability_cloud.mat";
+    cfg.featureObservationPath = "output/mississippi_mapping_calibrated/feature_observations.mat";
+    cfg.probabilityCloudPath = "output/mississippi_mapping_calibrated/view_conditioned_cloud.mat";
+    cfg.landmarkViews = landmarkViewMapConfig();
 
     % Covered frames: empty frameIndices means every frame of the MAT file
     cfg.frameIndices = [];

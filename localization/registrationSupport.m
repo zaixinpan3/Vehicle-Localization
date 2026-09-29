@@ -62,12 +62,13 @@ classdef registrationSupport
             components = struct('semanticName',source.semanticName,'mean',means, ...
                 'covariance',covariance,'mixtureWeight',source.mixtureWeight,'numComponents',source.numComponents);
             for name=["semanticProbability","occupancyProbability","supportAmplitude","repeatability", ...
-                    "temporalStability","detectionFrameCount"]
+                    "temporalStability","detectionFrameCount","viewReliability"]
                 if isfield(source,name), components.(name)=source.(name); end
             end
             projected = struct('components',components,'dimension',dimension);
             if isfield(cloud,'frameCalibration'), projected.frameCalibration=cloud.frameCalibration; end
             if isfield(cloud,'coordinateFrame'), projected.coordinateFrame=cloud.coordinateFrame; end
+            if dimension==2 && isfield(cloud,'landmarkViews'),projected.landmarkViews=cloud.landmarkViews;end
             if dimension==3 && isfield(cloud,'spatialCoordinateFrame')
                 projected.coordinateFrame=cloud.spatialCoordinateFrame;
             end

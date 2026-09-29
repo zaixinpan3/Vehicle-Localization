@@ -10,6 +10,14 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
     gcfg=cfg.geometric;
     validateParameters(cfg,gcfg);
     m.quality=quality(m);
+    f.viewReliability=ones(f.numComponents,1);
+    if isfield(fixedCloud.components,'viewReliability')
+        reliability=double(fixedCloud.components.viewReliability(:));
+        assert(numel(reliability)==f.numComponents && isreal(reliability)&& ...
+            all(isfinite(reliability)&reliability>=0&reliability<=1), ...
+            'VehicleLocalization:InvalidViewReliability','Map view reliability must be in [0,1].');
+        f.viewReliability=reliability;
+    end
 
     m.temporalStability=ones(m.numComponents,1);
     if isfield(movingCloud.components,'temporalStability')
@@ -200,6 +208,9 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
         % Apply after class balancing: sparse temporal evidence must not be
         % normalized back to the influence of a fully repeated class.
         weights(selected)=weights(selected).*m.temporalStability(source(selected));
+        % View coverage is an absolute target-support factor. Applying it
+        % after class balancing avoids restoring an unsupported class's force.
+        weights(selected)=weights(selected).*f.viewReliability(target(selected));
         coverage=nnz(selected)/max(1,nnz(possible));
         similarity=similarity+coverage*sum(weights(selected).*exp(-qvalue(selected)/2));
     end

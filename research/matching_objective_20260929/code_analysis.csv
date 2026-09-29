@@ -1,0 +1,16 @@
+file,findings
+config/landmarkViewMapConfig.m,0
+config/featureMapBuildConfig.m,0
+mapping/buildViewConditionedLandmarkMap.m,0
+mapping/validateLandmarkViewConfig.m,0
+localization/conditionSemanticMapOnView.m,0
+localization/prepareSemanticRegistrationGeometry.m,0
+localization/registerSemanticProbabilityCloud.m,0
+localization/registrationSupport.m,0
+localization/selectLocalProbabilityCloud.m,0
+localization/canonicalizeSemanticCloud.m,0
+localization/updateRobustPoseGraph.m,0
+scripts/buildMississippiViewConditionedMap.m,0
+scripts/rebuildInspvaSavedFeatureMap.m,0
+scripts/buildMississippiFeatureMap.m,0
+tests/landmarkViewMapTest.m,0

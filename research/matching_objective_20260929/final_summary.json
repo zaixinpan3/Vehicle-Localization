@@ -1,0 +1,84 @@
+{
+  "baselineCommit": "0ac9acc76da7f5565dcbc01313c2de65250a0d37",
+  "frames": 1170,
+  "initialErrorM": 0.640312423976002,
+  "baseline": {
+    "samples": 1170,
+    "maximumFrame": 829,
+    "maximumErrorM": 0.298605469094454,
+    "rmseM": 0.12132155015612593,
+    "p95M": 0.204444699656051,
+    "full": 1149,
+    "directional": 10
+  },
+  "final": {
+    "samples": 1170,
+    "maximumFrame": 178,
+    "maximumErrorM": 0.162239826855578,
+    "rmseM": 0.06100566202032323,
+    "p95M": 0.104537830210477,
+    "full": 1147,
+    "directional": 11
+  },
+  "maximumReductionPercent": 45.66749653059476,
+  "rmseReductionPercent": 49.71572491299655,
+  "p95ReductionPercent": 48.867429487608646,
+  "unchangedCurrentClouds": 1170,
+  "unchangedWindowClouds": 1170,
+  "maximumRawCachedPoseDifference": 4.65661287307739e-09,
+  "testsPassed": 303,
+  "testSuites": 21,
+  "codeAnalyzerFiles": 15,
+  "heldOutPointObservationControls": [
+    {
+      "samples": 584,
+      "maximumFrame": 1147,
+      "maximumErrorM": 0.153606774839526,
+      "rmseM": 0.05912039600034271,
+      "p95M": 0.1069672561666379,
+      "full": 573,
+      "directional": 5,
+      "variant": "productionEven",
+      "baseline": {
+        "samples": 584,
+        "maximumFrame": 829,
+        "maximumErrorM": 0.298605469094454,
+        "rmseM": 0.1206657005449136,
+        "p95M": 0.20339510997801996,
+        "full": 576,
+        "directional": 4
+      },
+      "scope": "Point-landmark observation model excludes scored frames; original curb map and grouping scaffold still reuse the drive."
+    },
+    {
+      "samples": 877,
+      "maximumFrame": 932,
+      "maximumErrorM": 0.201924261450477,
+      "rmseM": 0.06293527039035109,
+      "p95M": 0.1172340984126298,
+      "full": 864,
+      "directional": 7,
+      "variant": "productionQuarter",
+      "baseline": {
+        "samples": 877,
+        "maximumFrame": 1096,
+        "maximumErrorM": 0.297942098843718,
+        "rmseM": 0.11968956703789509,
+        "p95M": 0.20616263577643537,
+        "full": 862,
+        "directional": 7
+      },
+      "scope": "Point-landmark observation model excludes scored frames; original curb map and grouping scaffold still reuse the drive."
+    }
+  ],
+  "pairedRuntime": {
+    "legacyMedianMs": 14.2425,
+    "adoptedMedianMs": 7.95,
+    "pairedMedianDifferenceMs": -6.0955,
+    "legacyP95Ms": 18.43,
+    "adoptedP95Ms": 10.955
+  },
+  "completedReplayLabels": 46,
+  "scope": "Reused Mississippi route, same-drive map. Configured first frame excluded only from maximum. No online fine labels or reference XY/yaw resets. No independent-drive or surveyed-truth claim.",
+  "runtimeScope": "Alternating-order pairs including crop, conditioning and solve; concurrent external MATLAB workload observed, not a real-time guarantee."
+}

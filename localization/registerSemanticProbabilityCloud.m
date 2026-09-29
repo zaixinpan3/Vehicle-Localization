@@ -19,6 +19,12 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
     if nargin<5,positionAid=[];end
     if nargin<6,additionalSeeds=zeros(0,3);end
     initialPose=double(initialPose(:).');pyramid=validatePyramid(cfg);
+    [fixedCloud,viewConditioning]=conditionSemanticMapOnView(fixedCloud,initialPose);
+    if viewConditioning.enabled
+        % This map has already grouped aliases offline; merging conditioned
+        % centers again would erase their acquisition-specific geometry.
+        pyramid.mapMergeRadius=0;
+    end
     if isfield(cfg,'softPointAssociation'),validateSoftPointAssociation(cfg.softPointAssociation);end
     [coarseFixed,groups]=canonicalizeSemanticCloud(fixedCloud,pyramid.mapMergeRadius,pyramid.pointClasses);
     [coarseMoving,sourceGroups]=canonicalizeSemanticCloud(movingCloud,pyramid.sourceMergeRadius,pyramid.pointClasses);
@@ -62,6 +68,7 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
         retainedResult.reason="coarseRetainedByTrustRadius";result=retainedResult;
     end
     result.initialPoseXYTheta=initialPose;
+    result.mapViewConditioning=viewConditioning;
     result.configuredSoftAssociation=isfield(cfg,'softPointAssociation');
     result.pyramid=struct('coarsePoseXYTheta',coarse.poseXYTheta,'coarseAccepted',coarse.accepted, ...
         'coarseSimilarity',coarse.similarity,'coarseReason',coarse.reason, ...

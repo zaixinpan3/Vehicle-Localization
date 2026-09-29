@@ -30,6 +30,10 @@ if ~isfile(poseMatchCsvPath)
 end
 
 [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg);
+cloud=buildViewConditionedLandmarkMap(temporalMapToProbabilityCloud(probabilityCloudMap),featureData,cfg.landmarkViews);
+outputFolder=fileparts(cfg.probabilityCloudPath);
+if ~isfolder(outputFolder),mkdir(outputFolder);end
+save(cfg.probabilityCloudPath,'cloud','-v7.3');
 disp(probabilityCloudMap.layerSummaryTable);
 
 function value=shellQuote(value)

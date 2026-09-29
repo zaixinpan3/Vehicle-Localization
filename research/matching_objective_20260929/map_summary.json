@@ -1,0 +1,19 @@
+{
+  "legacyComponents": 1320,
+  "adoptedComponents": 1131,
+  "landmarkObservations": 4215,
+  "mapAcquisitions": 1170,
+  "config": {
+    "pointClasses": [
+      "pole",
+      "trafficSign"
+    ],
+    "mergeRadius": 1.5,
+    "maximumAssignmentDistance": 1.5,
+    "minimumObservationPoints": 3,
+    "bandwidth": 5,
+    "coverageScale": 5,
+    "varianceFloor": 0.0025,
+    "maximumHeadingDifference": 0.52359877559829882
+  }
+}

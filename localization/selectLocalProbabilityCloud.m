@@ -10,8 +10,12 @@ function [fixed,indices]=selectLocalProbabilityCloud(map,seed,radius)
     fixed.components.mean=c.mean(keep,:);
     fixed.components.covariance=c.covariance(:,:,keep);
     fixed.components.numComponents=nnz(keep);indices=find(keep);
+    if isfield(map,'landmarkViews')
+        fixed.landmarkViews=map.landmarkViews;
+        fixed.landmarkViews.observations=map.landmarkViews.observations(keep);
+    end
     for name=["semanticName","mixtureWeight","repeatability","semanticProbability","occupancyProbability", ...
-            "supportAmplitude","meanXYZ","heightAvailable","componentId"]
+            "supportAmplitude","meanXYZ","heightAvailable","componentId","viewReliability"]
         if isfield(c,name),fixed.components.(name)=c.(name)(keep,:);end
     end
     if isfield(c,'covarianceXYZ'),fixed.components.covarianceXYZ=c.covarianceXYZ(:,:,keep);end

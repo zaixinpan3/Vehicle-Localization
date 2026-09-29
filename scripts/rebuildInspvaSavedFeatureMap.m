@@ -63,6 +63,10 @@ function report = rebuildInspvaSavedFeatureMap(outputFolder,options)
         'referenceLimitation',"Same-drive INSPVA map and query observations; consistency experiment, not independent ground truth");
     save(fullfile(outputFolder,'probability_cloud_map.mat'),'probabilityCloudMap','-v7.3');
     save(fullfile(outputFolder,'probability_cloud.mat'),'cloud','-v7.3');
+    cloud=buildViewConditionedLandmarkMap(cloud,featureData,cfg.landmarkViews);
+    save(fullfile(outputFolder,'view_conditioned_cloud.mat'),'cloud','-v7.3');
+    report.viewConditionedComponents=cloud.components.numComponents;
+    report.viewConditionedObservations=cloud.mapConstruction.retainedLandmarkObservations;
     writetable(probabilityCloudMap.layerSummaryTable,fullfile(outputFolder,'map_layer_summary.csv'));
     fid=fopen(fullfile(outputFolder,'validation.json'),'w');assert(fid>=0);cleanup=onCleanup(@()fclose(fid));
     fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));

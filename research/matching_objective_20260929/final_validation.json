@@ -1,0 +1,33 @@
+{
+  "fullSuite": {
+    "tests": 303,
+    "passed": 303,
+    "failed": 0,
+    "incomplete": 0,
+    "suites": 21,
+    "artifact": "final_tests.csv"
+  },
+  "codeAnalyzer": {
+    "files": 15,
+    "findings": 0,
+    "artifact": "code_analysis.csv"
+  },
+  "provenanceFollowup": {
+    "renamedField": "mapConstruction.onlineQueryLabelsUsed",
+    "mapRebuilt": true,
+    "componentAndViewArraysExactlyUnchanged": true,
+    "testsRerun": 19,
+    "passed": 19,
+    "log": "output/matching_objective_20260929/provenance_validation.log"
+  },
+  "rawReplay": {
+    "frames": 1170,
+    "allCurrentAndWindowCloudsExactlyUnchanged": true,
+    "artifact": "final_raw_verification.csv"
+  },
+  "legacyParityReplay": true,
+  "pythonSummaryAssertionsPassed": true,
+  "rejectedPatchAppliesToBaseline": true,
+  "desktopVisualizationOpened": false,
+  "timingCaveat": "An unrelated MATLAB benchmark was running; paired ordering alternates within each frame."
+}

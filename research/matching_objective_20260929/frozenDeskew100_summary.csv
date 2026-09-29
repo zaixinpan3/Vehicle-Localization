@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMs,elapsedSeconds
+frozenDeskew100,137,0.385569944352772,0.116117588496802,0.215121752483939,1152,10,12.933,15.814841
