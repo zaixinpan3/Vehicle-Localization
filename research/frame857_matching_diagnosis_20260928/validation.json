@@ -1,0 +1,11 @@
+{
+  "baselineReproduced": true,
+  "viewerVerified": true,
+  "oraclePoleErrorM": 0.0689928834320027,
+  "threshold083ErrorM": 0.0779773190189357,
+  "currentErrorM": 0.473865024705953,
+  "noMapMergeErrorM": 0.120386930356452,
+  "poleScore": 0.830108852093012,
+  "thresholdScreenUsesFrozenPredictions": true,
+  "productionChanged": false
+}
