@@ -1,0 +1,18 @@
+{
+  "frames": 1170,
+  "currentProductionReplayed": true,
+  "previousTrajectoryReproduced": true,
+  "maximumFrame": 856,
+  "errorM": 0.410501028782604,
+  "yawErrorDeg": 0.650671261274709,
+  "timeSeconds": 85.5002380180083,
+  "noMapMergeErrorM": 0.101624986966663,
+  "oraclePoleErrorM": 0.0722107970897536,
+  "referencePolePoints": 18,
+  "missedOwnerScores": [
+    0.236654514182792,
+    0.0239940377084847
+  ],
+  "cleanMatlabFiles": 4,
+  "productionChanged": false
+}

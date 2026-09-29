@@ -1,0 +1,42 @@
+{
+  "frame": 856,
+  "reproductionMaxAbs": 0,
+  "seedErrorM": 0.41028825896098287,
+  "seedBodyError": [
+    0.40602511787703044,
+    -0.058992025682952684
+  ],
+  "seedYawErrorDeg": 0.38099021947303019,
+  "pyramid": {
+    "coarsePoseXYTheta": [
+      484352.80395656527,
+      4.9766228691243706E+6,
+      -0.16450892945879378
+    ],
+    "coarseAccepted": true,
+    "coarseSimilarity": 0.59580616662028107,
+    "coarseReason": "accepted",
+    "coarseComponents": 168,
+    "fineSeedXYTheta": [
+      484352.80395656527,
+      4.9766228691243706E+6,
+      -0.16450892945879378
+    ],
+    "refinementShiftM": 0.31741322224848073,
+    "coarseRetained": true,
+    "mapMergeRadius": 1.5,
+    "sourceMergeRadius": 0.5,
+    "trustRadius": 0.15,
+    "planarOnlyRefinement": true,
+    "semantics": "coarse solve on moment-matched canonical clouds seeds the fine solve; trust radius applies to planar-only refinement"
+  },
+  "sourceComponents": 29,
+  "canonicalSourceComponents": 29,
+  "curvatureEigenvalues": [
+    2.3467425441899961,
+    4.0576554487450851,
+    15.196213624765829
+  ],
+  "productionChanged": false,
+  "referenceUsedOnlyForDiagnostics": true
+}
