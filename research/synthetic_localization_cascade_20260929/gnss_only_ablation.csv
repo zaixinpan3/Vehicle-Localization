@@ -1,0 +1,7 @@
+case,noiseOverrides,gnssOnlySettledPositionRmseM,rawCorrectedReceiverRmseM,gnssOnlySettledHeadingRmseDeg,bothSourcesSettledPositionRmseM
+reference,none,0.0432,0.0389,0.201,0.0329
+no_wheel_scale,wheelScaleError=0,0.0415,0.0389,0.202,0.0331
+no_gyro_bias,yawRateBiasRadps=0,0.0411,0.0396,0.050,0.0332
+no_ay_bias,lateralAccelerationBiasMps2=0,0.0405,0.0390,0.219,0.0325
+no_motion_bias,wheelScaleError=0; yawRateBiasRadps=0; lateralAccelerationBiasMps2=0,0.0372,0.0396,0.057,0.0328
+white_gnss_only,gnssMarkovStdM=0; gnssWhiteStdM=0.036,0.0283,0.0405,0.196,0.0286

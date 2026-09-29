@@ -1,0 +1,223 @@
+{
+  "settings": {
+    "duration": 90,
+    "plantStep": 0.001,
+    "motionStep": 0.01,
+    "outputForwardOffsetM": 2.3597988944583816,
+    "receiverBodyOffsetM": [
+      1.72485903887133,
+      0.26441147004400672
+    ],
+    "speed": {
+      "mean": 11,
+      "slowAmplitude": 4,
+      "slowPeriod": 60,
+      "fastAmplitude": 1,
+      "fastPeriod": 13
+    },
+    "mismatch": {
+      "front": 0.85,
+      "rear": 1.15
+    },
+    "seed": 2.0260929E+7,
+    "settleS": 5,
+    "headingSettleS": 10,
+    "noise": {
+      "wheelScaleError": 0.005,
+      "wheelSpeedStdMps": 0.02,
+      "steeringStdRad": 0.0005,
+      "longitudinalAccelerationStdMps2": 0.05,
+      "lateralAccelerationStdMps2": 0.05,
+      "lateralAccelerationBiasMps2": 0.1,
+      "yawRateStdRadps": 0.002,
+      "yawRateBiasRadps": 0.001,
+      "gnssWhiteStdM": 0.02,
+      "gnssMarkovStdM": 0.03,
+      "gnssMarkovTimeS": 20,
+      "lidarAlongStdM": 0.1,
+      "lidarCrossStdM": 0.04,
+      "lidarYawStdRad": 0.0052359877559829881,
+      "lidarRejectFraction": 0.05,
+      "lidarJitterS": 0.003
+    },
+    "gnss": {
+      "periodS": 0.05,
+      "offsetS": 0.013
+    },
+    "lidar": {
+      "periodS": 0.1,
+      "offsetS": 0.05
+    },
+    "initialError": {
+      "positionM": [
+        1.5,
+        -1
+      ],
+      "headingRad": 0.05235987755982989
+    },
+    "matcher": {
+      "captureRadiusM": 1,
+      "captureYawRad": 0.05235987755982989
+    },
+    "outageRecoveryToleranceM": 0.15,
+    "convergenceToleranceM": 0.1
+  },
+  "checks": [
+    {
+      "check": "clean_consistency_position",
+      "value": 0.014497879700136244,
+      "limit": 0.05,
+      "passed": true,
+      "criterion": "Exact signals, truth initialization: maximum position error <= 5 cm (frame/sign conventions)"
+    },
+    {
+      "check": "clean_consistency_heading",
+      "value": 0.0023258439090108564,
+      "limit": 0.1,
+      "passed": true,
+      "criterion": "Exact signals: maximum heading error <= 0.1 deg"
+    },
+    {
+      "check": "clean_dead_reckoning_drift_fraction",
+      "value": 0.00047791578992109211,
+      "limit": 0.005,
+      "passed": true,
+      "criterion": "No absolute source: final drift <= 0.5% of distance travelled"
+    },
+    {
+      "check": "noisy_both_convergence_time",
+      "value": 0.60081303237165984,
+      "limit": 5,
+      "passed": true,
+      "criterion": "From 1.8 m / 3 deg initial error: position error stays <= 10 cm after 5 s"
+    },
+    {
+      "check": "noisy_both_heading_rmse",
+      "value": 0.12326208928950297,
+      "limit": 0.5,
+      "passed": true,
+      "criterion": "Heading RMSE after 10 s <= 0.5 deg"
+    },
+    {
+      "check": "fusion_not_worse_than_best_single_source",
+      "value": 0.0329480535984604,
+      "limit": 0.042099909011299237,
+      "passed": true,
+      "criterion": "Both-source settled RMSE <= best single-source settled RMSE"
+    },
+    {
+      "check": "gnss_only_filters_raw_receiver",
+      "value": 0.04324206977134664,
+      "limit": 0.03889996973587332,
+      "passed": false,
+      "criterion": "GNSS-only settled RMSE below raw corrected receiver RMSE"
+    },
+    {
+      "check": "lidar_only_filters_raw_lidar",
+      "value": 0.042099909011299237,
+      "limit": 0.1063318051423726,
+      "passed": true,
+      "criterion": "LiDAR-only settled RMSE below raw LiDAR pose RMSE"
+    },
+    {
+      "check": "gnss_only_heading_from_course",
+      "value": 0.29449332280584262,
+      "limit": 1,
+      "passed": true,
+      "criterion": "GNSS-only: heading error <= 1 deg after 10 s without any heading measurement"
+    },
+    {
+      "check": "gnss_outage_40_60_maximum",
+      "value": 0.12371866990481246,
+      "limit": 0.3,
+      "passed": true,
+      "criterion": "Single-source outage: error <= 30 cm"
+    },
+    {
+      "check": "gnss_outage_40_60_recovery",
+      "value": 0,
+      "limit": 3,
+      "passed": true,
+      "criterion": "Error <= 15 cm within 3 s after outage"
+    },
+    {
+      "check": "lidar_outage_40_60_maximum",
+      "value": 0.068709714816289763,
+      "limit": 0.3,
+      "passed": true,
+      "criterion": "Single-source outage: error <= 30 cm"
+    },
+    {
+      "check": "lidar_outage_40_60_recovery",
+      "value": 0,
+      "limit": 3,
+      "passed": true,
+      "criterion": "Error <= 15 cm within 3 s after outage"
+    },
+    {
+      "check": "both_outage_40_50_maximum",
+      "value": 0.25304098703249489,
+      "limit": 1,
+      "passed": true,
+      "criterion": "10 s dead reckoning with learned biases: error <= 1 m"
+    },
+    {
+      "check": "both_outage_40_50_recovery",
+      "value": 0,
+      "limit": 3,
+      "passed": true,
+      "criterion": "Error <= 15 cm within 3 s after outage"
+    },
+    {
+      "check": "alternating_sources",
+      "value": 0.041957186786748389,
+      "limit": 0.1,
+      "passed": true,
+      "criterion": "Sources alternating each second: settled RMSE <= 10 cm"
+    },
+    {
+      "check": "online_matcher_acceptance",
+      "value": 0.950530035335689,
+      "limit": 0.9,
+      "passed": true,
+      "criterion": "Closed-loop matcher with 1 m capture basin: acceptance after 5 s >= 90%"
+    },
+    {
+      "check": "online_matcher_accuracy",
+      "value": 0.032948042865651034,
+      "limit": 0.036242858958306437,
+      "passed": true,
+      "criterion": "Closed-loop matching RMSE within 10% of recorded-LiDAR fusion"
+    },
+    {
+      "check": "lateral_observer_nominal",
+      "value": 0.0051887278249334624,
+      "limit": 0.05,
+      "passed": true,
+      "criterion": "Lateral velocity RMSE at output point after 5 s <= 0.05 m/s (nominal plant, noise and ay bias)"
+    },
+    {
+      "check": "plant_mismatch_position",
+      "value": 0.032752235160259449,
+      "limit": 0.1,
+      "passed": true,
+      "criterion": "Cornering stiffness -15%/+15%: fused settled RMSE <= 10 cm"
+    },
+    {
+      "check": "wheel_scale_bias_sign",
+      "value": -0.066616975071184678,
+      "limit": 0,
+      "passed": true,
+      "criterion": "Learned longitudinal velocity bias opposes the +0.5% wheel scale error"
+    }
+  ],
+  "allChecksPassed": false,
+  "lateralDesignCertified": true,
+  "lateralVertexGainNorms": [
+    2.4242548807809706E-10,
+    5.4783787819078757E-10,
+    2.8226390635988497E-10
+  ],
+  "observerKind": "mncav-synchronous-aligned-observer-v4",
+  "scope": "Synthetic signals only; truth plant equals the lateral design model except plant_mismatch_both. Not a recorded-data or hardware validation."
+}

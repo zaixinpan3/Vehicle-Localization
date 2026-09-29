@@ -330,6 +330,13 @@ bounded noise. See [the runtime validation](../research/continuous_observer_runt
 The recorded-data entry offers separate `gnss` and `lidar` reconstructions
 and retains contract failures as failures.
 
+`validateSyntheticLocalizationCascade` exercises the current synchronous
+production chain end to end with synthetic signals and exact truth: lateral
+observer, frame alignment, MnCAV synchronous observer, source outages, the
+online matcher callback and lateral-model mismatch. See the
+[synthetic cascade record](../research/synthetic_localization_cascade_20260929/README.md),
+including its GNSS-only bias limitation and the numerically zero LPV gain.
+
 ## Registration helpers
 
 The unchanged registration entry points are `localizeLidarFrame`,
