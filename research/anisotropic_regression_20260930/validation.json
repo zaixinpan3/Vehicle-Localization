@@ -1,0 +1,15 @@
+{
+  "geometryControls": 51,
+  "observabilityControls": 30,
+  "solverParityFrames": [
+    178,
+    894,
+    932
+  ],
+  "gradientChecksPassed": 51,
+  "sameSourceMembershipAndWeights": true,
+  "sameScalarShapeObjectiveAndGradientAfterSplit": true,
+  "syntheticUnequalScaleCurvatureVerified": true,
+  "productionChanged": false,
+  "freshFullRouteReplay": false
+}

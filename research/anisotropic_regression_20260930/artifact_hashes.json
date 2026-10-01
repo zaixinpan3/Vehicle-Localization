@@ -1,0 +1,20 @@
+{
+  "research/anisotropic_regression_20260930/README.md": "be1617007c5ed3c237a566c8bd718416a5b504c0b61597299f9692a3dd7aca11",
+  "research/anisotropic_regression_20260930/associations.csv": "711bcebce154bf6d52d7358ebc75de76348ea5e797e096d76272c55ba92b1b87",
+  "research/anisotropic_regression_20260930/causal_controls.pdf": "d01748a34a9adc6760ca7b93a7950d4e35946ee543a9a3e2fdd1d81e5619c003",
+  "research/anisotropic_regression_20260930/causal_controls.png": "6382e38d5f6b217a5c7b0c239b3d7d007e4a45b6594754ff1a8358115d3fcb68",
+  "research/anisotropic_regression_20260930/checkRegressionDiagnosis.m": "faff3bcccde5c7c84912b2a0f9f149db3465f404792f8d566c9cea6d144c69c8",
+  "research/anisotropic_regression_20260930/code_analysis.csv": "d5226dae8d51f23b843d2dffbc1f72748f2a4245b7ab3aad133c82ab3becabe2",
+  "research/anisotropic_regression_20260930/controls.csv": "12fb7974b27587d5174c9db5eea2fc269c889a25db724c38a55ed9e8c6c20975",
+  "research/anisotropic_regression_20260930/cross_objectives.csv": "8e5ecd4d40c9a849b4510918398e57dffccf1fe1d81e92571fe43463d2c099fa",
+  "research/anisotropic_regression_20260930/diagnoseAnisotropicRegression.m": "e3840a75536407acd15cca2deae4c8f952244b7e2e3a43d4d8dd06eebb2ffcc4",
+  "research/anisotropic_regression_20260930/findings.json": "c2998aeaeb43d13f3ab09f4d88ae4697aa9b116e1e911eac2c531661b37455df",
+  "research/anisotropic_regression_20260930/input_hashes.json": "39bd2d7007dbb38ce8e9d54215375c92f7e646c1d3f71dfbda5369af5685407c",
+  "research/anisotropic_regression_20260930/observability_controls.csv": "eec603f41c4ee26e008ef9a143f412c1bfd63532908c67224b5ab8ff164441ec",
+  "research/anisotropic_regression_20260930/plotRegressionDiagnosis.m": "9478bdef801f930956c4f0e214acb666d140a2099bbf29bb4b2bafef1529f496",
+  "research/anisotropic_regression_20260930/reference_forces.csv": "9b91aaffcf39247612163b0dba0b6a4a988ceb3d727bc85430604f4a93c99855",
+  "research/anisotropic_regression_20260930/reference_geometry.csv": "d91bb20f3cc03712bbc4b9a1f42367c9135df61ab92c7dc6adb4489312314291",
+  "research/anisotropic_regression_20260930/shape_curvature.csv": "c45d3eb2dc31f29c04c3fed9289c567f2c1bd34dd318f59e31d2744950ca4179",
+  "research/anisotropic_regression_20260930/synthetic_curvature.csv": "eda411368aa0b07a74621bc52aa1d46b8f99dc11e07551c92c3c7ac8a40bf94d",
+  "research/anisotropic_regression_20260930/validation.json": "c4eed5c31dc1290b30285bbe995b2775e5b8585522e50a5ed20d0c579316895d"
+}

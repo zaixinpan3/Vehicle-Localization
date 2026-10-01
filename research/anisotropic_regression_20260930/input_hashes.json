@@ -1,0 +1,14 @@
+{
+  "output/source_shape_matching_20260929/shape50.mat": "239babdf7598992c94a6d2cd7fcd3c35a5799ab8f86a6e0c2607013c5f2e1e45",
+  "output/line_direction_matching_20260928/production/report.mat": "674e517f60b12bce6f3d71f8ed4ac0acc4a4859d2ea1aede22fe25825900371c",
+  "output/mississippi_mapping_calibrated/view_conditioned_cloud.mat": "90d51b3ad43e8e96e057fd654199bde43920146817da4a8e2f13d9ad91184dbf",
+  "research/source_shape_matching_20260929/final_raw.csv": "8c58471b50525cc86372cd2488baaa2b51b8b0d696f5a6d98054b2cff3fcc293",
+  "research/anisotropic_matching_20260930/route_comparison.csv": "6f7d1cc0d549b9d0ca658067ccfb9eaafc08e2fbf9bbb3d6efe85798a468c27b",
+  "research/anisotropic_matching_20260930/replayAnisotropicMatching.m": "d2d67bc0b10fdb9b172963cc00725bbb39c13d7b3e769ca5764d86cdb6564ea1",
+  "config/distributionRegistrationConfig.m": "cc9ed04c6d0dc4f3a4513c8124eccc99fa8d06c87af3cc77a65d179c32a5607c",
+  "config/anisotropicRegistrationConfig.m": "0f9ce0d1d68b0422c18acadc73ad76280981fbce7120bfae77fe0f2b6f8fac9d",
+  "localization/gaussianRegistrationResiduals.m": "b4847491f7429d37323732dd50a98700e834affa9c235c71e405f6a743df7f94",
+  "localization/prepareSemanticRegistrationGeometry.m": "7516eb02c8449dd6cb92c4ee72ad2fc44b7b5dda7e851495fd35402488572b7a",
+  "localization/prepareAnisotropicRegistrationGeometry.m": "a3e4f86bafbf62343c9d2d4445100327d1c045a566b9e44794365287b479d001",
+  "localization/registerSemanticProbabilityCloud.m": "316509b14f30a3263d59f93a1f9d952702ccea01425ad2da3fbddc0a8c147eba"
+}

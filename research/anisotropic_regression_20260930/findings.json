@@ -1,0 +1,439 @@
+{
+  "recorded_at": "2026-09-30T19:28:46.932399-05:00",
+  "source_commit": "322eb398329f1e95491ae53b2d8061b114851d90",
+  "dataset": "Mississippi; frozen five-scan distributions at frames 178, 894, 932",
+  "scope": "Causal factor/association/observability diagnosis only; no production changes, fresh perception, independent-drive validation, or full-route replay.",
+  "conclusions": [
+    "Finite covariance weighting relaxes elongated directions but does not remove partial-center bias or ensure that the weak-direction optimum stays near the prediction.",
+    "The new mode removes legacy partial-sign protection and coherent neighborhood direction evidence. Frame 178 benefits strongly when both are restored on identical fixed pairs.",
+    "Frame 894 changes two curb targets whose centers differ by more than 4.4 m along the road; the new objective and relative rank threshold jointly permit large longitudinal displacement.",
+    "Covariance-rotation and direct shape-gradient terms are small compared with center-position force at reference; disabling those terms does not remove large regressions.",
+    "The signed square root of total shape mismatch discards positive Gauss-Newton angular curvature at aligned unequal-scale clouds. A cost/gradient-preserving split corrects this, but changes tested fitted errors by less than 1 micrometer.",
+    "The old neighborhood angular information uses engineering scales, not calibrated uncertainty. Diagnostic restorations and rank suppression are not deployed or whole-route improvements."
+  ],
+  "controls_by_frame": {
+    "178": {
+      "legacy_dynamic": {
+        "errorM": 0.0265727956960291,
+        "longitudinalM": 0.0161279208919612,
+        "lateralM": -0.0211187982329853,
+        "yawErrorDeg": -0.168700715156755,
+        "lambda1": 4.06227576154658,
+        "lambda2": 9.21127323941026,
+        "lambda3": 26.6067978227951,
+        "rank": 3
+      },
+      "full_dynamic": {
+        "errorM": 0.46598056454028,
+        "longitudinalM": -0.216045213556033,
+        "lateralM": -0.412870866287276,
+        "yawErrorDeg": 2.07097852390515,
+        "lambda1": 0.574503923191241,
+        "lambda2": 8.47731764898299,
+        "lambda3": 19.2192266917991,
+        "rank": 3
+      },
+      "full_dynamic_split": {
+        "errorM": 0.465980298544847,
+        "longitudinalM": -0.216045101796516,
+        "lateralM": -0.412870624556504,
+        "yawErrorDeg": 2.07097711964881,
+        "lambda1": 0.578720658530238,
+        "lambda2": 8.47771898965665,
+        "lambda3": 19.2224546585515,
+        "rank": 3
+      },
+      "full_fixed_new": {
+        "errorM": 0.353885980614672,
+        "longitudinalM": -0.168614811317819,
+        "lateralM": -0.311133946524425,
+        "yawErrorDeg": 1.50132296588767,
+        "lambda1": 0.567363016496643,
+        "lambda2": 8.49161797763881,
+        "lambda3": 19.4083128308524,
+        "rank": 3
+      },
+      "position_fixed_new": {
+        "errorM": 0.355161875399861,
+        "longitudinalM": -0.168284028896357,
+        "lateralM": -0.312762599036324,
+        "yawErrorDeg": 1.51240530858177,
+        "lambda1": 0.644331389874524,
+        "lambda2": 8.58133206594711,
+        "lambda3": 21.1753183825184,
+        "rank": 3
+      },
+      "frozen_cov_position_fixed_new": {
+        "errorM": 0.352225348267928,
+        "longitudinalM": -0.167127911804661,
+        "lateralM": -0.310049926718708,
+        "yawErrorDeg": 1.49946244954481,
+        "lambda1": 0.650432706478049,
+        "lambda2": 8.51171049542113,
+        "lambda3": 21.232191908489,
+        "rank": 3
+      },
+      "full_fixed_old": {
+        "errorM": 0.321586662977,
+        "longitudinalM": -0.156283921923487,
+        "lateralM": -0.281057498659787,
+        "yawErrorDeg": 1.31303906685856,
+        "lambda1": 0.513290235208761,
+        "lambda2": 8.48006226362585,
+        "lambda3": 18.8643643491232,
+        "rank": 3
+      },
+      "full_direction_fixed_new": {
+        "errorM": 0.105586550053996,
+        "longitudinalM": -0.0703885432875206,
+        "lateralM": -0.0787017949361124,
+        "yawErrorDeg": -0.111302589501792,
+        "lambda1": 4.53444154008892,
+        "lambda2": 9.33172271346934,
+        "lambda3": 26.3465302348282,
+        "rank": 3
+      },
+      "partial_direction_fixed_new": {
+        "errorM": 0.0315158193580325,
+        "longitudinalM": 0.0181462292457237,
+        "lateralM": -0.0257674452356026,
+        "yawErrorDeg": -0.143468150981289,
+        "lambda1": 3.89362839042224,
+        "lambda2": 9.06898101214233,
+        "lambda3": 25.2978927545782,
+        "rank": 3
+      },
+      "curb_normal_fixed_new": {
+        "errorM": 0.385351857581673,
+        "longitudinalM": -0.186606321643491,
+        "lateralM": -0.337155950361746,
+        "yawErrorDeg": 1.68821210816724,
+        "lambda1": 0.589883955031771,
+        "lambda2": 8.41542176664877,
+        "lambda3": 20.1925634558476,
+        "rank": 3
+      }
+    },
+    "894": {
+      "legacy_dynamic": {
+        "errorM": 0.147686030877245,
+        "longitudinalM": 0.0244517595413192,
+        "lateralM": -0.145647777777789,
+        "yawErrorDeg": 0.643142622328899,
+        "lambda1": 0.0150266746750262,
+        "lambda2": 7.04750364425173,
+        "lambda3": 35.6327602669881,
+        "rank": 2
+      },
+      "full_dynamic": {
+        "errorM": 0.580283283888624,
+        "longitudinalM": 0.556072959078848,
+        "lateralM": -0.16586607170202,
+        "yawErrorDeg": 0.987522015827401,
+        "lambda1": 0.214916651659195,
+        "lambda2": 0.691081245426931,
+        "lambda3": 18.4696700153059,
+        "rank": 3
+      },
+      "full_dynamic_split": {
+        "errorM": 0.580283285250655,
+        "longitudinalM": 0.556072960210776,
+        "lateralM": -0.165866072672253,
+        "yawErrorDeg": 0.987522024000833,
+        "lambda1": 0.214980249871948,
+        "lambda2": 0.696479889803924,
+        "lambda3": 18.4745724571357,
+        "rank": 3
+      },
+      "full_fixed_new": {
+        "errorM": 0.481171688938434,
+        "longitudinalM": 0.450188734317835,
+        "lateralM": -0.169871415279826,
+        "yawErrorDeg": 0.961117206584408,
+        "lambda1": 0.201963803954306,
+        "lambda2": 0.673095259735905,
+        "lambda3": 18.3485702529538,
+        "rank": 3
+      },
+      "position_fixed_new": {
+        "errorM": 0.48382866473885,
+        "longitudinalM": 0.450861487583327,
+        "lateralM": -0.175539442397221,
+        "yawErrorDeg": 0.989469383116605,
+        "lambda1": 0.226715490979434,
+        "lambda2": 0.785180666675171,
+        "lambda3": 21.4634574892531,
+        "rank": 3
+      },
+      "frozen_cov_position_fixed_new": {
+        "errorM": 0.484109348017844,
+        "longitudinalM": 0.451254341949034,
+        "lateralM": -0.17530367854214,
+        "yawErrorDeg": 0.987804262924264,
+        "lambda1": 0.226915373191442,
+        "lambda2": 0.784816370357926,
+        "lambda3": 21.4855671301552,
+        "rank": 3
+      },
+      "full_fixed_old": {
+        "errorM": 0.162367188004272,
+        "longitudinalM": 0.0222199028527616,
+        "lateralM": -0.160839608485064,
+        "yawErrorDeg": 0.747438641527938,
+        "lambda1": 0.164559462591254,
+        "lambda2": 0.619673845292229,
+        "lambda3": 17.7186053099,
+        "rank": 2
+      },
+      "full_direction_fixed_new": {
+        "errorM": 0.136316468828514,
+        "longitudinalM": 0.0238459083853815,
+        "lateralM": -0.134214575688154,
+        "yawErrorDeg": 0.556033684989329,
+        "lambda1": 0.225422863405749,
+        "lambda2": 6.22378724011158,
+        "lambda3": 31.6317557501383,
+        "rank": 2
+      },
+      "partial_direction_fixed_new": {
+        "errorM": 0.136316468828514,
+        "longitudinalM": 0.0238459083853815,
+        "lateralM": -0.134214575688154,
+        "yawErrorDeg": 0.556033684989329,
+        "lambda1": 0.225422863405749,
+        "lambda2": 6.22378724011158,
+        "lambda3": 31.6317557501383,
+        "rank": 2
+      },
+      "curb_normal_fixed_new": {
+        "errorM": 0.189840303478231,
+        "longitudinalM": 0.0239439565476498,
+        "lateralM": -0.18832426229658,
+        "yawErrorDeg": 0.900230449344522,
+        "lambda1": 0.0120069143044844,
+        "lambda2": 0.713681251951456,
+        "lambda3": 20.1354852250659,
+        "rank": 2
+      }
+    },
+    "932": {
+      "legacy_dynamic": {
+        "errorM": 0.160193089346615,
+        "longitudinalM": -0.0153084532437221,
+        "lateralM": -0.159459954639707,
+        "yawErrorDeg": 0.672720383125425,
+        "lambda1": 5.53230349132558,
+        "lambda2": 8.87927142320684,
+        "lambda3": 44.4637823472948,
+        "rank": 3
+      },
+      "full_dynamic": {
+        "errorM": 0.156546901128306,
+        "longitudinalM": -0.0159827087762032,
+        "lateralM": -0.155728883875313,
+        "yawErrorDeg": 0.688780155467561,
+        "lambda1": 0.34096349809141,
+        "lambda2": 8.62281703509363,
+        "lambda3": 36.7529777451107,
+        "rank": 2
+      },
+      "full_dynamic_split": {
+        "errorM": 0.156547155666912,
+        "longitudinalM": -0.0159828332780239,
+        "lateralM": -0.155729126973111,
+        "yawErrorDeg": 0.688782095926975,
+        "lambda1": 0.344630153633409,
+        "lambda2": 8.62284290899789,
+        "lambda3": 36.7559672040437,
+        "rank": 2
+      },
+      "full_fixed_new": {
+        "errorM": 0.156544735977396,
+        "longitudinalM": -0.0159863774958183,
+        "lateralM": -0.155726330775478,
+        "yawErrorDeg": 0.688786944038653,
+        "lambda1": 0.340970107973954,
+        "lambda2": 8.62283913669108,
+        "lambda3": 36.7530123136437,
+        "rank": 2
+      },
+      "position_fixed_new": {
+        "errorM": 0.186249273109218,
+        "longitudinalM": -0.0231022616598815,
+        "lateralM": -0.184810922945346,
+        "yawErrorDeg": 0.866336958411368,
+        "lambda1": 0.398993811897364,
+        "lambda2": 8.92213319828608,
+        "lambda3": 38.7749634716011,
+        "rank": 3
+      },
+      "frozen_cov_position_fixed_new": {
+        "errorM": 0.18532697762682,
+        "longitudinalM": -0.0228108599237436,
+        "lateralM": -0.183917789530624,
+        "yawErrorDeg": 0.860225279834931,
+        "lambda1": 0.399297411863684,
+        "lambda2": 8.93144937307264,
+        "lambda3": 38.8018264617416,
+        "rank": 3
+      },
+      "full_fixed_old": {
+        "errorM": 0.157554564491266,
+        "longitudinalM": -0.0137002331470797,
+        "lateralM": -0.156957779048214,
+        "yawErrorDeg": 0.686320516275145,
+        "lambda1": 0.340212719879579,
+        "lambda2": 8.58114555891986,
+        "lambda3": 36.6306354689036,
+        "rank": 2
+      },
+      "full_direction_fixed_new": {
+        "errorM": 0.142778738593684,
+        "longitudinalM": -0.00917022749160123,
+        "lateralM": -0.142483946892819,
+        "yawErrorDeg": 0.577962987444031,
+        "lambda1": 5.04043511783466,
+        "lambda2": 8.84350316551416,
+        "lambda3": 42.8375137235442,
+        "rank": 3
+      },
+      "partial_direction_fixed_new": {
+        "errorM": 0.142778738593684,
+        "longitudinalM": -0.00917022749160123,
+        "lateralM": -0.142483946892819,
+        "yawErrorDeg": 0.577962987444031,
+        "lambda1": 5.04043511783466,
+        "lambda2": 8.84350316551416,
+        "lambda3": 42.8375137235442,
+        "rank": 3
+      },
+      "curb_normal_fixed_new": {
+        "errorM": 0.156807383506787,
+        "longitudinalM": -0.0179463724425446,
+        "lateralM": -0.155777030522468,
+        "yawErrorDeg": 0.685375807617112,
+        "lambda1": 0.347403582795858,
+        "lambda2": 8.64132588569599,
+        "lambda3": 37.5449890228375,
+        "rank": 2
+      }
+    }
+  },
+  "frame178_partial_sign": {
+    "tangentOffsetM": -0.417247640627819,
+    "normalOffsetM": 0.0636061645220733,
+    "sumAnisotropy": 2.0961038047405,
+    "intrinsicAnisotropy": 10.3168355242077,
+    "targetAnisotropy": 2.22080520792376,
+    "intrinsicTotalAxisDifferenceDeg": 16.4591558317211,
+    "weight": 0.160838086123333,
+    "robustWeight": 0.118308509611547
+  },
+  "frame894_changed_associations": [
+    {
+      "frame": "894",
+      "source": "3",
+      "oldGlobalTarget": "683",
+      "newGlobalTarget": "687",
+      "oldNewMeanDifferenceM": "4.52294901356617",
+      "newOldMeanDifferenceLongitudinalM": "4.51508359000538",
+      "legacyScoreOldTarget": "14.4539340054652",
+      "legacyScoreNewTarget": "15.1524004107909",
+      "modernScoreOldTarget": "16.6911176194994",
+      "modernScoreNewTarget": "16.472392136805"
+    },
+    {
+      "frame": "894",
+      "source": "5",
+      "oldGlobalTarget": "685",
+      "newGlobalTarget": "687",
+      "oldNewMeanDifferenceM": "4.41287578242888",
+      "newOldMeanDifferenceLongitudinalM": "-4.39777672629116",
+      "legacyScoreOldTarget": "14.816023403329",
+      "legacyScoreNewTarget": "14.9098588211683",
+      "modernScoreOldTarget": "17.8673354395136",
+      "modernScoreNewTarget": "15.8013153976111"
+    }
+  ],
+  "frame894_dynamic_new_min_max_eigenvalue_ratio": 0.011636193363557257,
+  "frame894_dynamic_old_min_max_eigenvalue_ratio": 0.00042170953253227575,
+  "shape_curvature_controls": [
+    {
+      "frame": "178",
+      "class": "curb",
+      "originalShapeGnInformation": "0.00337436098542009",
+      "splitShapeGnInformation": "0.729012416180094",
+      "trueShapeHalfCurvature": "0.722702992683197",
+      "legacyNeighborhoodInformation": "1132.11245702799",
+      "weightedShapeQ": "0.378282691904299",
+      "pairs": "27"
+    },
+    {
+      "frame": "178",
+      "class": "trafficSign",
+      "originalShapeGnInformation": "0.0147405387421655",
+      "splitShapeGnInformation": "0.0478527039536296",
+      "trueShapeHalfCurvature": "0.0391202571794245",
+      "legacyNeighborhoodInformation": "0",
+      "weightedShapeQ": "0.0213463188188123",
+      "pairs": "3"
+    },
+    {
+      "frame": "894",
+      "class": "curb",
+      "originalShapeGnInformation": "0.00689341706642011",
+      "splitShapeGnInformation": "1.02178954072597",
+      "trueShapeHalfCurvature": "1.00671851912661",
+      "legacyNeighborhoodInformation": "1701.76746234824",
+      "weightedShapeQ": "0.772459164472926",
+      "pairs": "16"
+    },
+    {
+      "frame": "932",
+      "class": "curb",
+      "originalShapeGnInformation": "0.00207990737230176",
+      "splitShapeGnInformation": "0.619068110472615",
+      "trueShapeHalfCurvature": "0.614488042624992",
+      "legacyNeighborhoodInformation": "1050.30607522687",
+      "weightedShapeQ": "0.449303914053724",
+      "pairs": "15"
+    },
+    {
+      "frame": "932",
+      "class": "pole",
+      "originalShapeGnInformation": "0.00303981479331596",
+      "splitShapeGnInformation": "0.041124516136768",
+      "trueShapeHalfCurvature": "0.0377589294996761",
+      "legacyNeighborhoodInformation": "0",
+      "weightedShapeQ": "0.0402614947631574",
+      "pairs": "1"
+    }
+  ],
+  "validation": {
+    "geometryControls": 51,
+    "observabilityControls": 30,
+    "solverParityFrames": [
+      178,
+      894,
+      932
+    ],
+    "gradientChecksPassed": 51,
+    "sameSourceMembershipAndWeights": true,
+    "sameScalarShapeObjectiveAndGradientAfterSplit": true,
+    "syntheticUnequalScaleCurvatureVerified": true,
+    "productionChanged": false,
+    "freshFullRouteReplay": false
+  },
+  "initial_check_outcome": "The diagnostic factor/gradient assertions passed; three final analyzer messages were corrected, and the final saved-data/analyzer check passes.",
+  "limitations": [
+    "Fixed correspondence interventions are anchored at evaluation poses and are offline oracles.",
+    "Diagnostic seeds are same-frame prior default outputs and merge radii are zero; custom controls omit public acceptance gates and coarse search.",
+    "Different residuals change robust weights; source membership and base quality weights are identical.",
+    "Rank changes contribute to the effect of restoring direction or old correspondences; these are not additive causal error percentages.",
+    "References are not newly surveyed groundtruth, map/query share a recording, and calibration is empirical.",
+    "Frame 932 transport/map-geometry bias remains unresolved by these controls; the preceding recursive improvement is not isolated local-factor accuracy.",
+    "The preceding 336 unit tests and 1170-frame route experiments are contextual results, not fresh tests of this diagnosis."
+  ],
+  "final_validation_command": "matlab -batch \"addpath(pwd);addpath('research/anisotropic_regression_20260930');diagnoseAnisotropicRegression;plotRegressionDiagnosis;checkRegressionDiagnosis;\"",
+  "final_validation_exit_code": 0
+}
