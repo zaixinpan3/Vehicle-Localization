@@ -1,0 +1,161 @@
+{
+  "source_commit": "0bac86fd9ed3843d06333122dfd1f137b53ea6c2",
+  "status": "Continuous mechanics verified; production-quality adoption remains unfinished",
+  "production_default": "geometricD2D preserved",
+  "experimental_mode": "anisotropicD2D",
+  "frames_per_replay": 1170,
+  "distinct_tests_passed": 336,
+  "suites_passed": 24,
+  "analyzer_files_clean": 6,
+  "raw_perception_rerun": false,
+  "default_pose_parity_maximum": 0,
+  "continuous_pose_parity_maximum": 0,
+  "routes": [
+    {
+      "variant": "default_verified",
+      "maximumFrame": "932",
+      "maximumErrorM": "0.159861269865301",
+      "rmseM": "0.0611234451258993",
+      "p95M": "0.104464373157195",
+      "full": "1148",
+      "directional": "11",
+      "medianMatchingMs": "11.0065",
+      "frame178ErrorM": "0.0277623360511406",
+      "frame932ErrorM": "0.159861269865301"
+    },
+    {
+      "variant": "continuous_verified",
+      "maximumFrame": "894",
+      "maximumErrorM": "0.580282803107217",
+      "rmseM": "0.0897333781269144",
+      "p95M": "0.188183002747126",
+      "full": "1140",
+      "directional": "27",
+      "medianMatchingMs": "9.2285",
+      "frame178ErrorM": "0.466576671916302",
+      "frame932ErrorM": "0.0774189935029786"
+    },
+    {
+      "variant": "full_covariance",
+      "maximumFrame": "894",
+      "maximumErrorM": "0.580282803107217",
+      "rmseM": "0.0897333781269144",
+      "p95M": "0.188183002747126",
+      "full": "1140",
+      "directional": "27",
+      "medianMatchingMs": "8.3635",
+      "frame178ErrorM": "0.466576671916302",
+      "frame932ErrorM": "0.0774189935029786"
+    },
+    {
+      "variant": "power2",
+      "maximumFrame": "599",
+      "maximumErrorM": "0.460452876563158",
+      "rmseM": "0.0926694292946922",
+      "p95M": "0.183617731637363",
+      "full": "1132",
+      "directional": "34",
+      "medianMatchingMs": "9.1865",
+      "frame178ErrorM": "0.232864848268989",
+      "frame932ErrorM": "0.178490054104678"
+    },
+    {
+      "variant": "power3",
+      "maximumFrame": "1110",
+      "maximumErrorM": "0.863598302442494",
+      "rmseM": "0.151889163219244",
+      "p95M": "0.340811985654921",
+      "full": "1101",
+      "directional": "36",
+      "medianMatchingMs": "9.738",
+      "frame178ErrorM": "0.160462617748896",
+      "frame932ErrorM": "0.102154068910286"
+    },
+    {
+      "variant": "point_soft_only",
+      "maximumFrame": "894",
+      "maximumErrorM": "0.580282803107217",
+      "rmseM": "0.0893391667541188",
+      "p95M": "0.183731593435025",
+      "full": "1139",
+      "directional": "28",
+      "medianMatchingMs": "6.812",
+      "frame178ErrorM": "0.477598339265545",
+      "frame932ErrorM": "0.0777010566135348"
+    },
+    {
+      "variant": "point_soft_power2",
+      "maximumFrame": "599",
+      "maximumErrorM": "0.460452876563158",
+      "rmseM": "0.0920831733153658",
+      "p95M": "0.180595424392848",
+      "full": "1132",
+      "directional": "34",
+      "medianMatchingMs": "7.846",
+      "frame178ErrorM": "0.232864848319194",
+      "frame932ErrorM": "0.180595424392848"
+    },
+    {
+      "variant": "neighborhood4",
+      "maximumFrame": "178",
+      "maximumErrorM": "0.414232187135383",
+      "rmseM": "0.0869936259405008",
+      "p95M": "0.181767589384225",
+      "full": "1137",
+      "directional": "30",
+      "medianMatchingMs": "9.9365",
+      "frame178ErrorM": "0.414232187135383",
+      "frame932ErrorM": "0.0785988299938316"
+    },
+    {
+      "variant": "neighborhood2",
+      "maximumFrame": "178",
+      "maximumErrorM": "0.469659426776357",
+      "rmseM": "0.0875726216387815",
+      "p95M": "0.186245065742788",
+      "full": "1138",
+      "directional": "29",
+      "medianMatchingMs": "9.6895",
+      "frame178ErrorM": "0.469659426776357",
+      "frame932ErrorM": "0.0786788371360159"
+    },
+    {
+      "variant": "orientation_overlap",
+      "maximumFrame": "178",
+      "maximumErrorM": "0.480559835695463",
+      "rmseM": "0.0889042724610073",
+      "p95M": "0.189525506764131",
+      "full": "1143",
+      "directional": "24",
+      "medianMatchingMs": "6.9285",
+      "frame178ErrorM": "0.480559835695463",
+      "frame932ErrorM": "0.185236903210514"
+    },
+    {
+      "variant": "orientation_power2",
+      "maximumFrame": "899",
+      "maximumErrorM": "0.68977030447423",
+      "rmseM": "0.111170232164017",
+      "p95M": "0.204673950970541",
+      "full": "1148",
+      "directional": "19",
+      "medianMatchingMs": "8.171",
+      "frame178ErrorM": "0.227162593657387",
+      "frame932ErrorM": "0.172055206946484"
+    }
+  ],
+  "controls": {
+    "prototype_candidates": 9,
+    "prototype_pose_exports_verified": 8,
+    "prototype_metrics_verified": 1,
+    "failed_shadow_check": "Corrected path precedence; original power2 pose export overwritten, original scalar metrics retained and verified"
+  },
+  "limitations": [
+    "Same recording for map and query",
+    "Fine reference is detector output",
+    "Empirical calibration",
+    "No new perception precision/recall or independent-drive validation",
+    "No controlled runtime comparison",
+    "No production-quality improvement"
+  ]
+}

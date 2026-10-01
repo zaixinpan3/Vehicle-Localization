@@ -1,0 +1,7 @@
+file,findings
+config/anisotropicRegistrationConfig.m,0
+localization/prepareSemanticRegistrationGeometry.m,0
+localization/prepareAnisotropicRegistrationGeometry.m,0
+localization/registerSemanticProbabilityCloud.m,0
+localization/gaussianRegistrationResiduals.m,0
+tests/anisotropicRegistrationTest.m,0

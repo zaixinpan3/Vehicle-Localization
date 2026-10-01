@@ -1,5 +1,8 @@
 function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initialPose,cfg,positionAid,additionalSeeds)
 % registerSemanticProbabilityCloud: Semantic Gaussian geometry registration.
+% Select anisotropicRegistrationConfig for continuous full Gaussian overlap.
+% The default remains the validated geometry model until the new probability
+% representation can match its full-route quality. Both use the shared solver.
 % The default GICP-style residuals use both covariances. Elongated ground
 % components constrain their normal direction; poles constrain horizontal XY.
 % Straight neighborhoods optionally add unoriented line-direction residuals
@@ -106,8 +109,8 @@ end
 
 function result=solveGeometry(fixedCloud,movingCloud,initialPose,cfg)
 % Each hypothesis is solved using exactly the same LiDAR-only objective.
-    assert(string(cfg.method)=="geometricD2D",'VehicleLocalization:InvalidRegistrationMethod', ...
-        'Use geometricD2D registration.');
+    assert(any(string(cfg.method)==["anisotropicD2D","geometricD2D"]),'VehicleLocalization:InvalidRegistrationMethod', ...
+        'Use geometricD2D or anisotropicD2D registration.');
     initialPose=double(initialPose(:).');gcfg=cfg.geometric;
     model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initialPose,cfg);
     f=model.fixed;m=model.moving;height=model.height;
