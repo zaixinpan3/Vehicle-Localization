@@ -1,8 +1,9 @@
 # Lateral observer performance: simulation and recorded drives
 
 Evaluation date: 2026-10-01. MATLAB R2026a, YALMIP + SeDuMi. The evaluated
-code is the **working tree** on top of commit `a9d1642`: the lateral observer
-sources, `config/lateralObserverConfig.m` and `tests/lateralObserverTest.m`
+code is the **working tree** as it stood on commit `a9d1642` when the runs
+were made (the later `7bc6271` adds only a separate research folder): the
+lateral observer sources, `config/lateralObserverConfig.m` and `tests/lateralObserverTest.m`
 carry uncommitted ISS-synthesis changes that this task did not author and did
 not modify. `input_hashes.csv` pins every evaluated source, configuration and
 sensor input by SHA-256. No gain, parameter or calibration was changed.
@@ -284,12 +285,19 @@ standard deviation of at most 0.113 degrees. A regression of the error on
 speed and yaw rate explains 48 % of its variance on 12-09-31 with a slope of
 -0.041 m/s per m/s, and 3.5 % on 12-11-24 (`recorded_diagnostics.csv`).
 
-This evaluation does not identify the cause of that offset. It is consistent
-with the earlier diagnosis in `research/mncav_lateral_diagnosis_20260916`,
-which found the reference lateral velocity incompatible with the bicycle
-output equation on this drive. It could lie in the reference frame or heading
-convention, in unmodeled road or vehicle effects, or in the model; the data
-here cannot separate them.
+This evaluation does not by itself identify the cause of that offset. It is
+consistent with the earlier diagnosis in
+`research/mncav_lateral_diagnosis_20260916`, which found the reference
+lateral velocity incompatible with the bicycle output equation on this drive.
+The same-day study `research/max_error_frame_20261001` reaches the matching
+conclusion from the reference alone: on straight samples the INSPVA course
+leads the INSPVA azimuth by 0.7 to 1.6 degrees on 12-09-31 and by a median of
+0.02 degrees on 12-11-24, and the 12-09-31 solution leaves RTK-fixed at
+44.6 s. Taken together, the 12-09-31 score measures a recording-specific
+disagreement between the reference heading and the reference direction of
+travel at least as much as it measures the observer. Whether the vehicle
+truly crabbed is not established; the measured lateral acceleration does not
+support it under the nominal model.
 
 For context, the 2026-09-25 evaluation reported 0.0552 and 0.2502 m/s on the
 same two drives with the vehicle parameters and gains of that date, so the
