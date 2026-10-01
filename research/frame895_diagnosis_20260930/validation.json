@@ -1,0 +1,9 @@
+{
+  "controls": 21,
+  "saved_assertions_passed": true,
+  "source_reconstruction_exact": true,
+  "production_pose_reproduced": true,
+  "reference_controls_offline_only": true,
+  "production_changed": false,
+  "gui_opened": false
+}

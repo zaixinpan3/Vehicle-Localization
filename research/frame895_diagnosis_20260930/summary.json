@@ -1,0 +1,27 @@
+{
+  "frame": 895,
+  "positionErrorM": 0.15871750239000135,
+  "bodyErrorM": [
+    -0.059204685864023353,
+    -0.14726184413031906
+  ],
+  "yawErrorDeg": 0.6933793433494696,
+  "predictionErrorM": 0.15452131789134532,
+  "predictionBodyErrorM": [
+    0.027887720132265582,
+    -0.15198392266520372
+  ],
+  "predictionYawErrorDeg": 0.61832138149802374,
+  "updateBodyM": [
+    -0.087092405996288938,
+    0.0047220785348846411
+  ],
+  "currentPoles": 1,
+  "currentCurbs": 10,
+  "currentSigns": 0,
+  "confirmedPoles": 1,
+  "confirmedCurbs": 14,
+  "confirmedSigns": 0,
+  "sourceReconstructionExact": true,
+  "productionReproduced": true
+}

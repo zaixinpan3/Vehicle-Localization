@@ -128,7 +128,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         end
         cfg.perception.coarseProbabilityCloud.projectionRotation=tilt(:,:,k);
         timer=tic; selectionTimer=tic;
-        local=selectMap(cloud,predicted,radius);
+        local=selectLocalProbabilityCloud(cloud,predicted,radius);
         selectionSeconds=toc(selectionTimer);
         [event,result,sourceHistory]=localizeLidarFrame(frame,local,predicted,scanTime(k),cfg,sourceHistory,motion(k,:));
         candidatePoses(k,:)=result.poseXYTheta;
@@ -205,17 +205,6 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     save(fullfile(outputFolder,'report.mat'),'report','cfg');
     plotReplay(report,outputFolder);
     disp(report.summary);
-end
-
-function cloud=selectMap(full,pose,radius)
-    cloud=full; c=full.components;
-    keep=sum((c.mean-pose(1:2)).^2,2)<=radius^2;
-    cloud.components.mean=c.mean(keep,:);
-    cloud.components.covariance=c.covariance(:,:,keep);
-    cloud.components.numComponents=nnz(keep);
-    for field=["semanticName","mixtureWeight","repeatability","semanticProbability","occupancyProbability","supportAmplitude"]
-        if isfield(c,field), cloud.components.(field)=c.(field)(keep,:); end
-    end
 end
 
 function pose=compose(a,b)

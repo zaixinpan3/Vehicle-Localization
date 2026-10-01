@@ -1,0 +1,15 @@
+{
+  "metricRowsVerified": 28,
+  "frameRows": 8183,
+  "sourceInputHashesUnchanged": 310,
+  "rawCachedMaximumPoseDifference": [
+    1.979060471057892e-09,
+    1.0244548320770264e-08,
+    2.0062995709224651e-10
+  ],
+  "rawCachedAcceptanceIdentical": true,
+  "factoryAnalyzerFiles": 5,
+  "runtimeChecksPassed": true,
+  "allUnitTestsPassed": false,
+  "failedUnitTestRetained": "lateralObserverTest/currentDesignSatisfiesTheOriginalCertificate"
+}

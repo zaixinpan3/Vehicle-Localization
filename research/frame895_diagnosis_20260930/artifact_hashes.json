@@ -1,0 +1,15 @@
+{
+  "research/frame895_diagnosis_20260930/README.md": "f473f20878b11cf96dd98c0a682e76a2a2e5185ed4228868c3beb863433b2f85",
+  "research/frame895_diagnosis_20260930/controls.csv": "d7503ddf3b8885fcae959b92c4f51b4efa0df473fb2c9e92f9b3001c36e57963",
+  "research/frame895_diagnosis_20260930/diagnoseFrame895.m": "2a1b47b7a0e11271c9f2a7745dc115bf4e28aab85b5d600c2ed70ad1914eb9c7",
+  "research/frame895_diagnosis_20260930/input_hashes.json": "d91f9e282fadd72715d107f59e930870788ceb3f0f086df852852999200c43ce",
+  "research/frame895_diagnosis_20260930/objective_forces.csv": "912d3fb8a6861b66b46a01b01ae14ac26ebe786651f9bd34d1271e6e5d4c1c23",
+  "research/frame895_diagnosis_20260930/objectives.csv": "8c61b8080d056eb7821dc862a4b2506e37ed49cc36ab449880a767f1f5f13566",
+  "research/frame895_diagnosis_20260930/prediction_pairs.csv": "f4e4be6c068321d0862d3b8549354db4c3f58b565728632da60eb7cafcdba189",
+  "research/frame895_diagnosis_20260930/production_pairs.csv": "d107113ad14baac8ca6c1e96b02e79ef4be06787a8ff93e53b1d8b9b938e35bf",
+  "research/frame895_diagnosis_20260930/reference_geometry.csv": "678822617f4b8723ecec065b83045c07ba77846220164d288a725b6b7af492d6",
+  "research/frame895_diagnosis_20260930/reference_pairs.csv": "ed1b4881946c4c08cc3827955a6b6ff17d59e04fd751ce84a0cc3c6122c1fd17",
+  "research/frame895_diagnosis_20260930/relative_motion.csv": "59bd66fb86b4c872672a9a953b2dd79995239e865de2c6348fc4265c181558ca",
+  "research/frame895_diagnosis_20260930/summary.json": "86c63958480b4d1038c71e60ba0747d29aedee295448d6c26da81d6e3289a19e",
+  "research/frame895_diagnosis_20260930/validation.json": "6f9f423a23b9bcfaad5525d5d648aa997a748f56379a7457ad79b788fa5bd3ce"
+}
