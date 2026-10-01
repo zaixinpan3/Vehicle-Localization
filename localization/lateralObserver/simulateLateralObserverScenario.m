@@ -4,9 +4,10 @@ function result = simulateLateralObserverScenario(design, cfg)
 % while the longitudinal speed varies sinusoidally, so both the scheduling
 % parameter and its rate are excited; the lateral accelerometer and the
 % gyroscope are corrupted by white noise; and the observer starts from a
-% deliberately wrong lateral velocity. The truth comes from integrating the
-% same LPV model the observer uses, so the residual error measures the
-% observer, not a model mismatch.
+% deliberately wrong lateral velocity. The truth integrates the LPV model of
+% cfg.simulation.plantVehicle. Left empty, the plant is the observer's own
+% vehicle and the residual error measures the observer alone; a different
+% plant vehicle exercises the axle-force mismatch the synthesis rejects.
 %
 % Input:
 %   design: struct from designLateralObserverGains
@@ -18,8 +19,8 @@ function result = simulateLateralObserverScenario(design, cfg)
         cfg = lateralObserverConfig();
     end
     assertLateralVehicleMatches(design,cfg);
-    truth = simulateTruth(design, cfg);
-    measurements = buildMeasurements(truth, design, cfg);
+    truth = simulateTruth(cfg);
+    measurements = buildMeasurements(truth, cfg);
 
     observerCfg = cfg;
     observerCfg.observer.initialState = truth.state(1, :).' + double(cfg.simulation.initialStateError(:));
@@ -33,12 +34,11 @@ function result = simulateLateralObserverScenario(design, cfg)
     result.metrics = metrics;
 end
 
-function truth = simulateTruth(design, cfg)
+function truth = simulateTruth(cfg)
 % simulateTruth: Integrate the true lateral dynamics along the scheduled
 % speed profile with fourth-order Runge-Kutta.
 %
 % Input:
-%   design: struct from designLateralObserverGains
 %   cfg: struct from lateralObserverConfig
 %
 % Output:
@@ -51,7 +51,11 @@ function truth = simulateTruth(design, cfg)
     [longitudinalSpeed, longitudinalAcceleration] = speedProfile(time, cfg);
     steeringAngle = steeringProfile(time, cfg);
     nonlinearity = cfg.observer.nonlinearity;
-    model = design.model;
+    plantVehicle = cfg.simulation.plantVehicle;
+    if isempty(plantVehicle)
+        plantVehicle = cfg.vehicle;
+    end
+    model = lateralBicycleModel(plantVehicle);
 
     state = zeros(numel(time), 2);
     for sampleIdx = 1:(numel(time) - 1)
@@ -175,13 +179,12 @@ function steeringAngle = steeringProfile(time, cfg)
     steeringAngle(time >= waypointTime(end)) = waypointAngle(end);
 end
 
-function measurements = buildMeasurements(truth, design, cfg)
+function measurements = buildMeasurements(truth, cfg)
 % buildMeasurements: Corrupt the true outputs with white measurement noise
 % and assemble the measurement struct consumed by the observer.
 %
 % Input:
 %   truth: struct from simulateTruth
-%   design: struct from designLateralObserverGains
 %   cfg: struct from lateralObserverConfig
 %
 % Output:
@@ -197,7 +200,6 @@ function measurements = buildMeasurements(truth, design, cfg)
         (double(cfg.simulation.lateralAccelerationNoiseStd) .* randn(numSamples, 1));
     measurements.yawRate = truth.yawRate + ...
         (double(cfg.simulation.yawRateNoiseStd) .* randn(numSamples, 1));
-    measurements.designH2Bound = design.h2Bound;
 end
 
 function metrics = computeMetrics(truth, estimate, cfg)

@@ -19,7 +19,8 @@ function model = lateralBicycleModel(vehicle)
 %
 % Output:
 %   model: struct with the affine basis matrices A0, A1, A2, C0, C2, the
-%       constant B and D, and the source vehicle parameters
+%       constant B and D, the axle-force mismatch channel E and F, and the
+%       source vehicle parameters
     requiredFields = ["mass", "yawInertia", "lf", "lr", "frontCorneringStiffness", "rearCorneringStiffness"];
     for fieldName = requiredFields
         assert(isfield(vehicle, fieldName) && isscalar(vehicle.(fieldName)) && ...
@@ -55,4 +56,11 @@ function model = lateralBicycleModel(vehicle)
 
     model.B = [frontStiffness ./ mass; (lf .* frontStiffness) ./ yawInertia];
     model.D = [frontStiffness ./ mass; 0.0];
+
+    % Axle-force mismatch channel. With w = [dFyf; dFyr] / m the error of the
+    % modeled front and rear axle lateral forces per unit vehicle mass, the
+    % true vehicle obeys xdot = A x + B delta + E w and y = C x + D delta +
+    % F w exactly, whatever makes the tire forces differ from the model
+    model.E = [1.0, 1.0; (mass .* lf) ./ yawInertia, -(mass .* lr) ./ yawInertia];
+    model.F = [1.0, 1.0; 0.0, 0.0];
 end

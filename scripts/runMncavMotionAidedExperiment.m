@@ -94,8 +94,9 @@ function report=runMncavMotionAidedExperiment(outputFolder,options)
         'lateralDesign','lateral','lateralInput','legacyMatched','frameIndices','-v7.3');
     fid=fopen(fullfile(outputFolder,'summary.json'),'w');assert(fid>=0);
     fprintf(fid,'%s\n',jsonencode(summary,PrettyPrint=true));fclose(fid);
-    gains=struct('vehicle',lateralCfg.vehicle,'lateralGains',lateralDesign.gains, ...
-        'lateralH2Bound',lateralDesign.h2Bound,'physicalGlobalGains',cfg.gains,'globalCertificate',design);
+    gains=struct('vehicle',lateralCfg.vehicle,'lateralVertexGains',lateralDesign.vertexGains, ...
+        'lateralDecayRate',lateralDesign.decayRate,'lateralIssGain',lateralDesign.issGain, ...
+        'physicalGlobalGains',cfg.gains,'globalCertificate',design);
     fid=fopen(fullfile(outputFolder,'gains.json'),'w');assert(fid>=0);
     fprintf(fid,'%s\n',jsonencode(gains,PrettyPrint=true));fclose(fid);
     fig=figure('Color','w','Name','MnCAV motion-aided localization','Position',[100,100,1300,820]);

@@ -52,6 +52,36 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(model.D(1), vehicle.frontCorneringStiffness ./ vehicle.mass, AbsTol=1.0e-12);
         end
 
+        function mismatchChannelReproducesAStiffnessError(testCase)
+        % mismatchChannelReproducesAStiffnessError: A vehicle with other
+        % cornering stiffnesses differs from the nominal model exactly by
+        % the axle-force errors per unit mass entering through E and F,
+        % which is the disturbance the synthesis is designed against.
+            cfg = lateralObserverConfig();
+            vehicle = cfg.vehicle;
+            model = lateralBicycleModel(vehicle);
+            trueVehicle = vehicle;
+            trueVehicle.frontCorneringStiffness = 0.8 .* vehicle.frontCorneringStiffness;
+            trueVehicle.rearCorneringStiffness = 1.25 .* vehicle.rearCorneringStiffness;
+            trueModel = lateralBicycleModel(trueVehicle);
+            longitudinalSpeed = 17.0;
+            state = [0.4; -0.12];
+            steeringAngle = 0.03;
+            rho = [longitudinalSpeed; 1.0 ./ longitudinalSpeed];
+            [A, C] = evaluateLateralModel(model, rho);
+            [trueA, trueC] = evaluateLateralModel(trueModel, rho);
+
+            frontSlip = steeringAngle - ((state(1) + (vehicle.lf .* state(2))) ./ longitudinalSpeed);
+            rearSlip = -(state(1) - (vehicle.lr .* state(2))) ./ longitudinalSpeed;
+            mismatch = [(trueVehicle.frontCorneringStiffness - vehicle.frontCorneringStiffness) .* frontSlip; ...
+                (trueVehicle.rearCorneringStiffness - vehicle.rearCorneringStiffness) .* rearSlip] ./ vehicle.mass;
+
+            testCase.verifyEqual((trueA * state) + (trueModel.B .* steeringAngle), ...
+                (A * state) + (model.B .* steeringAngle) + (model.E * mismatch), AbsTol=1.0e-12);
+            testCase.verifyEqual((trueC * state) + (trueModel.D .* steeringAngle), ...
+                (C * state) + (model.D .* steeringAngle) + (model.F * mismatch), AbsTol=1.0e-12);
+        end
+
         function schedulingTriangleCoversTheSpeedRange(testCase)
         % schedulingTriangleCoversTheSpeedRange: The barycentric coordinates of
         % every scheduling point in the speed range are nonnegative and sum to
@@ -92,29 +122,74 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             end
         end
 
+        function schedulingRateMatchesNumericalDerivative(testCase)
+        % schedulingRateMatchesNumericalDerivative: The analytic alphaRate used
+        % by the Pdot term agrees with a finite difference of alpha along a
+        % speed trajectory of the given longitudinal acceleration.
+            cfg = lateralObserverConfig();
+            polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
+            speed = 12.0;
+            acceleration = 2.5;
+            stepTime = 1.0e-6;
+
+            [~, alphaRate] = schedulingCoordinates(polytope, speed, acceleration);
+            alphaBefore = schedulingCoordinates(polytope, speed - (acceleration .* stepTime));
+            alphaAfter = schedulingCoordinates(polytope, speed + (acceleration .* stepTime));
+            numericalRate = (alphaAfter - alphaBefore) ./ (2.0 .* stepTime);
+
+            testCase.verifyEqual(alphaRate, numericalRate, AbsTol=1.0e-6);
+        end
+
         function currentDesignSatisfiesTheOriginalCertificate(testCase)
-        % currentDesignSatisfiesTheOriginalCertificate: The stored vertex gains
-        % satisfy the pre-convexification conditions of the proposition at
-        % every grid speed: negative definite Lyapunov derivative, H2 quantity
-        % below mu, and a stable error matrix. The check is repeated here with
-        % the blended gain so the stored margins are not taken on trust.
+        % currentDesignSatisfiesTheOriginalCertificate: The vertex gains
+        % satisfy the pre-convexification ISS certificate at every grid point:
+        % the Lyapunov derivative with the Pdot term, the decay rate, and the
+        % Lipschitz margin is negative definite, the normalized mismatch and
+        % measurement channels close with the reported ISS gain, the
+        % Lyapunov matrix respects P >= I, and the disturbance-free error
+        % matrix is stable. The mismatch channel makes output injection
+        % necessary, so the gains are not zero, and the minimum-gain program
+        % keeps the ISS gain within the configured relaxation of its optimum
+        % and every vertex gain within its bound. The check is repeated here
+        % with the blended gain and Lyapunov matrix so the reported margins
+        % are not taken on trust.
             design = testCase.CurrentDesign;
             testCase.verifyTrue(design.certified);
             testCase.verifyLessThan(design.maxCertificateMargin, 0);
             testCase.verifyLessThan(design.maxErrorEigenvalueRealPart, 0);
-            testCase.verifyLessThan(max(design.h2Values), design.h2Bound);
+            testCase.verifyGreaterThan(design.issGain, 0);
+            testCase.verifyEqual(design.issGainLimit, ...
+                (1.0 + design.cfg.synthesis.issGainRelaxation) .* design.optimalIssGain, RelTol=1.0e-12);
+            testCase.verifyLessThanOrEqual(design.issGain, design.issGainLimit .* (1.0 + 1.0e-6));
+            for vertexIdx = 1:3
+                testCase.verifyLessThanOrEqual(norm(design.vertexGains(:, :, vertexIdx)), ...
+                    design.vertexGainBounds(vertexIdx) + 1.0e-6);
+            end
+            testCase.verifyLessThanOrEqual(design.mismatchIssGain, design.issGain .* (1.0 + 1.0e-9));
+            testCase.verifyLessThanOrEqual(design.measurementIssGain, design.issGain .* (1.0 + 1.0e-9));
+            testCase.verifyEqual(design.errorBound, design.issGain ./ sqrt(2.0 .* design.decayRate), RelTol=1.0e-12);
             testCase.verifyEqual(size(design.vertexGains), [2, 2, 3]);
             testCase.verifyTrue(all(isfinite(design.vertexGains(:))));
+            testCase.verifyGreaterThan(design.maxVertexGainNorm, 0.1);
+            mismatchWeight = diag(design.axleForceMismatchScale);
+            measurementWeight = diag(design.measurementErrorScale);
 
-            P = design.lyapunovMatrix;
-            testCase.verifyGreaterThan(min(eig((P + P.') ./ 2.0)), 0);
             for point = design.grid.points.'
-                L = scheduleLateralObserverGain(design, point.speed);
+                [L, P] = scheduleLateralObserverGain(design, point.speed);
+                testCase.verifyGreaterThanOrEqual(min(eig((P + P.') ./ 2.0)), 1.0 - 1.0e-6);
+                PRate = (point.alphaRate(1) .* design.lyapunovBasis(:, :, 1)) + ...
+                    (point.alphaRate(2) .* design.lyapunovBasis(:, :, 2)) + ...
+                    (point.alphaRate(3) .* design.lyapunovBasis(:, :, 3));
                 closedLoop = point.A - (L * point.C);
-                certificate = (P * closedLoop) + (closedLoop.' * P) + design.errorWeight + ...
-                    (design.tau .* (P * P)) + ((design.lipschitzConstant.^2 ./ design.tau) .* eye(2));
-                testCase.verifyLessThan(max(eig((certificate + certificate.') ./ 2.0)), 0);
-                testCase.verifyLessThan(trace(L.' * P * L), design.h2Bound);
+                lyapunovBlock = (P * closedLoop) + (closedLoop.' * P) + PRate + ...
+                    (2.0 .* design.decayRate .* P) + (design.tau .* (P * P)) + ...
+                    ((design.lipschitzConstant.^2 ./ design.tau) .* eye(2));
+                testCase.verifyLessThan(max(eig((lyapunovBlock + lyapunovBlock.') ./ 2.0)), 0);
+                disturbanceInput = [(design.model.E - (L * design.model.F)) * mismatchWeight, -L * measurementWeight];
+                certificate = [lyapunovBlock, P * disturbanceInput; ...
+                    (P * disturbanceInput).', -(design.issGain.^2) .* eye(4)];
+                testCase.verifyLessThanOrEqual(max(eig((certificate + certificate.') ./ 2.0)), 1.0e-9);
+                testCase.verifyLessThan(max(real(eig(closedLoop))), 0);
             end
         end
 
@@ -136,7 +211,11 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             alpha = schedulingCoordinates(polytope, interiorSpeed);
             expected = (alpha(1) .* vertexGains(:, :, 1)) + (alpha(2) .* vertexGains(:, :, 2)) + ...
                 (alpha(3) .* vertexGains(:, :, 3));
-            testCase.verifyEqual(scheduleLateralObserverGain(design, interiorSpeed), expected, AbsTol=1.0e-12);
+            [interiorGain, interiorP] = scheduleLateralObserverGain(design, interiorSpeed);
+            testCase.verifyEqual(interiorGain, expected, AbsTol=1.0e-12);
+            expectedP = (alpha(1) .* design.lyapunovBasis(:, :, 1)) + (alpha(2) .* design.lyapunovBasis(:, :, 2)) + ...
+                (alpha(3) .* design.lyapunovBasis(:, :, 3));
+            testCase.verifyEqual(interiorP, expectedP, AbsTol=1.0e-12);
             testCase.verifyGreaterThan(min(alpha), 0, "The interior speed should use all three vertices.");
 
             belowRange = scheduleLateralObserverGain(design, polytope.speedRange(1) - 5.0);
@@ -192,6 +271,27 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyLessThan(result.metrics.settledLateralVelocityRmse, ...
                 0.05 .* result.metrics.peakLateralVelocity);
             testCase.verifyTrue(all(isfinite(result.estimate.state(:))));
+        end
+
+        function feedbackReducesTheErrorOfAMismatchedPlant(testCase)
+        % feedbackReducesTheErrorOfAMismatchedPlant: With a plant whose rear
+        % cornering stiffness is 30 percent below the model, the synthesized
+        % gains estimate the lateral velocity better than the same observer
+        % with zero gains, which is the open-loop bicycle model the
+        % mismatch-free synthesis used to return.
+            design = testCase.CurrentDesign;
+            cfg = design.cfg;
+            cfg.simulation.plantVehicle = cfg.vehicle;
+            cfg.simulation.plantVehicle.rearCorneringStiffness = 0.7 .* cfg.vehicle.rearCorneringStiffness;
+            openLoop = design;
+            openLoop.vertexGains = zeros(2, 2, 3);
+
+            designed = simulateLateralObserverScenario(design, cfg);
+            modelOnly = simulateLateralObserverScenario(openLoop, cfg);
+
+            testCase.verifyGreaterThan(modelOnly.metrics.settledLateralVelocityRmse, 0.1);
+            testCase.verifyLessThan(designed.metrics.settledLateralVelocityRmse, ...
+                0.7 .* modelOnly.metrics.settledLateralVelocityRmse);
         end
 
         function sideSlipRateIsConsistentWithTheSideSlipAngle(testCase)
@@ -369,9 +469,9 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             resolved = designLateralObserverGains(design.cfg);
 
             testCase.verifyEqual(resolved.tau, design.tau);
-            testCase.verifyEqual(resolved.h2Bound, design.h2Bound, RelTol=1.0e-4);
+            testCase.verifyEqual(resolved.slackScale, design.slackScale);
+            testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
-            testCase.verifyEqual(resolved.lyapunovMatrix, design.lyapunovMatrix, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.certified);
         end
     end

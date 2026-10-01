@@ -1,9 +1,11 @@
 function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
 % The vehicle group defines the 2-DOF lateral bicycle model; the scheduling
-% group defines the speed range covered by the polytope and the speed grid
-% on which the synthesis LMIs are imposed; the synthesis group holds the
-% Lipschitz bound, the error weighting, and the LMI solver settings; the
+% group defines the speed range covered by the polytope and the design grid
+% over speed and longitudinal acceleration; the synthesis group holds the
+% Lipschitz bound, the certified decay rate, the scales of the axle-force
+% mismatch and measurement-error channels, the Finsler multiplier scales,
+% and the LMI solver settings; the
 % observer group configures the online integration; the hybrid group defines
 % the division-free master estimator and its bumpless correction channels;
 % the simulation group defines the synthetic scenario used to exercise the
@@ -38,27 +40,40 @@ function cfg = lateralObserverConfig(profile)
     cfg.outputPoint = jsondecode(fileread(fullfile(fileparts(mfilename("fullpath")), ...
         "mncavMotionOutputPoint.json")));
 
-    % Scheduling parameter rho = [Vx; 1/Vx] and the speed grid over it. The
-    % gain is affine in the barycentric coordinates of rho on the triangle
-    % over speedRange, so the synthesis returns three vertex gains and the
-    % grid only fixes where the LMIs are imposed. The Lyapunov matrix is
-    % constant, so the certificate holds for any longitudinal acceleration.
+    % Scheduling parameter rho = [Vx; 1/Vx] and the design grid over it.
+    % The gain and the Lyapunov matrix are affine in the barycentric
+    % coordinates of rho on the triangle over speedRange, so the synthesis
+    % returns three vertex gains and the grid only fixes where the LMIs are
+    % imposed. The LMI is affine in the longitudinal acceleration through
+    % Pdot, so the two extreme accelerations already cover the whole interval.
     cfg.scheduling = struct();
     cfg.scheduling.speedRange = [5.0, 30.0];
+    cfg.scheduling.longitudinalAccelerationRange = [-3.0, 3.0];
     cfg.scheduling.speedGridCount = 9;
+    cfg.scheduling.accelerationGridCount = 2;
 
-    % H2 synthesis: Lipschitz bound of the unmodeled nonlinearity, the
-    % error weighting Q of the performance output z = Q^(1/2) e, and the
-    % fixed scalar tau of Young's inequality (searched over candidates).
+    % ISS synthesis: Lipschitz bound of the copied nonlinearity, the
+    % certified decay rate kappa of Vdot <= -2 kappa V + gamma^2 d'd (the
+    % disturbance-free error decays at least as exp(-kappa t)), the fixed
+    % scalar tau of Young's inequality, and the scale epsilon of the Finsler
+    % multiplier [X; epsilon X; 0]. Both scalars are searched over
+    % candidates and the pair with the smallest ISS gain gamma is kept. The
+    % disturbance d stacks the axle-force model mismatch and the measurement
+    % error, each divided by its scale at the end of this file; their ratio
+    % is what trades model trust against measurement trust. The smallest
+    % gains whose ISS gain stays within issGainRelaxation of that optimum
+    % are the design, which fixes the gains at the speeds that do not set
+    % the worst case and keeps the error poles no faster than needed.
     cfg.synthesis = struct();
     cfg.synthesis.lipschitzConstant = 0.5;
-    cfg.synthesis.errorWeight = eye(2);
-    cfg.synthesis.tauCandidates = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0];
-    cfg.synthesis.pFloor = 1.0e-4;
+    cfg.synthesis.decayRate = 2.0;
+    cfg.synthesis.issGainRelaxation = 0.05;
+    cfg.synthesis.tauCandidates = [0.01, 0.03, 0.1, 0.3, 1.0];
+    cfg.synthesis.slackScaleCandidates = [0.001, 0.003, 0.01, 0.03, 0.1];
     cfg.synthesis.pCeiling = 1.0e6;
-    % Minimizing mu pushes the solution onto the constraint boundary, so
-    % strictnessEpsilon is what buys a real margin in the certificate that
-    % designLateralObserverGains re-checks afterwards.
+    % Minimizing the ISS gain pushes the solution onto the constraint
+    % boundary, so strictnessEpsilon is what buys a real margin in the
+    % certificate that designLateralObserverGains re-checks afterwards.
     cfg.synthesis.strictnessEpsilon = 1.0e-6;
     cfg.synthesis.solver = "sedumi";
     cfg.synthesis.verbose = 0;
@@ -150,6 +165,8 @@ function cfg = lateralObserverConfig(profile)
     % tire regime the 2-DOF model assumes
     cfg.simulation.steeringWaypointDeg = [0.0, 2.0, -2.0, 1.8, -1.8, 2.0, -1.4, 1.6, 0.0];
     cfg.simulation.initialStateError = [0.5; 0.05];
+    % Vehicle of the simulated plant; empty means the observer's own vehicle
+    cfg.simulation.plantVehicle = [];
     cfg.simulation.randomSeed = 2026;
     sensors = mncavSensorConfig();
     cfg.sensorParameterProvenance = sensors;
@@ -158,4 +175,20 @@ function cfg = lateralObserverConfig(profile)
     cfg.simulation.lateralAccelerationNoiseStd = ...
         sensors.lateralSimulation.lateralAccelerationNoiseStdMps2;
     cfg.simulation.yawRateNoiseStd = sensors.lateralSimulation.yawRateNoiseStdRadps;
+
+    % Disturbance scales of the ISS synthesis. The axle-force mismatch is
+    % the declared cornering-stiffness uncertainty acting on the static
+    % share of each axle at the lateral acceleration up to which the linear
+    % model participates fully; it is a specific force in m/s^2 for
+    % [front; rear]. The measurement error is the declared sensor bias
+    % stress plus one noise standard deviation for [ay; r].
+    stiffnessUncertainty = max(abs(double(parameters.sensitivityFactors(:)) - 1.0));
+    axleShare = [cfg.vehicle.lr; cfg.vehicle.lf] ./ (cfg.vehicle.lf + cfg.vehicle.lr);
+    cfg.synthesis.axleForceMismatchScale = stiffnessUncertainty .* ...
+        cfg.hybrid.dynamic.fullLateralAcceleration .* axleShare;
+    cfg.synthesis.measurementErrorScale = [ ...
+        max(abs(double(sensors.lateralSimulation.lateralAccelerationBiasStressMps2(:)))) + ...
+        cfg.simulation.lateralAccelerationNoiseStd; ...
+        max(abs(double(sensors.lateralSimulation.yawRateBiasStressRadps(:)))) + ...
+        cfg.simulation.yawRateNoiseStd];
 end

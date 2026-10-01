@@ -238,10 +238,15 @@ body-frame bicycle state `[v_y, r]`, with steering as input and `[a_y, r]` from
 the IMU as output, but is evaluated only inside its certified positive-speed
 interval. Both LPV matrices are affine in `rho = [Vx; 1/Vx]` and are represented
 exactly on a triangle around the scheduling arc. `designLateralObserverGains`
-synthesizes one gain per triangle vertex from a quadratic Lyapunov function,
-`scheduleLateralObserverGain` blends the three with the barycentric coordinates
-of the current speed, and the synthesis re-checks that blend against the
-original certificate at every design speed.
+synthesizes one gain per triangle vertex from a parameter-dependent Lyapunov
+function through a Finsler slack matrix: the vertex gains whose blend has the
+smallest input-to-state gain from axle-force model mismatch and measurement
+error to the estimation error at the configured decay rate. The mismatch
+channel (`model.E`, `model.F`) carries any error of the modeled tire forces,
+so the gains trade trust in the bicycle model against trust in the IMU.
+`scheduleLateralObserverGain` blends the three gains with the barycentric
+coordinates of the current speed, and the synthesis re-checks that blend
+against the original certificate at every design point.
 
 Stationary zero-velocity information, a soft crawl-speed kinematic constraint,
 and the hidden LPV lateral-velocity estimate enter the master through separate
@@ -399,7 +404,7 @@ selfScore = scoreSemanticProbabilityCloudAlignment( ...
 [scores, queryInfo] = queryTemporalStabilityGmmMap(probabilityCloudMap, queryXY, "pole");
 % queryInfo.valid identifies coverage; invalid scores are NaN.
 
-design = designLateralObserverGains(lateralObserverConfig("mncav")); % nominal MnCAV LPV H2 synthesis
+design = designLateralObserverGains(lateralObserverConfig("mncav")); % nominal MnCAV LPV ISS synthesis
 estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
 
 lateral = designLateralObserverGains(); % current MnCAV; requires YALMIP/SDP
