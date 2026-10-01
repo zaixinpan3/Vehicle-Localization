@@ -1,0 +1,6 @@
+frame,originalFinePoints,finePointsInRoi,coveredFinePoints,selectedPillars,zeroFinePillars,acceptedBoundaryFits,reproductionMaxM,boundaryEnabled
+891,137,137,76,21,1,19,0,1
+892,117,117,78,20,1,17,0,1
+893,140,140,72,24,2,19,0,1
+894,83,83,71,30,3,20,0,1
+895,99,99,56,19,2,16,0,1

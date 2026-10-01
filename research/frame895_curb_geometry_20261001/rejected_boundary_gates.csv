@@ -1,0 +1,12 @@
+variant,frame,pillar,insideOriginalPillar,deltaColumn,deltaRow
+frame895_outside_boundary,895,5947,0,0,-1
+window_outside_boundaries,892,5861,0,0,1
+window_outside_boundaries,892,6162,0,0,-1
+window_outside_boundaries,892,6447,0,0,-1
+window_outside_boundaries,893,6247,0,0,-1
+window_outside_boundaries,893,6347,0,0,-1
+window_outside_boundaries,893,6446,0,0,1
+window_outside_boundaries,894,5761,0,0,1
+window_outside_boundaries,894,6147,0,0,-1
+window_outside_boundaries,895,5947,0,0,-1
+frame895_drop_bad_pillar,895,5947,0,0,-1

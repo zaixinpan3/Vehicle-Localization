@@ -1,0 +1,35 @@
+{
+  "matlabVersion": "26.1.0.3276743 (R2026a) Update 3",
+  "baselineErrorM": 0.15871750239000135,
+  "freshFramesReproducedExactly": [
+    891,
+    892,
+    893,
+    894,
+    895
+  ],
+  "sourceWindowReproducedExactly": true,
+  "publishedCovarianceDecompositionVerified": true,
+  "frozenFactorOptimizationsConverged": 8,
+  "productionShapeControlsAccepted": 6,
+  "angleOnlyPositionErrorM": 0.073171579423734839,
+  "allCurbWithinShapeErrorM": 0.06510373857382408,
+  "allCurbWithinShapeReferenceTransportErrorM": 0.028006582380288223,
+  "factoryAnalyzedFiles": [
+    "analyzeCurbGeometry895.m",
+    "auditFallbackAndMap895.m",
+    "compareMapShapeSemantics895.m",
+    "isolateCurbFactors895.m",
+    "validateDiagnosis895.m"
+  ],
+  "factoryAnalyzerFindings": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "productionSourceChanged": false,
+  "fullRouteRerun": false,
+  "desktopWindowOpened": false
+}
