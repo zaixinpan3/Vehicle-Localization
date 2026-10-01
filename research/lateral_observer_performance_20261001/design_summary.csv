@@ -1,0 +1,2 @@
+tau,slackScale,decayRatePerSecond,lipschitzConstant,gainBound,maxVertexGainNorm,issGain,designGridMaxPsiEigenvalue,denseGridPoints,denseMaxPsiEigenvalue,densePositivePsiPoints,denseMaxNoiseBlockEigenvalue,densePositiveNoisePoints,denseMinimumPEigenvalue,denseMaxFrozenPoleRealPart
+0.1,0.003,2,0.5,9.45890833993388e-11,5.47837878190788e-10,3.43267133343981e-09,-0.051986176678551,3003,-0.051986176678551,0,9.66338016937285e-13,0,1.42361771170823,-4.3295363084968

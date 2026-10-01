@@ -1,0 +1,9 @@
+quantity,maximumAbsoluteDifference,tolerance,passed
+truthState,1.11022302462516e-16,1e-10,1
+truthLateralAcceleration,1.33226762955019e-15,1e-10,1
+truthOutputLateralVelocity,2.22044604925031e-16,1e-10,1
+truthSideSlipAngle,1.38777878078145e-17,1e-10,1
+measuredLateralAcceleration,1.33226762955019e-15,1e-10,1
+measuredYawRate,5.55111512312578e-17,1e-10,1
+estimatedLateralVelocity,2.22044604925031e-16,1e-10,1
+tenSubstepPlantVersusOneStep,3.96174487660161e-09,1e-05,1
