@@ -3,7 +3,7 @@ function cfg=fullObserverConfig()
 % Source alignment is offline bracket interpolation with declared wait.
 % Measurement channels have zero perception delay; no pose transport occurs.
     cfg=motionAidedObserverConfig();
-    cfg.kind="full-synchronous-observer-v2";
+    cfg.kind="full-synchronous-observer-v3";
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('positionGain',1,'headingGain',.5, ...
@@ -16,9 +16,5 @@ function cfg=fullObserverConfig()
     cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2), ...
         'headingStdRad',0,'identifier',"coincident-output-points");
     cfg.lidar.maximumAge=.2;
-    % The synchronous observer learns both body-velocity bias components from
-    % past accepted LiDAR displacement. No reference velocity enters this fit.
-    cfg.bias=struct('enabled',true,'window',2,'maximumGap',.25, ...
-        'timeConstant',4,'maximumMagnitude',.8,'minimumSpeed',5);
     cfg.initialHeading=0;
 end

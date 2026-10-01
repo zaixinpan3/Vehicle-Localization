@@ -1,0 +1,10 @@
+{
+  "research/remove_lidar_velocity_bias_20260930/README.md": "ca5e7cd352ca8d7d186aec958fc3384bec47b56afddc7704f542cb883719de74",
+  "research/remove_lidar_velocity_bias_20260930/code_analyzer.csv": "07850c15aa72fb606e7bb913dceea229a3d19ab2462f875fd51b6e9e4d91a3a6",
+  "research/remove_lidar_velocity_bias_20260930/input_hashes.json": "b17afc65aa96921a4f4d4fdcd14a02a7ae915891d7d8ef310703b038a5c13601",
+  "research/remove_lidar_velocity_bias_20260930/replay_validation.json": "e56743c5a023cdd83b8c29ea4763c2be9a5acc2c77b83d86081c899a8c3883b2",
+  "research/remove_lidar_velocity_bias_20260930/synthetic_metrics.csv": "962d201588a6225d6a528fa8535864e6756890d5314bee821a28269089fe1c13",
+  "research/remove_lidar_velocity_bias_20260930/tests.csv": "7e1df468d4b3cfb3f30bc8b09ec3706e1250b37c79772a3dd5323111fbae7d47",
+  "research/remove_lidar_velocity_bias_20260930/validateRemoval.m": "452cf0353c982bbf161cd94211aad64d271da53c036efaea85e79ba1df953cc8",
+  "research/remove_lidar_velocity_bias_20260930/validation.json": "10366b942e5f4d50e892b7a3a51a03cd51913e6248e4cc6ca482e288cc505b09"
+}

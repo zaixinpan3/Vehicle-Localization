@@ -1,0 +1,37 @@
+{
+  "uniqueTests": 115,
+  "testSuites": 6,
+  "passedTests": 115,
+  "failedTests": 0,
+  "incompleteTests": 0,
+  "newMotionContractTests": 6,
+  "initialLaunch": {
+    "tests": 115,
+    "failedIncompleteTest": "improvedObserverTest/defaultLateralStageMatchesItsSuppliedOutput",
+    "reason": "Existing YALMIP/SeDuMi paths were absent from this MATLAB invocation.",
+    "resolution": "Added existing sibling dependency paths and reran all 46 improvedObserverTest cases; all passed."
+  },
+  "physicalCalibrationNumbersUnchanged": true,
+  "priorSourceHashesChecked": 310,
+  "unchangedPriorSourceHashes": 296,
+  "expectedChangedOrRemovedSources": [
+    "config/fullObserverConfig.m",
+    "config/mncavFullObserverConfig.m",
+    "config/mncavMotionOutputPoint.json",
+    "localization/correctLateralVelocityFromLidar.m",
+    "localization/runFullLocalizationObserver.m",
+    "localization/runSynchronousLocalizationObserver.m",
+    "scripts/calibrateMncavMotionOutputPoint.m",
+    "scripts/runMncavInterfaceCorrectionComparison.m",
+    "scripts/validateFullLocalizationObserver.m",
+    "scripts/validateSyntheticLocalizationCascade.m",
+    "tests/fullLocalizationObserverTest.m",
+    "tests/lidarVelocityConsistencyTest.m",
+    "tests/synchronousLocalizationTest.m",
+    "tests/gnssOutputPointTest.m"
+  ],
+  "syntheticSmokeScenario": "noisy_both, 90 s, seed 20260929; current vehicle and freshly synthesized gains",
+  "fullSyntheticScenarioMatrixRerun": false,
+  "newClosedLoopRecordedMatchingRun": false,
+  "historicalStudyReproduction": "Use the original study commit, including a27ae36e7fbd3472949f3f5ea6c460733949e81c for the preceding observer diagnosis; prior results were not rewritten."
+}

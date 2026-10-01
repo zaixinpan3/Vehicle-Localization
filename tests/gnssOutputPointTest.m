@@ -83,7 +83,7 @@ function f=fixture()
     g=struct('time',t,'position',position,'valid',true(n,1),'information',repmat(100*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[position,yaw],'valid',true(n,1),'information',repmat(100*eye(3),1,1,n),'delay',0);
     lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
-    cfg=fullObserverConfig;cfg.bias.enabled=false;cfg.initialState=[0;v;0;0;0;v*r;0];
+    cfg=fullObserverConfig;cfg.initialState=[0;v;0;0;0;v*r;0];
     f=struct('data',struct('highRate',h,'gnss',g,'lidar',l),'cfg',cfg,'lateral',lateral);
 end
 

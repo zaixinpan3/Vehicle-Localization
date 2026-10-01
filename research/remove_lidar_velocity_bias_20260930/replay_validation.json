@@ -1,0 +1,17 @@
+{
+  "frames": 1169,
+  "pairedFrames": 1121,
+  "configurationKind": "mncav-synchronous-aligned-observer-v5",
+  "priorDisabledLearningMaximumStateDifference": 0,
+  "futureMutationPrefixDifference": 0,
+  "removedConfigurationAndDiagnostics": true,
+  "allStatesFinite": true,
+  "pairedPositionRmseM": 0.19704008125180342,
+  "after2SecondsPositionRmseM": 0.197033098861585,
+  "after2SecondsMaximumM": 0.37515423489793837,
+  "maximumFrame": 1151,
+  "frame847ErrorM": 0.22995059481446628,
+  "scope": "Removal regression on 1169 frozen LiDAR-only packets and saved current-vehicle motion/lateral inputs. Matches the preceding disabled-learning control exactly; not a new closed-loop matching run or an accuracy improvement claim.",
+  "codeAnalyzerFiles": 13,
+  "codeAnalyzerFindings": 0
+}

@@ -34,5 +34,5 @@
       "locallyFittedOffsetM": 2.3245549906487724
     }
   ],
-  "interpretation": "Empirical effective lever arm absorbing installation geometry and lateral-model error; not a surveyed IMU position. The 12-09-31 drive carries an additional constant lateral offset left to the online bias learner."
+  "interpretation": "Empirical effective lever arm absorbing installation geometry and lateral-model error; not a surveyed IMU position. Held-out lateral discrepancies remain in the supplied motion input; no LiDAR-derived velocity-bias compensation is applied."
 }

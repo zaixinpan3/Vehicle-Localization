@@ -13,6 +13,7 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % GNSS heading is reconstructed from past position displacement and integrated
 % body motion, and used only without qualified LiDAR yaw. At insufficient
 % motion it is disabled, rather than claiming stationary yaw observability.
+% Both runtimes use wheel and lateral velocities without LiDAR-derived bias.
     arguments
         data (1,1) struct
         lateralDesign (1,1) struct
@@ -61,25 +62,23 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
     assert(isnumeric(x) && numel(x)==7 && all(isfinite(x)), ...
         'VehicleLocalization:InvalidFullInitialState','Supply a finite seven-state initial condition.');
     x=x(:);ig=1;il=1;ih=1;io=1;g=emptyAnchor(2);l=emptyAnchor(3);
-    gyro=0;bodyIntegral=0;rawIntegral=0;rotationIntegral=0;
-    gh=emptyHistory();lh=emptyHistory();targetBias=0;bias=0;
+    gyro=0;bodyIntegral=0;
+    gh=emptyHistory();
     z=zeros(n,7);mode=zeros(n,1);headingMode=zeros(n,1);ages=nan(n,2);
-    positionCorrection=zeros(n,4);yawCorrection=zeros(n,2);biasTrace=zeros(n,1);
-    stateBiasUpdates=0;courseUpdates=0;steps=0;maxRate=0;
+    positionCorrection=zeros(n,4);yawCorrection=zeros(n,2);
+    courseUpdates=0;steps=0;maxRate=0;
     counts=struct('gnssValid',0,'gnssInvalid',0,'lidarValid',0,'lidarInvalid',0);
     minWeight=nan(n,2);courseTrace=nan(n,1);translationMargin=nan(n,1);
     for k=1:numel(cuts)
         now=cuts(k);
         while ih<n && t(ih+1)<=now,ih=ih+1;end
-        rawVy=lateral.lateralVelocity(ih);
+        vy=lateral.lateralVelocity(ih);
         speed=h.longitudinalSpeed(ih);
-        participation=smoothParticipation(speed,cfg.bias.minimumSpeed);
-        vy=rawVy+participation*bias;
         while ig<=numel(G.time) && G.time(ig)<=now
             if G.valid(ig)
                 counts.gnssValid=counts.gnssValid+1;
                 g=anchor(G,ig,x(7),cfg.gnss.gainInformationScale);
-                gh=appendHistory(gh,now,G.values(ig,:),gyro,bodyIntegral,rotationIntegral,speed);
+                gh=appendHistory(gh,now,G.values(ig,:),bodyIntegral,speed);
                 gh=trimHistory(gh,now,cfg.gnss.courseWindow,cfg.gnss.maximumCourseGap);
                 [ok,first]=coveredWindow(gh,cfg.gnss.courseWindow,cfg.gnss.maximumCourseGap,cfg.gnss.minimumSpeed);
                 if ok
@@ -99,22 +98,8 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
             if L.valid(il)
                 counts.lidarValid=counts.lidarValid+1;
                 l=anchor(L,il,L.values(il,3),cfg.lidar.gainInformationScale);
-                lh=appendHistory(lh,now,L.values(il,:),gyro,rawIntegral,rotationIntegral,speed);
-                lh=trimHistory(lh,now,cfg.bias.window,cfg.bias.maximumGap);
-                [ok,first]=coveredWindow(lh,cfg.bias.window,cfg.bias.maximumGap,cfg.bias.minimumSpeed);
-                if ok && cfg.bias.enabled
-                    rotation=exp(1i*(lh.position(first,3)-lh.gyro(first)));
-                    B=rotation*(rotationIntegral-lh.rotation(first));
-                    displacement=complex(l.pose(1)-lh.position(first,1),l.pose(2)-lh.position(first,2));
-                    if abs(B)>.7*(now-lh.time(first))
-                        candidate=(displacement-rotation*(rawIntegral-lh.integral(first)))/B;
-                        if max(abs([real(candidate),imag(candidate)]))<=cfg.bias.maximumMagnitude
-                            targetBias=imag(candidate);stateBiasUpdates=stateBiasUpdates+1;
-                        end
-                    end
-                end
             else
-                l=emptyAnchor(3);lh=emptyHistory();counts.lidarInvalid=counts.lidarInvalid+1;
+                l=emptyAnchor(3);counts.lidarInvalid=counts.lidarInvalid+1;
             end
             il=il+1;
         end
@@ -126,7 +111,7 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
             z(io,:)=x.';mode(io)=double(g.active)+2*double(l.active);
             headingMode(io)=details.headingMode;positionCorrection(io,:)=details.position;
             yawCorrection(io,:)=details.yaw;ages(io,:)=[age(g,now),age(l,now)];
-            biasTrace(io)=participation*bias;minWeight(io,:)=[weightMinimum(g),weightMinimum(l)];
+            minWeight(io,:)=[weightMinimum(g),weightMinimum(l)];
             gain=zeros(2);if g.active,gain=gain+cfg.gnss.positionGain*g.weight;end
             if l.active,gain=gain+cfg.gains(1)*l.weight(1:2,1:2);end
             alpha=min(eig(gain));q2=cfg.maximumTrackAngleRate^2;
@@ -137,10 +122,6 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
         if k==numel(cuts),break;end
         span=cuts(k+1)-now;pieces=max(1,ceil(span/cfg.maximumIntegrationStep-1e-10));dt=span/pieces;
         for j=1:pieces
-            oldBias=bias;bias=targetBias+(bias-targetBias)*exp(-dt/cfg.bias.timeConstant);
-            meanBias=(oldBias+bias)/2;vy=rawVy+participation*meanBias;
-            betaRate=participation*(bias-oldBias)/dt*speed/max(speed^2+vy^2,1);
-            u=[speed,vy,h.longitudinalAcceleration(ih),h.lateralAcceleration(ih),h.yawRate(ih),lateral.sideSlipAngleRate(ih)+betaRate];
             gm=propagate(g,u,dt/2);lm=propagate(l,u,dt/2);
             ge=propagate(g,u,dt);le=propagate(l,u,dt);
             d1=rhs(x,u,g,l,cfg);d2=rhs(x+dt*d1/2,u,gm,lm,cfg);
@@ -148,8 +129,7 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
             x=x+dt*(d1+2*d2+2*d3+d4)/6;g=ge;l=le;
             delta=rotationStep(gyro,u(5),dt);
             bodyIntegral=bodyIntegral+delta*complex(speed,vy);
-            rawIntegral=rawIntegral+delta*complex(speed,rawVy);
-            rotationIntegral=rotationIntegral+delta;gyro=gyro+dt*u(5);
+            gyro=gyro+dt*u(5);
             maxRate=max(maxRate,abs(u(5)+u(6)));steps=steps+1;
         end
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Full observer became nonfinite.');
@@ -160,9 +140,9 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
         'heading',heading,'headingUnwrapped',z(:,7),'lateral',lateral,'observer',design);
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'sourceAge',ages, ...
         'positionCorrection',positionCorrection,'yawCorrection',yawCorrection, ...
-        'minimumWeights',minWeight,'gnssDerivedHeading',courseTrace,'lidarVelocityBias',biasTrace, ...
+        'minimumWeights',minWeight,'gnssDerivedHeading',courseTrace, ...
         'translationDissipationMargin',translationMargin, ...
-        'gnssCourseUpdates',courseUpdates,'lidarBiasUpdates',stateBiasUpdates,'packetCounts',counts, ...
+        'gnssCourseUpdates',courseUpdates,'packetCounts',counts, ...
         'integrationSteps',steps,'maximumTrackAngleRate',maxRate, ...
         'rateEnvelopeSatisfied',maxRate<=cfg.maximumTrackAngleRate,'stateResets',0, ...
         'referenceUsed',false,'futureMeasurementInterpolation',false, ...
@@ -234,13 +214,13 @@ function value=rotationStep(yaw,rate,dt)
 end
 
 function h=emptyHistory()
-    h=struct('time',zeros(0,1),'position',zeros(0,3),'gyro',zeros(0,1), ...
-        'integral',complex(zeros(0,1)),'rotation',complex(zeros(0,1)),'speed',zeros(0,1));
+    h=struct('time',zeros(0,1),'position',zeros(0,2), ...
+        'integral',complex(zeros(0,1)),'speed',zeros(0,1));
 end
 
-function h=appendHistory(h,time,position,gyro,integral,rotation,speed)
-    h.time(end+1,1)=time;h.position(end+1,:)=zeros(1,3);h.position(end,1:numel(position))=position;
-    h.gyro(end+1,1)=gyro;h.integral(end+1,1)=integral;h.rotation(end+1,1)=rotation;h.speed(end+1,1)=speed;
+function h=appendHistory(h,time,position,integral,speed)
+    h.time(end+1,1)=time;h.position(end+1,:)=position;
+    h.integral(end+1,1)=integral;h.speed(end+1,1)=speed;
 end
 
 function h=trimHistory(h,time,window,gap)
@@ -278,16 +258,10 @@ function x=weightMinimum(a)
     x=NaN;if a.active,x=min(eig(a.weight));end
 end
 
-function p=smoothParticipation(speed,minimum)
-    x=min(1,max(0,(abs(speed)-1)/(minimum-1)));p=x^3*(10-15*x+6*x^2);
-end
-
 function validateConfig(cfg)
     values=[cfg.maximumIntegrationStep,cfg.gnss.gainInformationScale,cfg.gnss.maximumAge, ...
         cfg.gnss.courseWindow,cfg.gnss.maximumCourseGap,cfg.gnss.minimumCourseDisplacement, ...
-        cfg.gnss.minimumSpeed,cfg.lidar.maximumAge,cfg.bias.window,cfg.bias.maximumGap, ...
-        cfg.bias.timeConstant,cfg.bias.maximumMagnitude];
-    assert(all(isfinite(values)) && all(values>0) && isfinite(cfg.initialHeading) ...
-        && isscalar(cfg.bias.enabled) && cfg.bias.minimumSpeed>1, ...
+        cfg.gnss.minimumSpeed,cfg.lidar.maximumAge];
+    assert(all(isfinite(values)) && all(values>0) && isfinite(cfg.initialHeading), ...
         'VehicleLocalization:InvalidFullConfig','Invalid full-observer settings.');
 end

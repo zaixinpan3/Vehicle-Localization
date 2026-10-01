@@ -4,8 +4,8 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
 % Synthetic wheel speed, steering, IMU, 20 Hz receiver positions and jittered
 % 10 Hz LiDAR poses then pass through the production chain: hybrid LPV
 % lateral observer -> frame-clock synchronization -> synchronous seven-state
-% observer (MnCAV configuration, receiver output-point correction, velocity
-% bias learning, GNSS course heading, optional online matcher callback).
+% observer (MnCAV configuration, receiver output-point correction, GNSS
+% course heading, optional online matcher callback).
 % Scenarios separate convention errors (clean signals), noise/bias accuracy,
 % source availability, closed-loop matching and lateral-model mismatch.
 % All signals are synthetic; no recorded data or reference trajectory is read.
@@ -45,7 +45,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
         assert(nnz(selected)==numel(unique(options.Scenarios)),'VehicleLocalization:UnknownScenario','Unknown scenario name.');
         definitions=definitions(selected,:);
     end
-    runs=cell(size(definitions,1),1);rows=cell(0,19);
+    runs=cell(size(definitions,1),1);rows=cell(0,17);
     for k=1:size(definitions,1)
         [name,truth,noise,init,sources,mask]=definitions{k,:};
         signals=synthesizeSignals(truth,settings,noise);
@@ -81,14 +81,14 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
             metrics.settledPositionRmseM,metrics.settledPositionP95M,metrics.positionMaximumAfterSettleM, ...
             metrics.settledHeadingRmseDeg,metrics.settledSpeedRmseMps,metrics.settledLateralVelocityRmseMps, ...
             metrics.convergenceTimeS,metrics.outageMaximumM,metrics.recoveryTimeS, ...
-            metrics.finalLongitudinalBiasMps,metrics.finalLateralBiasMps,metrics.rawGnssRmseM,metrics.rawLidarRmseM}; %#ok<AGROW>
+            metrics.rawGnssRmseM,metrics.rawLidarRmseM}; %#ok<AGROW>
         fprintf('%-24s settled position RMSE %.4f m, heading %.3f deg, lateral vy %.4f m/s\n', ...
             name,metrics.settledPositionRmseM,metrics.settledHeadingRmseDeg,metrics.settledLateralVelocityRmseMps);
     end
     table_=cell2table(rows,VariableNames={'scenario','noise','initialization','sources','frames', ...
         'positionRmseM','settledPositionRmseM','settledPositionP95M','settledPositionMaximumM', ...
         'settledHeadingRmseDeg','settledSpeedRmseMps','settledLateralVelocityRmseMps', ...
-        'lastTenCmExceedanceS','outageMaximumM','recoveryTimeS','finalLongitudinalBiasMps','finalLateralBiasMps', ...
+        'lastTenCmExceedanceS','outageMaximumM','recoveryTimeS', ...
         'rawGnssRmseM','rawLidarRmseM'});
     writetable(table_,fullfile(outputFolder,'metrics.csv'));
     if ~isempty(options.Scenarios)
@@ -284,8 +284,6 @@ function m=scoreRun(estimate,truth,fine,lateral,data,s,mask)
         m.recoveryTimeS=0;if ~isempty(bad),m.recoveryTimeS=t(after(min(bad+1,numel(after))))-window(2);end
         if ~isempty(bad) && bad==numel(after),m.recoveryTimeS=Inf;end
     end
-    m.finalLongitudinalBiasMps=estimate.diagnostics.lidarLongitudinalVelocityBias(end);
-    m.finalLateralBiasMps=estimate.diagnostics.lidarVelocityBias(end);
     m.rawGnssRmseM=NaN;m.rawLidarRmseM=NaN;
     if isfield(data,'gnss')
         ok=data.gnss.valid & settled;
@@ -341,7 +339,7 @@ function checks=evaluateChecks(runs,s)
         rows=add(rows,n+"_recovery",o.recoveryTimeS,3,o.recoveryTimeS<=3,"Error <= 15 cm within 3 s after outage");
     end
     o=get("both_outage_40_50");
-    rows=add(rows,"both_outage_40_50_maximum",o.outageMaximumM,1,o.outageMaximumM<=1,"10 s dead reckoning with learned biases: error <= 1 m");
+    rows=add(rows,"both_outage_40_50_maximum",o.outageMaximumM,1,o.outageMaximumM<=1,"10 s dead reckoning on supplied motion: error <= 1 m");
     rows=add(rows,"both_outage_40_50_recovery",o.recoveryTimeS,3,o.recoveryTimeS<=3,"Error <= 15 cm within 3 s after outage");
     a=get("alternating_1s");
     rows=add(rows,"alternating_sources",a.settledPositionRmseM,.1,a.settledPositionRmseM<=.1,"Sources alternating each second: settled RMSE <= 10 cm");
@@ -355,9 +353,6 @@ function checks=evaluateChecks(runs,s)
     p=get("plant_mismatch_both");
     rows=add(rows,"plant_mismatch_position",p.settledPositionRmseM,.1,p.settledPositionRmseM<=.1, ...
         "Cornering stiffness -15%/+15%: fused settled RMSE <= 10 cm");
-    wheel=s.noise.wheelScaleError;
-    rows=add(rows,"wheel_scale_bias_sign",b.finalLongitudinalBiasMps,0,b.finalLongitudinalBiasMps<0 && wheel>0, ...
-        "Learned longitudinal velocity bias opposes the +0.5% wheel scale error");
     checks=cell2table(rows,VariableNames={'check','value','limit','passed','criterion'});
 end
 

@@ -8,6 +8,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
 % It replaces data.lidar, receives the previous fused-state prediction and
 % current point-corrected GNSS, and returns a registration result. Candidate
 % selection may depend on GNSS; its information must exclude GNSS curvature.
+% Wheel and lateral-observer velocities are used without LiDAR-derived bias.
     h=data.highRate;t=h.time(:);n=numel(t);
     assert(n>=2 && all(isfinite(t)) && all(diff(t)>0), ...
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
@@ -39,30 +40,28 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     assert(numel(x)==7 && all(isfinite(x)),'VehicleLocalization:FullInitializationRequired', ...
         'Supply an explicit common initial state.');x=x(:);
     z=zeros(n,7);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
-    yawCorrection=zeros(n,2);biasTrace=zeros(n,2);courseTrace=nan(n,1);
+    yawCorrection=zeros(n,2);courseTrace=nan(n,1);
     gnssPosition=nan(n,2);gnssInformation=nan(2,2,n);
-    margins=nan(n,1);weights=nan(n,2);gyro=0;rawIntegral=0;bodyIntegral=0;rotationIntegral=0;
-    gh=history();lh=history();bias=0;targetBias=0;courseUpdates=0;biasUpdates=0;maximumRate=0;
+    margins=nan(n,1);weights=nan(n,2);gyro=0;bodyIntegral=0;
+    gh=history();courseUpdates=0;maximumRate=0;
     for k=1:n
         dt=0;if k>1,dt=t(k)-t(k-1);end
-        speed=h.longitudinalSpeed(k);rawVy=lateral.lateralVelocity(k);
-        part=participation(speed,cfg.bias.minimumSpeed);
+        speed=h.longitudinalSpeed(k);vy=lateral.lateralVelocity(k);
         rate=h.yawRate(k);
         if k>1
             rate=(h.yawRate(k-1)+rate)/2;
             meanSpeed=(h.longitudinalSpeed(k-1)+speed)/2;
-            meanVy=(lateral.lateralVelocity(k-1)+rawVy)/2;
+            meanVy=(lateral.lateralVelocity(k-1)+vy)/2;
             delta=rotationStep(gyro,rate,dt);
-            rawIntegral=rawIntegral+delta*complex(meanSpeed,meanVy);
-            bodyIntegral=bodyIntegral+delta*complex(meanSpeed+part*real(bias),meanVy+part*imag(bias));
-            rotationIntegral=rotationIntegral+delta;gyro=gyro+rate*dt;
+            bodyIntegral=bodyIntegral+delta*complex(meanSpeed,meanVy);
+            gyro=gyro+rate*dt;
         end
         predYaw=x(7)+rate*dt;course=NaN;
         if G.valid(k)
             % Course history uses only the current predicted attitude. No
             % reference attitude or future observer state enters alignment.
             coursePosition=correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),predYaw,alignment);
-            gh=append(gh,t(k),[coursePosition,0],gyro,bodyIntegral,rotationIntegral,speed);
+            gh=append(gh,t(k),coursePosition,bodyIntegral,speed);
             [gh,first]=window(gh,t(k),cfg.gnss.courseWindow,cfg.gnss.maximumCourseGap,cfg.gnss.minimumSpeed);
             if ~isempty(first)
                 displacement=complex(coursePosition(1)-gh.pose(first,1),coursePosition(2)-gh.pose(first,2));
@@ -77,7 +76,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         if onlineMatching
             midYaw=x(7)+rate*dt/2;
             Rmid=[cos(midYaw),-sin(midYaw);sin(midYaw),cos(midYaw)];
-            seed=[(x([1,4])+dt*Rmid*[speed+part*real(bias);rawVy+part*imag(bias)]).',predYaw];
+            seed=[(x([1,4])+dt*Rmid*[speed;vy]).',predYaw];
             aid=struct('valid',G.valid(k),'timestamp',t(k));
             if aid.valid
                 [aid.position,I]=correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),predYaw,alignment);
@@ -93,36 +92,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
                 all(isfinite(L.information(:,:,k)),'all') && min(eig(L.information(:,:,k)))>0), ...
                 'VehicleLocalization:InvalidOnlineLidar','Accepted matcher output needs finite full-pose geometry.');
         end
-        if L.valid(k)
-            lh=append(lh,t(k),L.values(k,:),gyro,rawIntegral,rotationIntegral,speed);
-            [lh,first]=window(lh,t(k),cfg.bias.window,cfg.bias.maximumGap,cfg.bias.minimumSpeed);
-            if cfg.bias.enabled && ~isempty(first)
-                rotation=exp(1i*(lh.pose(first,3)-lh.gyro(first)));
-                B=rotation*(rotationIntegral-lh.rotation(first));
-                displacement=complex(L.values(k,1)-lh.pose(first,1),L.values(k,2)-lh.pose(first,2));
-                if abs(B)>.7*(t(k)-lh.time(first))
-                    candidate=(displacement-rotation*(rawIntegral-lh.integral(first)))/B;
-                    if max(abs([real(candidate),imag(candidate)]))<=cfg.bias.maximumMagnitude
-                        % The same displacement identifies both body-velocity
-                        % discrepancies. Retain the longitudinal component
-                        % instead of discarding wheel-speed bias evidence.
-                        targetBias=candidate;biasUpdates=biasUpdates+1;
-                    end
-                end
-            end
-        else
-            lh=history();
-            % No new displacement evidence: hold the learned velocity bias.
-            % Continuing toward the last noisy target during a long outage
-            % would change the motion model without a new observation.
-            targetBias=bias;
-        end
-        oldBias=bias;bias=targetBias+(bias-targetBias)*exp(-dt/cfg.bias.timeConstant);
-        vx=speed+part*real(bias);vy=rawVy+part*imag(bias);betaRate=0;
-        if dt>0
-            betaRate=part/dt*(imag(bias-oldBias)*vx-real(bias-oldBias)*vy)/max(vx^2+vy^2,1);
-        end
-        q=h.yawRate(k)+lateral.sideSlipAngleRate(k)+betaRate;maximumRate=max(maximumRate,abs(q));
+        q=h.yawRate(k)+lateral.sideSlipAngleRate(k);maximumRate=max(maximumRate,abs(q));
         Wl=weight(L,k,cfg.lidar.gainInformationScale,3);
         yaw=predYaw;
         if L.valid(k) && Wl(3,3)>=cfg.lidar.minimumPoseWeight
@@ -142,7 +112,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         end
         K=cfg.gnss.positionGain*Wg+cfg.gains(1)*Wl(1:2,1:2);
         R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
-        velocity=R*[vx;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
+        velocity=R*[speed;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
         A=[(1+dt*cfg.gains(2))*eye(2),-dt*eye(2); ...
             -dt*q^2*eye(2),(1+dt*cfg.gains(3))*eye(2)-2*dt*q*J];
         va=A\[x([2,5])+dt*cfg.gains(2)*velocity;x([3,6])+dt*cfg.gains(3)*acceleration];
@@ -157,18 +127,16 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         alpha=min(eig(K));q2=cfg.maximumTrackAngleRate^2;
         margins(k)=min(eig([2*alpha,-1,0;-1,2*cfg.gains(2),-(1+q2);0,-(1+q2),2*cfg.gains(3)]));
         z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));
-        biasTrace(k,:)=part*[real(bias),imag(bias)];courseTrace(k)=course;
+        courseTrace(k)=course;
     end
     estimate=struct('time',t,'z',z,'onlineZ',z,'pose',[z(:,[1,4]),wrap(z(:,7))], ...
         'position',z(:,[1,4]),'velocity',z(:,[2,5]),'acceleration',z(:,[3,6]), ...
         'heading',wrap(z(:,7)),'headingUnwrapped',z(:,7),'lateral',lateral,'observer',design);
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition,'gnssInformationAtObserverPoint',gnssInformation, ...
-        'yawCorrection',yawCorrection,'lidarVelocityBias',biasTrace(:,2), ...
-        'lidarLongitudinalVelocityBias',biasTrace(:,1),'gnssDerivedHeading',courseTrace, ...
-        'motionBiasSource',"Past accepted LiDAR displacement versus wheel/gyro/lateral integration; held without LiDAR", ...
+        'yawCorrection',yawCorrection,'gnssDerivedHeading',courseTrace, ...
         'minimumWeights',weights,'translationDissipationMargin',margins,'gnssCourseUpdates',courseUpdates, ...
-        'lidarBiasUpdates',biasUpdates,'maximumTrackAngleRate',maximumRate, ...
+        'maximumTrackAngleRate',maximumRate, ...
         'rateEnvelopeSatisfied',maximumRate<=cfg.maximumTrackAngleRate,'stateResets',0, ...
         'packetCounts',struct('gnssValid',nnz(G.valid),'gnssInvalid',nnz(~G.valid), ...
         'lidarValid',nnz(L.valid),'lidarInvalid',nnz(~L.valid)), ...
@@ -207,13 +175,13 @@ function W=weight(s,k,scale,width)
 end
 
 function h=history()
-    h=struct('time',zeros(0,1),'pose',zeros(0,3),'gyro',zeros(0,1), ...
-        'integral',complex(zeros(0,1)),'rotation',complex(zeros(0,1)),'speed',zeros(0,1));
+    h=struct('time',zeros(0,1),'pose',zeros(0,2), ...
+        'integral',complex(zeros(0,1)),'speed',zeros(0,1));
 end
 
-function h=append(h,time,pose,gyro,integral,rotation,speed)
-    h.time(end+1,1)=time;h.pose(end+1,:)=pose;h.gyro(end+1,1)=gyro;
-    h.integral(end+1,1)=integral;h.rotation(end+1,1)=rotation;h.speed(end+1,1)=speed;
+function h=append(h,time,pose,integral,speed)
+    h.time(end+1,1)=time;h.pose(end+1,:)=pose;
+    h.integral(end+1,1)=integral;h.speed(end+1,1)=speed;
 end
 
 function [h,first]=window(h,time,duration,gap,speed)
@@ -223,10 +191,6 @@ function [h,first]=window(h,time,duration,gap,speed)
     if ~isempty(first) && (time-h.time(first)>duration+gap || any(diff(h.time(first:end))>gap) || min(h.speed(first:end))<speed)
         first=[];
     end
-end
-
-function p=participation(speed,minimum)
-    a=min(1,max(0,(abs(speed)-1)/(minimum-1)));p=a^3*(10-15*a+6*a^2);
 end
 
 function value=rotationStep(yaw,rate,dt)

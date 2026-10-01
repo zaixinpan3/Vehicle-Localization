@@ -1,0 +1,2 @@
+scenario,noise,initialization,sources,frames,positionRmseM,settledPositionRmseM,settledPositionP95M,settledPositionMaximumM,settledHeadingRmseDeg,settledSpeedRmseMps,settledLateralVelocityRmseMps,lastTenCmExceedanceS,outageMaximumM,recoveryTimeS,rawGnssRmseM,rawLidarRmseM
+noisy_both,noisy,perturbed,gnss+lidar,899,0.0811375391941493,0.0339956778340715,0.0592651111789604,0.0982971941108245,0.123060075227992,0.0556057682430428,0.00518872782493346,0.60081303237166,NaN,NaN,0.0394298015745467,0.106331805142373
