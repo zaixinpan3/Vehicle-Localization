@@ -1,0 +1,151 @@
+{
+  "baselineReplayMaximumDifference": 0,
+  "errorDecompositionMaximumResidualM": 4.0185935360620428E-9,
+  "motionDecompositionMaximumResidualM": 7.0429773124658368E-16,
+  "frame847": {
+    "frame": 847,
+    "time": 84.599167482942278,
+    "fullMatch": true,
+    "errorX": 0.24994766694726422,
+    "errorY": 0.08203172218054533,
+    "initialX": 7.7436028721040176E-61,
+    "initialY": -1.1522680360352226E-59,
+    "matchX": -0.0014441094782975093,
+    "matchY": 0.0032080819749848457,
+    "motionX": 0.25139177630828508,
+    "motionY": 0.078823640055263516,
+    "filterX": -0.01137537410241146,
+    "filterY": -0.0060517205341445177,
+    "quadratureX": 0.048591099875322619,
+    "quadratureY": 0.03570191061956271,
+    "inputX": 0.21417605053537395,
+    "inputY": 0.049173449969845281,
+    "positionGainMin": 1.5116501204580979,
+    "positionGainMax": 1.8570445176476531,
+    "currentMatchFractionMin": 0.13098957946786416,
+    "currentMatchFractionMax": 0.15624288320136412,
+    "velocityFilterX": -0.0060193829174384206,
+    "velocityFilterY": -0.019407787821348776
+  },
+  "frame847InputBodyVelocity": [
+    8.5745566032558518,
+    -0.18311668758410191
+  ],
+  "frame847BiasBodyVelocity": [
+    -0.057825130448456427,
+    0.10247741242895593
+  ],
+  "frame847StateVelocity": [
+    8.1286690086973739,
+    -2.5429098076209722
+  ],
+  "frame847InputVelocity": [
+    8.1346883916148123,
+    -2.5235020197996234
+  ],
+  "frame847AccelerationInput": [
+    0.6537534778372085,
+    1.2921975223892916
+  ],
+  "frame847StateAcceleration": [
+    0.92731466901986337,
+    1.1483186056469437
+  ],
+  "frame847Information": [
+    [
+      10.146786570489732,
+      -0.3739230372428945,
+      -26.206433587300406
+    ],
+    [
+      -0.3739230372428945,
+      14.649040895705566,
+      36.146364021697877
+    ],
+    [
+      -26.206433587300406,
+      36.146364021697877,
+      1630.4664750473225
+    ]
+  ],
+  "frame847PositionGain": [
+    [
+      1.5124673927393038,
+      0.01678133882994011
+    ],
+    [
+      0.01678133882994011,
+      1.856227245366447
+    ]
+  ],
+  "gainEigenvalueMedian": [
+    1.6488288489201359,
+    2.0507041075920913
+  ],
+  "currentMatchFractionMedian": [
+    0.14155473186203926,
+    0.17021428131050881
+  ],
+  "positionComponentRmseAfter2Seconds": {
+    "initial": 0.0010371425556069591,
+    "measurement": 0.0473254551587126,
+    "motion": 0.081015965667630072,
+    "velocityFilter": 0.044734773216269223,
+    "endpointQuadrature": 0.022429129958171361,
+    "trapezoidInput": 0.062139732926633148
+  },
+  "referenceUsage": "Scoring, additive error attribution, and explicitly named oracle only. All runtime sensitivity controls are reference-free.",
+  "scope": "Frozen LiDAR-only registrations from the complete closed-loop run; candidate settings do not certify closed-loop or cross-drive improvement.",
+  "inputErrorContributions": {
+    "heading": {
+      "frame847": [
+        0.0029555133227816806,
+        0.00042529333711622354
+      ],
+      "after2SecondsRmseM": 0.0099069433981053435
+    },
+    "longitudinal": {
+      "frame847": [
+        -0.007954847990858353,
+        0.0029692941326724428
+      ],
+      "after2SecondsRmseM": 0.023217708219672062
+    },
+    "lateral": {
+      "frame847": [
+        -0.011630456616998382,
+        -0.016442724091792572
+      ],
+      "after2SecondsRmseM": 0.0362809625035455
+    },
+    "reference_kinematics": {
+      "frame847": [
+        0.23080584182044875,
+        0.06222158659184937
+      ],
+      "after2SecondsRmseM": 0.05282573705607272
+    }
+  },
+  "frame847Motion": {
+    "frame": 847,
+    "time": 84.599167482942278,
+    "wheelVx": 8.5745566032558518,
+    "lateralVy": -0.18311668758410191,
+    "biasVx": -0.057825130448456427,
+    "biasVy": 0.10247741242895593,
+    "insBodyVx": 8.5074458343832848,
+    "insBodyVy": -0.053440691204807322,
+    "yawRate": 0.16387909547025417,
+    "betaRate": 0.010655860089635471,
+    "yawErrorDeg": -0.067089526809440414,
+    "headingX": 0.0029555133227816806,
+    "headingY": 0.00042529333711622354,
+    "longitudinalX": -0.007954847990858353,
+    "longitudinalY": 0.0029692941326724428,
+    "lateralX": -0.011630456616998382,
+    "lateralY": -0.016442724091792572,
+    "referenceKinematicsX": 0.23080584182044875,
+    "referenceKinematicsY": 0.06222158659184937
+  },
+  "motionReferenceCaveat": "INSPVA reported velocity is diagnostic only. Its trapezoid integral need not equal reported position increments; that difference is retained separately."
+}

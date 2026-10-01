@@ -1,0 +1,16 @@
+{
+  "research/lidar_observer_regression_20260930/README.md": "f5f0afe1565b32c0c0cf0c259f9d4920c6cfa2304163fc34751dd0d34b02ef12",
+  "research/lidar_observer_regression_20260930/auditReferenceKinematics.py": "1b378fe90bc55d37e9aba367d54c8937a707868bc25351c3c7aeb5548f5958fd",
+  "research/lidar_observer_regression_20260930/controls.csv": "53def9c2a7375edb1f95d3ea7941d5506d9b913c7a6ea452011ff7b401ea7185",
+  "research/lidar_observer_regression_20260930/decomposition.csv": "02d5f333faee955eb42e5b52794fad9114837661a1e0259404e14bb8dad52af9",
+  "research/lidar_observer_regression_20260930/diagnoseLidarObserverRegression.m": "f48bbca13ed9dd4b562f6aeb0be1e2d588b622f5f26c32ba98a6f26d1c00c091",
+  "research/lidar_observer_regression_20260930/diagnosis.pdf": "58b83d611660407cc506759f292224beedc0f01d4ec3a7c634258fef1317ba05",
+  "research/lidar_observer_regression_20260930/diagnosis.png": "1628fee737425aa7f62dda10bb6745311f2a25e72f0fe78132995b7f87d615e6",
+  "research/lidar_observer_regression_20260930/input_hashes.json": "6f097a195dfd47314d901f3f456815d1f0b1be020ef7ec3bd196bb4f1a9da219",
+  "research/lidar_observer_regression_20260930/motion_inputs.csv": "725488df0253ac967e4fc2000bcd76976adce7983df7f3ebb120468ab93d5102",
+  "research/lidar_observer_regression_20260930/plotLidarObserverDiagnosis.m": "67efcf7ed8a36b3be9b1714c7b60cb7cf87131303b57ee2defc9ffa72010811c",
+  "research/lidar_observer_regression_20260930/reference_consistency.json": "ca44c0a4b647a0de7938478f826fd2e99f3a8664d746152759acb708c7131d7e",
+  "research/lidar_observer_regression_20260930/summary.json": "e23c7e66684d7cb01e2cd42a6ff2f1c895f2a02f28b2974488b29ca725396638",
+  "research/lidar_observer_regression_20260930/validation.json": "c1f2f477572f88b78970c011f652b8aa87b69d4c6d87115b42925a3a02a317fc",
+  "research/lidar_observer_regression_20260930/verifyDiagnosis.py": "6b639c2126b62c79af9685829da6d9fbeae1088dd138e43c166dbe1de70e9011"
+}

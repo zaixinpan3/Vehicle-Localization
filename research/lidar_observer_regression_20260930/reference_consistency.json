@@ -1,0 +1,68 @@
+{
+  "nativeSamples": 5847,
+  "projectionScaleRange": [
+    0.9996028768342318,
+    0.999603072020856
+  ],
+  "positionProjectionMaximumDifferenceM": 9.313225746154785e-10,
+  "intervals": [
+    {
+      "begin": 2,
+      "end": 116,
+      "coveredSeconds": 114.0,
+      "positionMinusVelocityIntegralM": [
+        0.6611622019441389,
+        -2.0123000093844254
+      ],
+      "velocityResidualRmseMps": 0.3015319530749228
+    },
+    {
+      "begin": 80,
+      "end": 85,
+      "coveredSeconds": 5.0,
+      "positionMinusVelocityIntegralM": [
+        -0.675464627467421,
+        -0.26590965972446823
+      ],
+      "velocityResidualRmseMps": 0.21944041946944237
+    },
+    {
+      "begin": 83,
+      "end": 84.6,
+      "coveredSeconds": 1.6000000000349246,
+      "positionMinusVelocityIntegralM": [
+        -0.44809878594608576,
+        -0.20003780284870135
+      ],
+      "velocityResidualRmseMps": 0.32035200483508625
+    },
+    {
+      "begin": 84.5,
+      "end": 84.6,
+      "coveredSeconds": 0.1000000000349246,
+      "positionMinusVelocityIntegralM": [
+        -0.02978483804834886,
+        -0.012462456320071556
+      ],
+      "velocityResidualRmseMps": 0.3289655157938676
+    }
+  ],
+  "diagnosticLag": {
+    "bestSeconds": -0.03999999999999998,
+    "bestVelocityRmseMps": 0.30137588061552184,
+    "zeroLagVelocityRmseMps": 0.3028615499664276,
+    "searchRangeSeconds": [
+      -0.5,
+      0.5
+    ]
+  },
+  "diagnosticLeverArm": {
+    "bodyOffsetM": [
+      -0.3558059604062298,
+      0.2848855054517421
+    ],
+    "beforeVelocityRmseMps": 0.3028615499664276,
+    "afterVelocityRmseMps": 0.30070789350977684
+  },
+  "limitations": "Same receiver diagnostic consistency, not an independent truth assessment. Fits do not identify physical latency or mounting geometry. No production inputs or calibration changed."
+}

@@ -1,0 +1,16 @@
+{
+  "checksPassed": true,
+  "frames": 1169,
+  "pairedFrames": 1121,
+  "controlMetricRows": 22,
+  "baselinePairedMatchingRmseM": 0.0576766349524858,
+  "baselinePairedObserverRmseM": 0.0977961250668969,
+  "additiveClosureMaximumM": 4.01859349963285e-09,
+  "motionSplitMaximumM": 1.0408340855860843e-15,
+  "inputSplitMaximumM": 1.1379786002407855e-15,
+  "baselineRuntimeExactlyReproduced": true,
+  "unchangedPriorSourceHashes": 310,
+  "checkedInputHashes": 3,
+  "productionAlgorithmOrConfigurationChanged": false,
+  "scope": "Executed diagnostic assertions and independent exports check. No new complete closed-loop run or production retuning; the earlier unrelated lateral gain-bound test failure is not resolved by this study."
+}
