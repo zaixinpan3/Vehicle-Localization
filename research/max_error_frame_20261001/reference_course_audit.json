@@ -1,0 +1,299 @@
+{
+  "drives": {
+    "12-09-31 evaluation drive": {
+      "source": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspva.csv",
+      "firstGpsSeconds": 490083.42,
+      "lastGpsSeconds": 490200.34,
+      "samples": 5847,
+      "straightSamples": 2428,
+      "straightDefinition": "speed >= 5 m/s and |azimuth rate| <= 1 deg/s",
+      "courseMinusAzimuthDeg": {
+        "q25": 1.0261259619361596,
+        "median": 1.3444929288969263,
+        "q75": 1.4837220044026793,
+        "mean": 1.2521919948457223
+      },
+      "bins": [
+        {
+          "beginSeconds": 10,
+          "endSeconds": 20,
+          "samples": 29,
+          "medianSpeedMps": 7.95073356802949,
+          "medianCourseMinusAzimuthDeg": 1.078649561515732
+        },
+        {
+          "beginSeconds": 20,
+          "endSeconds": 30,
+          "samples": 164,
+          "medianSpeedMps": 14.23660938961613,
+          "medianCourseMinusAzimuthDeg": 1.53613497039494
+        },
+        {
+          "beginSeconds": 30,
+          "endSeconds": 40,
+          "samples": 308,
+          "medianSpeedMps": 14.171449848357259,
+          "medianCourseMinusAzimuthDeg": 1.3978607071934732
+        },
+        {
+          "beginSeconds": 40,
+          "endSeconds": 50,
+          "samples": 92,
+          "medianSpeedMps": 13.368511665957312,
+          "medianCourseMinusAzimuthDeg": 1.1436669592847295
+        },
+        {
+          "beginSeconds": 50,
+          "endSeconds": 60,
+          "samples": 168,
+          "medianSpeedMps": 12.193186471587978,
+          "medianCourseMinusAzimuthDeg": 0.9381567818891625
+        },
+        {
+          "beginSeconds": 60,
+          "endSeconds": 70,
+          "samples": 263,
+          "medianSpeedMps": 12.347353083033655,
+          "medianCourseMinusAzimuthDeg": 0.7472462426225093
+        },
+        {
+          "beginSeconds": 70,
+          "endSeconds": 80,
+          "samples": 133,
+          "medianSpeedMps": 11.49629056462496,
+          "medianCourseMinusAzimuthDeg": 0.6932909957643005
+        },
+        {
+          "beginSeconds": 90,
+          "endSeconds": 100,
+          "samples": 450,
+          "medianSpeedMps": 11.782278238845812,
+          "medianCourseMinusAzimuthDeg": 1.1786258148513298
+        },
+        {
+          "beginSeconds": 100,
+          "endSeconds": 110,
+          "samples": 479,
+          "medianSpeedMps": 11.666013609216929,
+          "medianCourseMinusAzimuthDeg": 1.4156367081084227
+        },
+        {
+          "beginSeconds": 110,
+          "endSeconds": 120,
+          "samples": 342,
+          "medianSpeedMps": 11.080615191541428,
+          "medianCourseMinusAzimuthDeg": 1.539640160706199
+        }
+      ]
+    },
+    "12-11-24 calibration drive": {
+      "source": "output/mncav_wheel_only_20260916/calibration_sensors/inspva.csv",
+      "firstGpsSeconds": 490206.58,
+      "lastGpsSeconds": 490284.5,
+      "samples": 3897,
+      "straightSamples": 810,
+      "straightDefinition": "speed >= 5 m/s and |azimuth rate| <= 1 deg/s",
+      "courseMinusAzimuthDeg": {
+        "q25": -0.10153580339701307,
+        "median": 0.020402318982121415,
+        "q75": 0.13659695780341963,
+        "mean": 0.017092847092031623
+      },
+      "bins": [
+        {
+          "beginSeconds": 10,
+          "endSeconds": 20,
+          "samples": 262,
+          "medianSpeedMps": 11.948374187498864,
+          "medianCourseMinusAzimuthDeg": 0.05154207869509264
+        },
+        {
+          "beginSeconds": 20,
+          "endSeconds": 30,
+          "samples": 66,
+          "medianSpeedMps": 11.742786610422417,
+          "medianCourseMinusAzimuthDeg": -0.050610251971534126
+        },
+        {
+          "beginSeconds": 30,
+          "endSeconds": 40,
+          "samples": 164,
+          "medianSpeedMps": 11.952406512114543,
+          "medianCourseMinusAzimuthDeg": -0.18096715035778743
+        },
+        {
+          "beginSeconds": 60,
+          "endSeconds": 70,
+          "samples": 108,
+          "medianSpeedMps": 11.919954137275935,
+          "medianCourseMinusAzimuthDeg": 0.22119070844472333
+        },
+        {
+          "beginSeconds": 70,
+          "endSeconds": 80,
+          "samples": 207,
+          "medianSpeedMps": 10.759213914037488,
+          "medianCourseMinusAzimuthDeg": 0.0706552243744909
+        }
+      ]
+    }
+  },
+  "evaluationSolution": {
+    "source": "data/raw/Missisipi/gnss/raw_data_2024-06-07-12-09-31_0_inspvax.csv",
+    "timeOrigin": "first INSPVA message of the evaluation drive",
+    "transitions": [
+      {
+        "timeSeconds": 0.5800000000162981,
+        "positionType": 56,
+        "name": "INS_RTKFIXED"
+      },
+      {
+        "timeSeconds": 44.5800000000163,
+        "positionType": 54,
+        "name": "INS_PSRDIFF"
+      },
+      {
+        "timeSeconds": 49.5800000000163,
+        "positionType": 55,
+        "name": "INS_RTKFLOAT"
+      }
+    ],
+    "samples": [
+      {
+        "timeSeconds": 0.5800000000162981,
+        "positionType": 56,
+        "latitudeStdM": 0.012941324152052402,
+        "longitudeStdM": 0.012713544070720673,
+        "azimuthStdDeg": 0.07141368836164474
+      },
+      {
+        "timeSeconds": 10.580000000016298,
+        "positionType": 56,
+        "latitudeStdM": 0.03657834976911545,
+        "longitudeStdM": 0.035784076899290085,
+        "azimuthStdDeg": 0.07507161796092987
+      },
+      {
+        "timeSeconds": 20.580000000016298,
+        "positionType": 56,
+        "latitudeStdM": 0.03926686942577362,
+        "longitudeStdM": 0.037411585450172424,
+        "azimuthStdDeg": 0.07622292637825012
+      },
+      {
+        "timeSeconds": 30.580000000016298,
+        "positionType": 56,
+        "latitudeStdM": 0.03761603310704231,
+        "longitudeStdM": 0.03638353943824768,
+        "azimuthStdDeg": 0.07843473553657532
+      },
+      {
+        "timeSeconds": 40.5800000000163,
+        "positionType": 56,
+        "latitudeStdM": 0.1491120308637619,
+        "longitudeStdM": 0.13130290806293488,
+        "azimuthStdDeg": 0.08237265050411224
+      },
+      {
+        "timeSeconds": 50.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.1524401754140854,
+        "longitudeStdM": 0.1306985467672348,
+        "azimuthStdDeg": 0.08728425204753876
+      },
+      {
+        "timeSeconds": 60.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.18321530520915985,
+        "longitudeStdM": 0.15466660261154175,
+        "azimuthStdDeg": 0.0922955647110939
+      },
+      {
+        "timeSeconds": 70.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.1717919558286667,
+        "longitudeStdM": 0.15677247941493988,
+        "azimuthStdDeg": 0.0976184532046318
+      },
+      {
+        "timeSeconds": 80.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.19303292036056519,
+        "longitudeStdM": 0.19956564903259277,
+        "azimuthStdDeg": 0.10231288522481918
+      },
+      {
+        "timeSeconds": 90.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.20408351719379425,
+        "longitudeStdM": 0.16999730467796326,
+        "azimuthStdDeg": 0.09855446964502335
+      },
+      {
+        "timeSeconds": 100.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.5510189533233643,
+        "longitudeStdM": 0.3674335181713104,
+        "azimuthStdDeg": 0.10364910215139389
+      },
+      {
+        "timeSeconds": 104.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.5180160403251648,
+        "longitudeStdM": 0.3350265920162201,
+        "azimuthStdDeg": 0.10469374805688858
+      },
+      {
+        "timeSeconds": 105.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.5161007642745972,
+        "longitudeStdM": 0.33705443143844604,
+        "azimuthStdDeg": 0.10525579750537872
+      },
+      {
+        "timeSeconds": 106.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.5199081897735596,
+        "longitudeStdM": 0.3416728675365448,
+        "azimuthStdDeg": 0.10586419701576233
+      },
+      {
+        "timeSeconds": 107.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.5314886569976807,
+        "longitudeStdM": 0.3479614853858948,
+        "azimuthStdDeg": 0.10653043538331985
+      },
+      {
+        "timeSeconds": 108.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.4502752125263214,
+        "longitudeStdM": 0.29727882146835327,
+        "azimuthStdDeg": 0.10712030529975891
+      },
+      {
+        "timeSeconds": 109.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.4063599407672882,
+        "longitudeStdM": 0.26883062720298767,
+        "azimuthStdDeg": 0.10781391710042953
+      },
+      {
+        "timeSeconds": 110.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.380492240190506,
+        "longitudeStdM": 0.2517634332180023,
+        "azimuthStdDeg": 0.10854129493236542
+      },
+      {
+        "timeSeconds": 111.5800000000163,
+        "positionType": 55,
+        "latitudeStdM": 0.3656565248966217,
+        "longitudeStdM": 0.24235892295837402,
+        "azimuthStdDeg": 0.10929243266582489
+      }
+    ]
+  },
+  "gapBetweenDrivesSeconds": 6.239999999990687,
+  "scope": "Native receiver messages only; does not determine whether azimuth or course is physically correct"
+}

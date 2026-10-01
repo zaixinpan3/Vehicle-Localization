@@ -1,0 +1,60 @@
+{
+  "frame": 1087,
+  "time": 108.59904474292027,
+  "positionErrorM": 0.20043590917050003,
+  "longitudinalM": 0.0043612937983523725,
+  "lateralM": -0.20038845617849321,
+  "yawErrorDeg": 0.082540367028871867,
+  "replayMaximumStateDifference": 0,
+  "decompositionMaximumResidualM": 2.7073448760628338E-9,
+  "wheelSpeedMps": 12.200343814769452,
+  "yawRateDegPerS": 0.0815433667492626,
+  "lateralVelocityInputMps": -0.0093081516161172637,
+  "inspvaVelocityLateralMps": 0.30600055328945475,
+  "inspvaIncrementLateralMps": 0.41507076172120411,
+  "inspvaVelocitySlipDeg": 1.4427485797198767,
+  "inspvaIncrementSlipDeg": 1.9570620173401585,
+  "positionGain": [
+    [
+      2.9216189865605307,
+      0.0032285726991758724
+    ],
+    [
+      0.0032285726991758724,
+      2.6477566056841892
+    ]
+  ],
+  "gnssGain": [
+    [
+      1.7053803880592417,
+      -1.0697770094998803E-5
+    ],
+    [
+      -1.0697770094998803E-5,
+      0.98988667209631587
+    ]
+  ],
+  "lidarGain": [
+    [
+      1.2162385985012891,
+      0.0032392704692708711
+    ],
+    [
+      0.0032392704692708711,
+      1.6578699335878733
+    ]
+  ],
+  "lateralPositionGainPerS": 2.6517102330476732,
+  "matchLateralM": -0.090719756341107891,
+  "gnssLateralM": 0.0095743784029316253,
+  "straightFramesAfterStartup": 516,
+  "medianStraightInputSlipDeg": -0.00500833118670215,
+  "medianStraightInspvaVelocitySlipDeg": 1.3450200377679287,
+  "medianStraightInspvaIncrementSlipDeg": 1.2577256285657441,
+  "oracleConstantCourseOffsetDeg": 1.3739351517529883,
+  "meanFusedLateralAfterStartupM": -0.068772503141535685,
+  "meanMatchLateralAfterStartupM": -0.0392272345753451,
+  "meanGnssLateralAfterStartupM": 0.0026929822231851622,
+  "referenceUsage": "Scoring, additive attribution and explicitly named oracle controls only",
+  "scope": "Frozen GNSS and closed-loop LiDAR packets of the both scenario; controls do not rematch scans"
+}
