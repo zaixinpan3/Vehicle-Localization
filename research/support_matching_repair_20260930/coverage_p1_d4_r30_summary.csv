@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMatchingMs,frame178ErrorM,frame932ErrorM
+coverage_p1_d4_r30,895,0.159156111831646,0.060895676967552,0.106251491628506,1141,11,9.302,0.0747176688161545,0.146897493466364

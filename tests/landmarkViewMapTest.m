@@ -34,7 +34,8 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
             t.verifyTrue(r.directionalAccepted,r.reason);t.verifyFalse(r.accepted);
             t.verifyEqual(r.observableRank,2);
             t.verifyEqual(r.poseXYTheta,[.6 0 0],AbsTol=1e-4);
-            t.verifyEqual(r.information*[1;0;0],zeros(3,1),AbsTol=1e-10);
+            t.verifyLessThan(abs(r.directionalInformation(1,1)),1e-10);
+            t.verifyEqual(r.directionalInformation*(eye(3)-r.physicalObservableProjector),zeros(3),AbsTol=1e-8);
         end
         function unsupportedPointOnlyMapRejectsCleanly(t)
             cloud=distributionRegistrationTest.exampleCloud();n=cloud.components.numComponents;

@@ -57,7 +57,7 @@ classdef registrationInformationTest < matlab.unittest.TestCase
         function roadTangentRemainsUnobservableInDirectionalEvent(testCase)
             cloud=geometricRegistrationTest.parallelRoad();
             result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
-            testCase.verifyEqual(result.information*[1;0;0],zeros(3,1),'AbsTol',1e-12);
+            testCase.verifyEqual(result.directionalInformation*[1;0;0],zeros(3,1),'AbsTol',1e-12);
             event=registrationSupport.registrationPoseMeasurement(result,0);
             testCase.verifyFalse(result.accepted);
             testCase.verifyTrue(result.directionalAccepted);
@@ -91,7 +91,7 @@ classdef registrationInformationTest < matlab.unittest.TestCase
         function directionalInformationAndProjectorUsePhysicalCoordinates(testCase)
             cloud=geometricRegistrationTest.parallelRoad();
             cloud.components.mean(:,:)=repmat([3 1],10,1);
-            cfg=distributionRegistrationConfig();
+            cfg=distributionRegistrationConfig();cfg.method="geometricD2D";
             result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0],cfg);
             event=registrationSupport.registrationPoseMeasurement(result,0,.15);
             scale=diag([1 1 1/cfg.yawLeverArm]);

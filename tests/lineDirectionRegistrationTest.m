@@ -80,7 +80,7 @@ classdef lineDirectionRegistrationTest < matlab.unittest.TestCase
     end
 end
 function cfg=settings()
-    cfg=distributionRegistrationConfig();cfg.lineDirection=struct('enabled',true,'radius',4,'minimumComponents',3,'minimumAnisotropy',9,'minimumSpan',2.4,'standardDeviation',deg2rad(.5));
+    cfg=distributionRegistrationConfig();cfg.method="geometricD2D";cfg.lineDirection=struct('enabled',true,'radius',4,'minimumComponents',3,'minimumAnisotropy',9,'minimumSpan',2.4,'standardDeviation',deg2rad(.5));
 end
 function c=road()
     p=[(0:1.2:8.4).' zeros(8,1)];n=size(p,1);

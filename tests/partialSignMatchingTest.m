@@ -84,7 +84,7 @@ classdef partialSignMatchingTest < matlab.unittest.TestCase
             moving.components.covariance(:,:,12:13)=repmat(diag([.01 .02]),1,1,2);
             moving.components.semanticName(12:13,1)="trafficSign";moving.components.repeatability(12:13,1)=1;
             moving.components.numComponents=13;moving.components.mixtureWeight=ones(13,1)/13;
-            cfg=distributionRegistrationConfig();cfg.pyramid.sourceMergeRadius=0;
+            cfg=distributionRegistrationConfig();cfg.method="geometricD2D";cfg.pyramid.sourceMergeRadius=0;
             cfg.partialSign=struct('enabled',true,'minimumAnisotropy',5,'minimumVariance',.01, ...
                 'consensusRadius',.15,'maximumNormalDifference',.2);
         end

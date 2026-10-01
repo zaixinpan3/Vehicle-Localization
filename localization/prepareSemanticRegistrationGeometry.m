@@ -2,8 +2,13 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
 % prepareSemanticRegistrationGeometry Shared Gaussian association and residual model.
 % The target coordinates are relative to initialPose XY. Geometry information
 % uses spatial scatter and class-balanced weights, not calibrated pose noise.
-% Locally straight source curb/facade neighborhoods also constrain line direction.
-% This adds yaw information without inventing a line-tangent position residual.
+% Dispatch supportD2D and full-overlap models before the legacy implementation.
+% Legacy curb/facade neighborhoods add line-direction yaw information without
+% inventing a line-tangent position residual.
+    if string(cfg.method)=="supportD2D"
+        model=prepareSupportRegistrationGeometry(fixedCloud,movingCloud,initialPose,cfg);
+        return;
+    end
     if string(cfg.method)=="anisotropicD2D"
         model=prepareAnisotropicRegistrationGeometry(fixedCloud,movingCloud,initialPose,cfg);
         return;

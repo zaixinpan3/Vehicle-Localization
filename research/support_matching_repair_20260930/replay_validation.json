@@ -1,0 +1,10 @@
+{
+  "frames": 1170,
+  "referenceUsedForScoringOnly": true,
+  "legacyMaximumPoseDifference": 0,
+  "defaultMethod": "supportD2D",
+  "maximumImprovedAgainstLegacy": true,
+  "rmseImprovedAgainstLegacy": true,
+  "rawPerceptionRerun": false,
+  "runtimeControlled": false
+}

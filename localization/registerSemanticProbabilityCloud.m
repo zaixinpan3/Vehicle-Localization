@@ -1,12 +1,11 @@
 function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initialPose,cfg,positionAid,additionalSeeds)
 % registerSemanticProbabilityCloud: Semantic Gaussian geometry registration.
-% Select anisotropicRegistrationConfig for continuous full Gaussian overlap.
-% The default remains the validated geometry model until the new probability
-% representation can match its full-route quality. Both use the shared solver.
-% The default GICP-style residuals use both covariances. Elongated ground
-% components constrain their normal direction; poles constrain horizontal XY.
-% Straight neighborhoods optionally add unoriented line-direction residuals
-% that constrain yaw without constraining position along the line.
+% The default supportD2D model marginalizes partial-center displacement and
+% uses connected distribution support for continuous anisotropic orientation.
+% Round clouds retain position evidence; elongated clouds increasingly relax
+% their tangent. All semantic classes use the same geometry rule.
+% geometricD2D retains the preceding point/line model for comparison;
+% anisotropicRegistrationConfig selects unmodified full-overlap geometry.
 % Stored map mixture weights are priors in same-class Gaussian association.
 % They already contain temporal stability; do not multiply repeatability again.
 % Source temporal stability scales influence after semantic class balancing.
@@ -109,10 +108,11 @@ end
 
 function result=solveGeometry(fixedCloud,movingCloud,initialPose,cfg)
 % Each hypothesis is solved using exactly the same LiDAR-only objective.
-    assert(any(string(cfg.method)==["anisotropicD2D","geometricD2D"]),'VehicleLocalization:InvalidRegistrationMethod', ...
-        'Use geometricD2D or anisotropicD2D registration.');
+    assert(any(string(cfg.method)==["supportD2D","anisotropicD2D","geometricD2D"]),'VehicleLocalization:InvalidRegistrationMethod', ...
+        'Use supportD2D, geometricD2D or anisotropicD2D registration.');
     initialPose=double(initialPose(:).');gcfg=cfg.geometric;
     model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initialPose,cfg);
+    gcfg.partitionTranslation=string(cfg.method)=="supportD2D";
     f=model.fixed;m=model.moving;height=model.height;
     result=struct('accepted',false,'reason',"insufficientComponents", ...
         'poseXYTheta',initialPose,'initialPoseXYTheta',initialPose,'similarity',0, ...
@@ -140,7 +140,7 @@ function result=solveGeometry(fixedCloud,movingCloud,initialPose,cfg)
         system=model.linearize(pose,scale);
         if iteration==1, result.initialSimilarity=system.similarity; end
         if system.numPairs<cfg.minimumComponents, break; end
-        [step,~,rank]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
+        [step,~,rank]=registrationObservableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio,gcfg.partitionTranslation);
         if rank==0, break; end
         if norm(step,inf)<cfg.stepTolerance
             converged=true; break;
@@ -160,14 +160,14 @@ function result=solveGeometry(fixedCloud,movingCloud,initialPose,cfg)
     end
     pose=[q(1:2).',initialPose(3)+q(3)*scale(3)];
     system=model.linearize(pose,scale);
-    [finalStep,projector,rank,eigenvalues]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
+    [finalStep,projector,rank,eigenvalues]=registrationObservableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio,gcfg.partitionTranslation);
     % Preserve the initial prediction in unsupported directions, rather than
     % silently replacing them with a drift accumulated through changing pairs.
     if rank<3
         q=projector*q;
         pose=[q(1:2).',initialPose(3)+q(3)*scale(3)];
         system=model.linearize(pose,scale);
-        [finalStep,projector,rank,eigenvalues]=observableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio);
+        [finalStep,projector,rank,eigenvalues]=registrationObservableStep(system.H,system.gradient,gcfg.minimumObservabilityRatio,gcfg.partitionTranslation);
     end
     result.poseXYTheta=initialPose+(q.*scale).';
     result.poseXYTheta(3)=atan2(sin(result.poseXYTheta(3)),cos(result.poseXYTheta(3)));
@@ -216,13 +216,6 @@ function result=solveGeometry(fixedCloud,movingCloud,initialPose,cfg)
     end
 end
 
-function [step,projector,rank,eigenvalues]=observableStep(h,gradient,ratio)
-    [v,d]=eig((h+h.')/2,'vector'); eigenvalues=d;
-    keep=d>max(1e-8,ratio*max(d)); rank=nnz(keep);
-    projector=v(:,keep)*v(:,keep).';
-    step=-v(:,keep)*((v(:,keep).'*gradient)./d(keep));
-end
-
 function diagnostics=classDiagnostics(system,cfg)
     classes=unique(system.pairs.semanticName); correction=zeros(numel(classes),1);
     ranks=zeros(numel(classes),1); matches=zeros(numel(classes),1);weighted=zeros(numel(classes),1);
@@ -232,7 +225,7 @@ function diagnostics=classDiagnostics(system,cfg)
             a=system.J(:,:,j); w=system.weights(j)*system.robust(j);
             h=h+w*(a.'*a); gradient=gradient+w*a.'*system.residual(:,j);
         end
-        [step,~,ranks(c)]=observableStep(h,gradient,cfg.minimumObservabilityRatio);
+        [step,~,ranks(c)]=registrationObservableStep(h,gradient,cfg.minimumObservabilityRatio,cfg.partitionTranslation);
         correction(c)=norm(step); matches(c)=numel(selected);
         % Measure disagreement in supported geometry. A large Newton step
         % in a weak class direction must not veto the other classes. The

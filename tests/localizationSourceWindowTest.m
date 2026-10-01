@@ -88,8 +88,9 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             result=registerSemanticProbabilityCloud(cloud,pooled,[.8 .3 .02]);
             testCase.verifyEqual(result.observableRank,2);
             testCase.verifyTrue(result.directionalAccepted,result.reason);
-            testCase.verifyEqual(result.poseXYTheta(1),.8,AbsTol=1e-12);
-            testCase.verifyEqual(result.directionalInformation*[1;0;0],zeros(3,1),AbsTol=1e-10);
+            testCase.verifyEqual(result.poseXYTheta(1),.8,AbsTol=1e-8);
+            testCase.verifyLessThan(abs(result.directionalInformation(1,1)),1e-10);
+            testCase.verifyEqual(result.directionalInformation*(eye(3)-result.physicalObservableProjector),zeros(3),AbsTol=1e-8);
         end
         function rejectsOneFrameHorizon(testCase)
             cloud=distributionRegistrationTest.exampleCloud();cfg=localizationSourceWindowConfig();cfg.maximumFrames=1;

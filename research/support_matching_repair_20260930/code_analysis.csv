@@ -1,0 +1,15 @@
+file,findings
+config/distributionRegistrationConfig.m,0
+config/supportRegistrationConfig.m,0
+localization/localizeLidarFrame.m,0
+localization/prepareSupportRegistrationGeometry.m,0
+localization/supportRegistrationGeometry.m,0
+localization/supportRegistrationResiduals.m,0
+localization/registrationObservableStep.m,0
+tests/supportRegistrationTest.m,0
+config/anisotropicRegistrationConfig.m,0
+localization/prepareSemanticRegistrationGeometry.m,0
+localization/prepareAnisotropicRegistrationGeometry.m,0
+localization/registerSemanticProbabilityCloud.m,0
+localization/gaussianRegistrationResiduals.m,0
+tests/anisotropicRegistrationTest.m,0

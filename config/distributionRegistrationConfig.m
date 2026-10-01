@@ -3,8 +3,14 @@ function cfg = distributionRegistrationConfig()
 % Search limits describe the prediction basin, not global relocalization.
 % Similarity/curvature gates are engineering checks, not calibrated confidence.
     cfg = struct();
-    cfg.method = "geometricD2D";
+    cfg.method = "supportD2D";
     cfg.localMapRadius = 100;
+    % Continuous geometry for every class. Marginalized support displacement
+    % relaxes partial centers while round clouds retain location constraints.
+    cfg.support=struct('slidingPower',1,'angularFloor',deg2rad(1), ...
+        'scatterScale',.1,'neighborhoodRadius',4,'minimumSpan',2.4, ...
+        'directionResolution',0,'directionPower',4,'coveragePower',2, ...
+        'consensusRadius',.15,'normalConsensus',.20,'maximumGap',1.5);
     % Canonical point clouds seed the fine solve. A matched pole can protect
     % the coarse basin; sign-only merged centroids cannot veto refinement.
     cfg.pyramid = struct('mapMergeRadius',1.5,'sourceMergeRadius',0.5, ...
@@ -15,6 +21,8 @@ function cfg = distributionRegistrationConfig()
     % anchors restore the hard fine solve, avoiding bias from nearby aliases.
     cfg.softPointAssociation = struct('temperature',2.5,'radius',1.5, ...
         'minimumPosterior',0.9,'hardWithUnmergedAnchors',2);
+    % The following partialSign/lineDirection fields and minimumLineAnisotropy
+    % below apply only when method is explicitly set to geometricD2D.
     % Repeated partial patches establish sign existence, but their centers
     % need not equal the complete landmark center. Preserve a strict majority
     % of coherent centers; off-center portions retain only panel-normal force.

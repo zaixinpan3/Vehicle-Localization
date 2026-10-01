@@ -64,7 +64,7 @@ classdef anisotropicRegistrationTest < matlab.unittest.TestCase
             model=prepareSemanticRegistrationGeometry(c,c,[0 0 0],anisotropicRegistrationConfig());
             s=model.linearize([.2 -.1 .3],ones(3,1));
             t.verifyFalse(any(s.pairs.shapeRotationUsed));
-            t.verifyEqual(s.J(:,:,1),diag([sqrt(20) sqrt(20) 0]),AbsTol=1e-12);
+            t.verifyEqual(s.J(:,:,1),[diag([sqrt(20) sqrt(20) 0]);zeros(1,3)],AbsTol=1e-12);
             t.verifyEqual(model.frozenCost(s,[.2 -.1 -.4]),s.cost,AbsTol=1e-12);
         end
         function rotatingAnElongatedCloudAtItsCenterCostsMore(t)

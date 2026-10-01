@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMatchingMs,frame178ErrorM,frame932ErrorM
+common_partitioned,895,0.158461667133172,0.0608296566848966,0.107051324705673,1140,11,10.546,0.0745932535773921,0.147059066773675

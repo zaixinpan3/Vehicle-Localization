@@ -70,7 +70,7 @@ classdef positionAidedRegistrationTest < matlab.unittest.TestCase
             testCase.verifyFalse(r.accepted);
             testCase.verifyTrue(r.directionalAccepted);
             testCase.verifyEqual(r.observableRank,2);
-            testCase.verifyLessThan(abs(min(eig(r.information))),1e-8);
+            testCase.verifyLessThan(abs(min(eig(r.directionalInformation))),1e-8);
         end
         function malformedAidIsRejected(testCase)
             [fixed,moving,cfg,aid]=fixture();aid.covariance(1,1)=-1;

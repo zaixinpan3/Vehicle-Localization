@@ -7,7 +7,7 @@ classdef robustPoseGraphTest < matlab.unittest.TestCase
     end
     methods (Test)
         function curbDirectionResidualsUseMatchingWeightRows(testCase)
-            [packet,map,cfg]=fixture();
+            [packet,map,cfg]=fixture();cfg.registration.method="geometricD2D";
             map.components.mean=[0 2;1 2;2 2;3 2;0 -2;3 -2];
             map.components.semanticName=[repmat("curb",4,1);repmat("pole",2,1)];
             map.components.covariance=cat(3,repmat(diag([1 .01]),1,1,4),repmat(.02*eye(2),1,1,2));

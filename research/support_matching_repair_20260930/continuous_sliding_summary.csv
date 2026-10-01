@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMatchingMs,frame178ErrorM,frame932ErrorM
+continuous_sliding,895,0.15871843997083,0.0610497249097278,0.106119576641635,1142,11,11.9765,0.0824040048907815,0.146760486958395

@@ -1,0 +1,117 @@
+{
+  "recorded_at": "2026-09-30T20:18:59.416539-05:00",
+  "parent_commit": "25f07bcd4288989495c58c23df5fdaa857338078",
+  "production_default": "supportD2D",
+  "implementation": [
+    "Class-uniform latent partial-support displacement with continuous covariance anisotropy",
+    "Connected same-class distribution support supplies continuous orientation evidence on both sides",
+    "Continuous elongated association temperature and finite tangent-distance candidate penalty",
+    "Generalized strict-majority partial-observation treatment across semantic classes",
+    "Translation observability projection before joint pose update and accepted information export",
+    "Cost-preserving angular/scale residual split repairs unequal-scale Gaussian Gauss-Newton curvature"
+  ],
+  "validation": {
+    "tests_passed": 356,
+    "test_suites": 25,
+    "factory_analyzer_files": 27,
+    "factory_analyzer_findings": 0,
+    "fresh_complete_causal_replays": 3,
+    "frames_per_replay": 1170,
+    "frames": 1170,
+    "referenceUsedForScoringOnly": true,
+    "legacyMaximumPoseDifference": 0,
+    "defaultMethod": "supportD2D",
+    "maximumImprovedAgainstLegacy": true,
+    "rmseImprovedAgainstLegacy": true,
+    "rawPerceptionRerun": false,
+    "runtimeControlled": false,
+    "static_plot_inspected": true,
+    "git_diff_check_passed": true
+  },
+  "results": [
+    {
+      "variant": "legacy_verified",
+      "maximumFrame": 932.0,
+      "maximumErrorM": 0.159861269865301,
+      "rmseM": 0.0611234451258993,
+      "p95M": 0.104464373157195,
+      "full": 1148.0,
+      "directional": 11.0,
+      "medianMatchingMs": 10.25,
+      "frame178ErrorM": 0.0277623360511406,
+      "frame932ErrorM": 0.159861269865301
+    },
+    {
+      "variant": "overlap_verified",
+      "maximumFrame": 894.0,
+      "maximumErrorM": 0.580282804423507,
+      "rmseM": 0.0897320078211258,
+      "p95M": 0.188179815890196,
+      "full": 1140.0,
+      "directional": 27.0,
+      "medianMatchingMs": 8.1215,
+      "frame178ErrorM": 0.466576827138599,
+      "frame932ErrorM": 0.0774204764350468
+    },
+    {
+      "variant": "final_default",
+      "maximumFrame": 895.0,
+      "maximumErrorM": 0.158717502390001,
+      "rmseM": 0.0607701719741981,
+      "p95M": 0.105769015822684,
+      "full": 1142.0,
+      "directional": 11.0,
+      "medianMatchingMs": 15.483,
+      "frame178ErrorM": 0.0785385068161773,
+      "frame932ErrorM": 0.144312189657698
+    }
+  ],
+  "focus_frames": [
+    {
+      "frame": 178.0,
+      "legacyErrorM": 0.0277623360511406,
+      "overlapErrorM": 0.466576827138599,
+      "repairedErrorM": 0.0785385068161773
+    },
+    {
+      "frame": 894.0,
+      "legacyErrorM": 0.147686034562844,
+      "overlapErrorM": 0.580282804423507,
+      "repairedErrorM": 0.148712445936598
+    },
+    {
+      "frame": 895.0,
+      "legacyErrorM": 0.144394293567995,
+      "overlapErrorM": 0.22225914840741,
+      "repairedErrorM": 0.158717502390001
+    },
+    {
+      "frame": 932.0,
+      "legacyErrorM": 0.159861269865301,
+      "overlapErrorM": 0.0774204764350468,
+      "repairedErrorM": 0.144312189657698
+    }
+  ],
+  "outcome": "Implemented, validated and enabled repair. Restores the previous route accuracy level while retaining continuous all-class anisotropy; no substantial accuracy breakthrough over geometricD2D.",
+  "limitations": [
+    "Previous geometric matcher still performs better on frame 178 and on P95; six fewer full-pose acceptances",
+    "Frame 895 remains the repaired maximum at 0.158717502390001 m",
+    "Shared map/query recording and route-specific empirical tuning; no independent-drive validation",
+    "Frozen previously raw-verified source cache; no fresh full-route raw perception run",
+    "Observed repaired median 15.483 ms versus geometric 10.25 ms is not controlled timing; no speedup claim",
+    "Direction weights and observable-rank threshold are engineering settings, not calibrated posterior information",
+    "Development screen/replay CSVs reflect intermediate implementations, not a final-code factorial sweep"
+  ],
+  "intermediate_failures": [
+    "Initial replay missing setup and initial test-suite concatenation harness error corrected",
+    "Default transition exposed disconnected-neighborhood joining and finite-information test assumptions",
+    "Broad pre-final check had two null-information/nanometer motion failures; final tests verify accepted projected nullspace and numerical tolerances",
+    "Additional analyzer found one stale suppression in the check script; removed before final zero-finding result"
+  ],
+  "deliberate_exclusions": [
+    "Unrelated observer/MnCAV scripts/tests and lateral configuration",
+    "Root README, AGENTS and lattice research changes",
+    "Untracked reference directory",
+    "Recorded data, generated MAT products, external dependencies and binaries"
+  ]
+}

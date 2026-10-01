@@ -1,0 +1,2 @@
+variant,maximumFrame,maximumErrorM,rmseM,p95M,full,directional,medianMatchingMs,frame178ErrorM,frame932ErrorM
+legacy_verified,932,0.159861269865301,0.0611234451258993,0.104464373157195,1148,11,10.25,0.0277623360511406,0.159861269865301

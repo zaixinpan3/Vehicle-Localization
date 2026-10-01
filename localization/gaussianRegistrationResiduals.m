@@ -16,11 +16,18 @@ function [residual,J,precision,shapeUsed]=gaussianRegistrationResiduals(sourceMe
     detA=(ax+noise).*(dx+noise)-bx.^2;detB=(at+noise).*(dt+noise)-bt.^2;
     shape=max(0,log(detS)-log(4)-.5*(log(detA)+log(detB)));
     angle=.5*(atan2(2*bx,ax-dx)-atan2(2*bt,at-dt));
-    signShape=sign(sin(angle));signShape(signShape==0)=1;
-    residual=[rx,ry,signShape.*sqrt(shape)].';
+    gapA=hypot(ax-dx,2*bx);gapB=hypot(at-dt,2*bt);
+    traceSum=a+d;alignedDet=(traceSum+gapA+gapB).*(traceSum-gapA-gapB)/4;
+    kappa=gapA.*gapB./alignedDet;u=kappa.*sin(angle).^2;orientationCost=log1p(u);
+    % Separate pose-invariant scale mismatch from smooth angular residuals.
+    % A single sqrt(total shape cost) loses Gauss-Newton curvature whenever
+    % unequal cloud scales leave a nonzero residual at aligned axes.
+    ratio=ones(n,1);active=u>1e-12;ratio(active)=orientationCost(active)./u(active);
+    orientation=sin(angle).*sqrt(kappa.*ratio);
+    residual=[rx,ry,orientation,sqrt(max(0,shape-orientationCost))].';
     precision=zeros(2,2,n);precision(1,1,:)=1./l11;
     precision(2,1,:)=-l21./l11./l22;precision(2,2,:)=1./l22;
-    J=zeros(3,3,n);J(1:2,1:2,:)=precision;
+    J=zeros(4,3,n);J(1:2,1:2,:)=precision;
     meanYaw=sourceMean*[r(:,2),-r(:,1)].';
     ap=-2*bx;bp=ax-dx;dp=2*bx;
     l11p=ap./(2*l11);l21p=bp./l11-l21.*l11p./l11;
@@ -28,14 +35,9 @@ function [residual,J,precision,shapeUsed]=gaussianRegistrationResiduals(sourceMe
     rxp=meanYaw(:,1)./l11-rx.*l11p./l11;
     ryp=(meanYaw(:,2)-l21p.*rx-l21.*rxp)./l22-ry.*l22p./l22;
     J(1,3,:)=rxp;J(2,3,:)=ryp;
-    shapePrime=(d.*ap+a.*dp-2*b.*bp)./detS;
-    shapeYaw=zeros(n,1);nonzero=shape>1e-12;
-    shapeYaw(nonzero)=signShape(nonzero).*shapePrime(nonzero)./(2*sqrt(shape(nonzero)));
-    % The signed square root has a finite derivative at identical shapes.
-    % Eigenvalue gaps vanish continuously as either distribution becomes round.
-    gapProduct=hypot(ax-dx,2*bx).*hypot(at-dt,2*bt);
-    aligned=~nonzero & abs(sin(angle))<1e-5;
-    shapeYaw(aligned)=cos(angle(aligned)).*sqrt(gapProduct(aligned)./detS(aligned));
+    shapeYaw=sqrt(kappa).*cos(angle);active=orientationCost>1e-12;
+    shapeYaw(active)=sign(sin(angle(active))).*kappa(active).*sin(angle(active)).*cos(angle(active))./ ...
+        ((1+u(active)).*sqrt(orientationCost(active)));
     J(3,3,:)=shapeYaw;
-    shapeUsed=gapProduct>0;
+    shapeUsed=gapA.*gapB>0;
 end

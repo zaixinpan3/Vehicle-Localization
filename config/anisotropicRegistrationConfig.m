@@ -4,6 +4,6 @@ function cfg=anisotropicRegistrationConfig()
 % no point/line switch. The September 30 Mississippi replay has higher maximum
 % error than the validated default; this mode is explicitly opt-in.
     cfg=distributionRegistrationConfig();cfg.method="anisotropicD2D";
-    cfg=rmfield(cfg,{'partialSign','lineDirection'});
+    cfg=rmfield(cfg,{'partialSign','lineDirection','support'});
     cfg.geometric=rmfield(cfg.geometric,'minimumLineAnisotropy');
 end
