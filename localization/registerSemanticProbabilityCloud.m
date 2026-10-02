@@ -17,6 +17,9 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
 % Gaussian each, which removes the sub-metre association aliases of split or
 % duplicated landmarks, and its pose seeds the solve on the original clouds.
 % Position aid and additional seeds act on the fine level only.
+% Accepted results also export lidarResidualModel: serializable frozen
+% correspondences, scatter, robust weights and admitted pose subspace for
+% Route A residual evaluation at the observer prediction (not the optimum).
     if nargin<4, cfg=distributionRegistrationConfig(); end
     if nargin<5,positionAid=[];end
     if nargin<6,additionalSeeds=zeros(0,3);end
@@ -213,6 +216,37 @@ function result=solveGeometry(fixedCloud,movingCloud,initialPose,cfg)
         result.directionalAccepted=true; result.reason="acceptedDirectional";
     else
         result.accepted=true; result.reason="accepted";
+    end
+    if result.accepted || result.directionalAccepted
+        result.lidarResidualModel=exportResidualModel(model,system,result,cfg);
+    end
+end
+
+function frozen=exportResidualModel(model,system,result,cfg)
+% Capture the actual solved level, including canonical coarse components,
+% soft association scatter and marginalized partial-support covariance.
+    source=system.pairs.source;
+    projector=eye(3);
+    if result.directionalAccepted,projector=result.physicalObservableProjector;end
+    frozen=struct('kind',"frozen-semantic-lidar-v1",'method',string(cfg.method), ...
+        'origin',model.origin,'anchorPose',result.poseXYTheta, ...
+        'poseProjector',projector,'poseSpread',zeros(3), ...
+        'sourceMean',model.moving.mean(source,1:2), ...
+        'sourceCovariance',model.moving.planarCovariance(:,:,source), ...
+        'targetMean',system.targetMean,'rowInfluence',system.weights.*system.robust, ...
+        'noiseStandardDeviation',cfg.geometric.noiseStandardDeviation, ...
+        'conditionedOnPositionAid',false,'informationCalibrated',false, ...
+        'weightSemantics',"Frozen class/temporal/view/robust influence; scatter is not calibrated pose covariance");
+    if string(cfg.method)=="geometricD2D"
+        frozen.precisionRoot=system.precision;
+        frozen.sourceAxis=model.moving.lineTangent(source,:);
+        frozen.targetNormal=system.directionNormal;frozen.directionScale=system.directionScale;
+    else
+        frozen.targetCovariance=system.targetCovariance;
+        if string(cfg.method)=="supportD2D"
+            frozen.sourceAxis=system.sourceTangent;frozen.targetNormal=system.targetNormal;
+            frozen.directionScale=system.directionScale;
+        end
     end
 end
 

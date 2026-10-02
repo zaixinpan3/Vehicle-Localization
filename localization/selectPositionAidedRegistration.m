@@ -73,6 +73,12 @@ function result=selectPositionAidedRegistration(solve,initialPose,aid,cfg,additi
         result.information=reduceInformation(result.information,spread);
         result.directionalInformation=reduceInformation(result.directionalInformation,spread);
     end
+    if isfield(result,'lidarResidualModel')
+        % The residual exporter must apply this uncertainty to both the
+        % innovation and Jacobian, not undo the information reduction.
+        result.lidarResidualModel.poseSpread=spread;
+        result.lidarResidualModel.conditionedOnPositionAid=true;
+    end
     result.positionAiding=struct('used',true,'reason',"hypothesisSelection", ...
         'selected',selected,'candidateCount',count,'seedPoses',seeds(1:count,:), ...
         'candidatePoses',poses,'geometricallyValid',valid,'similarity',similarity, ...

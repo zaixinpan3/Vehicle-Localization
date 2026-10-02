@@ -8,7 +8,8 @@ function validation=validateFullLocalizationObserver(outputFolder)
         "tests/improvedObserverTest.m","tests/lateralObserverTest.m", ...
         "tests/localizationMotionInputTest.m","tests/mncavVehicleConfigTest.m", ...
         "tests/wheelLongitudinalSpeedTest.m","tests/wheelMotionInputTest.m", ...
-        "tests/synchronousLocalizationTest.m","tests/gnssOutputPointTest.m"];
+        "tests/synchronousLocalizationTest.m","tests/gnssOutputPointTest.m", ...
+        "tests/lidarMatchedInjectionTest.m","tests/lidarRegistrationResidualTest.m"];
     results=runtests(cellstr(files));writetable(table(results),fullfile(outputFolder,'tests.csv'));
     assert(all([results.Passed]),'VehicleLocalization:RegressionFailure','Observer regression failed.');
     stored=load(fullfile(outputFolder,'experiment.mat'));
@@ -27,7 +28,7 @@ function validation=validateFullLocalizationObserver(outputFolder)
         residual=max(abs(diff(p)-dt.*(v+r.diagnostics.positionCorrection(2:end,1:2)+ ...
             r.diagnostics.positionCorrection(2:end,3:4))),[],'all');
         % Absolute UTM coordinates are about 5e6 m; allow their roundoff.
-        assert(residual<1e-7,'Backward-Euler position equation must hold.');
+        assert(residual<1e-7,'Reported baseline-plus-LiDAR position increments must hold.');
     else
         assert(stepPosition<1e-4 && stepHeading<1e-5);residual=NaN;
     end

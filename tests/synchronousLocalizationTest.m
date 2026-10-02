@@ -62,6 +62,68 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             testCase.verifyLessThan(abs(r.position(end,2)),1e-12);
             testCase.verifyFalse(r.observer.sampledSystemCertified);
         end
+        function curbOnlyCannotCorrectLongitudinalError(testCase)
+            f=fixture();f.data=rmfield(f.data,'gnss');f.cfg.initialState(1)=2;
+            f.cfg.initialState(4)=.2;
+            f.data.lidar.information=repmat(diag([0,100,100]),1,1,numel(f.data.highRate.time));
+            r=run(f);
+            testCase.verifyEqual(r.position(:,1)-8*r.time,2*ones(size(r.time)),AbsTol=1e-11);
+            testCase.verifyLessThan(abs(r.position(end,2)),.002);
+            testCase.verifyEqual(r.diagnostics.lidarMatched{end}.filter.rank,2);
+        end
+        function translationYawCrossTermsReachTheRuntime(testCase)
+            f=fixture();f.data=rmfield(f.data,'gnss');f.cfg.initialState(1)=.2;
+            f.data.lidar.information=repmat([100,0,20;0,100,0;20,0,100],1,1,21);
+            r=run(f);
+            testCase.verifyLessThan(r.headingUnwrapped(2),0);
+            testCase.verifyGreaterThan(abs(r.diagnostics.poseWeight(1,3,2)),0);
+            testCase.verifyTrue(r.diagnostics.lidarMatched{2}.jumpNonexpansive);
+        end
+        function completeReliabilityRejectionEqualsMissingLidar(testCase)
+            f=fixture();f.data.lidar.frameReliability=zeros(21,1);a=run(f);
+            f.data=rmfield(f.data,'lidar');b=run(f);
+            testCase.verifyEqual(a.z,b.z,AbsTol=0);
+            testCase.verifyEqual(a.diagnostics.yawCorrection,zeros(21,1),AbsTol=0);
+        end
+        function zeroInformationIsAValidZeroCorrection(testCase)
+            f=fixture();f.data.lidar.information=zeros(3,3,21);a=run(f);
+            f.data=rmfield(f.data,'lidar');b=run(f);
+            testCase.verifyEqual(a.z,b.z,AbsTol=0);
+        end
+        function validDirectionalMatcherFeedsItsFilteredInformation(testCase)
+            f=fixture();f.data=rmfield(f.data,{'gnss','lidar'});
+            f.cfg.initialState(1)=2;f.cfg.initialState(4)=.2;
+            f.data.lidarMatcher=@directionalResult;r=run(f);
+            testCase.verifyEqual(r.position(:,1)-8*r.time,2*ones(size(r.time)),AbsTol=1e-11);
+            testCase.verifyLessThan(abs(r.position(end,2)),.002);
+            testCase.verifyEqual(r.diagnostics.lidarMatched{2}.filter.rank,2);
+        end
+        function runtimeResidualProviderUsesPostBaselinePrediction(testCase)
+            f=fixture();f.cfg.initialState(4)=.2;
+            f.data.lidar.evaluateResidual=@lineResidual;
+            r=run(f);
+            testCase.verifyEqual(r.diagnostics.lidarMatched{2}.representation,"predictedPoseResidual");
+            testCase.verifyLessThan(abs(r.position(end,2)),.002);
+        end
+        function residualProviderReliabilityIsNotOverwritten(testCase)
+            f=fixture();f.cfg.initialState(4)=.2;f.data.lidar.evaluateResidual=@rejectedResidual;
+            a=run(f);f.data=rmfield(f.data,'lidar');b=run(f);
+            testCase.verifyEqual(a.z,b.z,AbsTol=0);
+        end
+        function sourceReliabilityIsAlignedWithItsOwnFrame(testCase)
+            f=unaligned();f.data.lidar.frameReliability=(0:20).'/20;
+            f.data.lidar.directionReliability=repmat([0,.5,1],21,1);
+            [d,~,~]=synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            testCase.verifyEqual(d.lidar.frameReliability,f.data.lidar.frameReliability,AbsTol=0);
+            testCase.verifyEqual(d.lidar.directionReliability,f.data.lidar.directionReliability,AbsTol=0);
+        end
+        function splitUpdateSatisfiesReportedPositionEquation(testCase)
+            f=fixture();f.cfg.initialState([1,4,7])=[.1;.2;.03];r=run(f);
+            rates=r.velocity(2:end,:)+r.diagnostics.positionCorrection(2:end,1:2) ...
+                +r.diagnostics.positionCorrection(2:end,3:4);
+            testCase.verifyEqual(diff(r.position),diff(r.time).*rates,AbsTol=1e-12);
+            testCase.verifyFalse(r.observer.lidarMatched.baselineFullStateCertified);
+        end
         function stateUsesOnlyOneLowRateSolve(testCase)
             f=fixture();a=run(f);f.cfg.maximumIntegrationStep=1e-6;b=run(f);
             testCase.verifyEqual(a.z,b.z,AbsTol=0);
@@ -108,6 +170,21 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             testCase.verifyError(@()run(f),'VehicleLocalization:AlignedLateralRequired');
         end
     end
+end
+
+function r=directionalResult(~,seed,~)
+    r=struct('poseXYTheta',[seed(1),0,0],'information',100*eye(3),'accepted',false, ...
+        'directionalAccepted',true,'supportedConverged',true,'observableRank',2, ...
+        'directionalInformation',diag([0,100,100]),'physicalObservableProjector',diag([0,1,1]));
+end
+
+function m=lineResidual(~,pose)
+    points=[-2,0;0,0;2,0];
+    m=buildLidarLineMeasurement(points,points,repmat([0,1],3,1),pose,100*ones(3,1));
+end
+
+function m=rejectedResidual(k,pose)
+    m=lineResidual(k,pose);m.frameReliability=0;
 end
 
 function r=onlineResult(~,seed,aid)

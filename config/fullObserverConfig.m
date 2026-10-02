@@ -3,9 +3,9 @@ function cfg=fullObserverConfig()
 % Source alignment is offline bracket interpolation with declared wait.
 % Measurement channels have zero perception delay; no pose transport occurs.
 % GNSS corrects position only. The heading is the integrated gyro, corrected
-% only by qualified LiDAR yaw.
+% by the full Lyapunov-matched LiDAR channel, including translation-yaw terms.
     cfg=motionAidedObserverConfig();
-    cfg.kind="full-synchronous-observer-v4";
+    cfg.kind="full-synchronous-route-a-v5";
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('positionGain',1,'gainInformationScale',16, ...

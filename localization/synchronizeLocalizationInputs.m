@@ -28,6 +28,14 @@ function [aligned,lateral,metadata]=synchronizeLocalizationInputs(data,lateralIn
     aligned.lidar.pose=data.lidar.pose(selected,:);
     aligned.lidar.valid=data.lidar.valid(selected);
     aligned.lidar.information=data.lidar.information(:,:,selected);
+    for name=["frameReliability","directionReliability"]
+        if isfield(data.lidar,name),aligned.lidar.(name)=data.lidar.(name)(selected,:);end
+    end
+    if isfield(data.lidar,'evaluateResidual')
+        originalIndex=find(selected);provider=data.lidar.evaluateResidual;
+        aligned.lidar.evaluateResidual=@(k,pose)provider(originalIndex(k),pose);
+    end
+    if isfield(data.lidar,'residualModels'),aligned.lidar.residualModels=data.lidar.residualModels(selected);end
     motionWait=h.time(right)-t;gnssWait=zeros(size(t));gnssBracket=zeros(size(t));
     if isfield(data,'gnss')
         g=data.gnss;

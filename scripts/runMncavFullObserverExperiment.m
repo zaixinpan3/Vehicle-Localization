@@ -21,15 +21,17 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     h=prepared.highRate;t=h.time;
     lateralDesign=designLateralObserverGains(lateralObserverConfig());
     lateral=runLateralVelocityObserver(h,lateralDesign,lateralObserverConfig("mncav"));
-    [calls,matching]=readMatchingInputs(options.MatchingFolder);
-    calls=calls(calls.time>=t(1) & calls.time<=t(end),:);
+    [calls,matching,residualModels]=readMatchingInputs(options.MatchingFolder);
+    covered=calls.time>=t(1) & calls.time<=t(end);
+    calls=calls(covered,:);residualModels=residualModels(covered);
     n=height(calls);information=zeros(3,3,n);
     for k=1:n
         c=calls(k,:);information(:,:,k)=[c.informationXX,c.informationXY,c.informationXPsi; ...
             c.informationXY,c.informationYY,c.informationYPsi;c.informationXPsi,c.informationYPsi,c.informationPsiPsi];
     end
     lidar=struct('time',calls.time,'pose',[calls.measurementX,calls.measurementY,calls.measurementPsi], ...
-        'information',information,'valid',logical(calls.fullPose),'delay',0);
+        'information',information,'valid',logical(calls.measurementValid),'delay',0);
+    lidar.residualModels=residualModels;
     bestMetadata=jsondecode(fileread('output/receiver_synchronized_inputs/bestpos_metadata.json'));
     referenceMetadata=jsondecode(fileread('output/receiver_synchronized_inputs/reference_metadata.json'));
     assert(string(bestMetadata.clock.modelId)==prepared.clockModelId && ...
@@ -51,14 +53,14 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     % Identical initial state in every ablation, including GNSS-only replay.
     assert(lidar.time(1)==t(1),'Initial acquisition clocks must agree.');
     initialization="first accepted LiDAR pose";
-    if lidar.valid(1)
+    first=find(abs(calls.time-t(1))<1e-7,1);
+    assert(~isempty(first),'Initial matching prediction is unavailable.');
+    if calls.fullPose(first)
         pose=lidar.pose(1,:);
     else
         % Temporal confirmation intentionally withholds the first scan. Use
         % the replay's existing initial prediction, without inventing a LiDAR
         % event or looking ahead to a later confirmed feature measurement.
-        first=find(abs(calls.time-t(1))<1e-7,1);
-        assert(~isempty(first),'Initial matching prediction is unavailable.');
         pose=[calls.predictedX(first),calls.predictedY(first),calls.predictedPsi(first)];
         initialization="matching prediction during temporal-confirmation startup";
     end
@@ -136,8 +138,15 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     if options.RematchWithGnss
         actual=runs{1}.estimate.matchingResults;
         data.lidar.pose=cell2mat(cellfun(@(r)r.poseXYTheta,actual,UniformOutput=false));
-        data.lidar.valid=cellfun(@(r)r.accepted,actual);
-        for k=1:numel(actual),data.lidar.information(:,:,k)=actual{k}.information;end
+        data.lidar.valid=false(numel(actual),1);
+        data.lidar.residualModels=cell(numel(actual),1);
+        for k=1:numel(actual)
+            event=registrationSupport.registrationPoseMeasurement(actual{k},data.lidar.time(k));
+            if ~isempty(event)
+                data.lidar.valid(k)=true;data.lidar.information(:,:,k)=event.information;
+                if isfield(event,'lidarResidualModel'),data.lidar.residualModels{k}=event.lidarResidualModel;end
+            end
+        end
         data.lidar.conditionedOnGnssSelection=true;
         data.lidar.informationCalibrated=false;
         lidar=data.lidar;
@@ -193,7 +202,7 @@ function r=onlineMatch(k,seed,aid,available,map,sources,cfg)
     end
 end
 
-function [calls,metadata]=readMatchingInputs(folder)
+function [calls,metadata,models]=readMatchingInputs(folder)
     recorded=jsondecode(fileread(fullfile(folder,'metadata.json')));
     assert(string(recorded.perceptionMode)=="coarseProbabilityCloud" && recorded.perceptionRerun && ...
         ~recorded.finePerceptionUsed,'VehicleLocalization:CoarseReplayRequired', ...
@@ -201,6 +210,8 @@ function [calls,metadata]=readMatchingInputs(folder)
     % CSV's decimal formatting can lose microseconds in epoch timestamps.
     % Keep the MAT result authoritative for clocks, poses and information.
     saved=load(fullfile(folder,'report.mat'),'report');calls=saved.report.calls;
+    models=cell(height(calls),1);
+    if isfield(saved.report,'lidarResidualModels'),models=saved.report.lidarResidualModels;end
     mapCfg=featureMapBuildConfig();root=fileparts(fileparts(mfilename('fullpath')));
     poses=readFramePoseTable(fullfile(root,'data',mapCfg.poseMatchCsvPath),calls.frame.');
     assert(max(abs(poses.lidar_stamp_sec-calls.rosStamp))<1e-6,'Replay acquisition stamps differ.');
@@ -209,11 +220,13 @@ function [calls,metadata]=readMatchingInputs(folder)
     calls.time=poses.receiver_time_sec;
     assert(max(abs(calls.time-calls.timeSeconds))<1e-7,'Receiver clock mismatch.');
     calls.fullPose=logical(calls.accepted);
+    calls.measurementValid=logical(calls.accepted | calls.directionalAccepted);
     calls.measurementX=calls.x;calls.measurementY=calls.y;calls.measurementPsi=calls.psi;
-    calls{~calls.fullPose,{'measurementX','measurementY','measurementPsi'}}=NaN;
+    calls{~calls.measurementValid,{'measurementX','measurementY','measurementPsi'}}=NaN;
     metadata=struct('source',"Fresh raw-scan whole-pillar coarse D2D measurements", ...
         'rerun',true,'folder',folder,'replay',recorded, ...
-        'directionalMeasurementsWithheld',nnz(calls.directionalAccepted), ...
+        'directionalMeasurementsAdmitted',nnz(calls.directionalAccepted), ...
+        'frozenResidualModels',nnz(~cellfun(@isempty,models)), ...
         'limitations',string(recorded.mapOverlap)+"; "+string(recorded.mode)+" matching initialization");
 end
 

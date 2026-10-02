@@ -108,6 +108,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     radius=100; rows=cell(n,32); maxTimestampDifference=0;
     store=matfile(matPath); frameBlock=[]; firstInBlock=0;sourceHistory=[];
     diskBlocks=zeros(0,3);candidatePoses=zeros(n,3);windowDetails=zeros(n,8);
+    lidarResidualModels=cell(n,1);
     for k=1:n
         if isempty(frameBlock) || k>=firstInBlock+numel(frameBlock)
             firstInBlock=k; lastInBlock=min(n,k+options.FrameBlockSize-1);
@@ -142,6 +143,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         if ~isempty(event)
             state=event.pose;
             information=event.information;
+            if isfield(event,'lidarResidualModel'),lidarResidualModels{k}=event.lidarResidualModel;end
         end
         difference=state-poseReference(k,:); difference(3)=wrap(difference(3));
         pairCount=0;
@@ -164,6 +166,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         end
     end
     report.calls=callTable(rows);
+    report.lidarResidualModels=lidarResidualModels;
     report.calls.clockModelId=repmat(string(clock.modelId),n,1);
     report.candidatePoses=array2table([frameIndices(:),candidatePoses],VariableNames={'frame','x','y','psi'});
     report.sourceWindows=array2table([frameIndices(:),windowDetails],VariableNames={'frame','scans','spanSeconds','components', ...

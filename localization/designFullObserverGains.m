@@ -11,6 +11,10 @@ function design=designFullObserverGains(cfg)
         "maximumCourseGap","minimumCourseDisplacement","minimumSpeed","headingErrorLimit"]);
     assert(isempty(obsolete),'VehicleLocalization:ObsoleteFullConfig', ...
         'GNSS does not correct the heading; remove cfg.gnss fields: %s.',strjoin(obsolete,', '));
+    if isfield(cfg,'timing') && cfg.timing=="synchronous"
+        design=matchedDesign(cfg);
+        return;
+    end
     base=designMotionAidedObserverGains(cfg);g=cfg.gains;
     validateattributes(cfg.gnss.positionGain,{'numeric'},{'scalar','finite','positive'});
     validateattributes(cfg.gnss.minimumPositionWeight,{'numeric'},{'scalar','finite','>',0,'<=',1});
@@ -33,4 +37,35 @@ function design=designFullObserverGains(cfg)
         'lidarHeadingRate',base.headingDecayRate, ...
         'matrixCertificateVerified',true,'unconditionalIssClaimed',false, ...
         'scope',"Common continuous translation bound; conditional local heading ISS only with qualified LiDAR yaw. GNSS-only operation integrates the gyro heading without correction; no ISS during arbitrary simultaneous outages.");
+end
+
+function design=matchedDesign(cfg)
+% Only translation has a stable GNSS baseline in the current architecture.
+% Extend that fixed storage to yaw to match the LiDAR adjoint, without
+% relabeling the extension as a seven-state baseline ISS certificate.
+    g=cfg.gains(:);
+    validateattributes(g,{'numeric'},{'real','finite','positive','numel',4});
+    validateattributes(cfg.maximumTrackAngleRate,{'numeric'},{'real','finite','nonnegative','scalar'});
+    validateattributes(cfg.gnss.positionGain,{'numeric'},{'real','finite','positive','scalar'});
+    validateattributes(cfg.gnss.minimumPositionWeight,{'numeric'},{'real','finite','>',0,'<=',1,'scalar'});
+    filterLidarPoseInformation(zeros(3),cfg);
+    alpha=cfg.gnss.positionGain*cfg.gnss.minimumPositionWeight;
+    matrices=zeros(3,3,2);margins=zeros(2,1);
+    for k=1:2
+        q2=(k-1)*cfg.maximumTrackAngleRate^2;
+        matrices(:,:,k)=[2*alpha,-1,0;-1,2*g(2),-(1+q2);0,-(1+q2),2*g(3)];
+        margins(k)=min(eig(matrices(:,:,k)));
+    end
+    assert(all(margins>1e-9),'VehicleLocalization:InfeasibleFullCertificate', ...
+        'GNSS baseline translation gains must have positive conditional dissipation.');
+    matched=struct('P',blkdiag(eye(6),g(1)/g(4)),'T',eye(7),'theta',1, ...
+        'scalingExponents',[1;2;3;1;2;3;1],'kappa',g(1), ...
+        'baselineFullStateCertified',false, ...
+        'metricSource',"Existing physical translation P=I6, extended with fixed yaw weight kp/kpsi");
+    design=struct('kind',cfg.kind,'gains',g.','gnssPositionGain',cfg.gnss.positionGain, ...
+        'translationP',eye(6),'comparisonMatrices',matrices, ...
+        'translationMargins',margins,'commonTranslationMargin',min(margins), ...
+        'matrixCertificateVerified',true,'unconditionalIssClaimed',false, ...
+        'baselineFullStateCertified',false,'lidarMatched',matched, ...
+        'scope',"Conditional GNSS baseline translation bound with heading/model errors as inputs; fixed-metric LiDAR dissipation only. No full-state certificate without an absolute heading channel or during arbitrary outages.");
 end

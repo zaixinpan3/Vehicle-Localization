@@ -256,6 +256,9 @@ classdef registrationSupport
                 'arrivalTimeIsPlaceholder',placeholder);
             measurement.conditionedOnPositionAid=isfield(result,'positionAiding') && result.positionAiding.used;
             measurement.positionAidInformationAdded=false;
+            if isfield(result,'lidarResidualModel')
+                measurement.lidarResidualModel=result.lidarResidualModel;
+            end
         end
     end
 end

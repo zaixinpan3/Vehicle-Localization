@@ -1,9 +1,10 @@
-# Continuous localization observer
+# Vehicle localization observer
 
 ## Current synchronous runtime
 
-`runFullLocalizationObserver` defaults to one backward-Euler update per common
-localization frame. `synchronizeLocalizationInputs` aligns motion/lateral
+`runFullLocalizationObserver` defaults to a baseline backward-Euler step and
+one implicit Route A LiDAR correction per common localization frame.
+`synchronizeLocalizationInputs` aligns motion/lateral
 estimates and BESTPOS positions on native LiDAR times, approximately 10 Hz.
 No GNSS/LiDAR pose is propagated between frames and no 100 Hz localization
 trajectory is generated. `highRate` remains the compatibility field name, but
@@ -50,18 +51,97 @@ frame time. Thus this experiment is offline synchronization; zero LiDAR
 processing delay does not mean zero alignment latency.
 
 Each available source must have exactly the same time array as `highRate`.
-Invalid or missing source packets withdraw only that frame's channel; older
-poses are not retained as substitute measurements. Both sources missing leaves
-only state dynamics. GNSS corrects position only: the heading integrates the
-gyro and is corrected only by qualified LiDAR yaw, so without LiDAR it is
-uncorrected gyro integration. Synchronized lateral estimates are required explicitly.
-One implicit solve uses each frame interval; `maximumIntegrationStep` is unused
-in this mode. MnCAV GNSS position gain is now 4/s, matching the LiDAR gain;
-other gains are unchanged. The continuous gain certificate is
-reported as context, with `sampledSystemCertified=false` for the complete new
-sampled nonlinear implementation. See the
+Invalid or missing packets withdraw that frame's channel. Both sources missing
+leaves the motion-aided prediction. GNSS corrects position only; without LiDAR,
+heading is uncorrected gyro integration. Synchronized lateral estimates are
+required. The baseline uses gyro-predicted heading for motion rotation and
+receiver-point correction, then LiDAR corrects the predicted pose jointly.
+The corrected heading enters the next baseline step. There are no integration
+substeps; `maximumIntegrationStep` is unused in this mode. MnCAV nominal gains
+remain `[4,4,12,4]` with GNSS position gain 4/s. The implementation before
+Route A and its earlier measurements are described in the
 [current calibration, gain and accuracy report](../research/mncav_bestpos_alignment_20260917/README.md)
 and the [discrete equations](../research/mncav_synchronous_bestpos_20260917/README.md).
+
+### Route A LiDAR injection
+
+The current seven-state model retains explicit heading at standstill. Its
+physical coordinates have fixed `theta=1`, `T=I7`; the two-chain exponents
+remain `[1,2,3,1,2,3,1]`. `designFullObserverGains` uses the existing translation
+storage `Ptranslation=I6`, extended with fixed yaw weight `kp/kpsi`. This is
+a Lyapunov storage metric, not an estimator covariance. It recovers the nominal
+position/yaw gain ratio for uncoupled geometry without dropping cross terms.
+
+For `D=diag(cfg.lidar.poseScales)`, `I=D'*information*D` and
+`C=D\(G*T)`, `filterLidarPoseInformation` constructs
+`F=U*diag(rho./(lambda+lambdaStar))*U'` and
+`S=U*diag(rho.*lambda./(lambda+lambdaStar))*U'`.
+Here `lambdaStar=cfg.lidar.gainInformationScale>0`; it is excluded from the
+reported information spectrum. The matched rate is
+`kappa*T*(P\(C'*xi))`, with fixed `kappa=kp`. Eigenvalues, eigenvectors, rank,
+trace, effective dimension and retained directional strengths are reported.
+Rank-deficient and zero information are valid. A curb's longitudinal nullspace
+is preserved. There is no minimum-eigenvalue information floor, yaw-diagonal
+gate or extra multiplication by point count.
+
+Accepted D2D registration now exports `lidarResidualModel`, a serializable
+model of the actual accepted coarse or fine solution. It retains source/map
+Gaussian geometry, normals or shape factors, frozen robust/class/temporal/view
+influence, and the admitted pose subspace. The online matcher passes it directly
+to `evaluateLidarRegistrationResidual`, which reevaluates the residual and its
+physical Jacobian at the post-baseline prediction. The source Gaussian scatter
+rotates using the same analytic derivative as the matcher. The support model's
+latent sliding covariance and any soft-association scatter are retained.
+
+Partial geometry evaluates `anchor+projector*(prediction-anchor)` and applies
+the same projector to its Jacobian. This preserves rejected directions in both
+innovation and information. Between-hypothesis pose spread from GNSS-assisted
+selection is applied as a low-rank residual whitening to both quantities; it
+can only reduce information, and adds no GNSS curvature. New replay MAT files
+retain models in `report.lidarResidualModels`; aligned observer packets use
+`data.lidar.residualModels`. Existing files without this geometry use the local
+approximation `xi=S*(D\(qL-predictedPose))`, with wrapped heading difference.
+Validated directional events use filtered `directionalInformation`. Rejected
+registrations remain rejected, and a directional match cannot initialize a full
+absolute pose. Both interfaces assume a consistent local angle chart and
+associations. Initializer, GNSS candidate selection and map correlations remain
+possible: information is a geometric surrogate, not calibrated inverse pose
+covariance or an assertion of independent measurement noise.
+
+For an external residual model, `data.lidar.evaluateResidual(k,predictedPose)` can supply
+`residual`, physical `jacobian`, `weights`, and `linearizationPose` at the
+post-baseline prediction on an admitted frame. `buildLidarLineMeasurement`
+constructs frozen point-to-line geometry from calibrated, deskewed vehicle
+points and associated unit map normals. The correction uses `xi=-F*D'*J'*W*r`.
+Weights may be diagonal or full PSD precision for correlated residuals. Do not
+use the optimizer's final near-zero gradient. Nuisance variables are not
+estimated here: an upstream nuisance elimination must consistently reduce both
+information and innovation, with any prior stated explicitly.
+
+Optional source arrays `frameReliability` (N-by-1) and `directionReliability`
+(N-by-3) range from zero to one. Directions follow ascending normalized
+information eigenvalues; repeated eigenspaces use their minimum reliability.
+Residual providers can also supply reliability, multiplied by source reliability.
+These gates require upstream association/support/noise evidence; eigenvalues
+alone do not establish reliability.
+
+At a frame, set `Q=kappa*C'*S*C`. The implicit LiDAR jump has error map
+`(I+h*(P\Q))\e`, whose energy-coordinate eigenvalues are `1/(1+h*lambdaZ)`.
+It is nonexpansive for any nonnegative step under the frozen affine noiseless
+model. The reusable correction helper also offers explicit updates capped at
+`h*max(lambdaZ)<=1.8<2`. Neither result certifies nonlinear association changes,
+map errors or the entire baseline-plus-jump system. The diagnostics retain
+`sampledSystemCertified=false` and `baselineFullStateCertified=false`.
+In particular, GNSS-only operation has no baseline yaw ISS certificate, and an
+arbitrary longitudinal outage with curb-only geometry cannot guarantee full
+position convergence. The reported translation margin concerns the GNSS
+baseline, treating heading/model errors as inputs.
+
+This extension follows the fixed quadratic metric and two-chain coordinates
+in Bessafa et al., *Generalized multi-output high-gain observer with application
+to ego vehicle trajectory and orientation estimation*, Sections 2.2 and 4.2,
+Theorem 5, [DOI: 10.1016/j.automatica.2026.112915](https://doi.org/10.1016/j.automatica.2026.112915).
+The new LiDAR jump is not certified by that paper's original continuous LMI.
 
 Longitudinal speed remains exclusively wheel derived. The lateral observer
 exports its velocity and side slip at the INSPVA output point that the pose
@@ -74,7 +154,7 @@ still enter the global observer at the IMU location; their lever-arm terms
 (`rDot*d`, `r^2*d`) are not compensated.
 `prepareWheelMotionInputs` reads wheel rates, steering and IMU with no alternate
 speed fallback. Missing/expired wheel aiding is an error, except the declared
-short stationary startup. The latest output directory is
+short stationary startup. The pre-Route-A output directory is
 `output/mncav_coarse_localization_20260924b`. On 1170 raw scans, the 1169
 observer outputs have fused position RMSE 5.96 cm (5.42 cm after the 2 s
 initialization transient) and heading RMSE 0.39 degrees; GNSS-only is 6.33 cm

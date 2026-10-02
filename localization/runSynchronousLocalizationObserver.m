@@ -1,16 +1,21 @@
 function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
-% runSynchronousLocalizationObserver One backward-Euler update per frame.
+% runSynchronousLocalizationObserver Baseline flow plus a Route A jump per frame.
 % Inputs and real measurement reconstructions must share the same frame clock.
 % No pose anchor is propagated, no inter-frame pose is generated, and absent
-% measurements withdraw their own correction. The continuous gain certificate
-% is retained as design context, not a proof of this sampled nonlinear system.
+% measurements withdraw their own correction. An implicit baseline step is
+% followed by an implicit Lyapunov-matched LiDAR step. Only the locally affine
+% LiDAR jump is certified as nonexpansive; the full sampled system is not.
 % Optional data.lidarMatcher(k,seed,positionAid) runs before the current update.
 % It replaces data.lidar, receives the previous fused-state prediction and
 % current point-corrected GNSS, and returns a registration result. Candidate
 % selection may depend on GNSS; its information must exclude GNSS curvature.
 % Wheel and lateral-observer velocities are used without LiDAR-derived bias.
-% GNSS corrects position only; the heading is the integrated gyro, corrected
-% only by qualified LiDAR yaw (diagnostics.headingMode 2, otherwise 0).
+% GNSS corrects position only; the full LiDAR information corrects pose jointly.
+% Matcher events and recorded data.lidar.residualModels supply accepted frozen
+% geometry for predicted-pose residual evaluation. Old pose-only records use
+% the local information approximation with its initialization dependence.
+% Optional data.lidar.evaluateResidual(k,predictedPose) supplies residual-level
+% geometry at the post-baseline pose on each valid frame, overriding that model.
     h=data.highRate;t=h.time(:);n=numel(t);
     assert(n>=2 && all(isfinite(t)) && all(diff(t)>0), ...
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
@@ -36,7 +41,10 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     continuous=designFullObserverGains(cfg);
-    design=struct('kind',"synchronous-backward-euler",'continuousDesign',continuous, ...
+    matchedDesign=continuous.lidarMatched;
+    poseJacobian=zeros(3,7);poseJacobian(1,1)=1;poseJacobian(2,4)=1;poseJacobian(3,7)=1;
+    design=struct('kind',"synchronous-route-a-implicit",'continuousDesign',continuous, ...
+        'lidarMatched',matchedDesign,'lidarJumpCertificate',"Implicit locally affine fixed-metric contraction", ...
         'sampledSystemCertified',false,'gainsRetuned',isfield(cfg.gnss,'positionGainDesign'));
     x=cfg.initialState;
     assert(numel(x)==7 && all(isfinite(x)),'VehicleLocalization:FullInitializationRequired', ...
@@ -44,6 +52,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     z=zeros(n,7);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
     yawCorrection=zeros(n,1);gnssPosition=nan(n,2);gnssInformation=nan(2,2,n);
     margins=nan(n,1);weights=nan(n,2);maximumRate=0;
+    lidarAudits=cell(n,1);poseWeights=zeros(3,3,n);baselineStates=zeros(n,7);
     for k=1:n
         dt=0;if k>1,dt=t(k)-t(k-1);end
         speed=h.longitudinalSpeed(k);vy=lateral.lateralVelocity(k);
@@ -61,27 +70,23 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             end
             matched=data.lidarMatcher(k,seed,aid);
             matchingResults{k}=matched;matchingSeeds(k,:)=seed;
-            L.values(k,:)=matched.poseXYTheta;L.information(:,:,k)=matched.information;
-            % The existing observer requires full pose. Partial geometry is
-            % retained in diagnostics rather than filled with a GNSS prior.
-            L.valid(k)=matched.accepted;
-            assert(~L.valid(k) || (all(isfinite(L.values(k,:))) && ...
-                all(isfinite(L.information(:,:,k)),'all') && min(eig(L.information(:,:,k)))>0), ...
-                'VehicleLocalization:InvalidOnlineLidar','Accepted matcher output needs finite full-pose geometry.');
+            event=registrationSupport.registrationPoseMeasurement(matched,t(k));
+            L.valid(k)=~isempty(event);
+            if L.valid(k)
+                L.values(k,:)=event.pose;L.information(:,:,k)=event.information;
+                if isfield(event,'lidarResidualModel'),L.residualModels{k}=event.lidarResidualModel;end
+                if isfield(matched,'frameReliability'),L.frameReliability(k)=matched.frameReliability;end
+                if isfield(matched,'directionReliability'),L.directionReliability(k,:)=matched.directionReliability(:).';end
+            end
         end
         q=h.yawRate(k)+lateral.sideSlipAngleRate(k);maximumRate=max(maximumRate,abs(q));
-        Wl=weight(L,k,cfg.lidar.gainInformationScale,3);
         yaw=predYaw;
-        if L.valid(k) && Wl(3,3)>=cfg.lidar.minimumPoseWeight
-            gain=cfg.gains(4)*Wl(3,3);yaw=predYaw+dt*gain/(1+dt*gain)*wrap(L.values(k,3)-predYaw);
-            headingMode(k)=2;yawCorrection(k)=gain*wrap(L.values(k,3)-yaw);
-        end
         Wg=zeros(2);
         if G.valid(k)
             [gnssPosition(k,:),gnssInformation(:,:,k)]=correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),yaw,alignment);
             I=gnssInformation(:,:,k);Wg=I/(I+cfg.gnss.gainInformationScale*eye(2));Wg=(Wg+Wg.')/2;
         end
-        K=cfg.gnss.positionGain*Wg+cfg.gains(1)*Wl(1:2,1:2);
+        K=cfg.gnss.positionGain*Wg;
         R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
         velocity=R*[speed;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
         A=[(1+dt*cfg.gains(2))*eye(2),-dt*eye(2); ...
@@ -89,12 +94,35 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         va=A\[x([2,5])+dt*cfg.gains(2)*velocity;x([3,6])+dt*cfg.gains(3)*acceleration];
         b=zeros(2,1);
         if G.valid(k),b=b+cfg.gnss.positionGain*Wg*gnssPosition(k,:).';end
-        if L.valid(k),b=b+cfg.gains(1)*Wl(1:2,1:2)*L.values(k,1:2).';end
         p=(eye(2)+dt*K)\(x([1,4])+dt*va(1:2)+dt*b);
         x=[p(1);va(1);va(3);p(2);va(2);va(4);yaw];
+        baselineStates(k,:)=x.';
+        if L.valid(k)
+            measurement=struct('pose',L.values(k,:).','information',L.information(:,:,k));
+            if isfield(L,'evaluateResidual')
+                measurement=L.evaluateResidual(k,x([1,4,7]));
+                assert(isfield(measurement,'residual'),'VehicleLocalization:InvalidLidarResidual', ...
+                    'evaluateResidual must return a predicted-pose residual channel.');
+            elseif ~isempty(L.residualModels{k})
+                measurement=evaluateLidarRegistrationResidual(L.residualModels{k},x([1,4,7]));
+            end
+            if ~isfield(measurement,'frameReliability'),measurement.frameReliability=1;end
+            if ~isfield(measurement,'directionReliability'),measurement.directionReliability=ones(3,1);end
+            measurement.frameReliability=measurement.frameReliability*L.frameReliability(k);
+            measurement.directionReliability=measurement.directionReliability(:).*L.directionReliability(k,:).';
+            [delta,audit]=computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
+                matchedDesign,cfg,StepSize=dt,Discretization="implicit");
+            assert(audit.jumpNonexpansive,'VehicleLocalization:LidarJumpCertificateFailed', ...
+                'The numerical LiDAR jump failed its fixed-metric energy check.');
+            x=x+delta;lidarAudits{k}=audit;poseWeights(:,:,k)=audit.filter.S;
+            rateCorrection=audit.continuousCorrection;
+            if dt>0,rateCorrection=delta/dt;end
+            correction(k,3:4)=rateCorrection([1,4]).';yawCorrection(k)=rateCorrection(7);
+            weights(k,2)=min(audit.filter.strengths);
+            if audit.filter.S(3,3)>0,headingMode(k)=2;end
+        end
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Synchronous update became nonfinite.');
         if G.valid(k),correction(k,1:2)=(cfg.gnss.positionGain*Wg*(gnssPosition(k,:).'-p)).';weights(k,1)=min(eig(Wg));end
-        if L.valid(k),correction(k,3:4)=(cfg.gains(1)*Wl(1:2,1:2)*(L.values(k,1:2).'-p)).';weights(k,2)=min(eig(Wl));end
         alpha=min(eig(K));q2=cfg.maximumTrackAngleRate^2;
         margins(k)=min(eig([2*alpha,-1,0;-1,2*cfg.gains(2),-(1+q2);0,-(1+q2),2*cfg.gains(3)]));
         z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));
@@ -105,6 +133,8 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition,'gnssInformationAtObserverPoint',gnssInformation, ...
         'yawCorrection',yawCorrection, ...
+        'lidarMatched',{lidarAudits},'poseWeight',poseWeights,'baselineState',baselineStates, ...
+        'baselineFullStateCertified',false, ...
         'minimumWeights',weights,'translationDissipationMargin',margins, ...
         'maximumTrackAngleRate',maximumRate, ...
         'rateEnvelopeSatisfied',maximumRate<=cfg.maximumTrackAngleRate,'stateResets',0, ...
@@ -113,7 +143,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'localizationUpdates',n-1,'virtualPoseUpdates',0,'integrationSubsteps',0, ...
         'nominalOutputRateHz',1/median(diff(t)),'referenceUsed',false, ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
-        'scope',"One implicit update per synchronized frame; no measurement transport. Input alignment is a separate offline operation.");
+        'scope',"Implicit baseline and matched LiDAR correction once per frame; local affine jump certificate only. Translation margins refer to the GNSS baseline with heading as an input. Alignment remains offline.");
     if onlineMatching
         estimate.matchingResults=matchingResults;estimate.matchingSeeds=matchingSeeds;
         estimate.diagnostics.matchingFeedback=true;
@@ -122,7 +152,9 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
 end
 
 function s=source(data,name,t,width)
-    n=numel(t);s=struct('valid',false(n,1),'values',nan(n,width),'information',nan(width,width,n));
+    n=numel(t);s=struct('valid',false(n,1),'values',nan(n,width),'information',nan(width,width,n), ...
+        'frameReliability',ones(n,1),'directionReliability',ones(n,3));
+    s.residualModels=cell(n,1);
     if ~isfield(data,name),return;end
     a=data.(name);field='pose';if width==2,field='position';end
     assert(isfield(a,'delay') && isequal(a.delay,0),'VehicleLocalization:FullZeroDelayRequired','Declare zero perception delay.');
@@ -130,18 +162,37 @@ function s=source(data,name,t,width)
     assert(isequal(size(a.(field)),[n,width]) && numel(a.valid)==n && ...
         all(ismember(a.valid,[0,1])) && size(a.information,1)==width && size(a.information,2)==width && size(a.information,3)==n, ...
         'VehicleLocalization:InvalidFullSource','Invalid synchronized source dimensions.');
-    s=struct('valid',logical(a.valid(:)),'values',a.(field),'information',a.information);
+    s.valid=logical(a.valid(:));s.values=a.(field);s.information=a.information;
+    if width==3
+        if isfield(a,'residualModels')
+            assert(iscell(a.residualModels) && numel(a.residualModels)==n, ...
+                'VehicleLocalization:InvalidLidarResidualModel','Align residual models with source frames.');
+            s.residualModels=a.residualModels(:);
+        end
+        for name=["frameReliability","directionReliability"]
+            if isfield(a,name)
+                assert(isequal(size(a.(name)),size(s.(name))) && isreal(a.(name)) && ...
+                    all(isfinite(a.(name)),'all') && all(a.(name)>=0 & a.(name)<=1,'all'), ...
+                    'VehicleLocalization:InvalidLidarReliability','Invalid aligned reliability array.');
+                s.(name)=a.(name);
+            end
+        end
+        if isfield(a,'evaluateResidual')
+            assert(isa(a.evaluateResidual,'function_handle'),'VehicleLocalization:InvalidLidarResidual', ...
+                'evaluateResidual must be a function handle.');
+            s.evaluateResidual=a.evaluateResidual;
+        end
+    end
     for k=find(s.valid).'
         I=s.information(:,:,k);
-        assert(all(isfinite(s.values(k,:))) && all(isfinite(I),'all') && ...
-            norm(I-I.','fro')<=1e-9*max(1,norm(I,'fro')) && min(eig((I+I.')/2))>0, ...
-            'VehicleLocalization:InvalidFullSource','Valid frames require finite positive information.');
+        assert(isreal(s.values(k,:)) && all(isfinite(s.values(k,:))) && isreal(I) && all(isfinite(I),'all') && ...
+            norm(I-I.','fro')<=1e-10*max(1,norm(I,'fro')), ...
+            'VehicleLocalization:InvalidFullSource','Valid frames require finite symmetric information.');
+        smallest=min(eig((I+I.')/2));validSpectrum=smallest>0;
+        if width==3,validSpectrum=smallest>=-1e-10*max(1,norm(I,2));end
+        assert(validSpectrum, ...
+            'VehicleLocalization:InvalidFullSource','Valid frames require finite symmetric information: PSD LiDAR, PD GNSS.');
     end
-end
-
-function W=weight(s,k,scale,width)
-    W=zeros(width);if ~s.valid(k),return;end
-    I=s.information(:,:,k);I=(I+I.')/2;W=I/(I+scale*eye(width));W=(W+W.')/2;
 end
 
 function x=wrap(x)

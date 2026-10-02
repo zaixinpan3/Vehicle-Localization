@@ -3,8 +3,8 @@ function report=runMncavCoarseLocalizationExperiment(outputFolder,options)
 % The existing offline semantic map is fixed. Every online scan is classified
 % only as whole XY pillars, then matched by geometric D2D. Recursive matching
 % uses wheel/gyro/lateral motion and accepted matches after its first seed.
-% The observer consumes full-pose measurements with their information matrices;
-% rejected or directional-only matches do not become full-pose measurements.
+% The observer consumes validated full or directional pose information;
+% Route A preserves nullspaces, and rejected matches supply no correction.
     arguments
         outputFolder (1,1) string="output/mncav_coarse_localization"
         options.MapFile (1,1) string=""

@@ -22,6 +22,9 @@ function [measurement, result, history] = localizeLidarFrame(frame, localMapClou
 % Subsequent calls require motionPose. There is no look-ahead delay.
 % Empty measurement means rejection. Exported robust Gaussian information
 % uses physical map-frame [X,Y,psi] coordinates and is not empirically calibrated.
+% Accepted events also carry a serializable lidarResidualModel. The current
+% synchronous observer reevaluates it at its prediction for the Route A gain;
+% the frozen model retains associations, robust influence and degeneracy gates.
 % Optional positionAid provides current map-frame position and covariance at
 % the observer point for hypothesis selection only; GNSS is not added to H.
     if nargin < 5 || isempty(cfg)
