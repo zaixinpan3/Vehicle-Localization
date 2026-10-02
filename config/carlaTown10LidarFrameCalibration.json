@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "calibration": {
+    "rotation": [
+      [
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        1
+      ]
+    ],
+    "translation": [
+      1.38776,
+      -0.0,
+      2.0
+    ],
+    "identifier": "carla-town10hd-lincoln-mkz-roof-20261001-v1"
+  },
+  "sourceFrame": "carla_semantic_lidar_right_handed",
+  "targetFrame": "vehicle_kinematic_reference_point",
+  "coordinateConvention": "p_reference = rotation * p_stored + translation; metres, forward/left/up",
+  "provenance": {
+    "sensor": "CARLA 0.10.0 sensor.lidar.ray_cast_semantic mounted at actor (0, 0, 2.0) m, no rotation",
+    "referencePoint": "body-axis point of least lateral velocity in turns (kinematic rear-axle point), estimated by scripts/carla/prepareCarlaDataset.py on the 2026-10-01 Town10HD mapping drive",
+    "referenceOffsetInActorFrameM": -1.38776,
+    "referenceOffsetEstimate": {
+      "value": -1.387759564847023,
+      "samples": 6741,
+      "lateralVelocityResidualMps": 0.015942299360880274
+    }
+  }
+}

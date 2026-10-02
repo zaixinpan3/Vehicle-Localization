@@ -508,6 +508,65 @@ replacement alone does not update a cached map. The existing LiDAR calibration
 is retained; INSPVA remains a quality-labeled navigation reference, not an
 independently validated ground-truth trajectory.
 
+### CARLA Town10HD simulation (`scripts/carla/`)
+
+The pipeline also runs on CARLA 0.10.0 (Unreal Engine 5) in Town10HD. The ego
+vehicle (Lincoln MKZ) carries a semantic ray-cast LiDAR that mimics the
+recorded Ouster OS1-64 (64 channels, 1,024 columns, +14.2/-17.7 deg, 120 m,
+complete sweeps at 10 Hz, 2.0 m above the road), a 50 Hz IMU with gyro noise
+and bias, GNSS, and the simulator ground truth. CARLA's LiDAR has no
+intensity or reflectivity, so traffic signs and road markings are not used.
+
+```bash
+# CARLA server running on port 2000 with Town10HD_Opt.
+python scripts/carla/captureCarlaTown10Drive.py --route mapping --output data/raw/Carla/<run>/mapping
+python scripts/carla/captureCarlaTown10Drive.py --route localization --output data/raw/Carla/<run>/localization
+python scripts/carla/prepareCarlaDataset.py --capture data/raw/Carla/<run>/mapping --output data/raw/Carla/<run>/mapping_prepared
+python scripts/carla/prepareCarlaDataset.py --capture data/raw/Carla/<run>/localization \
+    --output data/raw/Carla/<run>/localization_prepared --reference-offset <offset printed for the mapping drive>
+```
+
+The mapping route drives every non-junction road of the town once; the
+localization route is one lap of the outer ring (`--localization-lane`
+selects the lane and therefore the direction). `prepareCarlaDataset.py`
+converts CARLA's left-handed frames to the pipeline's right-handed frames,
+adds 1.5 cm LiDAR range noise, and expresses poses at the kinematic rear-axle
+reference point, where zero lateral velocity holds. Wheel speed is simulated
+from the ground truth with scale and noise errors. Per-point CARLA labels are
+kept for evaluation only.
+
+```matlab
+addpath("scripts/carla"); setupVehicleLocalization;
+buildCarlaPointCloudMat("data/raw/Carla/<run>/mapping_prepared");
+% Optional: run collectCarlaFeatureObservations on sweep blocks in parallel
+% processes and pass the files as ObservationFiles.
+buildCarlaFeatureMap("data/raw/Carla/<run>/mapping_prepared", "output/<map>");
+runCarlaLocalization("data/raw/Carla/<run>/localization_prepared", ...
+    "output/<map>/view_conditioned_cloud.mat", "output/<run>");
+```
+
+`perceptionConfig("Carla", mode)` selects curb, pole and facade with the
+CARLA-tuned values of `config/carlaPerceptionProfile.m` and the calibration
+`config/carlaTown10LidarFrameCalibration.json`. The values were chosen by
+random search against CARLA semantic labels on mapping-drive sweeps. The
+semantic precision forests are disabled because they were fitted on recorded
+Ouster data and reject most CARLA proposals.
+
+Two optional facade gates exist only for this profile. Coarse facade evidence
+is the continuous vertical run of each pillar, controlled by
+`facadeContinuousSupportMinimumSpan`. `facadeMaximumBaseHeight` requires that
+run to begin near the local ground: `perceiveFrame` then attaches a pillar
+ground-height map to the structural branch. This keeps online facades
+consistent with the mapped facades, so that tree canopies are not reported as
+facades. Without these fields, perception is unchanged.
+
+On the outer ring driven in the mapped direction, recursive matching with
+wheel/gyro prediction stayed within a few centimetres of the ground truth.
+The view-conditioned map weights poles by the headings seen during mapping.
+A drive opposite to a single-direction mapping pass therefore loses pole
+constraints; use the plain `probability_cloud.mat` there, or map both
+directions.
+
 ## Verification
 
 `currentPerceptionReferenceTest` verifies all point masks on 30 frozen frames

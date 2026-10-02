@@ -39,6 +39,10 @@ function perception = perceiveFrame(frame, cfg)
     groundPointIdx = segmentGround(voxelGrid, cfg.groundSegmentation);
     [groundContext, offGroundVoxelGrid] = buildBranchInputs( ...
         frame, voxelGrid, groundPointIdx, cfg.voxel.voxelSize(1:2), cfg.groundFeatures.curb);
+    if isfield(cfg.offGroundFeatures, "facadeMaximumBaseHeight")
+        offGroundVoxelGrid.groundHeightMap = pillarGroundHeight(voxelGrid, groundPointIdx, ...
+            numel(frame.x), offGroundVoxelGrid.pillarGeometry);
+    end
 
     coarseCfg = resolveCoarseProbabilityCloudConfig(cfg);
     ground = struct();
@@ -227,6 +231,27 @@ function xyView = buildGroundXYView(voxelGrid, cellSizeXY, groundPointMask, curb
         xyView.cellPointLocalIdx = int32(pointLocalIdx(sortOrder));
         xyView.cellPointIndices = int32(pointIndices(sortOrder));
     end
+end
+
+function heights = pillarGroundHeight(voxelGrid, groundPointIdx, numFramePoints, target)
+% pillarGroundHeight: Median ground-return height of every pillar of the
+% (cropped) target lattice. Pillars without ground returns take the nearest
+% ground-bearing pillar within three pillars and remain NaN beyond.
+    isGround = false(numFramePoints, 1);
+    isGround(double(groundPointIdx)) = true;
+    rows = isGround(double(voxelGrid.pointIndices));
+    dims = double(voxelGrid.pillarGeometry.mapSize);
+    full = nan(dims);
+    if any(rows)
+        full(:) = accumarray(double(voxelGrid.pointPillarLinIdx(rows)), double(voxelGrid.points(rows, 3)), ...
+            [prod(dims) 1], @median, NaN);
+        known = ~isnan(full);
+        [distance, nearest] = bwdist(known);
+        fill = ~known & distance <= 3;
+        full(fill) = full(nearest(fill));
+    end
+    offset = round((double(target.origin) - double(voxelGrid.pillarGeometry.origin)) ./ double(target.cellSize));
+    heights = full(offset(2) + (1:target.mapSize(1)), offset(1) + (1:target.mapSize(2)));
 end
 
 function pillars = subsetOffGroundPillars(source, selected)

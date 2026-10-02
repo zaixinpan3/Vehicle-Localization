@@ -94,13 +94,32 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
         facadeMaps=maps;
         facadeMaps.supportEvidence=single(maps.pillarCounts);
         if isfield(cfg,'facadeContinuousSupportMinimumPoints')
-            facadeMaps.supportEvidence=continuousPillarHeightSupport(pillars,mapSize,cfg.facadeContinuousSupportMinimumPoints);
+            minimumSpan=1;
+            if isfield(cfg,'facadeContinuousSupportMinimumSpan'),minimumSpan=cfg.facadeContinuousSupportMinimumSpan;end
+            facadeMaps.supportEvidence=continuousPillarHeightSupport(pillars,mapSize,cfg.facadeContinuousSupportMinimumPoints,minimumSpan);
             facadeMaps.occupiedMask=facadeMaps.supportEvidence>0;
         end
         [~,facadeMaps.lineScore,facadeMaps.normalOrientation]=buildPillarShapeScores( ...
             facadeMaps.supportEvidence,facadeMaps.occupiedMask,cfg,maps.dx,maps.dy);
+        elevated=false(mapSize);
+        if isfield(cfg,'facadeMaximumBaseHeight') && isfield(pillars,'groundHeightMap')
+            % Facades reach down to the ground; tree canopies and other
+            % overhanging structure start well above it. A pillar whose lowest
+            % nonground return lies more than facadeMaximumBaseHeight above
+            % the local ground (perceiveFrame's ground-height map) gives no
+            % facade evidence. Pillars with unknown ground are kept.
+            base=nan(mapSize);base(ids)=stats.minimumXYZ(:,3);
+            elevated=base-double(pillars.groundHeightMap)>cfg.facadeMaximumBaseHeight;
+            facadeMaps.supportEvidence(elevated)=0;
+            facadeMaps.occupiedMask=facadeMaps.occupiedMask & ~elevated;
+        end
         facade=extractFacadeFeatures(facadeMaps,facadeCfg);
         facade=expandFacadePillarSupport(facade,maps,cfg);
+        if any(elevated(:) & facade.mask(:))
+            facade.mask(elevated)=false;facade.lineMap(elevated)=0;
+            facade.pillarLinIdx=find(facade.mask);
+            facade.pillarLineIdx=double(facade.lineMap(facade.pillarLinIdx));
+        end
         maps.facadeLineScore=facadeMaps.lineScore;
     end
     poleMask=false(mapSize); candidates=struct();

@@ -7,12 +7,14 @@ function cfg = perceptionConfig(dataset, executionMode)
 % selected lattice, so change the mode here rather than after construction.
 % cfg.featureNames selects the semantic channels for this invocation.
 % Mississippi defaults to every channel except facade; Downtown selects all.
+% Carla (CARLA Town10HD semantic LiDAR, no intensity) selects curb, pole and
+% facade with the CARLA-tuned values of carlaPerceptionProfile.
 % Override featureNames with any subset, or strings(1,0) for no channels.
 % voxel.voxelSize contains exactly two XY spacings. Pillars retain full XYZ statistics.
     if nargin < 1 || isempty(dataset), dataset = "Mississippi"; end
     if nargin < 2 || isempty(executionMode), executionMode = "coarseProbabilityCloud"; end
     dataset = lower(string(dataset));
-    assert(isscalar(dataset) && any(dataset == ["mississippi", "missisipi", "downtown"]), ...
+    assert(isscalar(dataset) && any(dataset == ["mississippi", "missisipi", "downtown", "carla"]), ...
         "Unknown perception dataset profile.");
     cfg = struct();
     cfg.executionMode = string(executionMode);
@@ -29,10 +31,12 @@ function cfg = perceptionConfig(dataset, executionMode)
     end
     cloudCfg = coarseSemanticProbabilityCloudConfig(cfg.voxel);
     cfg.featureNames = cloudCfg.semanticNames;
-    if dataset ~= "downtown", cfg.featureNames(cfg.featureNames=="facade") = []; end
+    if ~any(dataset == ["downtown", "carla"]), cfg.featureNames(cfg.featureNames=="facade") = []; end
+    if dataset == "carla", cfg.featureNames(cfg.featureNames=="trafficSign") = []; end
     cfg.coarseProbabilityCloud = rmfield(cloudCfg,"semanticNames");
     cfg.fine = finePerceptionConfig();
     cfg.semanticPrecision = semanticPillarPrecisionConfig(spacing,dataset);
     cfg.curbBoundary=curbBoundaryGeometryConfig();
     cfg.curbBoundary.enabled=dataset~="downtown" && cfg.executionMode=="coarseProbabilityCloud";
+    if dataset == "carla", cfg = carlaPerceptionProfile(cfg); end
 end
