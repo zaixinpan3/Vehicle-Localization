@@ -3,7 +3,7 @@ function cfg=mncavFullObserverConfig()
 % Keep nominal correction bandwidth, with soft information-dependent gains.
 % Geometric LiDAR information is not a calibrated inverse pose-error covariance.
     cfg=fullObserverConfig();
-    cfg.kind="mncav-synchronous-aligned-observer-v5";
+    cfg.kind="mncav-synchronous-aligned-observer-v6";
     cfg.gnss.outputPoint=jsondecode(fileread(fullfile(fileparts(mfilename('fullpath')), ...
         'mncavBestposOutputPoint.json')));
     cfg.gnss.positionGain=cfg.gains(1);

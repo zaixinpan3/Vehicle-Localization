@@ -4,8 +4,9 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
 % Synthetic wheel speed, steering, IMU, 20 Hz receiver positions and jittered
 % 10 Hz LiDAR poses then pass through the production chain: hybrid LPV
 % lateral observer -> frame-clock synchronization -> synchronous seven-state
-% observer (MnCAV configuration, receiver output-point correction, GNSS
-% course heading, optional online matcher callback).
+% observer (MnCAV configuration, receiver output-point correction, optional
+% online matcher callback). GNSS corrects position only; heading is the gyro
+% corrected by LiDAR yaw.
 % Scenarios separate convention errors (clean signals), noise/bias accuracy,
 % source availability, closed-loop matching and lateral-model mismatch.
 % All signals are synthetic; no recorded data or reference trajectory is read.
@@ -293,7 +294,7 @@ function m=scoreRun(estimate,truth,fine,lateral,data,s,mask)
         ok=data.lidar.valid & settled;m.rawLidarRmseM=rms(vecnorm(data.lidar.pose(ok,1:2)-truth.position(ok,:),2,2));
     end
     m.modeCounts=arrayfun(@(v) nnz(estimate.diagnostics.mode==v),0:3);
-    m.headingModeCounts=arrayfun(@(v) nnz(estimate.diagnostics.headingMode==v),0:2);
+    m.headingModeCountsGyroLidar=[nnz(estimate.diagnostics.headingMode==0),nnz(estimate.diagnostics.headingMode==2)];
     m.maximumTrackAngleRate=estimate.diagnostics.maximumTrackAngleRate;
     m.acceleration=vecnorm(estimate.acceleration-rotateBody(truth.outputAcceleration,truth.heading),2,2);
     m.settledAccelerationRmseMps2=rms(m.acceleration(settled));
@@ -332,8 +333,6 @@ function checks=evaluateChecks(runs,s)
         "GNSS-only settled RMSE below raw corrected receiver RMSE");
     rows=add(rows,"lidar_only_filters_raw_lidar",lOnly.settledPositionRmseM,lOnly.rawLidarRmseM,lOnly.settledPositionRmseM<lOnly.rawLidarRmseM, ...
         "LiDAR-only settled RMSE below raw LiDAR pose RMSE");
-    rows=add(rows,"gnss_only_heading_from_course",gOnly.headingMaximumAfterSettleDeg,1,gOnly.headingMaximumAfterSettleDeg<=1, ...
-        "GNSS-only: heading error <= 1 deg after 10 s without any heading measurement");
     for n=["gnss_outage_40_60","lidar_outage_40_60"]
         o=get(n);rows=add(rows,n+"_maximum",o.outageMaximumM,.3,o.outageMaximumM<=.3,"Single-source outage: error <= 30 cm");
         rows=add(rows,n+"_recovery",o.recoveryTimeS,3,o.recoveryTimeS<=3,"Error <= 15 cm within 3 s after outage");

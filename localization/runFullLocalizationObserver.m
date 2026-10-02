@@ -10,9 +10,8 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % Invalid payloads may be NaN; invalidation immediately withdraws older data.
 % Pose anchors propagate using past/current body motion and gyro only. There
 % is no future-frame interpolation, pose reset, or reference-state input.
-% GNSS heading is reconstructed from past position displacement and integrated
-% body motion, and used only without qualified LiDAR yaw. At insufficient
-% motion it is disabled, rather than claiming stationary yaw observability.
+% GNSS corrects position only; the heading is the integrated gyro, corrected
+% only by qualified LiDAR yaw.
 % Both runtimes use wheel and lateral velocities without LiDAR-derived bias.
     arguments
         data (1,1) struct
@@ -62,13 +61,10 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
     assert(isnumeric(x) && numel(x)==7 && all(isfinite(x)), ...
         'VehicleLocalization:InvalidFullInitialState','Supply a finite seven-state initial condition.');
     x=x(:);ig=1;il=1;ih=1;io=1;g=emptyAnchor(2);l=emptyAnchor(3);
-    gyro=0;bodyIntegral=0;
-    gh=emptyHistory();
     z=zeros(n,7);mode=zeros(n,1);headingMode=zeros(n,1);ages=nan(n,2);
-    positionCorrection=zeros(n,4);yawCorrection=zeros(n,2);
-    courseUpdates=0;steps=0;maxRate=0;
+    positionCorrection=zeros(n,4);yawCorrection=zeros(n,1);steps=0;maxRate=0;
     counts=struct('gnssValid',0,'gnssInvalid',0,'lidarValid',0,'lidarInvalid',0);
-    minWeight=nan(n,2);courseTrace=nan(n,1);translationMargin=nan(n,1);
+    minWeight=nan(n,2);translationMargin=nan(n,1);
     for k=1:numel(cuts)
         now=cuts(k);
         while ih<n && t(ih+1)<=now,ih=ih+1;end
@@ -78,19 +74,8 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
             if G.valid(ig)
                 counts.gnssValid=counts.gnssValid+1;
                 g=anchor(G,ig,x(7),cfg.gnss.gainInformationScale);
-                gh=appendHistory(gh,now,G.values(ig,:),bodyIntegral,speed);
-                gh=trimHistory(gh,now,cfg.gnss.courseWindow,cfg.gnss.maximumCourseGap);
-                [ok,first]=coveredWindow(gh,cfg.gnss.courseWindow,cfg.gnss.maximumCourseGap,cfg.gnss.minimumSpeed);
-                if ok
-                    displacement=complex(g.pose(1)-gh.position(first,1),g.pose(2)-gh.position(first,2));
-                    bodyDisplacement=exp(-1i*gyro)*(bodyIntegral-gh.integral(first));
-                    if min(abs([displacement,bodyDisplacement]))>=cfg.gnss.minimumCourseDisplacement
-                        g.courseYaw=angle(displacement)-angle(bodyDisplacement);
-                        g.courseValid=true;courseUpdates=courseUpdates+1;
-                    end
-                end
             else
-                g=emptyAnchor(2);gh=emptyHistory();counts.gnssInvalid=counts.gnssInvalid+1;
+                g=emptyAnchor(2);counts.gnssInvalid=counts.gnssInvalid+1;
             end
             ig=ig+1;
         end
@@ -103,7 +88,7 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
             end
             il=il+1;
         end
-        if now>=g.time+cfg.gnss.maximumAge,g.active=false;g.courseValid=false;end
+        if now>=g.time+cfg.gnss.maximumAge,g.active=false;end
         if now>=l.time+cfg.lidar.maximumAge,l.active=false;end
         u=[speed,vy,h.longitudinalAcceleration(ih),h.lateralAcceleration(ih),h.yawRate(ih),lateral.sideSlipAngleRate(ih)];
         if io<=n && now==t(io)
@@ -116,7 +101,6 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
             if l.active,gain=gain+cfg.gains(1)*l.weight(1:2,1:2);end
             alpha=min(eig(gain));q2=cfg.maximumTrackAngleRate^2;
             translationMargin(io)=min(eig([2*alpha,-1,0;-1,2*cfg.gains(2),-(1+q2);0,-(1+q2),2*cfg.gains(3)]));
-            if g.courseValid,courseTrace(io)=g.courseYaw;end
             io=io+1;
         end
         if k==numel(cuts),break;end
@@ -127,9 +111,6 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
             d1=rhs(x,u,g,l,cfg);d2=rhs(x+dt*d1/2,u,gm,lm,cfg);
             d3=rhs(x+dt*d2/2,u,gm,lm,cfg);d4=rhs(x+dt*d3,u,ge,le,cfg);
             x=x+dt*(d1+2*d2+2*d3+d4)/6;g=ge;l=le;
-            delta=rotationStep(gyro,u(5),dt);
-            bodyIntegral=bodyIntegral+delta*complex(speed,vy);
-            gyro=gyro+dt*u(5);
             maxRate=max(maxRate,abs(u(5)+u(6)));steps=steps+1;
         end
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Full observer became nonfinite.');
@@ -140,9 +121,8 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
         'heading',heading,'headingUnwrapped',z(:,7),'lateral',lateral,'observer',design);
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'sourceAge',ages, ...
         'positionCorrection',positionCorrection,'yawCorrection',yawCorrection, ...
-        'minimumWeights',minWeight,'gnssDerivedHeading',courseTrace, ...
-        'translationDissipationMargin',translationMargin, ...
-        'gnssCourseUpdates',courseUpdates,'packetCounts',counts, ...
+        'minimumWeights',minWeight,'translationDissipationMargin',translationMargin, ...
+        'packetCounts',counts, ...
         'integrationSteps',steps,'maximumTrackAngleRate',maxRate, ...
         'rateEnvelopeSatisfied',maxRate<=cfg.maximumTrackAngleRate,'stateResets',0, ...
         'referenceUsed',false,'futureMeasurementInterpolation',false, ...
@@ -152,21 +132,17 @@ end
 
 function [d,audit]=rhs(x,u,g,l,cfg)
     v=rotate(x(7),u(1:2).');a=rotate(x(7),u(3:4).');q=u(5)+u(6);
-    cg=zeros(2,1);cl=cg;yg=0;yl=0;headingMode=0;
+    cg=zeros(2,1);cl=cg;yl=0;headingMode=0;
     if g.active,cg=cfg.gnss.positionGain*g.weight*(g.pose(1:2)-x([1,4]));end
-    lidarYaw=l.active && l.weight(3,3)>=cfg.lidar.minimumPoseWeight;
     if l.active
         cl=cfg.gains(1)*l.weight(1:2,1:2)*(l.pose(1:2)-x([1,4]));
-        if lidarYaw,yl=cfg.gains(4)*l.weight(3,3)*wrap(l.pose(3)-x(7));headingMode=2;end
-    end
-    if g.active && g.courseValid && ~lidarYaw && u(1)>=cfg.gnss.minimumSpeed
-        yg=cfg.gnss.headingGain*sin(g.courseYaw-x(7));headingMode=1;
+        if l.weight(3,3)>=cfg.lidar.minimumPoseWeight,yl=cfg.gains(4)*l.weight(3,3)*wrap(l.pose(3)-x(7));headingMode=2;end
     end
     d=zeros(7,1);d([1,4])=x([2,5])+cg+cl;
     d([2,5])=x([3,6])+cfg.gains(2)*(v-x([2,5]));
     d([3,6])=q^2*x([2,5])+2*q*[-x(6);x(3)]+cfg.gains(3)*(a-x([3,6]));
-    d(7)=u(5)+yl+yg;
-    if nargout>1,audit=struct('position',[cg.',cl.'],'yaw',[yg,yl],'headingMode',headingMode);end
+    d(7)=u(5)+yl;
+    if nargout>1,audit=struct('position',[cg.',cl.'],'yaw',yl,'headingMode',headingMode);end
 end
 
 function source=normalize(data,name,width)
@@ -197,42 +173,19 @@ function a=anchor(source,k,yaw,scale)
 end
 
 function a=emptyAnchor(width)
-    a=struct('active',false,'time',-Inf,'pose',zeros(3,1),'weight',zeros(width), ...
-        'courseValid',false,'courseYaw',0);
+    a=struct('active',false,'time',-Inf,'pose',zeros(3,1),'weight',zeros(width));
 end
 
 function a=propagate(a,u,dt)
     if ~a.active,return;end
     displacement=rotationStep(a.pose(3),u(5),dt)*complex(u(1),u(2));
     a.pose(1:2)=a.pose(1:2)+[real(displacement);imag(displacement)];
-    a.pose(3)=a.pose(3)+dt*u(5);a.courseYaw=a.courseYaw+dt*u(5);
+    a.pose(3)=a.pose(3)+dt*u(5);
 end
 
 function value=rotationStep(yaw,rate,dt)
     half=rate*dt/2;factor=1;if abs(half)>1e-10,factor=sin(half)/half;end
     value=dt*factor*exp(1i*(yaw+half));
-end
-
-function h=emptyHistory()
-    h=struct('time',zeros(0,1),'position',zeros(0,2), ...
-        'integral',complex(zeros(0,1)),'speed',zeros(0,1));
-end
-
-function h=appendHistory(h,time,position,integral,speed)
-    h.time(end+1,1)=time;h.position(end+1,:)=position;
-    h.integral(end+1,1)=integral;h.speed(end+1,1)=speed;
-end
-
-function h=trimHistory(h,time,window,gap)
-    keep=h.time>=time-window-gap;
-    for name=string(fieldnames(h)).',h.(name)=h.(name)(keep,:);end
-end
-
-function [ok,first]=coveredWindow(h,window,gap,speed)
-    first=find(h.time<=h.time(end)-window,1,'last');ok=false;
-    if isempty(first),return;end
-    ok=h.time(end)-h.time(first)<=window+gap && all(diff(h.time(first:end))<=gap) ...
-        && min(h.speed(first:end))>=speed;
 end
 
 function [p,yaw]=initialPose(G,L,time,yaw)
@@ -259,9 +212,7 @@ function x=weightMinimum(a)
 end
 
 function validateConfig(cfg)
-    values=[cfg.maximumIntegrationStep,cfg.gnss.gainInformationScale,cfg.gnss.maximumAge, ...
-        cfg.gnss.courseWindow,cfg.gnss.maximumCourseGap,cfg.gnss.minimumCourseDisplacement, ...
-        cfg.gnss.minimumSpeed,cfg.lidar.maximumAge];
+    values=[cfg.maximumIntegrationStep,cfg.gnss.gainInformationScale,cfg.gnss.maximumAge,cfg.lidar.maximumAge];
     assert(all(isfinite(values)) && all(values>0) && isfinite(cfg.initialHeading), ...
         'VehicleLocalization:InvalidFullConfig','Invalid full-observer settings.');
 end

@@ -52,7 +52,9 @@ processing delay does not mean zero alignment latency.
 Each available source must have exactly the same time array as `highRate`.
 Invalid or missing source packets withdraw only that frame's channel; older
 poses are not retained as substitute measurements. Both sources missing leaves
-only state dynamics. Synchronized lateral estimates are required explicitly.
+only state dynamics. GNSS corrects position only: the heading integrates the
+gyro and is corrected only by qualified LiDAR yaw, so without LiDAR it is
+uncorrected gyro integration. Synchronized lateral estimates are required explicitly.
 One implicit solve uses each frame interval; `maximumIntegrationStep` is unused
 in this mode. MnCAV GNSS position gain is now 4/s, matching the LiDAR gain;
 other gains are unchanged. The continuous gain certificate is

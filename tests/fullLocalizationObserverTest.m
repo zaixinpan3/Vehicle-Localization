@@ -46,29 +46,25 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(r.position,f.truth(:,1:2),AbsTol=1e-9);
             testCase.verifyTrue(all(ismember(r.diagnostics.mode,[1,2])));
         end
-        function movingGnssRecoversHeadingWithoutAHeadingMeasurement(testCase)
+        function movingGnssNeverCorrectsHeading(testCase)
             f=fixture(15,"gnss");f.cfg.initialState(7)=.2;r=run(f);
-            testCase.verifyLessThan(abs(r.heading(end)),.001);
-            testCase.verifyGreaterThan(r.diagnostics.gnssCourseUpdates,0);
-            testCase.verifyGreaterThan(nnz(r.diagnostics.headingMode==1),0);
+            testCase.verifyEqual(r.heading,.2*ones(size(r.time)),AbsTol=1e-12);
+            testCase.verifyEqual(r.diagnostics.headingMode,zeros(size(r.time)));
         end
         function stationaryGnssDoesNotInventHeadingObservability(testCase)
             f=fixture(4,"gnss");f.data.highRate.longitudinalSpeed(:)=0;
             f.data.gnss.position(:)=0;f.cfg.initialState(:)=0;f.cfg.initialState(7)=.2;
             r=run(f);
             testCase.verifyEqual(r.heading,.2*ones(size(r.time)),AbsTol=1e-12);
-            testCase.verifyEqual(r.diagnostics.gnssCourseUpdates,0);
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end
         function constantTurnUsesPastMotionTransport(testCase)
             f=turnFixture(4);r=run(f);
             testCase.verifyEqual(r.pose,f.truth,AbsTol=1e-7);
         end
-        function curvedGnssWindowReconstructsEndpointHeading(testCase)
+        function turningGnssKeepsTheGyroHeading(testCase)
             f=turnFixture(15);f.data=rmfield(f.data,'lidar');f.cfg.initialState(7)=.2;r=run(f);
-            testCase.verifyLessThan(abs(r.headingUnwrapped(end)-f.truth(end,3)),.001);
-            testCase.verifyLessThan(abs(atan2(sin(r.diagnostics.gnssDerivedHeading(end)-f.truth(end,3)), ...
-                cos(r.diagnostics.gnssDerivedHeading(end)-f.truth(end,3)))),1e-10);
+            testCase.verifyEqual(r.headingUnwrapped,f.truth(:,3)+.2,AbsTol=1e-9);
         end
         function invalidGnssDoesNotEraseLidarHeading(testCase)
             f=fixture(4,"lidar");f.cfg.initialState(7)=.1;r=run(f);
