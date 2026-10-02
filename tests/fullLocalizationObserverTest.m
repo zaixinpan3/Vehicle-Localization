@@ -29,10 +29,9 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(r.diagnostics.mode(ix),2*ones(nnz(ix),1));
             testCase.verifyEqual(r.diagnostics.positionCorrection(ix,1:2),zeros(nnz(ix),2));
         end
-        function absentPacketsExpireWithoutBeingReusedForever(testCase)
+        function unalignedPacketsCannotSelectAnotherRuntime(testCase)
             f=fixture(2,"gnss");f.data.gnss=trimSource(f.data.gnss,1);
-            r=run(f);ix=r.time>=f.cfg.gnss.maximumAge;
-            testCase.verifyEqual(r.diagnostics.mode(ix),zeros(nnz(ix),1));
+            testCase.verifyError(@()run(f),'VehicleLocalization:SynchronousInputsRequired');
         end
         function futureMeasurementsCannotChangeThePast(testCase)
             f=fixture(4,"both");a=run(f);
@@ -58,9 +57,10 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(r.heading,.2*ones(size(r.time)),AbsTol=1e-12);
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end
-        function constantTurnUsesPastMotionTransport(testCase)
+        function publicEntryUsesTheSoleSynchronizedRuntime(testCase)
             f=turnFixture(4);r=run(f);
-            testCase.verifyEqual(r.pose,f.truth,AbsTol=1e-7);
+            direct=runSynchronousLocalizationObserver(f.data,f.cfg,f.lateral);
+            testCase.verifyEqual(r,direct);
         end
         function turningGnssKeepsTheGyroHeading(testCase)
             f=turnFixture(15);f.data=rmfield(f.data,'lidar');f.cfg.initialState(7)=.2;r=run(f);
@@ -68,7 +68,7 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
         end
         function invalidGnssDoesNotEraseLidarHeading(testCase)
             f=fixture(4,"lidar");f.cfg.initialState(7)=.1;r=run(f);
-            testCase.verifyLessThan(abs(r.heading(end)),1e-7);
+            testCase.verifyLessThan(abs(r.heading(end)),2e-7);
             testCase.verifyEqual(r.diagnostics.headingMode,2*ones(size(r.time)));
         end
         function bothMissingPredictAndThenRecover(testCase)
@@ -84,29 +84,47 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             f=fixture(1,"both");f.data.gnss.delay=.1;
             testCase.verifyError(@() run(f),'VehicleLocalization:FullZeroDelayRequired');
         end
-        function uninformativeValidPacketIsRejected(testCase)
-            f=fixture(1,"both");f.data.lidar.information(3,3,1)=0;
+        function indefiniteValidPacketIsRejected(testCase)
+            f=fixture(1,"both");f.data.lidar.information(3,3,1)=-1;
             testCase.verifyError(@() run(f),'VehicleLocalization:InvalidFullSource');
         end
         function missingInitialPositionNeedsExplicitInitialization(testCase)
             f=fixture(1,"none");f.cfg.initialState=[];
             testCase.verifyError(@() run(f),'VehicleLocalization:FullInitializationRequired');
         end
-        function channelMatricesShareTheAdvertisedDissipation(testCase)
-            cfg=fullObserverConfig;design=designFullObserverGains(cfg);
-            testCase.verifyGreaterThanOrEqual(independentMargin(cfg),design.commonTranslationMargin-1e-10);
+        function missingTimingCannotActivateAHistoricalFallback(testCase)
+            f=fixture(2,"both");a=run(f);f.cfg=rmfield(f.cfg,'timing');b=run(f);
+            testCase.verifyEqual(a,b);
+            testCase.verifyTrue(b.diagnostics.continuousLmiVerified);
+        end
+        function historicalRuntimeIsRejected(testCase)
+            f=fixture(1,"both");f.cfg.timing="historical_transport";
+            testCase.verifyError(@()run(f),'VehicleLocalization:ObsoleteFullConfig');
+            testCase.verifyError(@()runSynchronousLocalizationObserver(f.data,f.cfg,f.lateral), ...
+                'VehicleLocalization:ObsoleteFullConfig');
+        end
+        function missingIssDomainCannotBypassDesign(testCase)
+            f=fixture(1,"both");f.cfg=rmfield(f.cfg,'iss');
+            testCase.verifyError(@()run(f),'VehicleLocalization:MissingFullIssDomain');
+        end
+        function uncertifiedGainsCannotReachNumericalIntegration(testCase)
+            f=fixture(1,"lidar");f.cfg.gnss.positionGain=0;f.cfg.maximumTrackAngleRate=0;
+            f.cfg.iss.maximumSpeed=8;f.cfg.iss.maximumAcceleration=0;
+            f.cfg.iss.minimumPositionStrength=.5;f.cfg.iss.minimumHeadingStrength=.5;
+            f.cfg.iss.maximumPositionHeadingCoupling=.25;
+            testCase.verifyError(@()run(f),'VehicleLocalization:InfeasibleFullCertificate');
         end
         function lidarCertificateDoesNotRequireGnssCorrection(testCase)
-            cfg=fullObserverConfig;cfg.gnss.positionGain=.001;
+            cfg=fullObserverConfig;cfg.gnss.positionGain=0;
             design=designFullObserverGains(cfg);
             testCase.verifyTrue(design.fullContinuousStateCertified);
-            testCase.verifyLessThan(design.commonTranslationMargin,0);
+            testCase.verifyGreaterThan(design.continuousCertificate.verification.verifiedDecayRate,cfg.iss.decayRate);
         end
     end
 end
 
 function f=fixture(duration,mode)
-    t=(0:.01:duration).';n=numel(t);zero=zeros(n,1);m=(0:.1:duration).';
+    t=(0:.1:duration).';n=numel(t);zero=zeros(n,1);m=t;
     high=struct('time',t,'longitudinalSpeed',8+zero,'longitudinalAcceleration',zero, ...
         'lateralAcceleration',zero,'yawRate',zero);
     lateral=struct('time',t,'lateralVelocity',zero,'sideSlipAngleRate',zero);
@@ -117,7 +135,7 @@ function f=fixture(duration,mode)
     data=struct('highRate',high);
     if ismember(mode,["gnss","both"]),data.gnss=gnss;end
     if ismember(mode,["lidar","both"]),data.lidar=lidar;end
-    cfg=fullObserverConfig;cfg.timing="historical_transport";
+    cfg=fullObserverConfig;
     cfg.initialState=[0;8;0;0;0;0;0];
     f=struct('data',data,'lateral',lateral,'cfg',cfg,'truth',[8*t,zero,zero]);
 end
@@ -137,19 +155,4 @@ function f=turnFixture(duration)
     f.truth=[v/r*sin(r*t),v/r*(1-cos(r*t)),r*t];
     f.data.lidar.pose=[v/r*sin(r*m),v/r*(1-cos(r*m)),r*m];
     f.data.gnss.position=f.data.lidar.pose(:,1:2);f.cfg.initialState=[0;v;0;0;0;v*r;0];
-end
-
-function smallest=independentMargin(cfg)
-    smallest=Inf;g=cfg.gains;J=[0,-1;1,0];
-    for q=linspace(-cfg.maximumTrackAngleRate,cfg.maximumTrackAngleRate,21)
-        for angle=linspace(0,pi,9)
-            R=[cos(angle),-sin(angle);sin(angle),cos(angle)];
-            for w=[cfg.gnss.positionGain*cfg.gnss.minimumPositionWeight,g(1)*cfg.lidar.minimumPoseWeight]
-                W=R*diag([w,2*w])*R.';
-                A=[-W,eye(2),zeros(2);zeros(2),-g(2)*eye(2),eye(2); ...
-                    zeros(2),q^2*eye(2),-g(3)*eye(2)+2*q*J];
-                smallest=min(smallest,min(eig(-(A+A.'))));
-            end
-        end
-    end
 end

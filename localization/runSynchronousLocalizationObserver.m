@@ -1,5 +1,5 @@
 function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
-% runSynchronousLocalizationObserver Baseline flow plus a Route A jump per frame.
+% runSynchronousLocalizationObserver Discretize the continuous ISS-designed observer.
 % Inputs and real measurement reconstructions must share the same frame clock.
 % No pose anchor is propagated, no inter-frame pose is generated, and absent
 % measurements withdraw their own correction. An implicit baseline step is
@@ -41,10 +41,10 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     continuous=designFullObserverGains(cfg);
-    matchedDesign=continuous.lidarMatched;
+    lidarInjection=continuous.lidarMatched;
     poseJacobian=zeros(3,7);poseJacobian(1,1)=1;poseJacobian(2,4)=1;poseJacobian(3,7)=1;
-    design=struct('kind',"synchronous-route-a-implicit",'continuousDesign',continuous, ...
-        'lidarMatched',matchedDesign,'lidarJumpCertificate',"Implicit locally affine fixed-metric contraction", ...
+    design=struct('kind',"continuous-iss-implicit",'continuousDesign',continuous, ...
+        'lidarMatched',lidarInjection,'lidarJumpCertificate',"Implicit locally affine fixed-metric contraction", ...
         'designRoute',continuous.designRoute, ...
         'sampledSystemCertified',false,'gainsRetuned',isfield(cfg.gnss,'positionGainDesign'));
     x=cfg.initialState;
@@ -52,7 +52,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'Supply an explicit common initial state.');x=x(:);
     z=zeros(n,7);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
     yawCorrection=zeros(n,1);gnssPosition=nan(n,2);gnssInformation=nan(2,2,n);
-    margins=nan(n,1);weights=nan(n,2);maximumRate=0;
+    weights=nan(n,2);maximumRate=0;
     lidarAudits=cell(n,1);poseWeights=zeros(3,3,n);baselineStates=zeros(n,7);
     informationBounds=nan(n,3);informationQualified=false(n,1);
     for k=1:n
@@ -113,7 +113,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             measurement.frameReliability=measurement.frameReliability*L.frameReliability(k);
             measurement.directionReliability=measurement.directionReliability(:).*L.directionReliability(k,:).';
             [delta,audit]=computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
-                matchedDesign,cfg,StepSize=dt,Discretization="implicit");
+                lidarInjection,cfg,StepSize=dt,Discretization="implicit");
             assert(audit.jumpNonexpansive,'VehicleLocalization:LidarJumpCertificateFailed', ...
                 'The numerical LiDAR jump failed its fixed-metric energy check.');
             x=x+delta;lidarAudits{k}=audit;poseWeights(:,:,k)=audit.filter.S;
@@ -130,8 +130,6 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         end
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Synchronous update became nonfinite.');
         if G.valid(k),correction(k,1:2)=(cfg.gnss.positionGain*Wg*(gnssPosition(k,:).'-p)).';weights(k,1)=min(eig(Wg));end
-        alpha=min(eig(K));q2=cfg.maximumTrackAngleRate^2;
-        margins(k)=min(eig([2*alpha,-1,0;-1,2*cfg.gains(2),-(1+q2);0,-(1+q2),2*cfg.gains(3)]));
         z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));
     end
     estimate=struct('time',t,'z',z,'onlineZ',z,'pose',[z(:,[1,4]),wrap(z(:,7))], ...
@@ -149,7 +147,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             all(hypot(h.longitudinalSpeed(:),lateral.lateralVelocity(:))<=cfg.iss.maximumSpeed) ...
             && all(hypot(h.longitudinalAcceleration(:),h.lateralAcceleration(:))<=cfg.iss.maximumAcceleration) ...
             && maximumRate<=cfg.maximumTrackAngleRate, ...
-        'minimumWeights',weights,'translationDissipationMargin',margins, ...
+        'minimumWeights',weights, ...
         'maximumTrackAngleRate',maximumRate, ...
         'rateEnvelopeSatisfied',maximumRate<=cfg.maximumTrackAngleRate,'stateResets',0, ...
         'packetCounts',struct('gnssValid',nnz(G.valid),'gnssInvalid',nnz(~G.valid), ...

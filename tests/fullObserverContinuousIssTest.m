@@ -16,11 +16,13 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
             testCase.verifySize(v.P,[7,7]);
             testCase.verifyFalse(v.sampledSystemCertified);
         end
-        function timingDoesNotChangeTheGainDesign(testCase)
+        function timingIsNotAGainDesignSelector(testCase)
             cfg=fullObserverConfig();a=designFullObserverGains(cfg);
-            cfg.timing="historical_transport";b=designFullObserverGains(cfg);
+            b=designFullObserverGains(rmfield(cfg,'timing'));
             testCase.verifyEqual(a.continuousCertificate,b.continuousCertificate);
             testCase.verifyEqual(a.gains,b.gains,AbsTol=0);
+            cfg.timing="historical_transport";
+            testCase.verifyError(@()designFullObserverGains(cfg),'VehicleLocalization:ObsoleteFullConfig');
         end
         function continuousEntryAndRuntimeUseTheSameDesign(testCase)
             cfg=fullObserverConfig();a=designContinuousObserverGains(cfg);

@@ -38,8 +38,12 @@ continuous ODE with decreasing steps, without a second gain-design route.
 
 ## Current synchronous runtime
 
-`runFullLocalizationObserver` defaults to a baseline backward-Euler step and
-one implicit Route A LiDAR correction per common localization frame.
+`runFullLocalizationObserver` always uses a baseline backward-Euler step and
+one implicit LiDAR correction per common localization frame, after the
+continuous ISS-LMI check. The historical transported runtime and its fallback
+for configurations without `timing` have been deleted. Requesting
+`timing="historical_transport"` is an error. Omitting `timing` cannot select
+another implementation or bypass the continuous design.
 `synchronizeLocalizationInputs` aligns motion/lateral
 estimates and BESTPOS positions on native LiDAR times, approximately 10 Hz.
 No GNSS/LiDAR pose is propagated between frames and no 100 Hz localization
@@ -93,13 +97,13 @@ heading is uncorrected gyro integration. Synchronized lateral estimates are
 required. The baseline uses gyro-predicted heading for motion rotation and
 receiver-point correction, then LiDAR corrects the predicted pose jointly.
 The corrected heading enters the next baseline step. There are no integration
-substeps; `maximumIntegrationStep` is unused in this mode. MnCAV nominal gains
+substeps or `maximumIntegrationStep` setting. MnCAV nominal gains
 remain `[4,4,12,4]` with GNSS position gain 4/s. The implementation before
 Route A and its earlier measurements are described in the
 [current calibration, gain and accuracy report](../research/mncav_bestpos_alignment_20260917/README.md)
 and the [discrete equations](../research/mncav_synchronous_bestpos_20260917/README.md).
 
-### Route A LiDAR injection
+### Information-aware LiDAR injection
 
 The current seven-state model retains explicit heading at standstill. Its
 physical coordinates have fixed `theta=1`, `T=I7`; the two-chain exponents
@@ -172,8 +176,9 @@ The complete continuous system has its own LMI certificate, computed before
 this discretization and conditional on its declared information domain.
 In particular, GNSS-only operation has no baseline yaw ISS certificate, and an
 arbitrary longitudinal outage with curb-only geometry cannot guarantee full
-position convergence. The reported translation margin concerns the GNSS
-baseline, treating heading/model errors as inputs.
+position convergence. The former GNSS-only translation-margin fields have
+been removed; the gain-design certificate is the continuous seven-state LMI
+certificate, with its declared assumptions and recorded-domain diagnostics.
 
 This extension follows the fixed quadratic metric and two-chain coordinates
 in Bessafa et al., *Generalized multi-output high-gain observer with application
@@ -206,17 +211,13 @@ reference matching seeds. It is a historical comparison, not an isolated
 coarse-versus-fine test. Both experiments use a same-drive map and shared
 INSPVA reference, rather than independent absolute ground truth.
 
-## Historical transported full runtime
-
-Saved configurations without `timing`, or explicit
-`cfg.timing="historical_transport"`, retain the old 100 Hz/asynchronous replay
-for reproducibility. That path propagates the last GNSS/LiDAR anchor between
-packets and expires it after 0.2 s. It is no longer the current default.
-Its [conditional continuous analysis](../research/full_observer_20260916/design.md)
-and [recorded validation](../research/full_observer_20260916/validation.md)
-remain historical and do not certify the new frame-rate discretization.
-
 ## Historical LiDAR-only motion-aided baseline
+
+The independent historical comparison entry points below are not selectable
+design or runtime branches of `runFullLocalizationObserver`. Its configuration
+no longer inherits `motionAidedObserverConfig`. Earlier transported-runtime
+results remain in their dated studies and Git history; reproducing that removed
+implementation requires the corresponding historical revision.
 
 For the historical MnCAV experiment with precomputed, zero-delay LiDAR, use
 `runMncavMotionAidedExperiment`. Its seven-state motion-aided observer directly

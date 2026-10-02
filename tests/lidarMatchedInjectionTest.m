@@ -122,7 +122,7 @@ classdef lidarMatchedInjectionTest < matlab.unittest.TestCase
         function currentDesignDoesNotInventBaselineYawCertificate(testCase)
             cfg=fullObserverConfig();d=designFullObserverGains(cfg);
             testCase.verifyEqual(d.lidarMatched.T,eye(7),AbsTol=0);
-            testCase.verifyEqual(d.lidarMatched.P(1:6,1:6),d.translationP,AbsTol=0);
+            testCase.verifyEqual(d.lidarMatched.P(1:6,1:6),eye(6),AbsTol=0);
             testCase.verifyFalse(d.baselineFullStateCertified);
         end
         function arbitraryPsdWeightingCanDestabilizeAFixedGain(testCase)

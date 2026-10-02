@@ -125,8 +125,10 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             testCase.verifyFalse(r.observer.lidarMatched.baselineFullStateCertified);
         end
         function stateUsesOnlyOneLowRateSolve(testCase)
-            f=fixture();a=run(f);f.cfg.maximumIntegrationStep=1e-6;b=run(f);
-            testCase.verifyEqual(a.z,b.z,AbsTol=0);
+            f=fixture();r=run(f);
+            testCase.verifyFalse(isfield(f.cfg,'maximumIntegrationStep'));
+            testCase.verifyEqual(r.diagnostics.integrationSubsteps,0);
+            testCase.verifyEqual(r.diagnostics.localizationUpdates,numel(r.time)-1);
         end
         function delayedSourceRejected(testCase)
             f=fixture();f.data.lidar.delay=.1;

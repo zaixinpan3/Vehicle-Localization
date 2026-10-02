@@ -1,5 +1,5 @@
 function [correction,audit] = computeLidarMatchedCorrection(measurement,pose,G,design,cfg,options)
-% computeLidarMatchedCorrection Route A in a fixed Lyapunov metric.
+% computeLidarMatchedCorrection Continuous LiDAR injection and its discretization.
 % C=D\(G*T), xi=-F*D'*J'*W*r or S*(D\(qL-pose)); the continuous
 % correction is kappa*T*(P\(C'*xi)). P is a Lyapunov matrix, not covariance.
 % Supply either pose/information or residual/jacobian/weights/linearizationPose.

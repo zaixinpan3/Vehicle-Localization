@@ -5,6 +5,9 @@ function problem=fullObserverIssProblem(cfg)
     arguments
         cfg (1,1) struct
     end
+    assert(~isfield(cfg,'timing') || isequal(string(cfg.timing),"synchronous"), ...
+        'VehicleLocalization:ObsoleteFullConfig', ...
+        'Only synchronized localization is supported; the historical transported runtime was removed.');
     assert(isfield(cfg,'iss'),'VehicleLocalization:MissingFullIssDomain', ...
         'Declare the continuous ISS domain in cfg.iss before selecting gains.');
     s=cfg.iss;g=cfg.gains(:).';

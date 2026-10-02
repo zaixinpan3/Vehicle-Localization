@@ -55,7 +55,7 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
             cfg=mncavFullObserverConfig();design=designFullObserverGains(cfg);
             testCase.verifyEqual(cfg.gnss.positionGain,cfg.gains(1),AbsTol=0);
             testCase.verifyFalse(cfg.gnss.outputPoint.evaluationDriveUsed);
-            testCase.verifyGreaterThan(design.commonTranslationMargin,0);
+            testCase.verifyGreaterThan(design.continuousCertificate.verification.verifiedDecayRate,cfg.iss.decayRate);
         end
         function matchedGainLimitsDriftWithGnssAlone(testCase)
             f=biasedStraightFixture();slow=run(f);f.cfg.gnss.positionGain=4;fast=run(f);
