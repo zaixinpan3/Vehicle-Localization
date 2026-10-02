@@ -19,6 +19,8 @@ function cfg=carlaPerceptionProfile(cfg)
 % gate raised for map consistency; offline facade: sample 82) and checked
 % on the held-out localization drives. Offline curb and pole keep the
 % Mississippi offline values: their searches found no better operating point.
+% Stable tree trunks are valid pole-like landmarks. The optional structure
+% rejection experiment is disabled to preserve their localization support.
 % See research/carla_town10_20261001/README.md.
     spacing=cfg.voxel.voxelSize(1);
     cfg.semanticPrecision.enabled=false;
@@ -29,6 +31,7 @@ function cfg=carlaPerceptionProfile(cfg)
         cfg.offGroundFeatures=coarseFacade(cfg.offGroundFeatures);
     else
         [cfg.offGroundFeatures,cfg.fine]=offlineFacade(cfg.offGroundFeatures,cfg.fine);
+        cfg.fine=offlinePoleStructure(cfg.fine);
     end
 end
 
@@ -71,6 +74,23 @@ function o=coarseFacade(o)
     o.maxLinesPerThetaCluster=14;o.maxThetaClusters=5;o.minAssignedPixels=6;
     o.supportGammaMin=0.34;o.supportQuantile=0.51;o.supportAbs=0.20;
     o.orientationToleranceDeg=26;o.facadeSupportRadiusCells=2;o.houghSuppressionSize=[8 8];
+end
+
+function fine=offlinePoleStructure(fine)
+% Optional semantic-label experiment; disabled for localization by default.
+% Enable with cfg.fine.poleStructureRejectionEnabled=true. This removes
+% useful trunks as well as building edges, so use a separately rebuilt map.
+% Remove tree trunks (canopy around the shaft top) and building edges
+% (returns beside the shaft over its height) from the mapped poles, and
+% clusters beyond 25 m, where building corners dominate the detections. On the
+% held-out lap this raises pole/sign-post precision of the offline pole
+% points from 78 to 98 % (Pole-label precision 43 to 54 %) and lowers
+% instance recall within 30 m from 65 to 52 %. These label metrics do not
+% measure geometric landmark validity or localization quality.
+    fine.poleStructureRejectionEnabled=false;
+    fine.poleClusterLinkMeters=0.5;fine.poleCanopyRadius=2.5;fine.poleCanopyHeight=3.0;
+    fine.poleCanopyMinimumPoints=10;fine.poleCanopyMaximumSectors=5;fine.poleCanopyMinimumThickness=0.6;
+    fine.poleMaximumAdjacentReturns=20;fine.poleMaximumRange=25;
 end
 
 function [o,fine]=offlineFacade(o,fine)

@@ -66,6 +66,12 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                 accepted(independent)=validatePolePoints(points(independent,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig,context.offGroundVoxelGrid.points,true);
                 accepted(base)=validatePolePoints(points(base,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig,context.offGroundVoxelGrid.points);
                 accepted(~base & ~independent)=validatePolePoints(points(~base & ~independent,:),cfg.fine,context.offGround,context.offGroundVoxelGrid.gridConfig,context.offGroundVoxelGrid.points);
+                if isfield(cfg.fine,'poleStructureRejectionEnabled') && ...
+                        cfg.fine.poleStructureRejectionEnabled && any(accepted)
+                    frameXYZ=double([frame.x(:),frame.y(:),frame.z(:)]);
+                    frameXYZ=frameXYZ(all(isfinite(frameXYZ),2),:);
+                    accepted(accepted)=rejectOverheadAndAdjacentStructure(points(accepted,:),frameXYZ,cfg.fine);
+                end
         end
         masks.(name)(pointIdx(accepted)) = true;
         decisions.(name) = struct("candidatePointIndices", pointIdx, ...
@@ -74,6 +80,50 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
         if name=="curb", decisions.curb.geometry=curbDetail; end
     end
     fine = struct("featureMasks", masks, "refinement", decisions, "candidates", candidates);
+end
+
+function keep = rejectOverheadAndAdjacentStructure(points, frameXYZ, cfg)
+% rejectOverheadAndAdjacentStructure: Remove accepted pole clusters that are
+% tree trunks or building edges. Accepted returns are grouped within
+% poleClusterLinkMeters in XY. A cluster is a trunk when returns above its
+% top (within poleCanopyRadius, from 0.5 m below the top to
+% poleCanopyHeight above it) number more than poleCanopyMinimumPoints,
+% occupy more than poleCanopyMaximumSectors of eight azimuth sectors and span
+% more than poleCanopyMinimumThickness vertically: a canopy surrounds the
+% shaft, whereas a lamp head or a signal arm stays in one or two directions.
+% A cluster is attached to a wall when more than poleMaximumAdjacentReturns
+% returns lie 0.4-1.0 m from its axis between its lowest and highest return.
+% Optional poleMaximumRange (metres from the sensor) removes distant clusters,
+% where sparse rings make wall corners look like shafts.
+    n=size(points,1);keep=true(n,1);label=zeros(n,1);clusters=0;
+    for a=1:n
+        if label(a),continue;end
+        clusters=clusters+1;queue=a;label(a)=clusters;
+        while ~isempty(queue)
+            k=queue(end);queue(end)=[];
+            add=find(label==0 & hypot(points(:,1)-points(k,1),points(:,2)-points(k,2))<cfg.poleClusterLinkMeters);
+            label(add)=clusters;queue=[queue;add]; %#ok<AGROW>
+        end
+    end
+    for c=1:clusters
+        members=label==c;p=points(members,:);centre=median(p(:,1:2),1);top=max(p(:,3));bottom=min(p(:,3));
+        d=hypot(frameXYZ(:,1)-centre(1),frameXYZ(:,2)-centre(2));
+        above=d<=cfg.poleCanopyRadius & d>0.5 & frameXYZ(:,3)>top-0.5 & frameXYZ(:,3)<top+cfg.poleCanopyHeight;
+        canopy=false;
+        if nnz(above)>cfg.poleCanopyMinimumPoints
+            azimuth=atan2(frameXYZ(above,2)-centre(2),frameXYZ(above,1)-centre(1));
+            sector=floor(mod(azimuth,2*pi)/(pi/4))+1;
+            sectors=nnz(accumarray(sector,1,[8 1])>=3);
+            heights=sort(frameXYZ(above,3));m=numel(heights);
+            thickness=heights(max(1,ceil(.9*m)))-heights(max(1,ceil(.1*m)));
+            canopy=sectors>cfg.poleCanopyMaximumSectors && thickness>cfg.poleCanopyMinimumThickness;
+        end
+        adjacent=nnz(d<=1.0 & d>0.4 & frameXYZ(:,3)>bottom & frameXYZ(:,3)<top);
+        distant=isfield(cfg,'poleMaximumRange') && norm(centre)>cfg.poleMaximumRange;
+        if canopy || distant || adjacent>cfg.poleMaximumAdjacentReturns
+            keep(members)=false;
+        end
+    end
 end
 
 function accepted = validatePolePoints(points, cfg, offGround, geometry, neighborhoodPoints, requireOutputRun)
