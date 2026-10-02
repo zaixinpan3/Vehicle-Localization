@@ -11,8 +11,9 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % Pose anchors propagate using past/current body motion and gyro only. There
 % is no future-frame interpolation, pose reset, or reference-state input.
 % GNSS corrects position only; the heading is the integrated gyro, corrected
-% only by qualified LiDAR yaw.
-% Both runtimes use wheel and lateral velocities without LiDAR-derived bias.
+% by LiDAR; the proximal mode also uses modeled state cross terms.
+% The optional synchronous proximal mode estimates body-velocity biases.
+% Other modes use the supplied wheel and lateral velocities directly.
     arguments
         data (1,1) struct
         lateralDesign (1,1) struct
