@@ -1,5 +1,41 @@
 # Vehicle localization observer
 
+## Continuous gain design, then discretization
+
+There is one design route for the current global observer. Both
+`designContinuousObserverGains` and the runtime entry `designFullObserverGains`
+use the same continuous seven-state ISS LMIs. Measurement timing does not
+select another gain-design problem. Add YALMIP and the SDP solver configured
+in `cfg.iss.solver` to the MATLAB path, as required by the lateral synthesis.
+`solveFullObserverIssLmi` fixes one candidate gain tuple and finds the common
+Lyapunov weights; `verifyFullObserverIssCertificate` independently recomputes
+both inequalities without relying on the solver status. Infeasible candidates
+are rejected before numerical integration. Joint gain/weight optimization is
+generally bilinear, so tuning uses an outer candidate search and an inner LMI
+feasibility test. A failed sufficient condition is not proof of instability.
+
+The current declared design domain in `fullObserverConfig().iss` is true speed
+at most 15 m/s, acceleration at most 2 m/s^2, and course rate at most the
+configured 0.4 rad/s. The filtered LiDAR matrix must have position strength
+at least 0.25, heading strength at least 0.97, and position/heading coupling
+norm at most 0.06. These are proof assumptions, not modifications of the input
+information. The requested Lyapunov decay rate is 0.01/s. The LMIs include
+estimated-heading compensation of the configured GNSS output-point offset.
+They permit zero GNSS weight; sufficient LiDAR information is still needed.
+Changing the gains, information regularizers, offset or design domain
+invalidates the prior certificate and requires reverification.
+
+The continuous proof metric is `continuousCertificate.verification.P`.
+It is distinct from the algebraic metric used to implement the LiDAR term.
+Neither the LMI weights nor the input bounds change the observer equations.
+The synchronous runtime discretizes those equations with the same gains.
+Its diagnostics report which observed LiDAR matrices meet the declared
+information conditions; the measured motion envelope is only a proxy for
+bounds on the true motion. Missing or insufficient measurements remain
+uncertified intervals. A continuous certificate is not relabeled as a proof
+for every sampling period. Numerical consistency is checked against the
+continuous ODE with decreasing steps, without a second gain-design route.
+
 ## Current synchronous runtime
 
 `runFullLocalizationObserver` defaults to a baseline backward-Euler step and
@@ -67,9 +103,9 @@ and the [discrete equations](../research/mncav_synchronous_bestpos_20260917/READ
 
 The current seven-state model retains explicit heading at standstill. Its
 physical coordinates have fixed `theta=1`, `T=I7`; the two-chain exponents
-remain `[1,2,3,1,2,3,1]`. `designFullObserverGains` uses the existing translation
-storage `Ptranslation=I6`, extended with fixed yaw weight `kp/kpsi`. This is
-a Lyapunov storage metric, not an estimator covariance. It recovers the nominal
+remain `[1,2,3,1,2,3,1]`. The injection uses an algebraic translation metric
+`I6`, extended with fixed yaw weight `kp/kpsi`. This is not the full continuous
+ISS proof metric or an estimator covariance. It recovers the nominal
 position/yaw gain ratio for uncoupled geometry without dropping cross terms.
 
 For `D=diag(cfg.lidar.poseScales)`, `I=D'*information*D` and
@@ -132,6 +168,8 @@ model. The reusable correction helper also offers explicit updates capped at
 `h*max(lambdaZ)<=1.8<2`. Neither result certifies nonlinear association changes,
 map errors or the entire baseline-plus-jump system. The diagnostics retain
 `sampledSystemCertified=false` and `baselineFullStateCertified=false`.
+The complete continuous system has its own LMI certificate, computed before
+this discretization and conditional on its declared information domain.
 In particular, GNSS-only operation has no baseline yaw ISS certificate, and an
 arbitrary longitudinal outage with curb-only geometry cannot guarantee full
 position convergence. The reported translation margin concerns the GNSS

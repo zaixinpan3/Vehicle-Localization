@@ -96,9 +96,11 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             cfg=fullObserverConfig;design=designFullObserverGains(cfg);
             testCase.verifyGreaterThanOrEqual(independentMargin(cfg),design.commonTranslationMargin-1e-10);
         end
-        function weakGnssGainCannotClaimTheCertificate(testCase)
+        function lidarCertificateDoesNotRequireGnssCorrection(testCase)
             cfg=fullObserverConfig;cfg.gnss.positionGain=.001;
-            testCase.verifyError(@() designFullObserverGains(cfg),'VehicleLocalization:InfeasibleFullCertificate');
+            design=designFullObserverGains(cfg);
+            testCase.verifyTrue(design.fullContinuousStateCertified);
+            testCase.verifyLessThan(design.commonTranslationMargin,0);
         end
     end
 end

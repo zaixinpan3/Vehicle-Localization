@@ -1,7 +1,8 @@
 function design = designContinuousObserverGains(cfg)
-% designContinuousObserverGains Alias for the current two-mode design entry.
+% designContinuousObserverGains Continuous ISS design for the current observer.
+% This alias and the numerical runtime use the same gain-design entry.
     arguments
-        cfg (1,1) struct = improvedObserverConfig()
+        cfg (1,1) struct = fullObserverConfig()
     end
-    design=designImprovedObserverGains(cfg);
+    design=designFullObserverGains(cfg);
 end
