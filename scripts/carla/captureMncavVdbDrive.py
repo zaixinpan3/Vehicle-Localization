@@ -19,38 +19,7 @@ from scipy.spatial.transform import Rotation
 
 from captureCarlaTown10Drive import LIDAR_ATTRIBUTES, LIDAR_DTYPE, spawn_sensor
 
-SAE_TO_PROJECT = np.diag([1., -1., -1.])
-Z_FLIP = np.diag([1., 1., -1.])
-
-
-def rotations(row):
-    """SAE body->world and project body->world rotations."""
-    r = Rotation.from_euler('xyz', [row['roll'], row['pitch'], row['yaw']]).as_matrix()
-    return r, SAE_TO_PROJECT @ r @ SAE_TO_PROJECT
-
-
-def synthesize_sensors(truth, cfg, offset, seed):
-    """Generate IMU specific force, wheel encoder and steering measurements."""
-    rng = np.random.default_rng(seed)
-    n = len(truth)
-    values = np.empty((n, 17))
-    for k, row in enumerate(truth):
-        r, rp = rotations(row)
-        acceleration = SAE_TO_PROJECT @ np.array([row['ax'], row['ayRight'], row['azDown']])
-        gravity_body = rp.T @ np.array([0., 0., -9.81])
-        specific = acceleration - gravity_body + rng.normal(0., cfg['accelerometerNoiseStdMps2'], 3)
-        omega = SAE_TO_PROJECT @ np.array([row['p'], row['q'], row['r']])
-        omega += rng.normal(0., cfg['gyroNoiseStdRadps'], 3)
-        wheels = np.array([row[f'omega{x}'] for x in ['FL', 'FR', 'RL', 'RR']])
-        wheels += rng.normal(0., cfg['wheelNoiseStdRadps'], 4)
-        # Recover equivalent center road-wheel angle from both actual wheel angles.
-        tangents = np.tan([row['steerFL'], row['steerFR']])
-        delta = -np.arctan(2. / np.sum(1. / tangents)) if np.all(np.abs(tangents) > 1e-8) else -np.mean(tangents)
-        delta += rng.normal(0., cfg['steeringNoiseStdRad'], 1)[0]
-        pos = np.array([row['x'], -row['y'], -row['zDown']]) + rp @ np.array([-offset, 0., 0.])
-        gnss = pos[:2] + rng.normal(0., cfg['gnssNoiseStdM'], 2)
-        values[k] = [row['time'], *specific, *omega, *wheels, delta, *gnss, cfg['gnssNoiseStdM']**2, 1., 0.]
-    return values
+from mncavVdbSensors import rotations, synthesize_sensors, Z_FLIP, SENSOR_COLUMNS
 
 
 def capture(args):
@@ -68,10 +37,10 @@ def capture(args):
     if args.duration is not None:ticks = ticks[ticks['time'] <= args.duration + 1e-8]
     args.output.mkdir(parents=True, exist_ok=False)
     for folder in ['points', 'labels']:(args.output / folder).mkdir()
-    sensors = synthesize_sensors(ticks, cfg['sensors'], offset, args.seed)
-    np.savetxt(args.output / 'sensors.csv', sensors, delimiter=',', header=','.join([
-        'time','specificX','specificY','specificZ','gyroX','gyroY','gyroZ',
-        'omegaFL','omegaFR','omegaRL','omegaRR','roadWheelAngle','gnssX','gnssY','gnssVariance','gnssValid','reserved']), comments='')
+    noise = json.loads((root / 'config/mncavVdbSensorNoise.json').read_text())
+    errors = noise[args.noise_profile]
+    sensors = synthesize_sensors(ticks, cfg['sensors'], offset, args.seed, errors)
+    np.savetxt(args.output / 'sensors.csv', sensors, delimiter=',', header=','.join(SENSOR_COLUMNS), comments='')
     calib = {'schemaVersion': 1, 'calibration': {'rotation': np.eye(3).tolist(),
         'translation': [offset, 0., cfg['sensors']['lidarHeightAboveNominalRoadM'] - cfg['body']['cgHeightM']],
         'identifier': 'mncav-vdb-cg-roof-to-configured-output-v1'},
@@ -83,7 +52,7 @@ def capture(args):
         'parameters': params, 'seed': args.seed, 'fixedDeltaSeconds': dt,
         'sensors': 'VDB specific-force/gyro/wheel states with seeded noise; real CARLA ray-cast LiDAR',
         'outputPointForwardOffsetM': offset, 'verticalDatum': 'VDB vertical displacement plus nominal CG height',
-        'completed': False}
+        'noiseProfile': args.noise_profile, 'sensorErrorModel': errors, 'completed': False}
     (args.output / 'metadata.json').write_text(json.dumps(metadata, indent=2))
     client = carla.Client(args.host, args.port);client.set_timeout(60.)
     world = client.get_world();assert 'Town10HD' in world.get_map().name
@@ -146,6 +115,7 @@ def capture(args):
 def main():
     p=argparse.ArgumentParser();p.add_argument('--trajectory', type=Path, required=True)
     p.add_argument('--parameters', type=Path, required=True);p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--noise-profile', choices=['white','moderate'], default='moderate')
     p.add_argument('--seed', type=int, default=20261002);p.add_argument('--duration', type=float)
     p.add_argument('--host', default='127.0.0.1');p.add_argument('--port', type=int, default=2000)
     capture(p.parse_args())

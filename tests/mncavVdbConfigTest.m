@@ -1,8 +1,10 @@
 classdef mncavVdbConfigTest < matlab.unittest.TestCase
     methods(TestClassSetup)
-        function paths(~)
+        function paths(tc)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            tc.applyFixture(matlab.unittest.fixtures.PathFixture(root));
             setupVehicleLocalization();
-            addpath(fullfile(fileparts(fileparts(mfilename('fullpath'))),'scripts','carla'));
+            addpath(fullfile(root,'scripts','carla'));
         end
     end
     methods(Test)

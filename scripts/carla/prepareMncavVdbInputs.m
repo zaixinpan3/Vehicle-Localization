@@ -5,6 +5,11 @@ function inputs=prepareMncavVdbInputs(datasetFolder,interfaceFile)
 % The stationary interval is excluded from localization evaluation.
     s=readtable(fullfile(datasetFolder,'sensors.csv'));s=s(s.time>=2,:);
     interface=jsondecode(fileread(interfaceFile));t=s.time;n=height(s);
+    nominalWheel=wheelSpeedObserverConfig();
+    assert(isfield(interface,'schemaVersion') && interface.schemaVersion==2 && ...
+        string(interface.source)=="independent-mncav-wheel-calibration" && ...
+        isequal(reshape(interface.effectiveRadiusM,1,4),nominalWheel.effectiveRadius), ...
+        'VehicleLocalization:OracleWheelCalibration','Require the independent current MnCAV wheel-radius calibration, not plant states.');
     stat=s.time<3;f=mean([s.specificX(stat),s.specificY(stat),s.specificZ(stat)],1);
     roll=atan2(f(2),f(3));pitch=atan2(-f(1),hypot(f(2),f(3)));
     tilt=zeros(3,3,n);acc=zeros(n,3);yawRate=zeros(n,1);angles=zeros(n,2);
@@ -23,7 +28,7 @@ function inputs=prepareMncavVdbInputs(datasetFolder,interfaceFile)
     h=struct('time',t,'steeringAngle',s.roadWheelAngle,'yawRate',s.gyroZ, ...
         'longitudinalAcceleration',acc(:,1),'lateralAcceleration',acc(:,2));
     h.wheels=struct('time',t,'angularVelocity',[s.omegaFL,s.omegaFR,s.omegaRL,s.omegaRR]);
-    wc=wheelSpeedObserverConfig();wc.effectiveRadius=reshape(interface.effectiveRadiusM,1,4);
+    wc=nominalWheel;
     wc.lagCompensation=zeros(1,4);wc.rearCgDistance=0; % Synthetic IMU is at the CG.
     wheel=estimateWheelLongitudinalSpeed(h,wc);
     assert(all(wheel.valid),'VehicleLocalization:MissingVdbWheel','Wheel input became unavailable.');
@@ -50,6 +55,6 @@ function inputs=prepareMncavVdbInputs(datasetFolder,interfaceFile)
     lateral.lateralVelocity=vo(:,2);
     inputs=struct('highRate',globalMotion,'lateral',lateral,'lateralDesign',design,'wheel',wheel, ...
         'tilt',tilt,'angles',angles,'cgMotion',h,'sensorTable',s,'referenceUsed',false, ...
-        'initialization',"Stationary IMU alignment over [2,3) seconds, evaluation starts at 3 seconds");
+        'initialization',"Stationary IMU alignment over [2,3) seconds; pose initialization follows in the localization runner");
     inputs.signature=mncavVdbInputSignature(datasetFolder,interfaceFile);
 end

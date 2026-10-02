@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "defaultProfile": "moderate",
+  "interpretation": "Declared engineering simulation priors, not identified MnCAV sensor specifications. White-noise sigmas are imported from mncavVdbConfig. No measurement calibration is fitted on the evaluation trajectory.",
+  "moderate": {
+    "accelerometerTurnOnBiasStdMps2": 0.02,
+    "accelerometerBiasRandomWalkMps2PerSqrtSecond": 0.001,
+    "gyroTurnOnBiasStdRadps": 0.0001,
+    "gyroBiasRandomWalkRadpsPerSqrtSecond": 0.00001,
+    "gnssCorrelatedErrorStdM": 0.05,
+    "gnssCorrelationTimeSeconds": 20.0,
+    "wheelScaleErrorStdFraction": 0.0005,
+    "wheelQuantizationStepRadps": 0.02,
+    "steeringZeroErrorStdRad": 0.0008726646259971648
+  },
+  "white": {
+    "accelerometerTurnOnBiasStdMps2": 0.0,
+    "accelerometerBiasRandomWalkMps2PerSqrtSecond": 0.0,
+    "gyroTurnOnBiasStdRadps": 0.0,
+    "gyroBiasRandomWalkRadpsPerSqrtSecond": 0.0,
+    "gnssCorrelatedErrorStdM": 0.0,
+    "gnssCorrelationTimeSeconds": 20.0,
+    "wheelScaleErrorStdFraction": 0.0,
+    "wheelQuantizationStepRadps": 0.0,
+    "steeringZeroErrorStdRad": 0.0
+  }
+}
