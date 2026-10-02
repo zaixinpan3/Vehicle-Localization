@@ -36,6 +36,34 @@ uncertified intervals. A continuous certificate is not relabeled as a proof
 for every sampling period. Numerical consistency is checked against the
 continuous ODE with decreasing steps, without a second gain-design route.
 
+### Dataset-specific tuned parameters
+
+The default `mncavFullObserverConfig()` retains nominal gains. An explicit
+parameter profile records the best fresh-recursive-tested candidate on
+`raw_data_2024-06-07-12-09-31_0`, using the receiver-reference-v3 study inputs
+and fixed map, with LiDAR information scale held at 16:
+
+```matlab
+cfg = mncavFullObserverConfig(GainProfile="mississippi-20240607-fixed-scale");
+```
+
+The physical gains `[kp,kv,ka,kpsi]` are `[80,4,12,1.25]`. GNSS position gain
+remains 4/s and its information scale remains 16. The label and provenance
+are stored in `cfg.tuning` and `config/mncavMississippiTunedGains.json`.
+This selects parameters for the same continuous LMI design and runtime.
+It does not install another observer or reuse a saved certificate.
+
+The objective normalizes position and heading RMSE separately by each
+scenario's nominal baseline, then takes the square root of the mean of the
+four squared ratios across LiDAR-only and both-sensor runs. All 1169 frames,
+including initialization, contribute. The prior fresh score is 0.736278
+(nominal baseline: 1). This is the best tested result within the fixed-scale
+search on the evaluation recording; it is not an exhaustive optimum or a
+claim of performance on another recording. A separate scale-64 candidate
+scored 0.733993 but changed the information-domain qualification substantially;
+it is not the fixed-scale profile recorded here. See the
+[gain study](../research/continuous_lmi_route_20261002/report.pdf).
+
 ## Current synchronous runtime
 
 `runFullLocalizationObserver` always uses a baseline backward-Euler step and
