@@ -3,15 +3,13 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
 % Inputs and real measurement reconstructions must share the same frame clock.
 % No pose anchor is propagated, no inter-frame pose is generated, and absent
 % measurements withdraw their own correction. An implicit baseline step is
-% followed by a LiDAR step. The default is the implicit Lyapunov-matched
-% channel; the optional proximal mode uses its propagated prior metric.
-% Only conditional affine statements are certified, not the nonlinear system.
+% followed by an implicit Lyapunov-matched LiDAR step. Only the locally affine
+% LiDAR jump is certified as nonexpansive; the full sampled system is not.
 % Optional data.lidarMatcher(k,seed,positionAid) runs before the current update.
 % It replaces data.lidar, receives the previous fused-state prediction and
 % current point-corrected GNSS, and returns a registration result. Candidate
 % selection may depend on GNSS; its information must exclude GNSS curvature.
-% Optional cfg.lidar.updateLaw="proximal" uses an augmented robust proximal
-% update with body-velocity bias states and a propagated uncertainty metric.
+% Wheel and lateral-observer velocities are used without LiDAR-derived bias.
 % GNSS corrects position only; the full LiDAR information corrects pose jointly.
 % Matcher events and recorded data.lidar.residualModels supply accepted frozen
 % geometry for predicted-pose residual evaluation. Old pose-only records use
@@ -44,31 +42,10 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     continuous=designFullObserverGains(cfg);
     matchedDesign=continuous.lidarMatched;
-    proximal=isfield(cfg.lidar,'updateLaw') && cfg.lidar.updateLaw=="proximal";
-    if isfield(cfg.lidar,'updateLaw')
-        assert(ismember(cfg.lidar.updateLaw,["matched","proximal"]), ...
-            'VehicleLocalization:InvalidLidarUpdateLaw','Unknown LiDAR update law.');
-    end
-    motionBias=zeros(2,1);uncertainty=[];biasHistory=zeros(n,2);uncertaintyDiagonal=zeros(n,9);
-    if proximal
-        pcfg=cfg.lidar.proximal;
-        pcfg.informationScales=cfg.lidar.poseScales;
-        assert(islogical(pcfg.estimateMotionBias) && isscalar(pcfg.estimateMotionBias));
-        assert(ismember(pcfg.positionIntegration,["trapezoidal","endpoint"]));
-        validateattributes(pcfg.initialStd,{'double'},{'positive','finite','numel',9});
-        uncertainty=diag(pcfg.initialStd(:).^2);
-    end
     poseJacobian=zeros(3,7);poseJacobian(1,1)=1;poseJacobian(2,4)=1;poseJacobian(3,7)=1;
     design=struct('kind',"synchronous-route-a-implicit",'continuousDesign',continuous, ...
         'lidarMatched',matchedDesign,'lidarJumpCertificate',"Implicit locally affine fixed-metric contraction", ...
         'sampledSystemCertified',false,'gainsRetuned',isfield(cfg.gnss,'positionGainDesign'));
-    if proximal
-        design.kind="synchronous-proximal";
-        design.lidarJumpCertificate="Convex frozen-measurement proximal nonexpansiveness in the prior metric";
-        design.proximal=pcfg;
-        design.augmentedStateOrder=["X","Vx","Ax","Y","Vy","Ay","yaw","bodySpeedBias","bodyLateralBias"];
-        design.metricInterpretation="Propagated design uncertainty and local robust curvature; not calibrated covariance";
-    end
     x=cfg.initialState;
     assert(numel(x)==7 && all(isfinite(x)),'VehicleLocalization:FullInitializationRequired', ...
         'Supply an explicit common initial state.');x=x(:);
@@ -79,7 +56,6 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     for k=1:n
         dt=0;if k>1,dt=t(k)-t(k-1);end
         speed=h.longitudinalSpeed(k);vy=lateral.lateralVelocity(k);
-        if proximal && pcfg.estimateMotionBias,speed=speed+motionBias(1);vy=vy+motionBias(2);end
         rate=h.yawRate(k);
         if k>1,rate=(h.yawRate(k-1)+rate)/2;end
         predYaw=x(7)+rate*dt;
@@ -118,17 +94,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         va=A\[x([2,5])+dt*cfg.gains(2)*velocity;x([3,6])+dt*cfg.gains(3)*acceleration];
         b=zeros(2,1);
         if G.valid(k),b=b+cfg.gnss.positionGain*Wg*gnssPosition(k,:).';end
-        displacement=dt*va(1:2);
-        if proximal && pcfg.positionIntegration=="trapezoidal",displacement=dt/2*(x([2,5])+va(1:2));end
-        p=(eye(2)+dt*K)\(x([1,4])+displacement+dt*b);
-        if proximal
-            gnssDerivative=zeros(2,1);
-            if G.valid(k) && dt>0
-                gnssDerivative=gnssMapDerivative(p,gnssPosition(k,:).',yaw,K,alignment,cfg,dt);
-            end
-            uncertainty=propagateProximalUncertainty(uncertainty,dt,A,R,[speed;vy], ...
-                [h.longitudinalAcceleration(k);h.lateralAcceleration(k)],K,gnssInformation(:,:,k),cfg.gains,pcfg,gnssDerivative);
-        end
+        p=(eye(2)+dt*K)\(x([1,4])+dt*va(1:2)+dt*b);
         x=[p(1);va(1);va(3);p(2);va(2);va(4);yaw];
         baselineStates(k,:)=x.';
         if L.valid(k)
@@ -144,32 +110,22 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             if ~isfield(measurement,'directionReliability'),measurement.directionReliability=ones(3,1);end
             measurement.frameReliability=measurement.frameReliability*L.frameReliability(k);
             measurement.directionReliability=measurement.directionReliability(:).*L.directionReliability(k,:).';
-            if proximal
-                [augmentedDelta,uncertainty,audit]=computeProximalLidarCorrection(measurement,x([1,4,7]), ...
-                    [poseJacobian,zeros(3,2)],uncertainty,pcfg);
-                delta=augmentedDelta(1:7);motionBias=motionBias+augmentedDelta(8:9);
-                poseWeights(:,:,k)=poseJacobian*audit.correctionMatrix(1:7,:);
-                rateCorrection=zeros(7,1);weights(k,2)=max(0,min(eig(audit.geometryShape)));
-                if any(audit.correctionMatrix(7,:)),headingMode(k)=2;end
-            else
-                [delta,audit]=computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
-                    matchedDesign,cfg,StepSize=dt,Discretization="implicit");
-                assert(audit.jumpNonexpansive,'VehicleLocalization:LidarJumpCertificateFailed', ...
-                    'The numerical LiDAR jump failed its fixed-metric energy check.');
-                poseWeights(:,:,k)=audit.filter.S;rateCorrection=audit.continuousCorrection;
-                weights(k,2)=min(audit.filter.strengths);
-                if audit.filter.S(3,3)>0,headingMode(k)=2;end
-            end
-            x=x+delta;lidarAudits{k}=audit;
+            [delta,audit]=computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
+                matchedDesign,cfg,StepSize=dt,Discretization="implicit");
+            assert(audit.jumpNonexpansive,'VehicleLocalization:LidarJumpCertificateFailed', ...
+                'The numerical LiDAR jump failed its fixed-metric energy check.');
+            x=x+delta;lidarAudits{k}=audit;poseWeights(:,:,k)=audit.filter.S;
+            rateCorrection=audit.continuousCorrection;
             if dt>0,rateCorrection=delta/dt;end
             correction(k,3:4)=rateCorrection([1,4]).';yawCorrection(k)=rateCorrection(7);
+            weights(k,2)=min(audit.filter.strengths);
+            if audit.filter.S(3,3)>0,headingMode(k)=2;end
         end
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Synchronous update became nonfinite.');
         if G.valid(k),correction(k,1:2)=(cfg.gnss.positionGain*Wg*(gnssPosition(k,:).'-p)).';weights(k,1)=min(eig(Wg));end
         alpha=min(eig(K));q2=cfg.maximumTrackAngleRate^2;
         margins(k)=min(eig([2*alpha,-1,0;-1,2*cfg.gains(2),-(1+q2);0,-(1+q2),2*cfg.gains(3)]));
         z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));
-        if proximal,biasHistory(k,:)=motionBias.';uncertaintyDiagonal(k,:)=diag(uncertainty).';end
     end
     estimate=struct('time',t,'z',z,'onlineZ',z,'pose',[z(:,[1,4]),wrap(z(:,7))], ...
         'position',z(:,[1,4]),'velocity',z(:,[2,5]),'acceleration',z(:,[3,6]), ...
@@ -188,11 +144,6 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'nominalOutputRateHz',1/median(diff(t)),'referenceUsed',false, ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
         'scope',"Implicit baseline and matched LiDAR correction once per frame; local affine jump certificate only. Translation margins refer to the GNSS baseline with heading as an input. Alignment remains offline.");
-    if proximal
-        estimate.motionBias=biasHistory;
-        estimate.diagnostics.uncertaintyDiagonal=uncertaintyDiagonal;
-        estimate.diagnostics.scope="Augmented motion flow and robust proximal LiDAR events; conditional local analysis, uncalibrated design uncertainty, no whole-system ISS claim.";
-    end
     if onlineMatching
         estimate.matchingResults=matchingResults;estimate.matchingSeeds=matchingSeeds;
         estimate.diagnostics.matchingFeedback=true;
@@ -246,14 +197,4 @@ end
 
 function x=wrap(x)
     x=atan2(sin(x),cos(x));
-end
-
-function derivative=gnssMapDerivative(p,position,yaw,K,alignment,cfg,dt)
-% Differentiate output-point alignment and its yaw-dependent information.
-    R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
-    a=R*J*alignment.bodyOffset(:);adot=-R*alignment.bodyOffset(:);C=R*alignment.bodyCovariance*R.';
-    covarianceDerivative=J*C-C*J+alignment.headingStdRad^2*(adot*a.'+a*adot.');
-    W=K/cfg.gnss.positionGain;
-    Kdot=-cfg.gnss.positionGain*cfg.gnss.gainInformationScale*W*covarianceDerivative*W;
-    derivative=(eye(2)+dt*K)\(dt*(Kdot*(position-p)-K*a));
 end

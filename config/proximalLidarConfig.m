@@ -1,9 +1,0 @@
-function cfg=proximalLidarConfig()
-% proximalLidarConfig Design uncertainties for the robust augmented update.
-% These physical scales are design assumptions, not calibrated covariances.
-% State order is [X,Vx,Ax,Y,Vy,Ay,yaw,bodySpeedBias,bodyLateralBias].
-    cfg=struct('poseStd',[.1;.1;deg2rad(.2)],'informationScales',ones(3,1),'huberThreshold',3, ...
-        'initialStd',[.1;.3;.3;.1;.3;.3;deg2rad(.5);.3;.3], ...
-        'processStd',[.01;.08;.3;.01;.08;.3;deg2rad(.2);.05;.05], ...
-        'estimateMotionBias',true,'positionIntegration',"trapezoidal");
-end
