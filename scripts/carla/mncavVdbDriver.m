@@ -35,6 +35,10 @@ function update(b)
     change=(desired-old)*(-expm1(-dt/cfg.driver.steeringTimeConstantSeconds));
     lim=cfg.driver.maximumSteeringRateRadps*dt;delta=old+max(-lim,min(lim,change));
     vref=min(route(idx:target,4));
+    % Tracking corrections can turn more sharply than the nominal path. Slow
+    % for both the requested and lagged steering curvature before accelerating.
+    steeringCurvature=max(abs(tan([desired,delta])))/L;
+    vref=min(vref,sqrt(cfg.simulation.lateralAccelerationMps2/max(steeringCurvature,.001)));
     if b.CurrentTime<cfg.simulation.settleSeconds,vref=0;delta=0;end
     if route(end,3)-route(idx,3)<3,vref=0;end
     acc=max(-cfg.simulation.maximumBrakeMps2,min(cfg.simulation.longitudinalAccelerationMps2,cfg.driver.speedGain*(vref-u(4))));

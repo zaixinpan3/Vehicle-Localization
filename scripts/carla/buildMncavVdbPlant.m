@@ -20,11 +20,7 @@ function [mdl,report]=buildMncavVdbPlant(outputFolder,routeFile)
     veh.FrontalArea=cfg.body.frontalAreaM2;veh.DragCoefficient=cfg.body.dragCoefficient;
     veh.YawMomentInertia=v.yawInertia;veh.RollMomentInertia=cfg.body.rollInertiaKgM2;veh.PitchMomentInertia=cfg.body.pitchInertiaKgM2;
     veh.SteeringRatio=cfg.steeringRatio;
-    route=readtable(routeFile);xy=[route.x_carla,route.y_carla];s=[0;cumsum(vecnorm(diff(xy),2,2))];
-    curvature=abs(route.curvature_per_m);speed=min(cfg.simulation.maximumSpeedMps,sqrt(cfg.simulation.lateralAccelerationMps2./max(curvature,.001)));
-    speed(end)=0;
-    for k=numel(speed)-1:-1:1,speed(k)=min(speed(k),sqrt(speed(k+1)^2+2*cfg.simulation.maximumBrakeMps2*(s(k+1)-s(k))));end
-    path=[xy,s,speed];
+    route=readtable(routeFile);[path,routeProfile]=mncavVdbRouteProfile(route,cfg);xy=path(:,1:2);s=path(:,3);
     veh.InitialLongPosition=xy(1,1);veh.InitialLatPosition=xy(1,2);veh.InitialVertPosition=0;
     veh.InitialYawAngle=deg2rad(route.yaw_carla_deg(1));veh.InitialLongVel=0;
     assignin(mw,'VEH',veh);
@@ -89,6 +85,7 @@ function [mdl,report]=buildMncavVdbPlant(outputFolder,routeFile)
     save_system(mdl,fullfile(outputFolder,[mdl '.slx']));
     report=struct('config',cfg,'body',veh,'staticWheelLoadsN',normal,'sprungWheelLoadsN',sprungNormal, ...
         'nominalCorneringStiffnessPerWheel',kReported,'routeFile',string(routeFile),'routeLengthM',s(end),'routePointCount',size(path,1), ...
+        'routeProfile',routeProfile, ...
         'matlabVersion',version,'plantModel',plant,'model',mdl);
     fid=fopen(fullfile(outputFolder,'plant_parameters.json'),'w');cleanup=onCleanup(@()fclose(fid));fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
 end
