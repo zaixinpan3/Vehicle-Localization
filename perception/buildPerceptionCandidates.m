@@ -1,6 +1,7 @@
 function candidates = buildPerceptionCandidates(pillars, ground, offGround, semanticNames)
 % buildPerceptionCandidates: Publish semantic XY pillar IDs and geometry.
-% Whole-pillar XYZ statistics support labels without vertical subdivision.
+% Class-specific support checks select labels; geometry stays on the shared
+% XY lattice with whole-pillar XYZ sufficient statistics.
     if nargin < 4
         semanticNames = ["curb", "pole", "facade", "trafficSign"];
     end

@@ -10,7 +10,8 @@ classdef semanticPillarPrecisionTest < matlab.unittest.TestCase
             online=perceptionConfig('Downtown');offline=perceptionConfig('Downtown','offline');
             testCase.verifyTrue(online.semanticPrecision.enabled);
             testCase.verifyFalse(offline.semanticPrecision.enabled);
-            testCase.verifyEqual(online.semanticPrecision.classes,["curb","trafficSign","facade"]);
+            testCase.verifyEqual(online.semanticPrecision.classes,["curb","trafficSign"]);
+            testCase.verifyTrue(isfield(online,'facadeSurface'));
         end
         function allModelSchemasHaveFiniteOperatingPoints(testCase)
             cfg=semanticPillarPrecisionConfig();

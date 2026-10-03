@@ -1,5 +1,5 @@
 function expected = expectedFinePerception(dataset, frameIndex)
-% expectedFinePerception: Immutable outputs plus explicit fine pole and curb revisions.
+% expectedFinePerception: Immutable outputs plus explicit feature revisions.
 % Original output evidence stays unchanged. Separate fixtures record intended
 % fine-detector correction; they are regression expectations, not ground truth.
     expected=loadPerceptionMaskReference(dataset,frameIndex);
@@ -9,6 +9,15 @@ function expected = expectedFinePerception(dataset, frameIndex)
     changes=jsondecode(fileread(fullfile(root,'tests','reference','finePoleRecovery.json')));
     dataset=lower(string(dataset));
     if dataset=="mississippi", dataset="missisipi"; end
+    facade=jsondecode(fileread(fullfile(root,'tests','reference','facadeSurfaceMasks.json')));
+    for entry=facade.entries(:).'
+        if dataset=="downtown" && entry.frameIndex==frameIndex
+            expected.featureMasks.facade(:)=false;
+            for run=entry.runs.'
+                expected.featureMasks.facade(run(1):run(2))=true;
+            end
+        end
+    end
     for entry=changes.entries(:).'
         if lower(string(entry.dataset))==dataset && entry.frameIndex==frameIndex
             expected.featureMasks.pole(entry.addedPoleIndices)=true;

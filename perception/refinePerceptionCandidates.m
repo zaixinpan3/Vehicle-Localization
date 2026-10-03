@@ -49,7 +49,15 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                 candidateMembers = ismember(grid.pointIndices,pointIdx);
                 candidates.pillarIndices{k} = unique(grid.pointPillarLinIdx(candidateMembers));
             case "facade"
-                accepted = validateFacadeCandidatePoints(points, context.offGround, cfg.fine);
+                if isfield(context,'facadeSurface')
+                    surface = context.facadeSurface;
+                    pointIdx = surface.pointIndices(surface.candidateMask);
+                    accepted = surface.pointLineIds(surface.candidateMask)>0;
+                    members = ismember(grid.pointIndices,pointIdx);
+                    candidates.pillarIndices{k} = unique(grid.pointPillarLinIdx(members));
+                else
+                    accepted = validateFacadeCandidatePoints(points, context.offGround, cfg.fine);
+                end
             case "trafficSign"
                 if isfield(frame,"intensity")
                     intensity = double(frame.intensity(pointIdx));
@@ -78,6 +86,9 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
             "evaluatedPointIndices", pointIdx, "accepted", accepted, ...
             "numEvaluated", numel(pointIdx), "numAccepted", nnz(accepted));
         if name=="curb", decisions.curb.geometry=curbDetail; end
+        if name=="facade" && isfield(context,'facadeSurface')
+            decisions.facade.planeValidation = context.facadeSurface.planeValidation;
+        end
     end
     fine = struct("featureMasks", masks, "refinement", decisions, "candidates", candidates);
 end

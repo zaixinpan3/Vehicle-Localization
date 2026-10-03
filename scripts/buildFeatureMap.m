@@ -30,13 +30,16 @@ function [probabilityCloudMap, featureData] = buildFeatureMap(dataRoot, cfg)
     end
     framePoseTable = readFramePoseTable(poseMatchCsvPath, frameIndices);
 
-    perceptionCfg = perceptionConfig("Mississippi", "offline");
+    profile = "Mississippi";
+    if isfield(cfg,'perceptionProfile'), profile = cfg.perceptionProfile; end
+    perceptionCfg = perceptionConfig(profile, "offline");
     if isfield(cfg,'frameCalibration'), perceptionCfg.frameCalibration=validateLidarFrameCalibration(cfg.frameCalibration); end
     perceptionCfg.featureNames = cfg.featureNames;
     featureData = collectFeatureObservations(matPath, frameIndices, framePoseTable, perceptionCfg, cfg);
     probabilityCloudMap = buildSlidingWindowMap(featureData, cfg);
     probabilityCloudMap.sourceMatPath = string(matPath);
     probabilityCloudMap.poseMatchCsvPath = string(poseMatchCsvPath);
+    probabilityCloudMap.perceptionProfile = string(profile);
     if ismember('clock_model_id',framePoseTable.Properties.VariableNames)
         identities=unique(string(framePoseTable.clock_model_id));
         assert(isscalar(identities),'VehicleLocalization:ClockMismatch','Mapping poses mix clock models.');
