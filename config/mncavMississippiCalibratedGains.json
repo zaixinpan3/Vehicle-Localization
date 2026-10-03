@@ -1,0 +1,117 @@
+{
+  "profile": "mississippi-20240607-calibrated",
+  "label": "Experimental map-conditional calibrated LiDAR weights; best fit-partition candidate",
+  "recording": "raw_data_2024-06-07-12-09-31_0",
+  "positionGain": 48.0,
+  "headingGain": 2.0,
+  "minimumPositionStrength": 0.4462993032406536,
+  "minimumHeadingStrength": 0.10369218214298807,
+  "maximumPositionHeadingCoupling": 1e-08,
+  "calibration": {
+    "kind": "conditional-pose-second-moment-v1",
+    "coefficients": [
+      [
+        0.0006314245752599856,
+        0.5681167963581331
+      ],
+      [
+        4.771451819531722e-07,
+        2.483245717694437
+      ]
+    ],
+    "referenceVariance": [
+      0.0007808959576946307,
+      4.469628249659109e-06
+    ],
+    "fitEndSeconds": 60.0,
+    "identifier": "mississippi-20240607-map-conditional-0-60s-v1",
+    "scope": "Conditional consistency with the fixed receiver reference and same-drive map; not independent absolute accuracy",
+    "mapAndReferenceReused": true,
+    "evaluationErrorsUsedForFitting": false,
+    "minimumFitStrength": [
+      0.4508073770107612,
+      0.10473957792221017
+    ],
+    "crossValidation": [
+      {
+        "channel": 0,
+        "model": "constant_second_moment",
+        "block_nll": [
+          -6.020044254229449,
+          -5.472057686647951,
+          -6.399762777993804,
+          -6.328552720950504,
+          -6.226293874986693,
+          -6.330077616827468
+        ],
+        "mean_nll": -6.129464821939312
+      },
+      {
+        "channel": 0,
+        "model": "affine_sandwich",
+        "block_nll": [
+          -6.046367484269703,
+          -5.475929609690418,
+          -6.427762140547971,
+          -6.3180675641935515,
+          -6.224326207509185,
+          -6.331466204285244
+        ],
+        "mean_nll": -6.137319868416012
+      },
+      {
+        "channel": 1,
+        "model": "constant_second_moment",
+        "block_nll": [
+          -8.835939777306114,
+          -11.230461421443835,
+          -11.808473010157185,
+          -11.737635533818066,
+          -11.704925942610735,
+          -11.394795816713577
+        ],
+        "mean_nll": -11.118705250341586
+      },
+      {
+        "channel": 1,
+        "model": "affine_sandwich",
+        "block_nll": [
+          -10.303303173274045,
+          -11.207218830204663,
+          -12.393283705237366,
+          -12.421462543312668,
+          -11.83738649087726,
+          -11.678443522454184
+        ],
+        "mean_nll": -11.640183044226697
+      }
+    ],
+    "heldoutValidation": [
+      {
+        "channel": 0,
+        "split": "heldout_60_end_s",
+        "samples": 560,
+        "rmse": 0.029454349932776316,
+        "predicted_rms": 0.028603383532985208,
+        "mean_standardized_square": 1.1262015702428578,
+        "coverage90": 0.8446428571428571,
+        "coverage95": 0.8910714285714286
+      },
+      {
+        "channel": 1,
+        "split": "heldout_60_end_s",
+        "samples": 560,
+        "rmse": 0.0026362729530039044,
+        "predicted_rms": 0.0026854777411984207,
+        "mean_standardized_square": 1.352654876395294,
+        "coverage90": 0.8553571428571428,
+        "coverage95": 0.9160714285714285
+      }
+    ]
+  },
+  "objective": "Joint baseline-normalized position and heading RMSE across LiDAR-only and both-sensor scenarios on time < 60 s, including initialization",
+  "heldout": "time >= 60 s, including frame 847; excluded from coefficient and gain selection",
+  "designRoute": "Continuous seven-state ISS LMIs before discretization; fixed common certificate within the declared domain",
+  "scope": "Dataset/map-conditional experimental profile. Gaussian tail coverage is imperfect. No cross-dataset, absolute accuracy, exhaustive optimum, arbitrary-outage or full sampled-system certificate is claimed.",
+  "study": "research/calibrated_lidar_gain_20261002/"
+}

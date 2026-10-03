@@ -24,6 +24,8 @@ estimated-heading compensation of the configured GNSS output-point offset.
 They permit zero GNSS weight; sufficient LiDAR information is still needed.
 Changing the gains, information regularizers, offset or design domain
 invalidates the prior certificate and requires reverification.
+The calibrated profile below declares its own measured-confidence domain;
+changing its error calibration also invalidates a saved certificate.
 
 The continuous proof metric is `continuousCertificate.verification.P`.
 It is distinct from the algebraic metric used to implement the LiDAR term.
@@ -63,6 +65,20 @@ claim of performance on another recording. A separate scale-64 candidate
 scored 0.733993 but changed the information-domain qualification substantially;
 it is not the fixed-scale profile recorded here. See the
 [gain study](../research/continuous_lmi_route_20261002/report.pdf).
+
+The experimental calibrated profile removes the LiDAR geometric information
+scale and uses measured conditional pose-error second moments:
+
+```matlab
+cfg = mncavFullObserverConfig(GainProfile="mississippi-20240607-calibrated");
+```
+
+It selects physical gains `[48,4,12,2]` from the first 60 seconds, after
+continuous LMI verification. The later interval, including frame 847, is
+held out from calibration and gain selection. It uses the same continuous
+design and numerical observer. It is a calibration of consistency with the
+current map/reference, with imperfect Gaussian tail coverage, and does not
+replace nominal defaults. See the [calibration equations and scope](../config/LIDAR_ERROR_CALIBRATION.md).
 
 ## Current synchronous runtime
 

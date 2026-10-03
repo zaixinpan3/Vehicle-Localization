@@ -108,6 +108,16 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             elseif ~isempty(L.residualModels{k})
                 measurement=evaluateLidarRegistrationResidual(L.residualModels{k},x([1,4,7]));
             end
+            if all(isfinite(L.poseErrorVariance(k,:)))
+                measurement.poseErrorVariance=L.poseErrorVariance(k,:).';
+            end
+            if isfield(cfg.lidar,'errorCalibration') && ~isfield(measurement,'poseErrorVariance')
+                assert(~isfield(L,'evaluateResidual') && ~isempty(L.residualModels{k}), ...
+                    'VehicleLocalization:MissingLidarErrorCalibration', ...
+                    'Calibrated gains require a fitted residual model or an explicit pose error variance.');
+                features=lidarPoseErrorFeatures(L.residualModels{k});
+                measurement.poseErrorVariance=predictLidarPoseErrorVariance(features,cfg.lidar.errorCalibration);
+            end
             if ~isfield(measurement,'frameReliability'),measurement.frameReliability=1;end
             if ~isfield(measurement,'directionReliability'),measurement.directionReliability=ones(3,1);end
             measurement.frameReliability=measurement.frameReliability*L.frameReliability(k);
@@ -166,6 +176,7 @@ end
 function s=source(data,name,t,width)
     n=numel(t);s=struct('valid',false(n,1),'values',nan(n,width),'information',nan(width,width,n), ...
         'frameReliability',ones(n,1),'directionReliability',ones(n,3));
+    s.poseErrorVariance=nan(n,2);
     s.residualModels=cell(n,1);
     if ~isfield(data,name),return;end
     a=data.(name);field='pose';if width==2,field='position';end
@@ -176,6 +187,13 @@ function s=source(data,name,t,width)
         'VehicleLocalization:InvalidFullSource','Invalid synchronized source dimensions.');
     s.valid=logical(a.valid(:));s.values=a.(field);s.information=a.information;
     if width==3
+        if isfield(a,'poseErrorVariance')
+            v=a.poseErrorVariance;
+            assert(isequal(size(v),[n,2]) && isreal(v) && ...
+                all(isfinite(v(s.valid,:)) & v(s.valid,:)>0,'all'), ...
+                'VehicleLocalization:InvalidLidarCalibration','Align positive physical error variances with valid LiDAR frames.');
+            s.poseErrorVariance=v;
+        end
         if isfield(a,'residualModels')
             assert(iscell(a.residualModels) && numel(a.residualModels)==n, ...
                 'VehicleLocalization:InvalidLidarResidualModel','Align residual models with source frames.');

@@ -62,7 +62,9 @@ function [correction,audit] = computeLidarMatchedCorrection(measurement,pose,G,d
     frame=1;direction=ones(3,1);
     if isfield(measurement,'frameReliability'),frame=measurement.frameReliability;end
     if isfield(measurement,'directionReliability'),direction=measurement.directionReliability(:);end
-    filter=filterLidarPoseInformation(information,cfg,frame,direction);
+    variance=[];
+    if isfield(measurement,'poseErrorVariance'),variance=measurement.poseErrorVariance;end
+    filter=filterLidarPoseInformation(information,cfg,frame,direction,variance);
     C=filter.D\(G*T);
     if residualMode
         xi=-filter.F*filter.D.'*gradient;representation="predictedPoseResidual";
@@ -78,7 +80,8 @@ function [correction,audit] = computeLidarMatchedCorrection(measurement,pose,G,d
     eigenvalues=max(eig(Z),0);largest=max(eigenvalues);
     step=options.StepSize;v=kappa*(P\(C.'*xi));
     if options.Discretization=="continuous"
-        correction=T*v;transition=eye(n);gainBound=kappa/filter.regularizer;
+        correction=T*v;transition=eye(n);gainBound=kappa*norm(filter.F,2);
+        if ~filter.calibrated,gainBound=kappa/filter.regularizer;end
     else
         if options.Discretization=="explicit" && largest>0,step=min(step,1.8/largest);end
         if options.Discretization=="implicit"

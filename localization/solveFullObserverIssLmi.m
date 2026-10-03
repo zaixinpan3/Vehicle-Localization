@@ -1,8 +1,8 @@
 function certificate=solveFullObserverIssLmi(cfg)
 % solveFullObserverIssLmi Test candidate gains in the continuous ISS LMIs.
-% Solve before discretization. Gain/weight products are not jointly linear:
-% outer parameter selection fixes the gains; this inner SDP finds a common
-% Lyapunov certificate. An infeasible result is not a proof of instability.
+% Solve before discretization. Outer parameter selection fixes the gains;
+% this inner SDP finds a common Lyapunov certificate. An infeasible result is
+% not a proof of instability.
 % Requires YALMIP and the configured SDP solver on the MATLAB path.
     arguments
         cfg (1,1) struct
