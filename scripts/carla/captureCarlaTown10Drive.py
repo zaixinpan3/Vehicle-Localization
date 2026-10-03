@@ -37,6 +37,7 @@ from pathlib import Path
 import numpy as np
 
 import carla
+from carlaSceneProfile import apply_scene_profile, restore_scene_profile
 
 LIDAR_DTYPE = np.dtype([("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("cos", "<f4"),
                         ("instance", "<u4"), ("tag", "<u4")])
@@ -85,6 +86,9 @@ def parse_args():
     parser.add_argument("--max-seconds", type=float, default=1200.0)
     parser.add_argument("--stop-after-seconds", type=float, default=None,
                         help="End the recording normally after this simulated time (test captures)")
+    parser.add_argument("--scene-profile", choices=["original", "mapping-static"],
+                        help="Defaults to mapping-static for mapping, original for localization; "
+                             "mapping-static requires a fresh dedicated world without live traffic")
     return parser.parse_args()
 
 
@@ -247,6 +251,7 @@ def drain_lidar(lidar_queue, vehicle_at_frame, step_at_frame, writer, output, li
 
 def main():
     args = parse_args()
+    scene_profile = args.scene_profile or ("mapping-static" if args.route == "mapping" else "original")
     sys.path.insert(0, str(args.agents_path))
     from agents.navigation.basic_agent import BasicAgent  # noqa: E402
     from agents.navigation.global_route_planner import GlobalRoutePlanner  # noqa: E402
@@ -279,6 +284,7 @@ def main():
         "coordinateConvention": "CARLA/Unreal left-handed: x forward, y right, z up; degrees; metres",
         "lidarPointFields": list(LIDAR_DTYPE.names),
         "otherActors": "none spawned; static map props only",
+        "sceneProfile": scene_profile,
     }
     if args.dry_run:
         (args.output / "metadata.json").write_text(json.dumps(metadata, indent=2))
@@ -292,8 +298,13 @@ def main():
     settings.max_substep_delta_time = 0.01
     settings.max_substeps = 10
     actors = []
+    scene_audit = {}
     try:
         world.apply_settings(settings)
+        scene_audit = apply_scene_profile(world, scene_profile)
+        (args.output / "scene_profile.json").write_text(json.dumps(scene_audit, indent=2) + "\n")
+        metadata["sceneProfileAudit"] = "scene_profile.json"
+        metadata["otherActors"] = "none spawned; environment meshes selected by the declared scene profile"
         start = route[0][0].transform
         spawn = carla.Transform(carla.Location(start.location.x, start.location.y, start.location.z + 0.5),
                                 start.rotation)
@@ -439,7 +450,10 @@ def main():
                 actor.destroy()
             except Exception:
                 pass
-        world.apply_settings(original)
+        try:
+            restore_scene_profile(world, scene_audit)
+        finally:
+            world.apply_settings(original)
 
 
 if __name__ == "__main__":

@@ -535,6 +535,19 @@ reference point, where zero lateral velocity holds. Wheel speed is simulated
 from the ground truth with scale and noise errors. Per-point CARLA labels are
 kept for evaluation only.
 
+Mapping capture defaults to `--scene-profile mapping-static`. Start with a
+fresh dedicated world without live traffic: parked vehicle meshes and named
+movable street props are disabled, including their collisions, before LiDAR
+ray casting. Buildings, lamps, roads, curbs, vegetation and unknown static
+geometry remain. Meshes sharing a structural actor are protected together;
+the generic Props layer is retained because it can contain lamp components.
+`scene_profile.json` records the selected object IDs, which are re-enabled
+when capture ends. This changes the acquisition scene, not point labels or
+the perception pipeline. Localization capture retains the original scene by
+default; `--scene-profile original` also preserves it for mapping. The API
+cannot recover a prior visibility state, so do not apply this profile to an
+already customized shared world.
+
 ```matlab
 addpath("scripts/carla"); setupVehicleLocalization;
 buildCarlaPointCloudMat("data/raw/Carla/<run>/mapping_prepared");
