@@ -6,12 +6,15 @@ classdef semanticPillarPrecisionTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function precisionIsEnabledOnlyOnTheCoarseLattice(testCase)
+        function downtownUsesGeometricSupportInsteadOfLegacyModels(testCase)
             online=perceptionConfig('Downtown');offline=perceptionConfig('Downtown','offline');
-            testCase.verifyTrue(online.semanticPrecision.enabled);
+            testCase.verifyFalse(online.semanticPrecision.enabled);
             testCase.verifyFalse(offline.semanticPrecision.enabled);
-            testCase.verifyEqual(online.semanticPrecision.classes,["curb","trafficSign"]);
+            testCase.verifyEmpty(online.semanticPrecision.classes);
             testCase.verifyTrue(isfield(online,'facadeSurface'));
+            testCase.verifyTrue(isfield(online,'downtownCurb'));
+            testCase.verifyTrue(isfield(online,'downtownStructure'));
+            testCase.verifyTrue(perceptionConfig('Mississippi').semanticPrecision.enabled);
         end
         function allModelSchemasHaveFiniteOperatingPoints(testCase)
             cfg=semanticPillarPrecisionConfig();
@@ -39,7 +42,7 @@ classdef semanticPillarPrecisionTest < matlab.unittest.TestCase
         function standaloneChannelsRetainTheSamePrecisionDecision(testCase)
             frame=recordedFrame(testCase,'downTownPointClouds.mat',200);
             cfg=perceptionConfig('Downtown');all=perceiveFrame(frame,cfg);
-            for name=["curb","trafficSign","facade"]
+            for name=["curb","trafficSign","facade","pole"]
                 cfg.featureNames=name;single=perceiveFrame(frame,cfg);
                 testCase.verifyEqual(single.candidates.pillarIndices{1}, ...
                     all.candidates.pillarIndices{all.candidates.semanticNames==name});

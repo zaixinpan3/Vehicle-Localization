@@ -1,6 +1,6 @@
-function surface = detectFacadeSurfaces(pillars, zReference, cfg)
+function surface = detectFacadeSurfaces(pillars, zReference, cfg, candidatePillars)
 % detectFacadeSurfaces: Sparse wall seeds and anchored point-plane support.
-% Use the existing XY lattice, local weighted 3D patches, and connected
+% Offline only: use the coarse candidate envelope, local 3D patches and connected
 % MSAC plane inliers. Seeds are immutable: new wall points never establish
 % new anchors. No fine XY grid, dense 3D tensor, external model or reference
 % labels are used. The point decisions also supply offline mapping masks.
@@ -12,6 +12,8 @@ function surface = detectFacadeSurfaces(pillars, zReference, cfg)
     geometry = pillars.pillarGeometry;
     xyz = double(pillars.points);
     ids = double(pillars.pointPillarLinIdx);
+    if nargin<4,candidatePillars=true(geometry.mapSize);end
+    assert(isequal(size(candidatePillars),geometry.mapSize));
     eligible = true(size(ids));
     if isfield(pillars.pointAttributes,'intensity')
         intensity = double(pillars.pointAttributes.intensity(:));
@@ -22,8 +24,12 @@ function surface = detectFacadeSurfaces(pillars, zReference, cfg)
         maps.supportEvidence,maps.occupiedMask,cfg.hough,maps.dx,maps.dy);
     proposals = extractFacadeFeatures(maps,cfg.hough);
     seedMap = validateSeedPatches(proposals.lineMap,proposals.detectedLines,samples,maps,cfg);
+    % Neighboring walls may veto a pole without receiving facade labels.
+    contextSeedMap = seedMap;
+    seedMap(~candidatePillars)=0;
     seedIds = seedMap(ids);
     seedIds(~eligible) = 0;
+    eligible = eligible & candidatePillars(ids);
     [pointLineIds, detail] = completeFacadeSurfaces(xyz,ids,seedIds,eligible, ...
         proposals.detectedLines,cfg.completion);
     accepted = pointLineIds>0;
@@ -32,7 +38,8 @@ function surface = detectFacadeSurfaces(pillars, zReference, cfg)
     count = accumarray(ids(eligible),1,[prod(geometry.mapSize),1]);
     support = accumarray(ids(accepted),1,[prod(geometry.mapSize),1]);
     surface = struct('mask',lineMap>0,'lineMap',lineMap, ...
-        'detectedLines',proposals.detectedLines,'seedLineMap',seedMap,'lineScore',maps.lineScore, ...
+        'detectedLines',proposals.detectedLines,'seedLineMap',seedMap, ...
+        'fullContextSeedLineMap',contextSeedMap,'lineScore',maps.lineScore, ...
         'pointIndices',double(pillars.pointIndices),'pointLineIds',pointLineIds, ...
         'candidateMask',detail.candidateMask,'planeValidation',detail, ...
         'supportFraction',reshape(support./max(count,1),geometry.mapSize));

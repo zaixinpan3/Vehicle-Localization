@@ -1,8 +1,8 @@
 function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
 % refinePerceptionCandidates: Fine point classification for offline mapping.
-% Ground candidates reuse the common road raster. Structural candidates are
-% independently reconstructed offline; coarse misses cannot suppress fine
-% detection. Each fine candidate member receives an explicit point decision.
+% Downtown evaluates original points and their neighborhoods only inside
+% the immutable coarse candidate pillars. Each evaluated member receives an
+% explicit decision; neighboring points supply context without new labels.
     n = numel(frame.x);
     grid = context.voxelGrid;
     ground = context.ground;
@@ -14,7 +14,12 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
         "pole", false(n, 1), ...
         "facade", false(n,1), "trafficSign", false(n,1));
     decisions = struct();
-    if any(ismember(candidates.semanticNames,["pole","facade","trafficSign"])) && isfield(context,'offGroundVoxelGrid')
+    originalCandidates = candidates;
+    if isfield(cfg,'downtownStructure')
+        context = prepareDowntownRefinement(context,cfg,candidates,groundPoint);
+    end
+    if any(ismember(candidates.semanticNames,["pole","facade","trafficSign"])) && ...
+            isfield(context,'offGroundVoxelGrid') && ~isfield(context,'downtownStructure')
         [context,candidates]=prepareFineStructuralCandidates(frame,context,candidates,cfg);
     end
     for k = 1:numel(candidates.semanticNames)
@@ -26,10 +31,17 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
         else
             pointIdx = pointIdx(groundPoint(pointIdx));
         end
+        coarsePointIdx = pointIdx;
         points = xyz(pointIdx, :);
         accepted = false(numel(pointIdx), 1);
         switch name
             case "curb"
+                if isfield(context,'downtownCurb')
+                    detail = context.downtownCurb;
+                    pointIdx = double(detail.pointIndices(detail.candidateMask));
+                    accepted = detail.acceptedMask(detail.candidateMask);
+                    curbDetail = detail;
+                else
                 radius = cfg.fine.curbCandidateRadiusCells;
                 support = conv2(double(ground.curbCellMask),ones(2*radius+1),'same')>0;
                 support = support.';
@@ -46,6 +58,7 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                 selected=vertcat(curbDetail.boundaryPointIndices{:});
                 pointIdx=union(pointIdx,evaluated);accepted=ismember(pointIdx,selected);
                 curbDetail.continuationPointIndices=intersect(continued,selected);
+                end
                 candidateMembers = ismember(grid.pointIndices,pointIdx);
                 candidates.pillarIndices{k} = unique(grid.pointPillarLinIdx(candidateMembers));
             case "facade"
@@ -59,11 +72,22 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                     accepted = validateFacadeCandidatePoints(points, context.offGround, cfg.fine);
                 end
             case "trafficSign"
-                if isfield(frame,"intensity")
+                if isfield(context,'downtownStructure')
+                    detail = context.downtownStructure.trafficSign;
+                    pointIdx = double(detail.pointIndices(detail.candidateMask));
+                    accepted = detail.acceptedMask(detail.candidateMask);
+                    candidates.pillarIndices{k} = unique(grid.pointPillarLinIdx(ismember(grid.pointIndices,pointIdx)));
+                elseif isfield(frame,"intensity")
                     intensity = double(frame.intensity(pointIdx));
                     accepted = isfinite(intensity(:)) & intensity(:) > cfg.offGroundFeatures.trafficSignIntensityThreshold;
                 end
             case "pole"
+                if isfield(context,'downtownStructure')
+                    detail = context.downtownStructure.pole;
+                    pointIdx = double(detail.pointIndices(detail.candidateMask));
+                    accepted = detail.acceptedMask(detail.candidateMask);
+                    candidates.pillarIndices{k} = unique(grid.pointPillarLinIdx(ismember(grid.pointIndices,pointIdx)));
+                else
                 base=true(numel(pointIdx),1);
                 if isfield(candidates,'basePolePillarIndices')
                     members=ismember(grid.pointPillarLinIdx,candidates.basePolePillarIndices);
@@ -80,6 +104,16 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
                     frameXYZ=frameXYZ(all(isfinite(frameXYZ),2),:);
                     accepted(accepted)=rejectOverheadAndAdjacentStructure(points(accepted,:),frameXYZ,cfg.fine);
                 end
+                end
+        end
+        if isfield(cfg,'downtownStructure')
+            selected = pointIdx(accepted);
+            assert(all(ismember(selected,coarsePointIdx)), ...
+                'perception:FineOutsideCandidate','Fine labels must belong to coarse candidate pillars.');
+            % Every candidate member receives a decision, including returns
+            % rejected by the initial radiometric or geometric eligibility gate.
+            pointIdx = coarsePointIdx;
+            accepted = ismember(pointIdx,selected);
         end
         masks.(name)(pointIdx(accepted)) = true;
         decisions.(name) = struct("candidatePointIndices", pointIdx, ...
@@ -89,8 +123,64 @@ function fine = refinePerceptionCandidates(frame, candidates, context, cfg)
         if name=="facade" && isfield(context,'facadeSurface')
             decisions.facade.planeValidation = context.facadeSurface.planeValidation;
         end
+        if ismember(name,["pole","trafficSign"]) && isfield(context,'downtownStructure')
+            decisions.(name).support = context.downtownStructure.(name);
+        end
+        if isfield(cfg,'downtownStructure')
+            source = originalCandidates.pillarIndices{k};
+            members = grid.pointIndices(ismember(grid.pointPillarLinIdx,source));
+            assert(all(ismember(pointIdx(accepted),members)), ...
+                'perception:FineOutsideCandidate','Fine labels must belong to coarse candidate pillars.');
+            candidates.pillarIndices{k} = source;
+        end
     end
     fine = struct("featureMasks", masks, "refinement", decisions, "candidates", candidates);
+end
+
+function context=prepareDowntownRefinement(context,cfg,candidates,groundPoint)
+% Immutable coarse envelopes qualify fine objects; full neighborhoods are context.
+    grid=context.voxelGrid;off=context.offGroundVoxelGrid;names=candidates.semanticNames;
+    if any(names=="curb")
+        g=context.ground;
+        envelope=candidateEnvelope(candidates,"curb",g.cellOrigin,g.cellSize,size(g.curbCellMask));
+        [~,context.downtownCurb]=detectDowntownCurbs(context.groundContext,context.ground, ...
+            grid.points,cfg.downtownCurb,envelope);
+    end
+    surface=struct();zReference=0;
+    if ~isempty(grid.points),zReference=min(grid.points(:,3));end
+    if any(ismember(names,["facade","pole"]))
+        surfaceCfg=cfg.facadeSurface;
+        surfaceCfg.trafficSignIntensityThreshold=cfg.offGroundFeatures.trafficSignIntensityThreshold;
+        envelope=context.offGround.facadeCellMask;
+        if any(names=="facade")
+            g=off.pillarGeometry;
+            envelope=candidateEnvelope(candidates,"facade",g.origin,g.cellSize,g.mapSize);
+        end
+        surface=detectFacadeSurfaces(off,zReference,surfaceCfg,envelope);
+        context.facadeSurface=surface;
+    end
+    context.downtownStructure=struct();
+    if any(ismember(names,["pole","trafficSign"]))
+        structureCfg=cfg.downtownStructure;
+        structureCfg.intensityThreshold=cfg.offGroundFeatures.trafficSignIntensityThreshold;
+        g=off.pillarGeometry;
+        masks=struct('pole',candidateEnvelope(candidates,"pole",g.origin,g.cellSize,g.mapSize), ...
+            'trafficSign',candidateEnvelope(candidates,"trafficSign",g.origin,g.cellSize,g.mapSize));
+        context.downtownStructure=detectDowntownStructures(off,grid,groundPoint(grid.pointIndices), ...
+            zReference,surface,structureCfg,names,masks);
+    end
+end
+
+function mask=candidateEnvelope(candidates,name,origin,spacing,dims)
+% Map immutable public pillar IDs onto a branch's cropped native raster.
+    mask=false(dims);index=find(candidates.semanticNames==name,1);
+    if isempty(index),return;end
+    geometry=candidates.geometry;
+    [row,col]=ind2sub(geometry.mapSize,double(candidates.pillarIndices{index}));
+    centers=geometry.origin+([col,row]-.5).*geometry.cellSize;
+    bins=floor((centers-origin)./spacing)+1;
+    valid=all(bins>=1,2) & bins(:,1)<=dims(2) & bins(:,2)<=dims(1);
+    mask(sub2ind(dims,bins(valid,2),bins(valid,1)))=true;
 end
 
 function keep = rejectOverheadAndAdjacentStructure(points, frameXYZ, cfg)

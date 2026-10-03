@@ -2,13 +2,13 @@ function cfg = perceptionConfig(dataset, executionMode)
 % perceptionConfig: Shared pillar perception and offline point refinement.
 % executionMode selects the product and its lattice: coarseProbabilityCloud
 % (default) returns a sparse semantic Gaussian cloud for localization from
-% 0.6 m pillars; offline returns independent detailed point masks used by
+% 0.6 m pillars; offline returns detailed point masks used by
 % mapping from 0.3 m pillars. Every pillar-stage parameter is derived for the
 % selected lattice, so change the mode here rather than after construction.
 % cfg.featureNames selects the semantic channels for this invocation.
 % Mississippi defaults to every channel except facade; Downtown selects all.
-% Downtown facade uses anchored wall surfaces aligned with the tuned V12
-% reference, with no external-project or recorded-label runtime dependency.
+% Downtown uses the joint reviewV12 curb, wall, pole and sign support rules,
+% with no external-project or recorded-label runtime dependency.
 % Carla (CARLA Town10HD semantic LiDAR, no intensity) selects curb, pole and
 % facade with the CARLA-tuned values of carlaPerceptionProfile.
 % Override featureNames with any subset, or strings(1,0) for no channels.
@@ -40,7 +40,19 @@ function cfg = perceptionConfig(dataset, executionMode)
     cfg.semanticPrecision = semanticPillarPrecisionConfig(spacing,dataset);
     if dataset == "downtown"
         cfg.facadeSurface = facadeSurfaceConfig(spacing);
-        cfg.semanticPrecision.classes(cfg.semanticPrecision.classes=="facade") = [];
+        cfg.downtownCurb = downtownCurbConfig(spacing);
+        cfg.downtownStructure = downtownStructuralConfig(spacing);
+        cfg.downtownCandidates = downtownCandidateConfig(spacing);
+        cfg.offGroundFeatures.trafficSignIntensityThreshold = 1600;
+        cfg.facadeSurface.trafficSignIntensityThreshold = 1600;
+        if spacing<.6
+            cfg.offGroundFeatures.pillarStatistics=struct('facadeMinimumPoints',1,'facadeMinimumHeight',0.10);
+        end
+        for field = string(fieldnames(cfg.downtownCurb.groundOverrides)).'
+            cfg.groundFeatures.curb.(field) = cfg.downtownCurb.groundOverrides.(field);
+        end
+        cfg.semanticPrecision.enabled = false;
+        cfg.semanticPrecision.classes = strings(1,0);
     end
     cfg.curbBoundary=curbBoundaryGeometryConfig();
     cfg.curbBoundary.enabled=dataset~="downtown" && cfg.executionMode=="coarseProbabilityCloud";

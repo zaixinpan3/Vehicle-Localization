@@ -68,14 +68,14 @@ classdef facadeSurfaceTest < matlab.unittest.TestCase
             testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,200);cfg=perceptionConfig('Downtown');
             cfg.featureNames="facade";cfg.coarseProbabilityCloud.storeDiagnostics=true;
-            result=perceiveFrame(frame,cfg);surface=result.diagnostics.offGround.facade;
+            result=perceiveFrame(frame,cfg);mask=result.diagnostics.offGround.facadeCellMask;
             pillars=result.diagnostics.offGroundPointContext;
-            count=nnz(surface.mask(pillars.pointPillarLinIdx));
+            count=nnz(mask(pillars.pointPillarLinIdx));
             testCase.verifyEqual(result.probabilityCloud.sourceSummary.selectedHitCount,count);
-            testCase.verifyGreaterThanOrEqual(count,nnz(surface.pointLineIds));
+            testCase.verifyFalse(isfield(result.diagnostics.offGround.facade,'pointLineIds'));
             testCase.verifyFalse(isfield(result,'featureMasks'));
             testCase.verifyEqual(result.candidates.geometry.cellSize,[.6 .6],'AbsTol',1e-12);
-            testCase.verifyEqual(result.probabilityCloud.classificationStage,"pillarCandidatesWithAnchoredFacadeValidation");
+            testCase.verifyEqual(result.probabilityCloud.classificationStage,"pillarOnlyCoarseValidation");
         end
         function mappingEntryHonorsTheFacadeProfile(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));

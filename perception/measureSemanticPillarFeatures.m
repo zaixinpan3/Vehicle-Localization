@@ -24,7 +24,7 @@ function [x,names,ids]=measureSemanticPillarFeatures(ground,offGround,semantic)
         maps=offGround.columnMaps;mask=offGround.(semantic+"CellMask");ids=find(mask);dims=size(mask);
         stats=maps.statistics;at=double(stats.pillarIndices);cv=stats.covarianceXYZ;
         [rr,cc]=ind2sub(dims,at);origin=maps.origin;spacing=[maps.dx maps.dy];
-        lower=origin+([cc rr]-1).*spacing;
+        lower=origin+([cc(:) rr(:)]-1).*spacing;
         fields=struct();fields.count=zeros(dims);fields.count(at)=stats.count;
         data=[stats.meanXYZ(:,1:2)-lower,stats.minimumXYZ(:,1:2)-lower, ...
             stats.maximumXYZ(:,1:2)-lower,stats.meanXYZ(:,3),stats.minimumXYZ(:,3),stats.maximumXYZ(:,3),cv];
@@ -58,7 +58,8 @@ function [x,names,ids]=measureSemanticPillarFeatures(ground,offGround,semantic)
             neighbor=[neighbor,{'lineScore','planeDistance','normalVariance'}];
         end
     end
-    [rows,cols]=ind2sub(dims,ids);center=origin+([cols rows]-.5).*spacing;
+    ids=ids(:);
+    [rows,cols]=ind2sub(dims,ids);center=origin+([cols(:) rows(:)]-.5).*spacing;
     x=hypot(center(:,1),center(:,2));names="range";
     for key=sort(fieldnames(fields)).'
         value=fields.(key{1});x(:,end+1)=value(ids);names(end+1)=string(key{1}); %#ok<AGROW>
@@ -69,7 +70,7 @@ function [x,names,ids]=measureSemanticPillarFeatures(ground,offGround,semantic)
             kernel=ones(2*radius+1);count=conv2(double(valid),kernel,'same');
             mean=conv2(v,kernel,'same')./max(count,1);
             variance=max(0,conv2(v.^2,kernel,'same')./max(count,1)-mean.^2);
-            values=[mean(ids),sqrt(variance(ids)),v(ids)-mean(ids),count(ids)];
+            values=reshape([mean(ids),sqrt(variance(ids)),v(ids)-mean(ids),count(ids)],numel(ids),4);
             x=[x,values]; %#ok<AGROW>
             names=[names,string(neighbor{k})+"_r"+radius+["_mean","_std","_contrast","_count"]]; %#ok<AGROW>
         end

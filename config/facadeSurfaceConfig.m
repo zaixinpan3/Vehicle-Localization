@@ -1,16 +1,16 @@
 function cfg = facadeSurfaceConfig(spacing)
-% facadeSurfaceConfig: Anchored wall geometry aligned with the tuned V12
+% facadeSurfaceConfig: Offline wall geometry aligned with the tuned V12
 % RobustVehicleLocalization Downtown detector (2026-10-03). The same metric
-% support rules operate on this invocation's existing XY pillar lattice.
-% Sparse height samples support facade decisions; output Gaussian geometry
-% still contains all nonground returns in accepted pillars. Other semantic
-% channels keep their independent, previously calibrated parameters.
+% support rules operate inside this invocation's coarse candidate envelope.
+% Sparse height samples and individual residuals belong to fine perception;
+% the online classifier does not invoke this stage. Reflective points
+% use the joint Downtown threshold before structural evidence is computed.
 %
 % Input: spacing: existing XY pillar spacing in meters (0.3 or 0.6).
 % Output: cfg: Hough, seed-patch and connected-plane support parameters.
     cfg = struct();
     cfg.heightResolution = 0.5;
-    cfg.trafficSignIntensityThreshold = 1800;
+    cfg.trafficSignIntensityThreshold = 1600;
     cfg.hough = rmfield(structuralPillarConfig(spacing), 'pole');
     cfg.hough.supportQuantile = 0.50;
     cfg.hough.houghSuppressionSize = [1 25];

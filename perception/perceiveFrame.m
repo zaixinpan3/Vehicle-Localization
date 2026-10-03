@@ -4,12 +4,10 @@ function perception = perceiveFrame(frame, cfg)
 % planar Gaussian components, without point feature labeling. The optional
 % curb boundary model replaces biased full-pillar centers for matching;
 % diagnostics retain the original empirical whole-pillar statistics.
-% Downtown facade candidates additionally require sparse height-patch and
-% anchored raw-point plane support on the same XY lattice. Their online
-% Gaussian moments still include every nonground member of selected pillars.
-% offline independently reconstructs detailed structural
-% candidates and explicitly evaluates their points for mapping. Its featureMasks
-% address the original input point order. Ground segmentation is common
+% Downtown coarse candidates depend only on whole-pillar distribution
+% statistics. Point and neighborhood validation runs only in offline mode
+% within those immutable candidates. Output moments retain whole pillars.
+% Offline featureMasks address the original input point order. Ground segmentation is common
 % preprocessing in both modes, not point-level semantic feature refinement.
 % cfg is produced by perceptionConfig; frame requires x, y, z fields.
     assert(isstruct(frame) && all(isfield(frame, ["x", "y", "z"])), ...
@@ -53,27 +51,18 @@ function perception = perceiveFrame(frame, cfg)
         ground = analyzeGroundPillars(groundContext, cfg.groundFeatures, coarseCfg);
     end
     offGround = struct();
-    if any(ismember(featureNames,["pole","facade","trafficSign"]))
-        offGround = analyzeStructuralPillars(offGroundVoxelGrid, cfg.offGroundFeatures, coarseCfg);
+    if any(ismember(featureNames,["pole","facade","trafficSign"])) || ...
+            (isfield(cfg,'downtownStructure') && any(featureNames=="curb"))
+        if isfield(cfg,'downtownStructure')
+            offGround = analyzeDowntownPillarStatistics(offGroundVoxelGrid,cfg.offGroundFeatures,coarseCfg,groundContext);
+        else
+            offGround = analyzeStructuralPillars(offGroundVoxelGrid,cfg.offGroundFeatures,coarseCfg);
+        end
     end
-    if mode=="coarseProbabilityCloud" && isfield(cfg,"semanticPrecision")
+    if isfield(cfg,'downtownCandidates')
+        [ground,offGround] = classifyDowntownPillarStatistics(ground,offGround,featureNames,cfg.downtownCandidates);
+    elseif mode=="coarseProbabilityCloud" && isfield(cfg,"semanticPrecision")
         [ground,offGround]=filterSemanticPillarCandidates(ground,offGround,featureNames,cfg.semanticPrecision,groundContext,offGroundVoxelGrid);
-    end
-    facadeSurface = struct();
-    if any(featureNames=="facade") && isfield(cfg,"facadeSurface")
-        zReference = 0;
-        if ~isempty(voxelGrid.points), zReference = min(voxelGrid.points(:,3)); end
-        surfaceCfg = cfg.facadeSurface;
-        surfaceCfg.trafficSignIntensityThreshold = cfg.offGroundFeatures.trafficSignIntensityThreshold;
-        facadeSurface = detectFacadeSurfaces(offGroundVoxelGrid,zReference,surfaceCfg);
-        % Keep the established pole decisions and whole-pillar output moments.
-        % Only the facade channel is replaced by independently anchored walls.
-        offGround.facade = facadeSurface;
-        offGround.facadeCellMask = facadeSurface.mask;
-        offGround.columnMaps.facadeLineScore = facadeSurface.lineScore;
-        floorProbability = coarseCfg.minimumSemanticProbability;
-        offGround.facadeProbability = single(facadeSurface.mask.* ...
-            (floorProbability+(1-floorProbability)*facadeSurface.supportFraction));
     end
     candidates = buildPerceptionCandidates(voxelGrid, ground, offGround, coarseCfg.semanticNames);
     geometryGround=ground;boundaryDetails=table();
@@ -84,9 +73,6 @@ function perception = perceiveFrame(frame, cfg)
             coarseCfg.projectionRotation,coarseCfg.projectionTranslation,cfg.curbBoundary);
     end
     probabilityCloud = buildCoarseSemanticProbabilityCloud(geometryGround, offGround, coarseCfg);
-    if isfield(cfg,"facadeSurface") && any(featureNames=="facade")
-        probabilityCloud.classificationStage = "pillarCandidatesWithAnchoredFacadeValidation";
-    end
     if useBoundary
         probabilityCloud=applyCurbBoundaryScatter(probabilityCloud,cfg.curbBoundary);
     end
@@ -105,9 +91,6 @@ function perception = perceiveFrame(frame, cfg)
     if mode == "offline"
         context = struct("voxelGrid", voxelGrid, "groundContext", groundContext, ...
             "offGroundVoxelGrid", offGroundVoxelGrid, "ground", ground, "offGround", offGround);
-        if isfield(cfg,"facadeSurface") && any(featureNames=="facade")
-            context.facadeSurface = facadeSurface;
-        end
         fine = refinePerceptionCandidates(frame, candidates, context, cfg);
         perception.executionMode = "offline";
         perception.featureMasks = fine.featureMasks;
