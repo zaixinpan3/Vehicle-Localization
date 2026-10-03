@@ -8,6 +8,9 @@ function cfg=mncavFullObserverConfig(options)
 % All profiles use the same continuous ISS-LMI design and numerical runtime.
 % GainProfile="mississippi-20240607-calibrated" selects the experimental
 % conditional error calibration, without a LiDAR information-scale parameter.
+% Both dataset-tuned profiles were developed using historical reference tilt.
+% They remain explicit transfer-comparison profiles after sensor-only tilt was
+% introduced; their old accuracy/optimality claims do not describe the new inputs.
     arguments
         options.GainProfile (1,1) string {mustBeMember(options.GainProfile, ...
             ["nominal","mississippi-20240607-fixed-scale","mississippi-20240607-calibrated"])}="nominal"

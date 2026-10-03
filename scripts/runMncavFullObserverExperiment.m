@@ -22,6 +22,12 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     lateralDesign=designLateralObserverGains(lateralObserverConfig());
     lateral=runLateralVelocityObserver(h,lateralDesign,lateralObserverConfig("mncav"));
     [calls,matching,residualModels]=readMatchingInputs(options.MatchingFolder);
+    if ~options.RematchWithGnss
+        assert(isfield(matching.replay,'tiltSource') && ...
+            ismember(string(matching.replay.tiltSource),["front-ouster-raw-imu","disabled"]), ...
+            'VehicleLocalization:ReferenceTiltCache', ...
+            'Frozen LiDAR packets require a regenerated sensor-only matching replay.');
+    end
     covered=calls.time>=t(1) & calls.time<=t(end);
     calls=calls(covered,:);residualModels=residualModels(covered);
     n=height(calls);information=zeros(3,3,n);
@@ -76,6 +82,9 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         else
             sourceCache=prepareMississippiLocalizationClouds(options.MatchingFolder);
         end
+        assert(isfield(sourceCache,'tilt'),'VehicleLocalization:ReferenceTiltCache', ...
+            'Legacy coarse caches must be regenerated with sensor-only tilt.');
+        assertSensorOnlyLidarTilt(sourceCache.tilt);
         [covered,sourceIndex]=ismember(calls.frame,sourceCache.calls.frame);
         assert(all(covered) && isequaln(sourceCache.cfg.sourceWindow,localizationSourceWindowConfig()) && ...
             max(abs(sourceCache.calls.timeSeconds(sourceIndex)-calls.time))<1e-7 && ...
@@ -83,6 +92,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
             'VehicleLocalization:CoarseCacheMismatch','Coarse cache frames, clock and horizon must match.');
         sourceClouds=sourceCache.sources(sourceIndex);registrationCfg=distributionRegistrationConfig();
         matching.currentSourceWindow=sourceCache.cfg.sourceWindow;
+        matching.tiltSource=sourceCache.tilt.source;
     end
     scenarios=["both","lidar_only","gnss_only","gnss_outage","lidar_outage","both_outage","alternating"];
     runs=cell(numel(scenarios),1);rows=cell(0,12);
@@ -231,6 +241,7 @@ function [calls,metadata,models]=readMatchingInputs(folder)
 end
 
 function m=score(pose,reference)
+    if isempty(pose),m=nan(1,6);return;end
     e=vecnorm(pose(:,1:2)-reference(:,1:2),2,2);a=atan2(sin(pose(:,3)-reference(:,3)),cos(pose(:,3)-reference(:,3)));
     m=[rms(e),median(e),prctile(e,95),max(e),mean(e<=.1),rad2deg(rms(a))];
 end

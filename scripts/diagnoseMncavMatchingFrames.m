@@ -12,10 +12,11 @@ function report=diagnoseMncavMatchingFrames(outputFolder)
     mapCfg=featureMapBuildConfig();pcfg=perceptionConfig("Mississippi");cfg=distributionRegistrationConfig();
     frames=[100,300,700,820,879,1090,1093,1098];rows={};details=cell(numel(frames),2);
     poses=readFramePoseTable(fullfile(root,'data',mapCfg.poseMatchCsvPath),frames);
+    tilt=prepareMississippiLidarTilt(poses.lidar_stamp_sec);
     for k=1:numel(frames)
         id=frames(k);c=calls(calls.frame==id,:);pred=[c.predictedX,c.predictedY,c.predictedPsi];
         ref=[c.referenceX,c.referenceY,c.referencePsi];
-        [~,pcfg.coarseProbabilityCloud.projectionRotation]=poseRowToPlanarPose(poses(k,:));
+        pcfg.coarseProbabilityCloud.projectionRotation=tilt.rotation(:,:,k);
         frame=loadPointCloudFrame(fullfile(root,'data',mapCfg.pointCloudMatPath),id);
         moving=perceiveCoarseProbabilityCloud(frame,pcfg);local=crop(cloud,pred);
         for j=1:2

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "pointFrame": "front_ouster",
+  "baseRotation": [[0.925216, -0.367871, 0.093195], [0.368647, 0.929524, 0.009468], [-0.090110, 0.025595, 0.995625]],
+  "additionalRotation": [[0.931395, 0.364011, 0], [-0.364011, 0.931395, 0], [0, 0, 1]],
+  "imuToPointRotation": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  "provenance": "Existing fixed point-cloud installation rotation, moved without changing its numbers. Ouster IMU and sensor XYZ axes are parallel; the recorded front_ouster point cloud uses sensor XYZ coordinates. No trajectory reference is used.",
+  "imuAxesSource": "https://static.ouster.dev/sensor-docs/image_route1/image_route2/sensor_data/sensor-data.html#imu-data-to-sensor-xyz-coordinate-frame"
+}

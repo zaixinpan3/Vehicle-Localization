@@ -2,10 +2,10 @@ function [measurement, result, history] = localizeLidarFrame(frame, localMapClou
 % localizeLidarFrame: Online pillar perception -> local D2D -> observer event.
 % localMapCloud is one selected/cached window from temporalMapToProbabilityCloud.
 % initialPose is [mapX mapY yaw] in meters/radians, timestamp is acquisition
-% time in seconds. The caller supplies a vehicle-aligned frame and sets known
-% IMU tilt in cfg.perception.coarseProbabilityCloud.projectionRotation when
-% required by the map convention. poseRowToPlanarPose supplies this rotation
-% for recorded mapping poses. This routine does not estimate extrinsics/tilt.
+% time in seconds. The caller supplies a vehicle-aligned frame and may set
+% causal sensor-derived tilt in cfg.perception.coarseProbabilityCloud.projectionRotation.
+% Reference-pose roll/pitch must not be used here. updateLidarImuTilt provides
+% sensor-only compensation; this routine does not estimate extrinsics/tilt.
 % The temporal source uses XY because its motion input is planar. The state
 % and event pose are [X Y psi]; Z/roll/pitch are not optimized.
 % Validated rank-deficient geometry

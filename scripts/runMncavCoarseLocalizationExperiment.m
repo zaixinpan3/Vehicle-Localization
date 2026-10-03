@@ -29,10 +29,11 @@ function report=runMncavCoarseLocalizationExperiment(outputFolder,options)
     root=fileparts(fileparts(mfilename('fullpath')));
     frame=loadPointCloudFrame(fullfile(root,'data',mapCfg.pointCloudMatPath),1);
     poses=readFramePoseTable(fullfile(root,'data',mapCfg.poseMatchCsvPath),1);
-    [pose,tilt]=poseRowToPlanarPose(poses(1,:));
+    pose=poseRowToPlanarPose(poses(1,:));
+    tilt=prepareMississippiLidarTilt(poses.lidar_stamp_sec,sensorFolder);
     cfg=struct('perception',perceptionConfig("Mississippi"),'registration',distributionRegistrationConfig());
     if ~isempty(fieldnames(options.FrameCalibration)),cfg.perception.frameCalibration=validateLidarFrameCalibration(options.FrameCalibration);end
-    cfg.perception.coarseProbabilityCloud.projectionRotation=tilt;
+    cfg.perception.coarseProbabilityCloud.projectionRotation=tilt.rotation(:,:,1);
     profile clear;profile on;
     profileCleanup=onCleanup(@()profile('off'));
     localizeLidarFrame(frame,map.cloud,pose,0,cfg);

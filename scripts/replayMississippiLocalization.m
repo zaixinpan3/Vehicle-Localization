@@ -3,7 +3,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
 % recursive uses four-wheel speed and accepted D2D poses after one
 % GNSS initialization. referenceSeed resets the initial guess on every scan
 % and is a local-registration diagnostic, not an autonomous trajectory.
-% Recorded GNSS/INS supplies known tilt and the evaluation reference. No
+% Raw LiDAR IMU supplies causal tilt; GNSS/INS supplies the evaluation reference. No
 % ground-truth position/yaw enters recursive predictions after initialization.
 % A receiver-time bridge corrects the recorded ROS/GPS clock-rate mismatch.
 % MotionInputs can supply time relative to the first selected scan, recorded
@@ -45,10 +45,11 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         poseReferenceSource="nearest matched NovAtel ODOM pose";
         referenceTimeOffset=max(abs(poses.odom_dt_sec));
     end
-    poseReference=zeros(n,3); tilt=zeros(3,3,n);
+    poseReference=zeros(n,3);
     for k=1:n
-        [poseReference(k,:),tilt(:,:,k)]=poseRowToPlanarPose(poses(k,:));
+        poseReference(k,:)=poseRowToPlanarPose(poses(k,:));
     end
+    tilt=prepareMississippiLidarTilt(poses.lidar_stamp_sec,sensorFolder);
     gnssFolder=fileparts(posePath); stem="raw_data_2024-06-07-12-09-31_0";
     clock=loadReceiverClock(fullfile(gnssFolder,stem+"_inspva.csv"));
     assert(ismember('clock_model_id',poses.Properties.VariableNames) && ...
@@ -127,7 +128,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         else
             predicted=compose(state,relative(motion(k-1,:),motion(k,:)));
         end
-        cfg.perception.coarseProbabilityCloud.projectionRotation=tilt(:,:,k);
+        cfg.perception.coarseProbabilityCloud.projectionRotation=tilt.rotation(:,:,k);
         timer=tic; selectionTimer=tic;
         local=selectLocalProbabilityCloud(cloud,predicted,radius);
         selectionSeconds=toc(selectionTimer);
@@ -189,7 +190,8 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         'rosDurationSeconds',poses.lidar_stamp_sec(end)-poses.lidar_stamp_sec(1), ...
         'receiverDurationSeconds',scanTime(end)-scanTime(1), ...
         'reference',poseReferenceSource, ...
-        'knownTilt',"recorded GNSS/INS roll/pitch through quaternion yaw/tilt decomposition", ...
+        'knownTilt',"causal front-Ouster raw IMU and wheel speed; no reference attitude", ...
+        'tiltSource',tilt.source,'tiltAlignedFrames',nnz(tilt.aligned), ...
         'maximumReferenceTimeOffsetSeconds',referenceTimeOffset, ...
         'maximumMatTimestampDifferenceSeconds',maxTimestampDifference, ...
         'timingScope',"map crop, fresh coarse perception, D2D and pose event; excludes disk read and offline preparation", ...

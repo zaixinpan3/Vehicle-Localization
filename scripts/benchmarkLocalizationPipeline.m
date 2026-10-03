@@ -22,6 +22,7 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
     posePath = fullfile(root,'data',mapCfg.poseMatchCsvPath);
     cfg.sourceWindow=localizationSourceWindowConfig();
     allPoses=readFramePoseTable(posePath,1:max(frames));
+    sensorTilt=prepareMississippiLidarTilt(allPoses.lidar_stamp_sec);
     [prepared,~,~]=prepareMncavObserverReplay('output/mncav_wheel_only_20260916/sensors', ...
         "",table(),0,IncludeOdom=false);
     saved=struct('design',designLateralObserverGains(lateralObserverConfig()));
@@ -37,11 +38,13 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
         item.frame = loadPointCloudFrame(matPath,frameIndex);
         preparation(index,1) = 1000*toc(timer);
         row = readFramePoseTable(posePath,frameIndex);
-        [item.pose,item.tilt] = poseRowToPlanarPose(row);
+        item.pose = poseRowToPlanarPose(row);
+        item.tilt = sensorTilt.rotation(:,:,frameIndex);
+        item.tiltProvenance = rmfield(sensorTilt,{'rotation','time','angles','valid','aligned','ageSeconds','sourceIndex'});
         timer=tic;item.history=[];
         for previous=frameIndex-cfg.sourceWindow.maximumFrames+1:frameIndex-1
             priorFrame=loadPointCloudFrame(matPath,previous);
-            [~,priorTilt]=poseRowToPlanarPose(allPoses(previous,:));
+            priorTilt=sensorTilt.rotation(:,:,previous);
             priorCfg=pcfg;priorCfg.coarseProbabilityCloud.projectionRotation=priorTilt;
             source=perceiveCoarseProbabilityCloud(priorFrame,priorCfg);
             [~,item.history]=updateLocalizationSourceWindow(source,allPoses.receiver_time_sec(previous), ...

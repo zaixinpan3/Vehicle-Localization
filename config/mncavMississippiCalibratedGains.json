@@ -1,6 +1,8 @@
 {
   "profile": "mississippi-20240607-calibrated",
-  "label": "Experimental map-conditional calibrated LiDAR weights; best fit-partition candidate",
+  "label": "Historical calibrated LiDAR weights and gains; explicit transfer profile for sensor-only tilt",
+  "calibrationTiltSource": "Reference-derived tilt in the historical fit; prohibited in current localization inputs",
+  "optimalityForSensorOnlyTiltEstablished": false,
   "recording": "raw_data_2024-06-07-12-09-31_0",
   "positionGain": 48.0,
   "headingGain": 2.0,
