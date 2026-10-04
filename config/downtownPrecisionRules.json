@@ -1,0 +1,130 @@
+{
+  "curb": [
+    {
+      "feature": "ground_roughnessMap_r2_contrast",
+      "operator": ">=",
+      "threshold": 0.024145
+    },
+    {
+      "feature": "energy_heightStepMeters_r2_std",
+      "operator": "<=",
+      "threshold": 0.015472
+    },
+    {
+      "feature": "energy_linearityComponentSize",
+      "operator": ">=",
+      "threshold": 643.0
+    },
+    {
+      "feature": "ground_roughnessMap_r1_mean",
+      "operator": ">=",
+      "threshold": 0.01902
+    },
+    {
+      "feature": "ground_countMap_r2_std",
+      "operator": "<=",
+      "threshold": 4.713053
+    },
+    {
+      "feature": "road_r2_mean",
+      "operator": "<=",
+      "threshold": 0.2
+    }
+  ],
+  "facade": [
+    {
+      "feature": "whole_r1_count",
+      "operator": ">=",
+      "threshold": 480.51
+    },
+    {
+      "feature": "whole_r2_principalVerticalComponent",
+      "operator": ">=",
+      "threshold": 0.998818
+    },
+    {
+      "feature": "whole_r2_scattering",
+      "operator": "<=",
+      "threshold": 0.009415
+    },
+    {
+      "feature": "whole_r0_planarity",
+      "operator": "<=",
+      "threshold": 0.007566
+    },
+    {
+      "feature": "whole_r1_middleVariance",
+      "operator": ">=",
+      "threshold": 0.047487
+    },
+    {
+      "feature": "count",
+      "operator": ">=",
+      "threshold": 2.0
+    }
+  ],
+  "pole": [
+    {
+      "feature": "whole_r1_middleVariance",
+      "operator": "<=",
+      "threshold": 0.005553
+    },
+    {
+      "feature": "height",
+      "operator": ">=",
+      "threshold": 2.464124
+    },
+    {
+      "feature": "count",
+      "operator": ">=",
+      "threshold": 20.0
+    },
+    {
+      "feature": "whole_r2_principalVerticalComponent",
+      "operator": ">=",
+      "threshold": 0.99742
+    },
+    {
+      "feature": "whole_r2_principalVarianceFraction",
+      "operator": "<=",
+      "threshold": 0.997812
+    },
+    {
+      "feature": "whole_r2_middleVariance",
+      "operator": "<=",
+      "threshold": 0.031077
+    }
+  ],
+  "trafficSign": [
+    {
+      "feature": "height",
+      "operator": "<=",
+      "threshold": 0.624625
+    },
+    {
+      "feature": "reflective_ground_r4_meanClearance",
+      "operator": ">=",
+      "threshold": 2.193244
+    },
+    {
+      "feature": "reflective_fraction",
+      "operator": ">=",
+      "threshold": 1.0
+    },
+    {
+      "feature": "reflective_ground_r4_nearestClearance",
+      "operator": "<=",
+      "threshold": 3.179414
+    },
+    {
+      "feature": "reflective_verticalVarianceFraction",
+      "operator": "<=",
+      "threshold": 0.98932
+    },
+    {
+      "feature": "reflective_ground_r4_meanClearance",
+      "operator": "<=",
+      "threshold": 6.032449
+    }
+  ]
+}

@@ -6,6 +6,23 @@ classdef downtownStatisticsModelTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function precisionDefaultsOnlyRemoveBroadCandidatePillars(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','raw','downTownPointClouds.mat');
+            testCase.assumeTrue(isfile(file));
+            frame=loadPointCloudFrame(file,75);
+            strict=perceptionConfig('Downtown');
+            broad=perceptionConfig('Downtown','coarseProbabilityCloud','highRecall');
+            a=perceiveFrame(frame,strict);b=perceiveFrame(frame,broad);
+            testCase.verifyTrue(strict.downtownCandidates.precisionFilter.enabled);
+            testCase.verifyFalse(broad.downtownCandidates.precisionFilter.enabled);
+            testCase.verifyEqual(a.candidates.geometry,b.candidates.geometry);
+            for k=1:numel(a.candidates.semanticNames)
+                testCase.verifyTrue(all(ismember(a.candidates.pillarIndices{k},b.candidates.pillarIndices{k})));
+            end
+            testCase.verifyFalse(isfield(a,'featureMasks'));
+            testCase.verifyEqual(a.sourceSummary,b.sourceSummary);
+        end
         function pooledPoleGateRejectsSpreadAndIgnoresCoordinateTranslation(testCase)
             stats=struct('pillarIndices',int32([1;5]),'count',[30;30], ...
                 'meanXYZ',[10 5 2;11 5 2], ...

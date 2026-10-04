@@ -39,7 +39,7 @@ classdef perceptionFeatureSelectionTest < matlab.unittest.TestCase
             testCase.verifyTrue(unrequestedMasksAreEmpty(offline,channels));
         end
         function signOnlyDoesNotReadUnrelatedDetectorParameters(testCase)
-            cfg=perceptionConfig("Downtown"); cfg.featureNames="trafficSign";
+            cfg=perceptionConfig("Downtown","coarseProbabilityCloud","highRecall"); cfg.featureNames="trafficSign";
             cfg.groundFeatures.curb.weights=struct();
             cfg.offGroundFeatures.poleSeedRunLayerThreshold=struct();
             cfg.offGroundFeatures.thetaResolutionDeg=struct();

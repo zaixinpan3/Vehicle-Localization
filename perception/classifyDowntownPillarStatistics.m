@@ -43,6 +43,9 @@ function [ground,offGround]=classifyDowntownPillarStatistics(ground,offGround,na
         offGround.trafficSignProbability(~offGround.trafficSignCellMask)=0;
     end
     if ~cfg.useModels
+        if isfield(cfg,'precisionFilter') && cfg.precisionFilter.enabled
+            [ground,offGround]=applyDowntownPrecisionRules(ground,offGround,names,cfg.precisionFilter.rules);
+        end
         offGround=synchronizeStructuralMasks(offGround);
         return;
     end

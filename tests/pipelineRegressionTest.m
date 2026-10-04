@@ -42,7 +42,9 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
                     frame = loadPointCloudFrame(matPath, frameEntry.frameIdx);
                     profile="Mississippi";
                     if frameEntry.facadeDetectionEnabled, profile="Downtown"; end
-                    cfg=perceptionConfig(profile,"offline");
+                    % Preserve the archived operating point; precision defaults
+                    % intentionally reject some historical target candidates.
+                    cfg=perceptionConfig(profile,"offline","highRecall");
                     perception = perceiveFrame(frame, cfg);
                     expected=expectedFinePerception(profile,frameEntry.frameIdx);
                     for name = string(fieldnames(expected.featureMasks)).'

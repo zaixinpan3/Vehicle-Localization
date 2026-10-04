@@ -27,11 +27,20 @@ function result = detectDowntownStructures(pillars,fullPillars,groundMask,zRefer
     if any(string(featureNames)=="trafficSign")
         assert(isequal(size(candidateMasks.trafficSign),dims));
         signCandidate=reflective & candidateMasks.trafficSign(ids);
-        signMask=false(dims); signMask(ids(signCandidate))=true;
+        supportCandidate=signCandidate;
+        if isfield(candidateMasks,'trafficSignContext')
+            supportCandidate=reflective & candidateMasks.trafficSignContext(ids);
+        end
+        signMask=false(dims); signMask(ids(supportCandidate))=true;
         components=double(labelmatrix(bwconncomp(signMask,8)));
-        [keep,metrics]=validateDowntownSignSupport(xyz(signCandidate,:),components(ids(signCandidate)), ...
+        % Evaluate connected neighborhood support only for components that
+        % touch a candidate point. Context points cannot receive labels.
+        touching=unique(components(ids(signCandidate)));
+        supportCandidate=supportCandidate & ismember(components(ids),touching);
+        [keep,metrics]=validateDowntownSignSupport(xyz(supportCandidate,:),components(ids(supportCandidate)), ...
             double(fullPillars.points(groundMask,:)),cfg.signSupport);
-        selected=false(size(ids)); selected(signCandidate)=keep;
+        selected=false(size(ids)); selected(supportCandidate)=keep;
+        selected=selected & signCandidate;
         result.trafficSign=makeDecision(original,ids,signCandidate,selected,dims);
         result.trafficSign.supportValidation=metrics;
     end

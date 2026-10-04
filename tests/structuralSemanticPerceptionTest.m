@@ -83,7 +83,7 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             file=fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','raw',dataset+'PointClouds.mat');
             testCase.assumeTrue(isfile(file));
             frame=loadPointCloudFrame(file,frameIndex);
-            cfg=perceptionConfig(dataset,"offline");
+            cfg=perceptionConfig(dataset,"offline","highRecall");
             fine=perceiveFrame(frame,cfg);
             reference=expectedFinePerception(dataset,frameIndex);
             audit=fine.refinement.trafficSign;

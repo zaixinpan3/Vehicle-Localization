@@ -143,8 +143,13 @@ function context=prepareDowntownRefinement(context,cfg,candidates,groundPoint)
     if any(names=="curb")
         g=context.ground;
         envelope=candidateEnvelope(candidates,"curb",g.cellOrigin,g.cellSize,size(g.curbCellMask));
+        support=envelope;
+        if isfield(g,'precisionContext') && isfield(g.precisionContext,'curb')
+            radius=cfg.downtownCurb.boundaryRoadReferenceRadiusCells;
+            support=imdilate(envelope,ones(2*radius+1)) & g.precisionContext.curb;
+        end
         [~,context.downtownCurb]=detectDowntownCurbs(context.groundContext,context.ground, ...
-            grid.points,cfg.downtownCurb,envelope);
+            grid.points,cfg.downtownCurb,envelope,support);
     end
     surface=struct();zReference=0;
     if ~isempty(grid.points),zReference=min(grid.points(:,3));end
@@ -166,6 +171,11 @@ function context=prepareDowntownRefinement(context,cfg,candidates,groundPoint)
         g=off.pillarGeometry;
         masks=struct('pole',candidateEnvelope(candidates,"pole",g.origin,g.cellSize,g.mapSize), ...
             'trafficSign',candidateEnvelope(candidates,"trafficSign",g.origin,g.cellSize,g.mapSize));
+        if isfield(context.offGround,'precisionContext') && isfield(context.offGround.precisionContext,'trafficSign')
+            radius=ceil(structureCfg.signSupport.groundSearchRadiusMeters/g.cellSize(1));
+            masks.trafficSignContext=imdilate(masks.trafficSign,ones(2*radius+1)) & ...
+                context.offGround.precisionContext.trafficSign;
+        end
         context.downtownStructure=detectDowntownStructures(off,grid,groundPoint(grid.pointIndices), ...
             zReference,surface,structureCfg,names,masks);
     end

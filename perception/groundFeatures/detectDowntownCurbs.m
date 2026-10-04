@@ -1,4 +1,4 @@
-function [ground,curb] = detectDowntownCurbs(context,ground,allPoints,cfg,candidateCellMask)
+function [ground,curb] = detectDowntownCurbs(context,ground,allPoints,cfg,candidateCellMask,supportCellMask)
 % detectDowntownCurbs: Refine points strictly within existing curb candidates.
 % The accepted joint reference selects a narrow dominant boundary, removes
 % short fragments and elevated obstacles, and extends only measured samples
@@ -26,7 +26,11 @@ function [ground,curb] = detectDowntownCurbs(context,ground,allPoints,cfg,candid
     assert(isequal(size(candidateCellMask),size(xy.countMap)), ...
         'Curb candidates must use the existing ground raster.');
     eligible = sampleCellMapAtPoints(cells,candidateCellMask)>0;
-    candidates = eligible & sampleCellMapAtPoints(cells,maps.extractedMask)>0;
+    % Neighboring support stabilizes narrow-boundary fitting when precision
+    % gating fragments the object. Only eligible points receive final labels.
+    if nargin<6,supportCellMask=candidateCellMask;end
+    supportEligible=sampleCellMapAtPoints(cells,supportCellMask)>0;
+    candidates = supportEligible & sampleCellMapAtPoints(cells,maps.extractedMask)>0;
     accepted = filterNearRoadPoints(candidates,points,cells,ground.stats, ...
         maps,initialRoad.roadCellMask,cfg);
     accepted = filterDominantBoundaryPoints(accepted,points,cells,xy, ...
@@ -51,7 +55,7 @@ function [ground,curb] = detectDowntownCurbs(context,ground,allPoints,cfg,candid
     if cfg.endpointExtension.enabled
         assert(cfg.obstacleClearance.enabled,'Curb extension requires obstacle clearance.');
         [accepted,curb.extensionValidation,curb.addedMask] = extendDowntownCurbEndpoints( ...
-            points,allPoints,cells,mapSize,maps,accepted,cfg.endpointExtension,cfg.obstacleClearance,eligible);
+            points,allPoints,cells,mapSize,maps,accepted,cfg.endpointExtension,cfg.obstacleClearance,supportEligible);
     end
     curb.acceptedMask = accepted & eligible;
     cellMask = false(fliplr(mapSize));
