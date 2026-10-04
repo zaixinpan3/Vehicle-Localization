@@ -2,8 +2,8 @@ function cfg = perceptionConfig(dataset, executionMode)
 % perceptionConfig: Shared pillar perception and offline point refinement.
 % executionMode selects the product and its lattice: coarseProbabilityCloud
 % (default) returns a sparse semantic Gaussian cloud for localization from
-% 0.6 m pillars; offline returns detailed point masks used by
-% mapping from 0.3 m pillars. Every pillar-stage parameter is derived for the
+% 0.6 m pillars (0.3 m for Downtown); offline returns detailed point masks used
+% by mapping from 0.3 m pillars. Every pillar-stage parameter is derived for the
 % selected lattice, so change the mode here rather than after construction.
 % cfg.featureNames selects the semantic channels for this invocation.
 % Mississippi defaults to every channel except facade; Downtown selects all.
@@ -23,7 +23,7 @@ function cfg = perceptionConfig(dataset, executionMode)
     cfg.executionBackend = "auto"; % Native kernels when built; otherwise MATLAB.
     cfg.compactGroundRaster = true; % Trim empty margins, retaining all ground and its halo.
     cfg.frameCalibration = lidarFrameCalibrationConfig(dataset);
-    cfg.voxel = pillarGridConfig(cfg.executionMode);
+    cfg.voxel = pillarGridConfig(cfg.executionMode, dataset);
     spacing = cfg.voxel.voxelSize(1);
     cfg.groundSegmentation = groundSegmentationConfig(spacing);
     cfg.groundFeatures = groundFeatureConfig(spacing);

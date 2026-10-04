@@ -74,7 +74,7 @@ classdef facadeSurfaceTest < matlab.unittest.TestCase
             testCase.verifyEqual(result.probabilityCloud.sourceSummary.selectedHitCount,count);
             testCase.verifyFalse(isfield(result.diagnostics.offGround.facade,'pointLineIds'));
             testCase.verifyFalse(isfield(result,'featureMasks'));
-            testCase.verifyEqual(result.candidates.geometry.cellSize,[.6 .6],'AbsTol',1e-12);
+            testCase.verifyEqual(result.candidates.geometry.cellSize,[.3 .3],'AbsTol',1e-12);
             testCase.verifyEqual(result.probabilityCloud.classificationStage,"pillarOnlyCoarseValidation");
         end
         function mappingEntryHonorsTheFacadeProfile(testCase)

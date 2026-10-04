@@ -1,7 +1,7 @@
 function cfg=downtownCandidateConfig(spacing)
 % downtownCandidateConfig: Whole-pillar statistical candidate operating points.
-% Offline envelopes favor recall before point/neighborhood rejection. Online
-% classifiers use current-frame pillar statistics only, with no fine calls.
+% Downtown's 0.3 m statistical envelopes favor candidate recall in both modes.
+% Legacy 0.6 m classifiers remain available for explicit configurations only.
     cfg=struct('spacing',spacing,'useModels',spacing>.3, ...
         'modelDirectory',fileparts(mfilename('fullpath')), ...
         'modelFiles',struct(),'curbHaloMeters',0.6, ...

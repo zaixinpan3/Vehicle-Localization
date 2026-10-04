@@ -6,6 +6,19 @@ classdef downtownStatisticsModelTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function downtownCoarseSharesTheFineCandidateLattice(testCase)
+            coarse=perceptionConfig('Downtown');
+            fine=perceptionConfig('Downtown','offline');
+            testCase.verifyEqual(coarse.executionMode,"coarseProbabilityCloud");
+            testCase.verifyEqual(coarse.voxel.voxelSize,[.3 .3]);
+            testCase.verifyEqual(coarse.voxel.gridDims,[334 334]);
+            testCase.verifyEqual(coarse.voxel.voxelSize,fine.voxel.voxelSize);
+            testCase.verifyEqual(pillarGridExtent(coarse.voxel),pillarGridExtent(fine.voxel));
+            testCase.verifyFalse(coarse.downtownCandidates.useModels);
+            testCase.verifyEqual(coarse.downtownCandidates,fine.downtownCandidates);
+            testCase.verifyEqual(perceptionConfig('Mississippi').voxel.voxelSize,[.6 .6]);
+            testCase.verifyEqual(perceptionConfig('Carla').voxel.voxelSize,[.6 .6]);
+        end
         function trainedModelsUseOnlyDistributionFeatures(testCase)
             cfg=downtownCandidateConfig(.6);
             testCase.verifyTrue(cfg.useModels);
