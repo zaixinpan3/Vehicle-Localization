@@ -20,6 +20,10 @@ function [ground,offGround]=classifyDowntownPillarStatistics(ground,offGround,na
     end
     if cfg.spacing<.6 && any(ismember(names,["pole","facade"]))
         occupied=offGround.columnMaps.occupiedMask;
+        if any(names=="pole") && isfield(cfg,'poleDistributionGate') && cfg.poleDistributionGate.enabled
+            gate=filterDowntownPoleDistribution(offGround.columnMaps,cfg.poleDistributionGate);
+            offGround.poleCellMask=offGround.poleCellMask & gate;
+        end
         for name=["pole","facade"]
             halo=cfg.structuralHaloMeters;
             if name=="facade",halo=cfg.facadeHaloMeters;end
@@ -28,6 +32,15 @@ function [ground,offGround]=classifyDowntownPillarStatistics(ground,offGround,na
             offGround.(name+"CellMask")=mask;
             offGround.(name+"Probability")=single(mask.*max(.5,double(offGround.(name+"Probability"))));
         end
+    end
+    if cfg.spacing<.6 && any(names=="trafficSign") && isfield(cfg,'signMinimumReflectiveMeanClearance')
+        radiation=offGround.columnMaps.radiometry;
+        known=radiation.ground.r4_count>0;
+        clearance=radiation.reflective.meanXYZ(:,3)-radiation.ground.r4_meanZ;
+        keep=~known | clearance>=cfg.signMinimumReflectiveMeanClearance;
+        mask=false(size(offGround.trafficSignCellMask));mask(double(radiation.pillarIndices))=keep;
+        offGround.trafficSignCellMask=offGround.trafficSignCellMask & mask;
+        offGround.trafficSignProbability(~offGround.trafficSignCellMask)=0;
     end
     if ~cfg.useModels
         offGround=synchronizeStructuralMasks(offGround);

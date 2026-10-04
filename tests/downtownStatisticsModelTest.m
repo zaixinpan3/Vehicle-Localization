@@ -6,6 +6,19 @@ classdef downtownStatisticsModelTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function pooledPoleGateRejectsSpreadAndIgnoresCoordinateTranslation(testCase)
+            stats=struct('pillarIndices',int32([1;5]),'count',[30;30], ...
+                'meanXYZ',[10 5 2;11 5 2], ...
+                'covarianceXYZ',[.001 0 .001 0 0 1;.2 0 .001 0 0 .1]);
+            maps=struct('statistics',stats,'mapSize',[1 5]);
+            cfg=struct('radiusCells',1,'minimumVerticalVarianceFraction',.9, ...
+                'maximumRadialVariance',.1);
+            original=filterDowntownPoleDistribution(maps,cfg);
+            maps.statistics.meanXYZ=maps.statistics.meanXYZ+[200 -300 50];
+            translated=filterDowntownPoleDistribution(maps,cfg);
+            testCase.verifyEqual(original,[true false false false false]);
+            testCase.verifyEqual(translated,original);
+        end
         function downtownCoarseSharesTheFineCandidateLattice(testCase)
             coarse=perceptionConfig('Downtown');
             fine=perceptionConfig('Downtown','offline');
