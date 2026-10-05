@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "description": "Independent batch reference smoother measurement model; uncertainties are modeling assumptions, not certified errors.",
+  "increment_translation_sigma_m": 0.1,
+  "increment_rotation_sigma_deg": 0.05,
+  "gyro_increment_sigma_deg_at_100ms": 0.02,
+  "receiver_position_floor_m": 0.1,
+  "receiver_attitude_floor_deg": 0.2,
+  "receiver_anchor_interval_seconds": 0.95,
+  "holdout_guard_seconds": 1.0,
+  "qualification": "Receiver covariance floors and correlated-input downsampling do not establish an independent absolute accuracy bound."
+}

@@ -4,7 +4,9 @@
 Use ``uv run --with rosbags --with numpy python scripts/prepareOfflineReferenceBag.py``.
 Only front Ouster measurements enter the estimator. Native packet timestamps
 recover scan starts exactly; recorded ROS/header timestamps are audit fields.
-No GNSS, navigation pose, semantic mask, or project estimator is an input.
+No trajectory anchors, semantic masks or project estimator enter this replay.
+An optional explicit sensor calibration may use receiver motion; its provenance
+is retained and the resulting inputs are labeled as receiver-assisted.
 """
 import argparse
 import csv
@@ -64,7 +66,22 @@ def match_scan(relative_ns, frames):
     return candidates[0]
 
 
-def prepare(bag, output):
+def correct_imu(acceleration, angular, calibration):
+    """Apply an explicitly supplied intrinsic calibration in native axes."""
+    if calibration is None:
+        return acceleration, angular
+    scale = np.asarray(calibration["acceleration_scale_xyz"], dtype=float)
+    bias = np.asarray(calibration["acceleration_bias_mps2"], dtype=float)
+    gyro_bias = np.asarray(calibration["gyro_bias_lidar_radps"], dtype=float)
+    if any(v.shape != (3,) for v in [scale, bias, gyro_bias]) or not np.isfinite(np.r_[scale, bias, gyro_bias]).all():
+        raise ValueError("Intrinsic calibration requires three finite values per vector")
+    if np.any(scale <= 0) or np.any(scale > 2):
+        raise ValueError("Invalid accelerometer scale")
+    return acceleration * scale - bias, angular - gyro_bias
+
+
+def prepare(bag, output, imu_calibration=None):
+    calibration = json.loads(imu_calibration.read_text()) if imu_calibration else None
     output.mkdir(parents=True, exist_ok=False)
     store = get_typestore(Stores.ROS2_JAZZY)
     types = store.types
@@ -135,6 +152,7 @@ def prepare(bag, output):
                 stamp = (acc_ns + gyro_ns) // 2
                 acceleration = np.asarray(values[:3]) * 9.80665
                 angular = np.deg2rad(values[3:])
+                acceleration, angular = correct_imu(acceleration, angular, calibration)
                 imu = imu_type(header(stamp, "front_ouster_imu"), quat_type(0., 0., 0., 1.),
                                np.asarray([-1.] + [0.] * 8), vector_type(*angular), np.zeros(9),
                                vector_type(*acceleration), np.zeros(9))
@@ -153,7 +171,8 @@ def prepare(bag, output):
                 try:
                     frame_id, start_ns, matches = match_scan(relative, frames)
                 except ValueError as error:
-                    rejected.append({"frame_index": frame_index, "reason": str(error)})
+                    rejected.append({"frame_index": frame_index, "reason": str(error),
+                                     "original_header_ns": original_header_ns, "original_bag_ns": arrival})
                     continue
                 if rows and start_ns <= rows[-1]["native_start_ns"]:
                     raise ValueError("Duplicate/nonmonotonic cloud timestamps")
@@ -194,6 +213,12 @@ def prepare(bag, output):
                    duration_seconds=(rows[-1]["native_end_ns"] - rows[0]["native_start_ns"]) * 1e-9,
                    output_pose_frame="front_ouster; vehicle reference-point translation not surveyed",
                    imu_axes="Native Ouster sensor XYZ, parallel to point sensor XYZ; no project mounting rotation applied")
+    if calibration is not None:
+        summary.update(imu_calibration=calibration,
+                       imu_calibration_sha256=hashlib.sha256(imu_calibration.read_bytes()).hexdigest(),
+                       receiver_used_for_sensor_calibration=bool(calibration.get("receiver_motion_used")),
+                       navigation_or_project_estimator_used=bool(calibration.get("receiver_motion_used")),
+                       project_estimator_used=False)
     (output / "preparation.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary, indent=2), flush=True)
     return summary
@@ -203,5 +228,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bag", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--imu-calibration", type=Path, help="Explicit native-axis intrinsic calibration; provenance is retained")
     args = parser.parse_args()
-    prepare(args.bag, args.output)
+    prepare(args.bag, args.output, args.imu_calibration)

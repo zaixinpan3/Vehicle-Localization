@@ -29,6 +29,23 @@ def adapt(source, output):
   pcd_name_fill_num = 6;
 ''' + text[end:]
     text = '#include "standalone_time.hpp"\n' + text
+    marker = "  HBA hba(total_layer_num, data_path, thread_num);"
+    if text.count(marker) != 1:
+        raise ValueError("Unsupported upstream HBA constructor marker")
+    text = text.replace(marker, marker + '''
+  // A single global bundle has no preceding layer to populate its clouds.
+  if (total_layer_num == 1) {
+    for (int i = 0; i < hba.layers[0].pose_vec.size(); i++) {
+      pcl::PointCloud<PointType>::Ptr pc(new pcl::PointCloud<PointType>);
+      mypcl::loadPCD(data_path, pcd_name_fill_num, pc, i, "pcd/");
+      hba.layers[0].pcds[i] = pc;
+    }
+    global_ba(hba.layers[0]);
+    mypcl::write_pose(hba.layers[0].pose_vec, data_path);
+    std::cout << "single global bundle complete" << std::endl;
+    return 0;
+  }
+''')
     (output / "source/hba.cpp").write_text(text)
     for path in [output / "source/hba.cpp", *list((output / "include").glob("*.hpp"))]:
         text = path.read_text()
@@ -68,8 +85,10 @@ target_compile_options(hba PRIVATE -O3)
     files = sorted([source / "source/hba.cpp", *list((source / "include").glob("*.hpp"))])
     manifest = {"upstream_commit": subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip(),
                 "source_sha256": {str(p.relative_to(source)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
-                "adaptations": ["ROS parameters replaced by command arguments", "steady clock timing", "unused ROS visualization includes removed", "EOF-safe pose parsing", "atomic quaternion serialization fixes repeated in-place multiplication"],
-                "algorithm_modified": False}
+                "adaptations": ["ROS parameters replaced by command arguments", "steady clock timing", "unused ROS visualization includes removed", "EOF-safe pose parsing", "atomic quaternion serialization fixes repeated in-place multiplication",
+                                "Single-layer mode loads raw scans and writes direct global-BA poses; hierarchy PGO is unnecessary"],
+                "optimization_equations_modified": False, "single_layer_execution_added": True,
+                "multilayer_execution_modified": False}
     (output / "adapter_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 

@@ -1,10 +1,18 @@
 {
   "schema_version": 1,
-  "description": "Independent GLIM offline reference; no project estimator or receiver poses enter fitting.",
+  "description": "Independent GLIM continuous-time LiDAR frontend with geometric local/global mapping; raw gyro does not constrain this estimator.",
   "qualification": "Pseudo-ground-truth at the front LiDAR origin; physical vehicle reference-point extrinsics remain unverified.",
   "config_sensors.json": {
     "sensors": {
-      "T_lidar_imu": [0.006, -0.012, 0.008, 0, 0, 0, 1],
+      "T_lidar_imu": [
+        0.006,
+        -0.012,
+        0.008,
+        0,
+        0,
+        0,
+        1
+      ],
       "global_shutter_lidar": false,
       "autoconf_perpoint_times": false,
       "autoconf_prefer_frame_time": true,
@@ -38,22 +46,18 @@
       "num_threads": 4
     }
   },
-  "config_odometry_gpu.json": {
-    "odometry_estimation": {
-      "smoother_lag": 10.0,
-      "compute_covs": true,
-      "isam2_relinearize_thresh": 0.01,
-      "full_connection_window_size": 3,
-      "max_num_keyframes": 20,
-      "num_threads": 4
-    }
-  },
   "config_sub_mapping_gpu.json": {
     "sub_mapping": {
       "enable_optimization": true,
       "keyframe_randomsampling_rate": 1.0,
       "submap_downsample_resolution": 0.1,
-      "submap_target_num_points": 100000
+      "submap_target_num_points": 100000,
+      "enable_imu": false,
+      "max_num_keyframes": 5,
+      "create_between_factors": true,
+      "keyframe_update_strategy": "DISPLACEMENT",
+      "keyframe_update_interval_trans": 0.0,
+      "keyframe_update_interval_rot": 0.0
     }
   },
   "config_global_mapping_gpu.json": {
@@ -61,9 +65,23 @@
       "randomsampling_rate": 1.0,
       "submap_voxel_resolution": 0.25,
       "submap_voxel_resolution_max": 0.5,
-      "isam2_relinearize_thresh": 0.01
+      "isam2_relinearize_thresh": 0.01,
+      "enable_imu": false
     }
   },
   "extrinsics_provenance": "GLIM documented nominal Ouster IMU-to-sensor transform, not a per-unit survey. Native bag point axes are retained; empirical project reference-assisted calibration is excluded.",
+  "config.json": {
+    "global": {
+      "config_odometry": "config_odometry_ct.json"
+    }
+  },
+  "config_odometry_ct.json": {
+    "odometry_estimation": {
+      "num_threads": 8,
+      "lm_max_iterations": 30,
+      "smoother_lag": 2.0,
+      "isam2_relinearize_thresh": 0.01
+    }
+  },
   "timing_provenance": "Prepared cloud t is UINT32 nanoseconds. GLIM ROS conversion divides UINT32 t by 1e9 before TimeKeeper; its configured scale must remain 1.0. Native scan-start headers and relative per-point times are used."
 }

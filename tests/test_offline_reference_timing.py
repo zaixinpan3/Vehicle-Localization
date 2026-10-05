@@ -8,10 +8,20 @@ from types import SimpleNamespace
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from prepareOfflineReferenceBag import lidar_columns, match_scan, point_view
+from prepareOfflineReferenceBag import correct_imu, lidar_columns, match_scan, point_view
 
 
 class NativeTimingTest(unittest.TestCase):
+    def test_intrinsic_calibration_keeps_native_axes_and_units(self):
+        acceleration, gyro = correct_imu(np.array([1., 2., 10.]), np.array([.02, -.03, .04]),
+            dict(acceleration_scale_xyz=[1., 1., 1.], acceleration_bias_mps2=[.1, -.2, .5],
+                 gyro_bias_lidar_radps=[.01, -.01, .01]))
+        np.testing.assert_allclose(acceleration, [.9, 2.2, 9.5])
+        np.testing.assert_allclose(gyro, [.01, -.02, .03])
+        with self.assertRaisesRegex(ValueError, "scale"):
+            correct_imu(np.zeros(3), np.zeros(3), dict(acceleration_scale_xyz=[0., 1., 1.],
+                 acceleration_bias_mps2=[0., 0., 0.], gyro_bias_lidar_radps=[0., 0., 0.]))
+
     def test_packet_padding_and_frame_id(self):
         raw = bytearray(12609)
         for i in range(16):

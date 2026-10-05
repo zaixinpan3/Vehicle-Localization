@@ -25,6 +25,9 @@ def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+IMPLEMENTATION_SHA256 = sha256(Path(__file__))
+
+
 def configure(upstream, overrides, destination):
     destination.mkdir(exist_ok=False)
     selected = json.loads(overrides.read_text())
@@ -33,7 +36,26 @@ def configure(upstream, overrides, destination):
         for section, update in selected.get(source.name, {}).items():
             parameters[section].update(update)
         (destination / source.name).write_text(json.dumps(parameters, indent=2) + "\n")
+    validate_time_contract(destination)
     return {p.name: sha256(p) for p in destination.glob("*.json")}
+
+
+def validate_time_contract(configuration):
+    """GLIM ROS converts our UINT32 t to seconds before TimeKeeper.
+
+    Applying another nanosecond scale silently disables practical deskew.
+    This runner consumes only bags from prepareOfflineReferenceBag.py, whose
+    cloud time representation is UINT32 nanoseconds and scan-start relative.
+    """
+    sensors = json.loads((configuration / "config_sensors.json").read_text())["sensors"]
+    if sensors.get("global_shutter_lidar") is not False:
+        raise ValueError("Prepared spinning Ouster scans require global_shutter_lidar=false for deskew")
+    if sensors.get("autoconf_perpoint_times") is not False:
+        raise ValueError("Prepared Ouster timing requires explicit relative-time settings")
+    if sensors.get("perpoint_relative_time") is not True:
+        raise ValueError("Prepared Ouster t must remain relative to scan-start headers")
+    if sensors.get("perpoint_time_scale") != 1.0:
+        raise ValueError("GLIM ROS already converts UINT32 t from ns to seconds; perpoint_time_scale must be 1.0")
 
 
 def export_reference(prepared, output, estimator=None, log_name="glim.log"):
@@ -47,20 +69,29 @@ def export_reference(prepared, output, estimator=None, log_name="glim.log"):
     if np.max(np.abs(norms - 1)) > 1e-3:
         raise ValueError("Invalid orientation quaternions")
     times = trajectory[:, 0]
+    preparation = json.loads((prepared / "preparation.json").read_text())
     with (prepared / "frames.csv").open() as stream:
         frames = list(csv.DictReader(stream))
+    prepared_count = len(frames)
+    known = {int(frame["frame_index"]): frame for frame in frames}
+    rejected = {int(frame["frame_index"]): frame for frame in preparation["rejected_frames"]}
+    if set(known) & set(rejected) or set(known) | set(rejected) != set(range(1, preparation["frames_seen"] + 1)):
+        raise ValueError("Prepared/rejected frame identities do not reconcile with the original recording")
+    frames = [known.get(i, {"frame_index": i, **rejected.get(i, {})}) for i in range(1, preparation["frames_seen"] + 1)]
     rows = []
     for frame in frames:
-        stamp = int(frame["native_start_ns"]) * 1e-9
-        index = int(np.searchsorted(times, stamp))
+        stamp = int(frame["native_start_ns"]) * 1e-9 if "native_start_ns" in frame else float("nan")
+        index = int(np.searchsorted(times, stamp)) if np.isfinite(stamp) else 0
         candidates = [i for i in (index - 1, index) if 0 <= i < len(times)]
         best = min(candidates, key=lambda i: abs(times[i] - stamp))
-        exact = abs(times[best] - stamp) < 1e-5
+        exact = np.isfinite(stamp) and abs(times[best] - stamp) < 1e-5
         row = dict(frame_index=int(frame["frame_index"]), native_time_sec=stamp,
-                   original_header_time_sec=int(frame["original_header_ns"]) * 1e-9,
-                   original_bag_time_sec=int(frame["original_bag_ns"]) * 1e-9,
+                   original_header_time_sec=int(frame["original_header_ns"]) * 1e-9 if "original_header_ns" in frame else float("nan"),
+                   original_bag_time_sec=int(frame["original_bag_ns"]) * 1e-9 if "original_bag_ns" in frame else float("nan"),
                    estimated=int(exact), reference_kind="pseudo_ground_truth",
                    pose_frame="front_ouster", quality="estimated_unverified" if exact else "not_estimated")
+        if not np.isfinite(stamp):
+            row["quality"] = "timing_rejected_not_estimated"
         for key in ["x_m", "y_m", "z_m", "qx", "qy", "qz", "qw", "roll_rad", "pitch_rad", "yaw_rad"]:
             row[key] = ""
         if exact:
@@ -105,18 +136,18 @@ def export_reference(prepared, output, estimator=None, log_name="glim.log"):
         "positionMeters": positions, "quaternionXYZW": quaternions,
         "poseFrame": "front_ouster", "referenceKind": "pseudo_ground_truth",
         "solverIssueDetected": bool(issues), "externalAccuracyVerified": False,
+        "navigationPoseUsedForEstimation": preparation.get("receiver_used_for_sensor_calibration", False),
     }, do_compression=True, oned_as="column")
     cautions = {term: log.lower().count(term.lower()) for term in
                 ["IMU prediction is not good", "IMU data are noisy", "small overlap",
                  "insufficient IMU", "time stamp is too old", "an exception was caught"]}
-    preparation = json.loads((prepared / "preparation.json").read_text())
     if estimator is None:
         configuration = output / "config/config.json"
         selected = json.loads(configuration.read_text()) if configuration.exists() else {}
         frontend = str(selected)
         estimator = "GLIM continuous-time LiDAR global mapping" if "odometry_ct" in frontend else "GLIM GPU range-inertial global mapping"
     summary = dict(reference_kind="pseudo_ground_truth", estimator=estimator,
-                   frames_prepared=len(rows), frames_estimated=sum(r["estimated"] for r in rows),
+                   frames_prepared=prepared_count, frames_output=len(rows), frames_estimated=sum(r["estimated"] for r in rows),
                    missing_frame_indices=[r["frame_index"] for r in rows if not r["estimated"]],
                    source_frames_seen=preparation["frames_seen"],
                    input_timing_rejections=preparation["rejected_frames"],
@@ -127,9 +158,13 @@ def export_reference(prepared, output, estimator=None, log_name="glim.log"):
                    warning_counts=cautions,
                    global_coordinate_frame="arbitrary local map; no geodetic anchors; consult estimator configuration for gravity convention",
                    output_reference_point="front LiDAR origin; not a surveyed vehicle/INS origin",
-                   navigation_pose_used_for_estimation=False,
+                   navigation_pose_used_for_estimation=preparation.get("receiver_used_for_sensor_calibration", False),
+                   receiver_used_for_sensor_calibration=preparation.get("receiver_used_for_sensor_calibration", False),
                    qualification="Review solver issues, coverage, dynamic objects, calibration and independent validation before scoring fine accuracy",
                    hashes={p.name: sha256(p) for p in [output / "reference_poses.csv", output / "reference_lidar.tum"]})
+    if "imu_calibration" in preparation:
+        summary["imu_calibration"] = preparation["imu_calibration"]
+        summary["imu_calibration_sha256"] = preparation["imu_calibration_sha256"]
     (output / "quality.json").write_text(json.dumps(summary, indent=2) + "\n")
     return summary
 
@@ -139,7 +174,7 @@ def run(args):
     if args.docker_host:
         docker += ["-H", args.docker_host]
     image = subprocess.check_output(docker + ["image", "inspect", args.image,
-                                            "--format", "{{index .RepoDigests 0}}"], text=True).strip()
+                                            "--format", "{{if .RepoDigests}}{{index .RepoDigests 0}}{{else}}{{.Id}}{{end}}"], text=True).strip()
     status_path = args.output_root / "batch_status.json"
     args.output_root.mkdir(parents=True, exist_ok=True)
     statuses = json.loads(status_path.read_text()) if status_path.exists() else []
@@ -171,6 +206,7 @@ def run(args):
                             "--ros-args", "-p", "config_path:=/result/config",
                             "-p", "auto_quit:=true", "-p", "dump_path:=/result/dump"]
         record = dict(prepared=str(prepared), output=str(output), image_digest=image,
+                      implementation_sha256=IMPLEMENTATION_SHA256,
                       config_hashes=config_hashes, override_sha256=sha256(args.overrides), command=command,
                       started_at=time.strftime("%Y-%m-%dT%H:%M:%S%z"), status="running")
         (output / "run.json").write_text(json.dumps(record, indent=2) + "\n")

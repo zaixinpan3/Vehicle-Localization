@@ -16,6 +16,7 @@ from rosbags.typesys import Stores, get_typestore
 from scipy.spatial.transform import Rotation, Slerp
 
 from prepareOfflineReferenceBag import point_view
+from runOfflineReference import sha256, validate_time_contract
 
 
 def deskew(points, relative_seconds, start, trajectory):
@@ -32,6 +33,11 @@ def deskew(points, relative_seconds, start, trajectory):
 def prepare(prepared, reference, output, voxel):
     if voxel <= 0:
         raise ValueError("Voxel resolution must be positive")
+    source_quality = json.loads((reference.parent / "quality.json").read_text())
+    if source_quality.get("logged_solver_issues") or not source_quality.get("solver", {}).get("success", True):
+        raise ValueError("Initialization contains unresolved solver issues")
+    if (reference.parent / "config/config_sensors.json").exists():
+        validate_time_contract(reference.parent / "config")
     output.mkdir(parents=True, exist_ok=False)
     (output / "pcd").mkdir()
     (output / "process1/pcd").mkdir(parents=True)
@@ -68,12 +74,14 @@ def prepare(prepared, reference, output, voxel):
             if len(selected) % 100 == 0:
                 print(f"Prepared {len(selected)} scans", flush=True)
     poses = np.asarray(selected)
-    if len(poses) < 50:
-        raise ValueError("Too few covered scans for the configured hierarchy")
+    if len(poses) < 10:
+        raise ValueError("At least ten covered scans required for bundle adjustment")
     np.savetxt(output / "pose.json", poses[:, [1, 2, 3, 7, 4, 5, 6]], fmt="%.12f")
     np.savetxt(output / "initial_lidar.tum", poses, fmt="%.12f")
     (output / "preparation.json").write_text(json.dumps({"scans": len(poses), "voxel_m": voxel,
-        "reference_input": str(reference.resolve()), "navigation_pose_used": False,
+        "reference_input": str(reference.resolve()), "reference_input_sha256": sha256(reference),
+        "navigation_pose_used": source_quality["navigation_pose_used_for_estimation"],
+        "source_coordinate_frame": source_quality["global_coordinate_frame"],
         "deskew": "LiDAR-pose linear translation / SLERP rotation; no extrapolation",
         "limitations": ["Within-scan motion approximated by scan-rate interpolation", "Dynamic objects are not semantically masked"]}, indent=2) + "\n")
 

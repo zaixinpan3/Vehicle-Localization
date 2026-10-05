@@ -109,7 +109,8 @@ def validate(bag, output):
         writer = csv.DictWriter(stream, fieldnames=list(diagnostics[0]))
         writer.writeheader()
         writer.writerows(diagnostics)
-    result = dict(status="diagnostic_completed", navigation_used_by_slam=False,
+    source_quality = json.loads((output / "quality.json").read_text())
+    result = dict(status="diagnostic_completed", navigation_used_by_slam=source_quality.get("navigation_pose_used_for_estimation", False),
                   alignment="Single scale-fixed SE3 fit on first 25% of time; yaw mounting offset fitted only there",
                   training_samples=int(training.sum()), withheld_samples=int((~training).sum()),
                   withheld_position_discrepancy_rmse_m=float(np.sqrt(np.mean(errors[~training]**2))),
