@@ -1637,6 +1637,33 @@
             ]
           }
         ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "population_r1_verticalVariance",
+                "threshold": 0.0010944050154648721,
+                "operator": "<="
+              },
+              {
+                "feature": "energy_total_r2_mean",
+                "threshold": 0.15056052058935165,
+                "operator": ">"
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r1_verticalVariance",
+                "threshold": 0.0010944050154648721,
+                "operator": ">"
+              }
+            ]
+          }
+        ]
       }
     ]
   },
@@ -1974,6 +2001,38 @@
                 "feature": "population_r7_verticalResidualVariance",
                 "operator": "<=",
                 "threshold": 5.47113265
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "whole_r0_count",
+                "threshold": 7.5,
+                "operator": "<="
+              },
+              {
+                "feature": "nonreflective_r0_planarity",
+                "threshold": 0.0030048449989408255,
+                "operator": ">"
+              },
+              {
+                "feature": "nonreflective_r1_eigenEntropy",
+                "threshold": 0.10736623406410217,
+                "operator": "<="
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "whole_r0_count",
+                "threshold": 7.5,
+                "operator": ">"
               }
             ]
           }
