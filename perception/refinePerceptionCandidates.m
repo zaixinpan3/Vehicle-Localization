@@ -161,7 +161,16 @@ function context=prepareDowntownRefinement(context,cfg,candidates,groundPoint)
             g=off.pillarGeometry;
             envelope=candidateEnvelope(candidates,"facade",g.origin,g.cellSize,g.mapSize);
         end
-        surface=detectFacadeSurfaces(off,zReference,surfaceCfg,envelope);
+        support=envelope;
+        if cfg.downtownCandidates.candidatePolicy=="precision" && ...
+                isfield(context.offGround,'precisionContext') && isfield(context.offGround.precisionContext,'facade')
+            % Completion windows need intact neighboring anchors. The metric
+            % bound follows the existing extension and fit-window settings.
+            radius=ceil((surfaceCfg.completion.maxExtensionMeters+ ...
+                surfaceCfg.completion.localFitWindowMeters)/off.pillarGeometry.cellSize(1));
+            support=imdilate(envelope,ones(2*radius+1)) & context.offGround.precisionContext.facade;
+        end
+        surface=detectFacadeSurfaces(off,zReference,surfaceCfg,envelope,support);
         context.facadeSurface=surface;
     end
     context.downtownStructure=struct();
@@ -171,6 +180,11 @@ function context=prepareDowntownRefinement(context,cfg,candidates,groundPoint)
         g=off.pillarGeometry;
         masks=struct('pole',candidateEnvelope(candidates,"pole",g.origin,g.cellSize,g.mapSize), ...
             'trafficSign',candidateEnvelope(candidates,"trafficSign",g.origin,g.cellSize,g.mapSize));
+        if cfg.downtownCandidates.candidatePolicy=="precision" && ...
+                isfield(context.offGround,'precisionContext') && isfield(context.offGround.precisionContext,'pole')
+            radius=ceil(structureCfg.context.lateralAttachment.contextRadiusMeters/g.cellSize(1));
+            masks.poleContext=imdilate(masks.pole,ones(2*radius+1)) & context.offGround.precisionContext.pole;
+        end
         if isfield(context.offGround,'precisionContext') && isfield(context.offGround.precisionContext,'trafficSign')
             radius=ceil(structureCfg.signSupport.groundSearchRadiusMeters/g.cellSize(1));
             masks.trafficSignContext=imdilate(masks.trafficSign,ones(2*radius+1)) & ...

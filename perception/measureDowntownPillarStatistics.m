@@ -11,6 +11,7 @@ function [features,names,ids]=measureDowntownPillarStatistics(ground,offGround,s
         [features,names,ids]=measureSemanticPillarFeatures(ground,offGround,'curb');
         [context,contextNames]=curbOffGroundContext(ground,offGround,ids);
         features=[features,context];names=[names,contextNames];
+        [features,names]=appendShape(features,names,ids,ground);
         return;
     end
     % The common structural descriptor requires no Hough line or point fit.
@@ -22,7 +23,15 @@ function [features,names,ids]=measureDowntownPillarStatistics(ground,offGround,s
     features=[features,reshape(double(maps.pointScore(ids)),[],1),reshape(double(maps.lineScore(ids)),[],1)];
     [context,contextNames]=measureDowntownDistributionContext(maps,ids);
     features=[features,context];names=[names,contextNames];
+    [features,names]=appendShape(features,names,ids,maps);
     features(~isfinite(features))=0;
+end
+
+function [features,names]=appendShape(features,names,ids,branch)
+    if ~isfield(branch,'distributionShape'),return;end
+    summary=branch.distributionShape;
+    [found,rows]=ismember(double(ids),double(summary.pillarIndices));assert(all(found));
+    features=[features,summary.values(rows,:)];names=[names,"distribution_"+summary.names];
 end
 
 function [features,names]=curbOffGroundContext(ground,offGround,ids)

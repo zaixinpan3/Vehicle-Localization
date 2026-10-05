@@ -1,11 +1,11 @@
 function cfg=downtownCandidateConfig(spacing,candidatePolicy)
 % downtownCandidateConfig: Whole-pillar statistical candidate operating points.
-% Downtown's 0.3 m statistical envelopes favor candidate recall in both modes.
+% Downtown's default balances precision with buffered calibration recall.
 % Legacy 0.6 m classifiers remain available for explicit configurations only.
     if nargin<2,candidatePolicy="precision";end
     candidatePolicy=string(candidatePolicy);
-    assert(isscalar(candidatePolicy) && any(candidatePolicy==["precision","highRecall"]), ...
-        'perception:DowntownCandidatePolicy','Use precision or highRecall.');
+    assert(isscalar(candidatePolicy) && any(candidatePolicy==["precision","strictPrecision","highRecall"]), ...
+        'perception:DowntownCandidatePolicy','Use precision, strictPrecision or highRecall.');
     cfg=struct('spacing',spacing,'useModels',spacing>.3, ...
         'modelDirectory',fileparts(mfilename('fullpath')), ...
         'modelFiles',struct(),'curbHaloMeters',0, ...
@@ -21,9 +21,11 @@ function cfg=downtownCandidateConfig(spacing,candidatePolicy)
         'facade','downtownFacadeStatisticsModel.json','pole','downtownPoleStatisticsModel.json', ...
         'trafficSign','downtownTrafficSignStatisticsModel.json');
     cfg.candidatePolicy=candidatePolicy;
-    cfg.precisionFilter=struct('enabled',spacing<.6 && candidatePolicy=="precision",'rules',struct());
+    cfg.precisionFilter=struct('enabled',spacing<.6 && candidatePolicy~="highRecall",'rules',struct());
     if cfg.precisionFilter.enabled
+        filename='downtownBalancedRules.json';
+        if candidatePolicy=="strictPrecision",filename='downtownPrecisionRules.json';end
         cfg.precisionFilter.rules=jsondecode(fileread(fullfile(fileparts(mfilename('fullpath')), ...
-            'downtownPrecisionRules.json')));
+            filename)));
     end
 end

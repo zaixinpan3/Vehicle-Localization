@@ -9,7 +9,9 @@ function cfg = perceptionConfig(dataset, executionMode, candidatePolicy)
 % Mississippi defaults to every channel except facade; Downtown selects all.
 % Downtown uses the joint reviewV12 curb, wall, pole and sign support rules,
 % with no external-project or recorded-label runtime dependency.
-% Downtown defaults to precision-priority statistical candidate rejection.
+% Downtown defaults to distribution-rule alternatives that favor precision
+% subject to retaining useful target coverage in buffered calibration.
+% "strictPrecision" reproduces the earlier severe-recall-loss operating point.
 % An explicit third argument "highRecall" retains the historical broad
 % candidates for reproducing the archived point-output reference.
 % Carla (CARLA Town10HD semantic LiDAR, no intensity) selects curb, pole and
@@ -43,6 +45,7 @@ function cfg = perceptionConfig(dataset, executionMode, candidatePolicy)
     cfg.fine = finePerceptionConfig();
     cfg.semanticPrecision = semanticPillarPrecisionConfig(spacing,dataset);
     if dataset == "downtown"
+        cfg.groundFeatures.collectPillarDistributionShape=spacing<.6;
         cfg.facadeSurface = facadeSurfaceConfig(spacing);
         cfg.downtownCurb = downtownCurbConfig(spacing);
         cfg.downtownStructure = downtownStructuralConfig(spacing);

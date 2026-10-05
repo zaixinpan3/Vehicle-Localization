@@ -1,4 +1,4 @@
-function surface = detectFacadeSurfaces(pillars, zReference, cfg, candidatePillars)
+function surface = detectFacadeSurfaces(pillars, zReference, cfg, candidatePillars, supportPillars)
 % detectFacadeSurfaces: Sparse wall seeds and anchored point-plane support.
 % Offline only: use the coarse candidate envelope, local 3D patches and connected
 % MSAC plane inliers. Seeds are immutable: new wall points never establish
@@ -6,14 +6,20 @@ function surface = detectFacadeSurfaces(pillars, zReference, cfg, candidatePilla
 % labels are used. The point decisions also supply offline mapping masks.
 %
 % Input: pillars: nonground pillar context; zReference: shared height phase;
-%        cfg: facadeSurfaceConfig for the pillar spacing.
+%        cfg: facadeSurfaceConfig for the pillar spacing;
+%        candidatePillars: immutable label eligibility;
+%        supportPillars: optional bounded neighborhood context, containing
+%            candidates (default: candidates). Context cannot receive labels.
 % Output: surface: pillar mask/line ownership, point decisions, candidate
 %         indices and supporting plane diagnostics on the original points.
     geometry = pillars.pillarGeometry;
     xyz = double(pillars.points);
     ids = double(pillars.pointPillarLinIdx);
     if nargin<4,candidatePillars=true(geometry.mapSize);end
+    if nargin<5,supportPillars=candidatePillars;end
     assert(isequal(size(candidatePillars),geometry.mapSize));
+    assert(isequal(size(supportPillars),geometry.mapSize));
+    assert(~any(candidatePillars & ~supportPillars,'all'));
     eligible = true(size(ids));
     if isfield(pillars.pointAttributes,'intensity')
         intensity = double(pillars.pointAttributes.intensity(:));
@@ -26,12 +32,17 @@ function surface = detectFacadeSurfaces(pillars, zReference, cfg, candidatePilla
     seedMap = validateSeedPatches(proposals.lineMap,proposals.detectedLines,samples,maps,cfg);
     % Neighboring walls may veto a pole without receiving facade labels.
     contextSeedMap = seedMap;
-    seedMap(~candidatePillars)=0;
+    seedMap(~supportPillars)=0;
     seedIds = seedMap(ids);
     seedIds(~eligible) = 0;
-    eligible = eligible & candidatePillars(ids);
+    eligible = eligible & supportPillars(ids);
     [pointLineIds, detail] = completeFacadeSurfaces(xyz,ids,seedIds,eligible, ...
         proposals.detectedLines,cfg.completion);
+    % Neighboring plane inliers supply shape/overlap context; only immutable
+    % candidate members receive the public facade decision.
+    contextPlaneSupportIds=pointLineIds;
+    pointLineIds(~candidatePillars(ids))=0;
+    detail.candidateMask=detail.candidateMask & candidatePillars(ids);
     accepted = pointLineIds>0;
     lineMap = zeros(geometry.mapSize,'uint16');
     lineMap(ids(accepted)) = pointLineIds(accepted);
@@ -41,6 +52,7 @@ function surface = detectFacadeSurfaces(pillars, zReference, cfg, candidatePilla
         'detectedLines',proposals.detectedLines,'seedLineMap',seedMap, ...
         'fullContextSeedLineMap',contextSeedMap,'lineScore',maps.lineScore, ...
         'pointIndices',double(pillars.pointIndices),'pointLineIds',pointLineIds, ...
+        'contextPlaneSupportIds',contextPlaneSupportIds, ...
         'candidateMask',detail.candidateMask,'planeValidation',detail, ...
         'supportFraction',reshape(support./max(count,1),geometry.mapSize));
 end

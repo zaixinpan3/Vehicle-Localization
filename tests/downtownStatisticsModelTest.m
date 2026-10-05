@@ -6,6 +6,18 @@ classdef downtownStatisticsModelTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function operatingPointsRetainStatisticalSchemas(testCase)
+            balanced=perceptionConfig('Downtown');
+            strict=perceptionConfig('Downtown','offline','strictPrecision');
+            testCase.verifyTrue(balanced.groundFeatures.collectPillarDistributionShape);
+            testCase.verifyTrue(isfield(balanced.downtownCandidates.precisionFilter.rules.pole,'alternatives'));
+            testCase.verifyFalse(isfield(strict.downtownCandidates.precisionFilter.rules.pole,'alternatives'));
+            testCase.verifyEqual(balanced.voxel.voxelSize,strict.voxel.voxelSize);
+            testCase.verifyEqual(pillarGridExtent(balanced.voxel),pillarGridExtent(strict.voxel));
+            testCase.verifyEqual(strict.downtownCandidates.precisionFilter.rules, ...
+                jsondecode(fileread(fullfile(strict.downtownCandidates.modelDirectory,'downtownPrecisionRules.json'))));
+            testCase.verifyFalse(isfield(perceptionConfig('Mississippi').groundFeatures,'collectPillarDistributionShape'));
+        end
         function precisionDefaultsOnlyRemoveBroadCandidatePillars(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','raw','downTownPointClouds.mat');

@@ -2,7 +2,8 @@ function result=analyzeDowntownPillarStatistics(pillars,cfg,cloudCfg,groundConte
 % analyzeDowntownPillarStatistics: Form Downtown candidates from whole pillars.
 % Raw returns are aggregated once into count, moments, bounds and intensity
 % maxima and radiometric conditional distributions. Every subsequent decision
-% uses those statistics or neighboring pillar statistics. No height slices, planes, density peaks,
+% uses those statistics or neighboring pillar statistics. No height-voxel
+% topology, planes, density peaks,
 % point neighborhoods or semantic point labels are evaluated here.
 % Optional cfg.pillarStatistics supplies broad candidate thresholds; a
 % downstream statistics model may rank or filter these candidate masks.
@@ -14,6 +15,9 @@ function result=analyzeDowntownPillarStatistics(pillars,cfg,cloudCfg,groundConte
     ids=double(stats.pillarIndices);height=stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3);
     maps=struct('origin',geometry.origin,'dx',geometry.cellSize(1), ...
         'dy',geometry.cellSize(2),'mapSize',dims,'statistics',stats);
+    if all(geometry.cellSize<.6)
+        maps.distributionShape=aggregatePillarDistributionShape(pillars.points,pillars.pointPillarLinIdx);
+    end
     maps.radiometry=aggregateDowntownRadiometry(pillars,cfg.trafficSignIntensityThreshold,groundContext);
     maps.pillarCounts=zeros(dims);maps.pillarCounts(ids)=stats.count;
     maps.pillarZRange=zeros(dims);maps.pillarZRange(ids)=height;

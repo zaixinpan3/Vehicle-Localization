@@ -55,7 +55,9 @@ function result = detectDowntownStructures(pillars,fullPillars,groundMask,zRefer
     if isfield(facade,'fullContextSeedLineMap')
         seedFacade=facade.fullContextSeedLineMap>0;
     end
-    [rawMask,supportMask]=proposePoles(maps,samples,seedFacade,cfg,candidateMasks.pole);
+    supportCandidate=candidateMasks.pole;
+    if isfield(candidateMasks,'poleContext'),supportCandidate=candidateMasks.poleContext;end
+    [rawMask,supportMask]=proposePoles(maps,samples,seedFacade,cfg,supportCandidate);
     nativeMask=validateSliceSupport(rawMask,maps,samples,zReference,cfg);
     components=double(labelmatrix(bwconncomp(nativeMask,8)));
     selected=nativeMask(ids) & eligible;
@@ -68,13 +70,16 @@ function result = detectDowntownStructures(pillars,fullPillars,groundMask,zRefer
     componentIds=componentIds(keep);
     labels=zeros(size(ids)); labels(selected)=componentIds;
     detail=struct('poleMaskRaw',rawMask,'poleSupportMask',supportMask);
-    recovery=recoverDowntownDensePoles(xyz,ids,eligible,facade.pointLineIds, ...
+    facadeSupportIds=facade.pointLineIds;
+    if isfield(facade,'contextPlaneSupportIds'),facadeSupportIds=facade.contextPlaneSupportIds;end
+    recovery=recoverDowntownDensePoles(xyz,ids,eligible,facadeSupportIds, ...
         nativeMask,detail,cfg.denseRecovery);
     labels(recovery.pointMask)=max(components,[],'all')+recovery.pointComponentIds(recovery.pointMask);
     selected=selected | recovery.pointMask;
     [keep,contextMetrics]=validateDowntownPoleContext(xyz(selected,:),original(selected), ...
         labels(selected),double(fullPillars.points),double(fullPillars.pointIndices),cfg.context);
     selectedIds=find(selected); selected(selectedIds(~keep))=false;
+    selected=selected & candidateMasks.pole(ids);
     assert(all(candidateMasks.pole(ids(selected))), ...
         'perception:FineOutsideCoarseCandidate','Fine pole labels must stay inside coarse candidates.');
     evaluationMask=rawMask | (supportMask & imdilate(rawMask,ones(2*cfg.denseRecovery.supportRadiusCells+1)));
