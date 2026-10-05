@@ -1,18 +1,22 @@
-function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputFolder,lateralDesign)
+function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputFolder,lateralDesign,options)
 % replayDowntownGnssFreeLocalization Actual synchronous localization cascade.
 % GNSS absent from initialization through the last frame. Runtime reads only
 % measured clouds/motion and a frozen map; evaluation reference is a separate
-% scorer. Fixed approximate local-origin prior is shared across recordings.
+% scorer. One externally supplied reference pose initializes the first query.
+% No reference trajectory is read here, including when initializing velocity.
+    arguments
+        datasetFolder
+        mapFile
+        outputFolder
+        lateralDesign
+        options.InitialPosePacket (1,1) struct=struct()
+    end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     protocol=downtownReferenceReplayConfig();metadata=jsondecode(fileread(fullfile(datasetFolder,'metadata.json')));
     assert(metadata.measurementOnly && ~metadata.gnssExported && ~metadata.clock.referencePoseUsed);
     inputs=prepareDowntownMotionInputs(datasetFolder,lateralDesign);save(fullfile(outputFolder,'motion_inputs.mat'),'inputs','-v7.3');
     source=load(mapFile,'cloud');map=registrationSupport.projectSemanticProbabilityCloud(source.cloud,2);
-    frames=readtable(fullfile(datasetFolder,'frames.csv'));
-    valid=frames.available==1 & mod(frames.frame_index,2)==protocol.queryFrameParity & ...
-        frames.native_time_sec>=inputs.nativeOriginSeconds & ...
-        frames.native_time_sec<=inputs.nativeOriginSeconds+inputs.highRate.time(end)-.1002;
-    ids=frames.frame_index(valid);native=frames.native_time_sec(valid);t=native-inputs.nativeOriginSeconds;n=numel(t);
+    [ids,native,t]=downtownReplayFrameSchedule(datasetFolder,inputs);n=numel(t);
     assert(n>=2 && isempty(intersect(ids,source.cloud.trainingFrameIndices)),'VehicleLocalization:EvaluationLeakage','Query acquisitions must not enter the map.');
     h=struct('time',t);
     for field=["longitudinalSpeed","longitudinalAcceleration","lateralAcceleration","yawRate"]
@@ -21,7 +25,8 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     lat=struct('time',t,'lateralVelocity',interp1(inputs.lateral.time,inputs.lateral.lateralVelocity,t), ...
         'sideSlipAngleRate',interp1(inputs.lateral.time,inputs.lateral.sideSlipAngleRate,t));
     motion=interp1(inputs.highRate.time,inputs.motion,t);
-    cfg=protocol.observer;prior=protocol.initialPose;R=[cos(prior(3)),-sin(prior(3));sin(prior(3)),cos(prior(3))];v=R*[h.longitudinalSpeed(1);lat.lateralVelocity(1)];
+    cfg=protocol.observer;prior=validateDowntownInitialPose(options.InitialPosePacket,ids(1),native(1));
+    R=[cos(prior(3)),-sin(prior(3));sin(prior(3)),cos(prior(3))];v=R*[h.longitudinalSpeed(1);lat.lateralVelocity(1)];
     cfg.initialState=[prior(1);v(1);0;prior(2);v(2);0;prior(3)];
     Rmotion=[cos(motion(1,3)),-sin(motion(1,3));sin(motion(1,3)),cos(motion(1,3))];
     relativeXY=(motion(:,1:2)-motion(1,1:2))*Rmotion;
@@ -31,13 +36,20 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     matching=struct('perception',p,'registration',protocol.registration,'sourceWindow',protocol.sourceWindow);
     timer=tic;estimate=runFullLocalizationObserver(data,lateralDesign,cfg,LateralInputs=lat);runtime=toc(timer);
     assert(estimate.diagnostics.packetCounts.gnssValid==0 && all(ismember(estimate.diagnostics.mode,[0,2])));
+    estimate.diagnostics.referenceUsed=true; % One initialization pose, separately audited.
+    estimate.diagnostics.referenceUsedForInitialization=true;
+    estimate.diagnostics.referenceInitializationCount=1;
+    estimate.diagnostics.referenceInitializationFrameIndex=ids(1);
+    estimate.diagnostics.referenceUsedAfterInitialization=false;
     trajectory=array2table([ids,native,t,estimate.pose,candidates,deadReckoning,accepted,directional,timings*1000], ...
         'VariableNames',{'frame_index','native_time_sec','elapsed_sec','x_m','y_m','yaw_rad','match_x_m','match_y_m','match_yaw_rad','dead_reckoning_x_m','dead_reckoning_y_m','dead_reckoning_yaw_rad','accepted','directional_accepted','perception_ms','registration_ms','total_ms'});
     writetable(trajectory,fullfile(outputFolder,'trajectory.csv'));
     if isfield(estimate,'matchingResults'),estimate=rmfield(estimate,'matchingResults');end
     report=struct('frames',n,'durationSeconds',t(end)-t(1),'accepted',nnz(accepted),'directionalAccepted',nnz(directional), ...
         'gnssValidPackets',estimate.diagnostics.packetCounts.gnssValid,'gnssInitializationUsed',false, ...
-        'referenceUsedForRuntime',false,'initialPose',prior,'initialization',"Fixed approximate local-map-origin prior; no per-frame reference reset or global-relocalization claim", ...
+        'referenceUsedForInitialization',true,'referenceInitializationCount',1,'referenceUsedAfterInitialization',false, ...
+        'initialPose',prior,'initialPosePacket',options.InitialPosePacket,'initializationMode',protocol.initializationMode, ...
+        'initialization',"Exact first-query pseudo-reference pose once; velocities measured; no later reference or GNSS input", ...
         'featureNames',protocol.featureNames,'runtimeSeconds',runtime,'medianProcessingMs',median(timings(:,3))*1000, ...
         'continuousLmiVerified',estimate.diagnostics.continuousLmiVerified,'sampledSystemCertified',false, ...
         'mapFile',mapFile,'datasetFolder',datasetFolder,'trainingQueryOverlap',0,'evaluation',protocol.evaluation, ...

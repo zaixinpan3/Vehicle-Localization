@@ -3,6 +3,29 @@ classdef downtownReferenceReplayTest < matlab.unittest.TestCase
         function paths(~),setupVehicleLocalization();end
     end
     methods (Test)
+        function initializationReadsOnlyTheFirstSelectedReference(test)
+            folder=string(tempname);mkdir(folder);cleanup=onCleanup(@()rmdir(folder,'s')); %#ok<NASGU>
+            path=fullfile(folder,'mapping_poses.csv');
+            f=fopen(path,'w');fprintf(f,'frame_index,lidar_stamp_sec,pose_x_m,pose_y_m,pose_z_m,pose_qw,pose_qx,pose_qy,pose_qz\n2,10,4,-3,0,1,0,0,0\nInvalid future pose must not be read\n');fclose(f);
+            packet=readDowntownInitialPose(folder,2,10);
+            test.verifyEqual(validateDowntownInitialPose(packet,2,10),[4,-3,0]);
+            test.verifyEqual(packet.referencePoseCount,1);
+            f=fopen(path,'w');fprintf(f,'frame_index,lidar_stamp_sec,pose_x_m,pose_y_m,pose_z_m,pose_qw,pose_qx,pose_qy,pose_qz\n2,10,4,-3,0,1,0,0,0\nEntirely changed future reference\n');fclose(f);
+            test.verifyEqual(readDowntownInitialPose(folder,2,10),packet);
+            test.verifyError(@()readDowntownInitialPose(folder,2,10.01),'VehicleLocalization:InitialReferenceClock');
+            test.verifyError(@()validateDowntownInitialPose(packet,2,10.01),'VehicleLocalization:InitialPoseClock');
+            delete(path);test.verifyEqual(validateDowntownInitialPose(packet,2,10),[4,-3,0]);
+            test.verifyError(@()validateDowntownInitialPose(packet,4,10.2),'VehicleLocalization:InitialPoseClock');
+            test.verifyError(@()readDowntownInitialPose(folder,2,10),'VehicleLocalization:InitialReferenceMissing');
+        end
+        function queryScheduleUsesSensorCoverageOnly(test)
+            folder=string(tempname);mkdir(folder);cleanup=onCleanup(@()rmdir(folder,'s')); %#ok<NASGU>
+            frames=table((1:6).',(10:.1:10.5).',ones(6,1),'VariableNames',{'frame_index','native_time_sec','available'});
+            writetable(frames,fullfile(folder,'frames.csv'));
+            inputs=struct('nativeOriginSeconds',10.15,'highRate',struct('time',[0;.5]));
+            [ids,time]=downtownReplayFrameSchedule(folder,inputs);
+            test.verifyEqual(ids,[4;6]);test.verifyEqual(time,[10.3;10.5],'AbsTol',1e-12);
+        end
         function motionIgnoresCorruptedReferenceArtifacts(test)
             folder=string(tempname);mkdir(folder);mkdir(fullfile(folder,'sensors'));cleanup=onCleanup(@()rmdir(folder,'s')); %#ok<NASGU>
             time=(100:.02:102).';n=numel(time);p=mncavReplayConfig();wheel=wheelSpeedObserverConfig();
