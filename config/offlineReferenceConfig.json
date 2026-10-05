@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "description": "Independent GLIM offline reference; no project estimator or receiver poses enter fitting.",
+  "qualification": "Pseudo-ground-truth at the front LiDAR origin; physical vehicle reference-point extrinsics remain unverified.",
+  "config_sensors.json": {
+    "sensors": {
+      "T_lidar_imu": [0.006, -0.012, 0.008, 0, 0, 0, 1],
+      "global_shutter_lidar": false,
+      "autoconf_perpoint_times": false,
+      "autoconf_prefer_frame_time": true,
+      "perpoint_relative_time": true,
+      "perpoint_time_scale": 1e-9,
+      "ring_field": "ring"
+    }
+  },
+  "config_ros.json": {
+    "glim_ros": {
+      "imu_topic": "/reference/imu",
+      "points_topic": "/reference/points",
+      "image_topic": "/reference/unused_image",
+      "acc_scale": 1.0,
+      "ang_scale": 1.0,
+      "extension_modules": [],
+      "enable_local_mapping": true,
+      "enable_global_mapping": true
+    }
+  },
+  "config_preprocess.json": {
+    "preprocess": {
+      "distance_near_thresh": 1.0,
+      "distance_far_thresh": 100.0,
+      "use_random_grid_downsampling": false,
+      "downsample_resolution": 0.2,
+      "random_downsample_target": -1,
+      "enable_outlier_removal": true,
+      "outlier_removal_k": 10,
+      "outlier_std_mul_factor": 2.0,
+      "num_threads": 4
+    }
+  },
+  "config_odometry_gpu.json": {
+    "odometry_estimation": {
+      "smoother_lag": 10.0,
+      "compute_covs": true,
+      "isam2_relinearize_thresh": 0.01,
+      "full_connection_window_size": 3,
+      "max_num_keyframes": 20,
+      "num_threads": 4
+    }
+  },
+  "config_sub_mapping_gpu.json": {
+    "sub_mapping": {
+      "enable_optimization": true,
+      "keyframe_randomsampling_rate": 1.0,
+      "submap_downsample_resolution": 0.1,
+      "submap_target_num_points": 100000
+    }
+  },
+  "config_global_mapping_gpu.json": {
+    "global_mapping": {
+      "randomsampling_rate": 1.0,
+      "submap_voxel_resolution": 0.25,
+      "submap_voxel_resolution_max": 0.5,
+      "isam2_relinearize_thresh": 0.01
+    }
+  },
+  "extrinsics_provenance": "GLIM documented nominal Ouster IMU-to-sensor transform, not a per-unit survey. Native bag point axes are retained; empirical project reference-assisted calibration is excluded."
+}
