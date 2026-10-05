@@ -72,8 +72,8 @@ function windows=schedule(frames,count,stride)
     validateattributes(count,{'numeric'},{'scalar','integer','positive','finite'});
     validateattributes(stride,{'numeric'},{'scalar','integer','positive','finite'});
     assert(stride<=count,'buildSlidingWindowMap:UncoveredFrames','Window stride must not exceed window count.');
-    assert(~isempty(frames) && all(isfinite(frames)) && all(frames==floor(frames)) && all(diff(frames)==1), ...
-        'buildSlidingWindowMap:InvalidFrames','Frame indices must be contiguous finite integers.');
+    assert(~isempty(frames) && all(isfinite(frames)) && all(frames==floor(frames)) && all(diff(frames)>0), ...
+        'buildSlidingWindowMap:InvalidFrames','Frame indices must be increasing finite integers.');
     if numel(frames)<=count, windows={frames}; return; end
     last=numel(frames)-count+1; starts=unique([1:stride:last,last]);
     windows=arrayfun(@(i) frames(i:i+count-1),starts,'UniformOutput',false).';

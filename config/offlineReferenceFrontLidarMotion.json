@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "leverLidarToInsMeters": [
+    -2.921122541172823,
+    0.4114737659832134,
+    -0.260803121476387
+  ],
+  "calibrationSequence": "raw_data_2024-06-07-12-09-31_0",
+  "calibrationSourceSha256": "c3ac20f6110d25cb1010238009742fcad852349b042be15614edd66ada7ab31c",
+  "surveyed": false,
+  "scope": "Fixed independent first-June lever estimate reused for transporting existing MnCAV output-point motion to the front LiDAR; no Downtown reference fits motion inputs"
+}
