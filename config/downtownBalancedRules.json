@@ -1,618 +1,1640 @@
 {
   "curb": {
-    "alternatives": [
+    "allOf": [
       {
-        "predicates": [
+        "alternatives": [
           {
-            "feature": "energy_extractedMask",
-            "operator": "<=",
-            "threshold": 0.5
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": "<=",
+                "threshold": 0.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r1_mean",
+                "operator": "<=",
+                "threshold": 0.07469681650400162
+              },
+              {
+                "feature": "energy_total_r1_mean",
+                "operator": "<=",
+                "threshold": 0.0524040050804615
+              }
+            ]
           },
           {
-            "feature": "energy_heightStepMeters_r1_mean",
-            "operator": "<=",
-            "threshold": 0.07469681650400162
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": "<=",
+                "threshold": 0.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r1_mean",
+                "operator": ">",
+                "threshold": 0.07469681650400162
+              },
+              {
+                "feature": "offGround_r2_heightVariance",
+                "operator": "<=",
+                "threshold": 4.978499964636285e-05
+              },
+              {
+                "feature": "energy_totalBase_r2_mean",
+                "operator": "<=",
+                "threshold": 0.46424272656440735
+              },
+              {
+                "feature": "energy_linearityComponentPeakEnergy",
+                "operator": ">",
+                "threshold": 0.810217022895813
+              },
+              {
+                "feature": "ground_roughnessMap_r2_std",
+                "operator": ">",
+                "threshold": 0.013846284709870815
+              },
+              {
+                "feature": "energy_relativeHeight",
+                "operator": ">",
+                "threshold": 0.14536522328853607
+              },
+              {
+                "feature": "energy_linearityComponentPeakEnergy",
+                "operator": "<=",
+                "threshold": 0.979462206363678
+              },
+              {
+                "feature": "energy_total_r2_std",
+                "operator": "<=",
+                "threshold": 0.04495253600180149
+              }
+            ]
           },
           {
-            "feature": "energy_total_r1_mean",
-            "operator": "<=",
-            "threshold": 0.0524040050804615
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": "<=",
+                "threshold": 0.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r1_mean",
+                "operator": ">",
+                "threshold": 0.07469681650400162
+              },
+              {
+                "feature": "offGround_r2_heightVariance",
+                "operator": "<=",
+                "threshold": 4.978499964636285e-05
+              },
+              {
+                "feature": "energy_totalBase_r2_mean",
+                "operator": "<=",
+                "threshold": 0.46424272656440735
+              },
+              {
+                "feature": "energy_linearityComponentPeakEnergy",
+                "operator": ">",
+                "threshold": 0.810217022895813
+              },
+              {
+                "feature": "ground_roughnessMap_r2_std",
+                "operator": ">",
+                "threshold": 0.013846284709870815
+              },
+              {
+                "feature": "energy_relativeHeight",
+                "operator": ">",
+                "threshold": 0.14536522328853607
+              },
+              {
+                "feature": "energy_linearityComponentPeakEnergy",
+                "operator": "<=",
+                "threshold": 0.979462206363678
+              },
+              {
+                "feature": "energy_total_r2_std",
+                "operator": ">",
+                "threshold": 0.04495253600180149
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": "<=",
+                "threshold": 0.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r1_mean",
+                "operator": ">",
+                "threshold": 0.07469681650400162
+              },
+              {
+                "feature": "offGround_r2_heightVariance",
+                "operator": "<=",
+                "threshold": 4.978499964636285e-05
+              },
+              {
+                "feature": "energy_totalBase_r2_mean",
+                "operator": "<=",
+                "threshold": 0.46424272656440735
+              },
+              {
+                "feature": "energy_linearityComponentPeakEnergy",
+                "operator": ">",
+                "threshold": 0.810217022895813
+              },
+              {
+                "feature": "ground_roughnessMap_r2_std",
+                "operator": ">",
+                "threshold": 0.013846284709870815
+              },
+              {
+                "feature": "energy_relativeHeight",
+                "operator": ">",
+                "threshold": 0.14536522328853607
+              },
+              {
+                "feature": "energy_linearityComponentPeakEnergy",
+                "operator": ">",
+                "threshold": 0.979462206363678
+              },
+              {
+                "feature": "energy_total_r2_mean",
+                "operator": "<=",
+                "threshold": 0.16231577843427658
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": "<=",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.046344805508852005
+              },
+              {
+                "feature": "energy_linearitySigma1Meters",
+                "operator": "<=",
+                "threshold": 0.698908120393753
+              },
+              {
+                "feature": "energy_total",
+                "operator": ">",
+                "threshold": 0.23277026414871216
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": "<=",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.046344805508852005
+              },
+              {
+                "feature": "energy_linearitySigma1Meters",
+                "operator": ">",
+                "threshold": 0.698908120393753
+              },
+              {
+                "feature": "energy_linearity_r2_std",
+                "operator": "<=",
+                "threshold": 0.062139369547367096
+              },
+              {
+                "feature": "energy_totalBase_r1_mean",
+                "operator": ">",
+                "threshold": 0.4369262754917145
+              },
+              {
+                "feature": "energy_total",
+                "operator": "<=",
+                "threshold": 0.20087499171495438
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": "<=",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": ">",
+                "threshold": 0.046344805508852005
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 103.5
+              },
+              {
+                "feature": "ground_roughnessMap_r1_contrast",
+                "operator": ">",
+                "threshold": -0.017747554928064346
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_std",
+                "operator": "<=",
+                "threshold": 0.04576547630131245
+              },
+              {
+                "feature": "energy_total_r1_mean",
+                "operator": ">",
+                "threshold": 0.1028401106595993
+              },
+              {
+                "feature": "energy_totalBase_r2_mean",
+                "operator": "<=",
+                "threshold": 0.5729303359985352
+              },
+              {
+                "feature": "ground_countMap_r2_mean",
+                "operator": ">",
+                "threshold": 1.95119047164917
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": "<=",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": ">",
+                "threshold": 0.046344805508852005
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 103.5
+              },
+              {
+                "feature": "ground_roughnessMap_r1_contrast",
+                "operator": ">",
+                "threshold": -0.017747554928064346
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_std",
+                "operator": "<=",
+                "threshold": 0.04576547630131245
+              },
+              {
+                "feature": "energy_total_r1_mean",
+                "operator": ">",
+                "threshold": 0.1028401106595993
+              },
+              {
+                "feature": "energy_totalBase_r2_mean",
+                "operator": ">",
+                "threshold": 0.5729303359985352
+              },
+              {
+                "feature": "energy_fullCellReliefMeters",
+                "operator": ">",
+                "threshold": 0.04770416021347046
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": ">",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 94.5
+              },
+              {
+                "feature": "ground_countMap_r1_contrast",
+                "operator": "<=",
+                "threshold": 6.527777671813965
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": ">",
+                "threshold": -1.1633332967758179
+              },
+              {
+                "feature": "energy_fullCellReliefMeters",
+                "operator": ">",
+                "threshold": 0.07408523559570312
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 18.0
+              },
+              {
+                "feature": "distribution_heightKurtosis",
+                "operator": "<=",
+                "threshold": 1.9250308275222778
+              },
+              {
+                "feature": "energy_heightStepMeters_r1_contrast",
+                "operator": "<=",
+                "threshold": 0.02048545517027378
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": ">",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 94.5
+              },
+              {
+                "feature": "ground_countMap_r1_contrast",
+                "operator": "<=",
+                "threshold": 6.527777671813965
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": ">",
+                "threshold": -1.1633332967758179
+              },
+              {
+                "feature": "energy_fullCellReliefMeters",
+                "operator": ">",
+                "threshold": 0.07408523559570312
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 18.0
+              },
+              {
+                "feature": "distribution_heightKurtosis",
+                "operator": "<=",
+                "threshold": 1.9250308275222778
+              },
+              {
+                "feature": "energy_heightStepMeters_r1_contrast",
+                "operator": ">",
+                "threshold": 0.02048545517027378
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": ">",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 94.5
+              },
+              {
+                "feature": "ground_countMap_r1_contrast",
+                "operator": "<=",
+                "threshold": 6.527777671813965
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": ">",
+                "threshold": -1.1633332967758179
+              },
+              {
+                "feature": "energy_fullCellReliefMeters",
+                "operator": ">",
+                "threshold": 0.07408523559570312
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 18.0
+              },
+              {
+                "feature": "distribution_heightKurtosis",
+                "operator": ">",
+                "threshold": 1.9250308275222778
+              },
+              {
+                "feature": "energy_heightStepMeters_r1_std",
+                "operator": "<=",
+                "threshold": 0.03140643984079361
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": ">",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 94.5
+              },
+              {
+                "feature": "ground_countMap_r1_contrast",
+                "operator": "<=",
+                "threshold": 6.527777671813965
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": ">",
+                "threshold": -1.1633332967758179
+              },
+              {
+                "feature": "energy_fullCellReliefMeters",
+                "operator": ">",
+                "threshold": 0.07408523559570312
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 18.0
+              },
+              {
+                "feature": "distribution_heightKurtosis",
+                "operator": ">",
+                "threshold": 1.9250308275222778
+              },
+              {
+                "feature": "energy_heightStepMeters_r1_std",
+                "operator": ">",
+                "threshold": 0.03140643984079361
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": ">",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 94.5
+              },
+              {
+                "feature": "ground_countMap_r1_contrast",
+                "operator": "<=",
+                "threshold": 6.527777671813965
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": ">",
+                "threshold": -1.1633332967758179
+              },
+              {
+                "feature": "energy_fullCellReliefMeters",
+                "operator": ">",
+                "threshold": 0.07408523559570312
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": ">",
+                "threshold": 18.0
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": ">",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 94.5
+              },
+              {
+                "feature": "ground_countMap_r1_contrast",
+                "operator": ">",
+                "threshold": 6.527777671813965
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "energy_extractedMask",
+                "operator": ">",
+                "threshold": 0.5
+              },
+              {
+                "feature": "ground_roughnessMap",
+                "operator": ">",
+                "threshold": 0.02625369466841221
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": ">",
+                "threshold": 94.5
+              },
+              {
+                "feature": "offGround_r1_meanAboveGround",
+                "operator": ">",
+                "threshold": 0.8881644904613495
+              }
+            ]
           }
         ]
       },
       {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": "<=",
-            "threshold": 0.5
-          },
-          {
-            "feature": "energy_heightStepMeters_r1_mean",
-            "operator": ">",
-            "threshold": 0.07469681650400162
-          },
-          {
-            "feature": "offGround_r2_heightVariance",
-            "operator": "<=",
-            "threshold": 4.978499964636285e-05
-          },
-          {
-            "feature": "energy_totalBase_r2_mean",
-            "operator": "<=",
-            "threshold": 0.46424272656440735
-          },
-          {
-            "feature": "energy_linearityComponentPeakEnergy",
-            "operator": ">",
-            "threshold": 0.810217022895813
-          },
-          {
-            "feature": "ground_roughnessMap_r2_std",
-            "operator": ">",
-            "threshold": 0.013846284709870815
-          },
-          {
-            "feature": "energy_relativeHeight",
-            "operator": ">",
-            "threshold": 0.14536522328853607
-          },
-          {
-            "feature": "energy_linearityComponentPeakEnergy",
-            "operator": "<=",
-            "threshold": 0.979462206363678
-          },
-          {
-            "feature": "energy_total_r2_std",
-            "operator": "<=",
-            "threshold": 0.04495253600180149
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": "<=",
-            "threshold": 0.5
-          },
-          {
-            "feature": "energy_heightStepMeters_r1_mean",
-            "operator": ">",
-            "threshold": 0.07469681650400162
-          },
-          {
-            "feature": "offGround_r2_heightVariance",
-            "operator": "<=",
-            "threshold": 4.978499964636285e-05
-          },
-          {
-            "feature": "energy_totalBase_r2_mean",
-            "operator": "<=",
-            "threshold": 0.46424272656440735
-          },
-          {
-            "feature": "energy_linearityComponentPeakEnergy",
-            "operator": ">",
-            "threshold": 0.810217022895813
-          },
-          {
-            "feature": "ground_roughnessMap_r2_std",
-            "operator": ">",
-            "threshold": 0.013846284709870815
-          },
-          {
-            "feature": "energy_relativeHeight",
-            "operator": ">",
-            "threshold": 0.14536522328853607
-          },
-          {
-            "feature": "energy_linearityComponentPeakEnergy",
-            "operator": "<=",
-            "threshold": 0.979462206363678
-          },
-          {
-            "feature": "energy_total_r2_std",
-            "operator": ">",
-            "threshold": 0.04495253600180149
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": "<=",
-            "threshold": 0.5
-          },
-          {
-            "feature": "energy_heightStepMeters_r1_mean",
-            "operator": ">",
-            "threshold": 0.07469681650400162
-          },
-          {
-            "feature": "offGround_r2_heightVariance",
-            "operator": "<=",
-            "threshold": 4.978499964636285e-05
-          },
-          {
-            "feature": "energy_totalBase_r2_mean",
-            "operator": "<=",
-            "threshold": 0.46424272656440735
-          },
-          {
-            "feature": "energy_linearityComponentPeakEnergy",
-            "operator": ">",
-            "threshold": 0.810217022895813
-          },
-          {
-            "feature": "ground_roughnessMap_r2_std",
-            "operator": ">",
-            "threshold": 0.013846284709870815
-          },
-          {
-            "feature": "energy_relativeHeight",
-            "operator": ">",
-            "threshold": 0.14536522328853607
-          },
-          {
-            "feature": "energy_linearityComponentPeakEnergy",
-            "operator": ">",
-            "threshold": 0.979462206363678
-          },
-          {
-            "feature": "energy_total_r2_mean",
-            "operator": "<=",
-            "threshold": 0.16231577843427658
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": "<=",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "energy_heightStepMeters_r2_mean",
-            "operator": "<=",
-            "threshold": 0.046344805508852005
-          },
-          {
-            "feature": "energy_linearitySigma1Meters",
-            "operator": "<=",
-            "threshold": 0.698908120393753
-          },
-          {
-            "feature": "energy_total",
-            "operator": ">",
-            "threshold": 0.23277026414871216
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": "<=",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "energy_heightStepMeters_r2_mean",
-            "operator": "<=",
-            "threshold": 0.046344805508852005
-          },
-          {
-            "feature": "energy_linearitySigma1Meters",
-            "operator": ">",
-            "threshold": 0.698908120393753
-          },
-          {
-            "feature": "energy_linearity_r2_std",
-            "operator": "<=",
-            "threshold": 0.062139369547367096
-          },
-          {
-            "feature": "energy_totalBase_r1_mean",
-            "operator": ">",
-            "threshold": 0.4369262754917145
-          },
-          {
-            "feature": "energy_total",
-            "operator": "<=",
-            "threshold": 0.20087499171495438
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": "<=",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "energy_heightStepMeters_r2_mean",
-            "operator": ">",
-            "threshold": 0.046344805508852005
-          },
-          {
-            "feature": "offGround_r2_countSum",
-            "operator": "<=",
-            "threshold": 103.5
-          },
-          {
-            "feature": "ground_roughnessMap_r1_contrast",
-            "operator": ">",
-            "threshold": -0.017747554928064346
-          },
-          {
-            "feature": "energy_heightStepMeters_r2_std",
-            "operator": "<=",
-            "threshold": 0.04576547630131245
-          },
-          {
-            "feature": "energy_total_r1_mean",
-            "operator": ">",
-            "threshold": 0.1028401106595993
-          },
-          {
-            "feature": "energy_totalBase_r2_mean",
-            "operator": "<=",
-            "threshold": 0.5729303359985352
-          },
-          {
-            "feature": "ground_countMap_r2_mean",
-            "operator": ">",
-            "threshold": 1.95119047164917
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": "<=",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "energy_heightStepMeters_r2_mean",
-            "operator": ">",
-            "threshold": 0.046344805508852005
-          },
-          {
-            "feature": "offGround_r2_countSum",
-            "operator": "<=",
-            "threshold": 103.5
-          },
-          {
-            "feature": "ground_roughnessMap_r1_contrast",
-            "operator": ">",
-            "threshold": -0.017747554928064346
-          },
-          {
-            "feature": "energy_heightStepMeters_r2_std",
-            "operator": "<=",
-            "threshold": 0.04576547630131245
-          },
-          {
-            "feature": "energy_total_r1_mean",
-            "operator": ">",
-            "threshold": 0.1028401106595993
-          },
-          {
-            "feature": "energy_totalBase_r2_mean",
-            "operator": ">",
-            "threshold": 0.5729303359985352
-          },
-          {
-            "feature": "energy_fullCellReliefMeters",
-            "operator": ">",
-            "threshold": 0.04770416021347046
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": ">",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 94.5
-          },
-          {
-            "feature": "ground_countMap_r1_contrast",
-            "operator": "<=",
-            "threshold": 6.527777671813965
-          },
-          {
-            "feature": "ground_countMap_r2_contrast",
-            "operator": ">",
-            "threshold": -1.1633332967758179
-          },
-          {
-            "feature": "energy_fullCellReliefMeters",
-            "operator": ">",
-            "threshold": 0.07408523559570312
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 18.0
-          },
-          {
-            "feature": "distribution_heightKurtosis",
-            "operator": "<=",
-            "threshold": 1.9250308275222778
-          },
-          {
-            "feature": "energy_heightStepMeters_r1_contrast",
-            "operator": "<=",
-            "threshold": 0.02048545517027378
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": ">",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 94.5
-          },
-          {
-            "feature": "ground_countMap_r1_contrast",
-            "operator": "<=",
-            "threshold": 6.527777671813965
-          },
-          {
-            "feature": "ground_countMap_r2_contrast",
-            "operator": ">",
-            "threshold": -1.1633332967758179
-          },
-          {
-            "feature": "energy_fullCellReliefMeters",
-            "operator": ">",
-            "threshold": 0.07408523559570312
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 18.0
-          },
-          {
-            "feature": "distribution_heightKurtosis",
-            "operator": "<=",
-            "threshold": 1.9250308275222778
-          },
-          {
-            "feature": "energy_heightStepMeters_r1_contrast",
-            "operator": ">",
-            "threshold": 0.02048545517027378
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": ">",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 94.5
-          },
-          {
-            "feature": "ground_countMap_r1_contrast",
-            "operator": "<=",
-            "threshold": 6.527777671813965
-          },
-          {
-            "feature": "ground_countMap_r2_contrast",
-            "operator": ">",
-            "threshold": -1.1633332967758179
-          },
-          {
-            "feature": "energy_fullCellReliefMeters",
-            "operator": ">",
-            "threshold": 0.07408523559570312
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 18.0
-          },
-          {
-            "feature": "distribution_heightKurtosis",
-            "operator": ">",
-            "threshold": 1.9250308275222778
-          },
-          {
-            "feature": "energy_heightStepMeters_r1_std",
-            "operator": "<=",
-            "threshold": 0.03140643984079361
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": ">",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 94.5
-          },
-          {
-            "feature": "ground_countMap_r1_contrast",
-            "operator": "<=",
-            "threshold": 6.527777671813965
-          },
-          {
-            "feature": "ground_countMap_r2_contrast",
-            "operator": ">",
-            "threshold": -1.1633332967758179
-          },
-          {
-            "feature": "energy_fullCellReliefMeters",
-            "operator": ">",
-            "threshold": 0.07408523559570312
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 18.0
-          },
-          {
-            "feature": "distribution_heightKurtosis",
-            "operator": ">",
-            "threshold": 1.9250308275222778
-          },
-          {
-            "feature": "energy_heightStepMeters_r1_std",
-            "operator": ">",
-            "threshold": 0.03140643984079361
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": ">",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 94.5
-          },
-          {
-            "feature": "ground_countMap_r1_contrast",
-            "operator": "<=",
-            "threshold": 6.527777671813965
-          },
-          {
-            "feature": "ground_countMap_r2_contrast",
-            "operator": ">",
-            "threshold": -1.1633332967758179
-          },
-          {
-            "feature": "energy_fullCellReliefMeters",
-            "operator": ">",
-            "threshold": 0.07408523559570312
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": ">",
-            "threshold": 18.0
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": ">",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": "<=",
-            "threshold": 94.5
-          },
-          {
-            "feature": "ground_countMap_r1_contrast",
-            "operator": ">",
-            "threshold": 6.527777671813965
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "energy_extractedMask",
-            "operator": ">",
-            "threshold": 0.5
-          },
-          {
-            "feature": "ground_roughnessMap",
-            "operator": ">",
-            "threshold": 0.02625369466841221
-          },
-          {
-            "feature": "offGround_r1_countSum",
-            "operator": ">",
-            "threshold": 94.5
-          },
-          {
-            "feature": "offGround_r1_meanAboveGround",
-            "operator": ">",
-            "threshold": 0.8881644904613495
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 4.373913049697876
+              },
+              {
+                "feature": "energy_total_r2_count",
+                "operator": "<=",
+                "threshold": 19.5
+              },
+              {
+                "feature": "distribution_radialKurtosis",
+                "operator": "<=",
+                "threshold": 1.4533675909042358
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 4.373913049697876
+              },
+              {
+                "feature": "energy_total_r2_count",
+                "operator": "<=",
+                "threshold": 19.5
+              },
+              {
+                "feature": "distribution_radialKurtosis",
+                "operator": ">",
+                "threshold": 1.4533675909042358
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 4.373913049697876
+              },
+              {
+                "feature": "energy_total_r2_count",
+                "operator": ">",
+                "threshold": 19.5
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": "<=",
+                "threshold": -0.020182844251394272
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 4.373913049697876
+              },
+              {
+                "feature": "energy_total_r2_count",
+                "operator": ">",
+                "threshold": 19.5
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": ">",
+                "threshold": -0.020182844251394272
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": ">",
+                "threshold": 4.373913049697876
+              },
+              {
+                "feature": "energy_totalBase_r1_contrast",
+                "operator": "<=",
+                "threshold": 0.17014682292938232
+              },
+              {
+                "feature": "ground_countMap_r1_std",
+                "operator": "<=",
+                "threshold": 5.99809455871582
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": ">",
+                "threshold": 4.373913049697876
+              },
+              {
+                "feature": "energy_totalBase_r1_contrast",
+                "operator": "<=",
+                "threshold": 0.17014682292938232
+              },
+              {
+                "feature": "ground_countMap_r1_std",
+                "operator": ">",
+                "threshold": 5.99809455871582
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": ">",
+                "threshold": 4.373913049697876
+              },
+              {
+                "feature": "energy_totalBase_r1_contrast",
+                "operator": ">",
+                "threshold": 0.17014682292938232
+              },
+              {
+                "feature": "energy_linearityValidRatio",
+                "operator": "<=",
+                "threshold": 0.7283950448036194
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": "<=",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_countMap_r2_contrast",
+                "operator": ">",
+                "threshold": 4.373913049697876
+              },
+              {
+                "feature": "energy_totalBase_r1_contrast",
+                "operator": ">",
+                "threshold": 0.17014682292938232
+              },
+              {
+                "feature": "energy_linearityValidRatio",
+                "operator": ">",
+                "threshold": 0.7283950448036194
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": ">",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": "<=",
+                "threshold": 0.04601401090621948
+              },
+              {
+                "feature": "energy_total_r2_std",
+                "operator": "<=",
+                "threshold": 0.1735881343483925
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": "<=",
+                "threshold": -0.0510563850402832
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": ">",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": "<=",
+                "threshold": 0.04601401090621948
+              },
+              {
+                "feature": "energy_total_r2_std",
+                "operator": "<=",
+                "threshold": 0.1735881343483925
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": ">",
+                "threshold": -0.0510563850402832
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": ">",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": "<=",
+                "threshold": 0.04601401090621948
+              },
+              {
+                "feature": "energy_total_r2_std",
+                "operator": ">",
+                "threshold": 0.1735881343483925
+              },
+              {
+                "feature": "energy_totalBase_r2_count",
+                "operator": "<=",
+                "threshold": 14.5
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": ">",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": ">",
+                "threshold": 0.04601401090621948
+              },
+              {
+                "feature": "ground_roughnessMap_r1_mean",
+                "operator": "<=",
+                "threshold": 0.027919700369238853
+              },
+              {
+                "feature": "energy_total_r1_std",
+                "operator": ">",
+                "threshold": 0.025828899815678596
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 84.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": ">",
+                "threshold": 0.0735446996986866
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": ">",
+                "threshold": 0.04601401090621948
+              },
+              {
+                "feature": "ground_roughnessMap_r1_mean",
+                "operator": ">",
+                "threshold": 0.027919700369238853
+              },
+              {
+                "feature": "energy_total_r2_std",
+                "operator": ">",
+                "threshold": 0.11954132840037346
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": ">",
+                "threshold": 84.5
+              },
+              {
+                "feature": "offGround_r1_minimumAboveGround",
+                "operator": "<=",
+                "threshold": 1.349238395690918
+              },
+              {
+                "feature": "offGround_r1_heightVariance",
+                "operator": "<=",
+                "threshold": 0.016323519870638847
+              },
+              {
+                "feature": "distribution_heightMiddleHalfFraction",
+                "operator": "<=",
+                "threshold": 0.47727273404598236
+              },
+              {
+                "feature": "ground_countMap_r2_std",
+                "operator": ">",
+                "threshold": 2.129509925842285
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": ">",
+                "threshold": 84.5
+              },
+              {
+                "feature": "offGround_r1_minimumAboveGround",
+                "operator": "<=",
+                "threshold": 1.349238395690918
+              },
+              {
+                "feature": "offGround_r1_heightVariance",
+                "operator": ">",
+                "threshold": 0.016323519870638847
+              },
+              {
+                "feature": "offGround_r1_meanPillarHeight",
+                "operator": ">",
+                "threshold": 1.6777337789535522
+              },
+              {
+                "feature": "offGround_r2_meanPillarHeight",
+                "operator": "<=",
+                "threshold": 1.8047874569892883
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": "<=",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": ">",
+                "threshold": 84.5
+              },
+              {
+                "feature": "offGround_r1_minimumAboveGround",
+                "operator": ">",
+                "threshold": 1.349238395690918
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 24.5
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": "<=",
+                "threshold": 0.010908749885857105
+              },
+              {
+                "feature": "energy_fullCellRelief",
+                "operator": "<=",
+                "threshold": 0.022343439981341362
+              },
+              {
+                "feature": "energy_linearityRefinementDelta",
+                "operator": "<=",
+                "threshold": -0.42927947640419006
+              },
+              {
+                "feature": "ground_roughnessMap_r1_mean",
+                "operator": ">",
+                "threshold": 0.01196707971394062
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 24.5
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": "<=",
+                "threshold": 0.010908749885857105
+              },
+              {
+                "feature": "energy_fullCellRelief",
+                "operator": ">",
+                "threshold": 0.022343439981341362
+              },
+              {
+                "feature": "energy_linearity_r2_mean",
+                "operator": "<=",
+                "threshold": 0.1507367193698883
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_mean",
+                "operator": ">",
+                "threshold": 0.09135797247290611
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 24.5
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": "<=",
+                "threshold": 0.010908749885857105
+              },
+              {
+                "feature": "energy_fullCellRelief",
+                "operator": ">",
+                "threshold": 0.022343439981341362
+              },
+              {
+                "feature": "energy_linearity_r2_mean",
+                "operator": ">",
+                "threshold": 0.1507367193698883
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": "<=",
+                "threshold": 0.010480095166713
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 24.5
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": "<=",
+                "threshold": 0.010908749885857105
+              },
+              {
+                "feature": "energy_fullCellRelief",
+                "operator": ">",
+                "threshold": 0.022343439981341362
+              },
+              {
+                "feature": "energy_linearity_r2_mean",
+                "operator": ">",
+                "threshold": 0.1507367193698883
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": ">",
+                "threshold": 0.010480095166713
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 24.5
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": ">",
+                "threshold": 0.010908749885857105
+              },
+              {
+                "feature": "distribution_radialKurtosis",
+                "operator": "<=",
+                "threshold": 1.4765607118606567
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": "<=",
+                "threshold": 0.015525284688919783
+              },
+              {
+                "feature": "energy_heightStepMeters_r1_mean",
+                "operator": ">",
+                "threshold": 0.02943560481071472
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 24.5
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": ">",
+                "threshold": 0.010908749885857105
+              },
+              {
+                "feature": "distribution_radialKurtosis",
+                "operator": "<=",
+                "threshold": 1.4765607118606567
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": ">",
+                "threshold": 0.015525284688919783
+              },
+              {
+                "feature": "energy_total_r2_mean",
+                "operator": "<=",
+                "threshold": 0.275935560464859
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 24.5
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": ">",
+                "threshold": 0.010908749885857105
+              },
+              {
+                "feature": "distribution_radialKurtosis",
+                "operator": "<=",
+                "threshold": 1.4765607118606567
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": ">",
+                "threshold": 0.015525284688919783
+              },
+              {
+                "feature": "energy_total_r2_mean",
+                "operator": ">",
+                "threshold": 0.275935560464859
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 24.5
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": ">",
+                "threshold": 0.010908749885857105
+              },
+              {
+                "feature": "distribution_radialKurtosis",
+                "operator": ">",
+                "threshold": 1.4765607118606567
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 162.5
+              },
+              {
+                "feature": "distribution_heightKurtosis",
+                "operator": "<=",
+                "threshold": 1.986234188079834
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": "<=",
+                "threshold": 24.5
+              },
+              {
+                "feature": "ground_roughnessMap_r2_mean",
+                "operator": ">",
+                "threshold": 0.010908749885857105
+              },
+              {
+                "feature": "distribution_radialKurtosis",
+                "operator": ">",
+                "threshold": 1.4765607118606567
+              },
+              {
+                "feature": "offGround_r2_countSum",
+                "operator": "<=",
+                "threshold": 162.5
+              },
+              {
+                "feature": "distribution_heightKurtosis",
+                "operator": ">",
+                "threshold": 1.986234188079834
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": ">",
+                "threshold": 24.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_std",
+                "operator": "<=",
+                "threshold": 0.016096459701657295
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": "<=",
+                "threshold": 0.0047773150727152824
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": ">",
+                "threshold": 24.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_std",
+                "operator": "<=",
+                "threshold": 0.016096459701657295
+              },
+              {
+                "feature": "ground_detrendedHeightMap",
+                "operator": ">",
+                "threshold": 0.0047773150727152824
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": ">",
+                "threshold": 24.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_std",
+                "operator": ">",
+                "threshold": 0.016096459701657295
+              },
+              {
+                "feature": "energy_totalBase_r2_mean",
+                "operator": "<=",
+                "threshold": 0.5439608693122864
+              },
+              {
+                "feature": "offGround_r2_heightVariance",
+                "operator": "<=",
+                "threshold": 2.66512131690979
+              },
+              {
+                "feature": "offGround_r2_minimumAboveGround",
+                "operator": ">",
+                "threshold": 0.36026620864868164
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": ">",
+                "threshold": 24.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_std",
+                "operator": ">",
+                "threshold": 0.016096459701657295
+              },
+              {
+                "feature": "energy_totalBase_r2_mean",
+                "operator": "<=",
+                "threshold": 0.5439608693122864
+              },
+              {
+                "feature": "offGround_r2_heightVariance",
+                "operator": ">",
+                "threshold": 2.66512131690979
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": ">",
+                "threshold": 24.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_std",
+                "operator": ">",
+                "threshold": 0.016096459701657295
+              },
+              {
+                "feature": "energy_totalBase_r2_mean",
+                "operator": ">",
+                "threshold": 0.5439608693122864
+              },
+              {
+                "feature": "offGround_r2_meanAboveGround",
+                "operator": "<=",
+                "threshold": 2.2300976514816284
+              },
+              {
+                "feature": "distribution_heightMeanFraction",
+                "operator": ">",
+                "threshold": 0.43921923637390137
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "ground_roughnessMap_r2_contrast",
+                "operator": ">",
+                "threshold": 0.011306545231491327
+              },
+              {
+                "feature": "offGround_r1_countSum",
+                "operator": ">",
+                "threshold": 24.5
+              },
+              {
+                "feature": "energy_heightStepMeters_r2_std",
+                "operator": ">",
+                "threshold": 0.016096459701657295
+              },
+              {
+                "feature": "energy_totalBase_r2_mean",
+                "operator": ">",
+                "threshold": 0.5439608693122864
+              },
+              {
+                "feature": "offGround_r2_meanAboveGround",
+                "operator": ">",
+                "threshold": 2.2300976514816284
+              },
+              {
+                "feature": "offGround_r2_heightVariance",
+                "operator": "<=",
+                "threshold": 0.8136495351791382
+              }
+            ]
           }
         ]
       }
@@ -770,173 +1792,190 @@
     ]
   },
   "pole": {
-    "alternatives": [
+    "allOf": [
       {
-        "predicates": [
+        "alternatives": [
           {
-            "feature": "nonreflective_r1_middleVariance",
-            "operator": "<=",
-            "threshold": 0.020983925089240074
+            "predicates": [
+              {
+                "feature": "nonreflective_r1_middleVariance",
+                "operator": "<=",
+                "threshold": 0.020983925089240074
+              },
+              {
+                "feature": "pillarPointScore",
+                "operator": "<=",
+                "threshold": 0.7872233390808105
+              },
+              {
+                "feature": "nonreflective_ground_r1_meanClearance",
+                "operator": "<=",
+                "threshold": 2.537055253982544
+              },
+              {
+                "feature": "whole_r2_normalVerticalComponent",
+                "operator": "<=",
+                "threshold": 0.0010441999766044319
+              },
+              {
+                "feature": "nonreflective_r0_principalVarianceFraction",
+                "operator": "<=",
+                "threshold": 0.9905446469783783
+              }
+            ]
           },
           {
-            "feature": "pillarPointScore",
-            "operator": "<=",
-            "threshold": 0.7872233390808105
+            "predicates": [
+              {
+                "feature": "nonreflective_r1_middleVariance",
+                "operator": "<=",
+                "threshold": 0.020983925089240074
+              },
+              {
+                "feature": "pillarPointScore",
+                "operator": "<=",
+                "threshold": 0.7872233390808105
+              },
+              {
+                "feature": "nonreflective_ground_r1_meanClearance",
+                "operator": ">",
+                "threshold": 2.537055253982544
+              },
+              {
+                "feature": "nonreflective_ground_r1_meanClearance",
+                "operator": "<=",
+                "threshold": 3.024837374687195
+              },
+              {
+                "feature": "whole_r1_covYZ",
+                "operator": "<=",
+                "threshold": -0.03285701014101505
+              }
+            ]
           },
           {
-            "feature": "nonreflective_ground_r1_meanClearance",
-            "operator": "<=",
-            "threshold": 2.537055253982544
+            "predicates": [
+              {
+                "feature": "nonreflective_r1_middleVariance",
+                "operator": "<=",
+                "threshold": 0.020983925089240074
+              },
+              {
+                "feature": "pillarPointScore",
+                "operator": ">",
+                "threshold": 0.7872233390808105
+              },
+              {
+                "feature": "whole_r0_count",
+                "operator": ">",
+                "threshold": 7.5
+              },
+              {
+                "feature": "whole_r0_scattering",
+                "operator": "<=",
+                "threshold": 0.003300294978544116
+              },
+              {
+                "feature": "whole_r0_covXY",
+                "operator": ">",
+                "threshold": -0.001445784990210086
+              }
+            ]
           },
           {
-            "feature": "whole_r2_normalVerticalComponent",
-            "operator": "<=",
-            "threshold": 0.0010441999766044319
+            "predicates": [
+              {
+                "feature": "nonreflective_r1_middleVariance",
+                "operator": ">",
+                "threshold": 0.020983925089240074
+              },
+              {
+                "feature": "nonreflective_r2_middleVariance",
+                "operator": "<=",
+                "threshold": 0.07013409957289696
+              },
+              {
+                "feature": "nonreflective_r0_principalVerticalComponent",
+                "operator": "<=",
+                "threshold": 0.9997866153717041
+              },
+              {
+                "feature": "nonreflective_r2_middleVariance",
+                "operator": ">",
+                "threshold": 0.07003644108772278
+              }
+            ]
           },
           {
-            "feature": "nonreflective_r0_principalVarianceFraction",
-            "operator": "<=",
-            "threshold": 0.9905446469783783
+            "predicates": [
+              {
+                "feature": "nonreflective_r1_middleVariance",
+                "operator": ">",
+                "threshold": 0.020983925089240074
+              },
+              {
+                "feature": "nonreflective_r2_middleVariance",
+                "operator": "<=",
+                "threshold": 0.07013409957289696
+              },
+              {
+                "feature": "nonreflective_r0_principalVerticalComponent",
+                "operator": ">",
+                "threshold": 0.9997866153717041
+              },
+              {
+                "feature": "whole_r2_varYY",
+                "operator": "<=",
+                "threshold": 0.025486474856734276
+              },
+              {
+                "feature": "pillarPointScore",
+                "operator": ">",
+                "threshold": 0.6833333373069763
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "nonreflective_r1_middleVariance",
+                "operator": ">",
+                "threshold": 0.020983925089240074
+              },
+              {
+                "feature": "nonreflective_r2_middleVariance",
+                "operator": ">",
+                "threshold": 0.07013409957289696
+              },
+              {
+                "feature": "nonreflective_r1_middleVariance",
+                "operator": "<=",
+                "threshold": 0.02389613538980484
+              },
+              {
+                "feature": "nonreflective_r0_covYZ",
+                "operator": "<=",
+                "threshold": -0.0299023799598217
+              },
+              {
+                "feature": "whole_r2_largestVariance",
+                "operator": "<=",
+                "threshold": 2.0634987354278564
+              }
+            ]
           }
         ]
       },
       {
-        "predicates": [
+        "alternatives": [
           {
-            "feature": "nonreflective_r1_middleVariance",
-            "operator": "<=",
-            "threshold": 0.020983925089240074
-          },
-          {
-            "feature": "pillarPointScore",
-            "operator": "<=",
-            "threshold": 0.7872233390808105
-          },
-          {
-            "feature": "nonreflective_ground_r1_meanClearance",
-            "operator": ">",
-            "threshold": 2.537055253982544
-          },
-          {
-            "feature": "nonreflective_ground_r1_meanClearance",
-            "operator": "<=",
-            "threshold": 3.024837374687195
-          },
-          {
-            "feature": "whole_r1_covYZ",
-            "operator": "<=",
-            "threshold": -0.03285701014101505
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "nonreflective_r1_middleVariance",
-            "operator": "<=",
-            "threshold": 0.020983925089240074
-          },
-          {
-            "feature": "pillarPointScore",
-            "operator": ">",
-            "threshold": 0.7872233390808105
-          },
-          {
-            "feature": "whole_r0_count",
-            "operator": ">",
-            "threshold": 7.5
-          },
-          {
-            "feature": "whole_r0_scattering",
-            "operator": "<=",
-            "threshold": 0.003300294978544116
-          },
-          {
-            "feature": "whole_r0_covXY",
-            "operator": ">",
-            "threshold": -0.001445784990210086
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "nonreflective_r1_middleVariance",
-            "operator": ">",
-            "threshold": 0.020983925089240074
-          },
-          {
-            "feature": "nonreflective_r2_middleVariance",
-            "operator": "<=",
-            "threshold": 0.07013409957289696
-          },
-          {
-            "feature": "nonreflective_r0_principalVerticalComponent",
-            "operator": "<=",
-            "threshold": 0.9997866153717041
-          },
-          {
-            "feature": "nonreflective_r2_middleVariance",
-            "operator": ">",
-            "threshold": 0.07003644108772278
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "nonreflective_r1_middleVariance",
-            "operator": ">",
-            "threshold": 0.020983925089240074
-          },
-          {
-            "feature": "nonreflective_r2_middleVariance",
-            "operator": "<=",
-            "threshold": 0.07013409957289696
-          },
-          {
-            "feature": "nonreflective_r0_principalVerticalComponent",
-            "operator": ">",
-            "threshold": 0.9997866153717041
-          },
-          {
-            "feature": "whole_r2_varYY",
-            "operator": "<=",
-            "threshold": 0.025486474856734276
-          },
-          {
-            "feature": "pillarPointScore",
-            "operator": ">",
-            "threshold": 0.6833333373069763
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "nonreflective_r1_middleVariance",
-            "operator": ">",
-            "threshold": 0.020983925089240074
-          },
-          {
-            "feature": "nonreflective_r2_middleVariance",
-            "operator": ">",
-            "threshold": 0.07013409957289696
-          },
-          {
-            "feature": "nonreflective_r1_middleVariance",
-            "operator": "<=",
-            "threshold": 0.02389613538980484
-          },
-          {
-            "feature": "nonreflective_r0_covYZ",
-            "operator": "<=",
-            "threshold": -0.0299023799598217
-          },
-          {
-            "feature": "whole_r2_largestVariance",
-            "operator": "<=",
-            "threshold": 2.0634987354278564
+            "predicates": [
+              {
+                "feature": "population_r7_verticalResidualVariance",
+                "operator": "<=",
+                "threshold": 5.47113265
+              }
+            ]
           }
         ]
       }

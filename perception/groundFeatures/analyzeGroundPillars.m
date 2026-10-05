@@ -66,6 +66,9 @@ function coarseGround = analyzeGroundPillars(groundContext, groundCfg, coarseCfg
     coarseGround.energyMaps = energyMaps;
     if isfield(groundCfg,'collectPillarDistributionShape') && groundCfg.collectPillarDistributionShape
         coarseGround.distributionShape=aggregatePillarDistributionShape(groundContext.groundPoints,cellRows);
+        coarseGround.populationStatistics=aggregatePillarStatistics( ...
+            groundContext.groundPoints,cellRows,struct(), ...
+            isfield(curbCfg,'useNativeKernels') && curbCfg.useNativeKernels);
     end
     coarseGround.initialRoadResult = initialRoad;
     coarseGround.roadResult = road;

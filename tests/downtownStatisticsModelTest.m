@@ -10,7 +10,7 @@ classdef downtownStatisticsModelTest < matlab.unittest.TestCase
             balanced=perceptionConfig('Downtown');
             strict=perceptionConfig('Downtown','offline','strictPrecision');
             testCase.verifyTrue(balanced.groundFeatures.collectPillarDistributionShape);
-            testCase.verifyTrue(isfield(balanced.downtownCandidates.precisionFilter.rules.pole,'alternatives'));
+            testCase.verifyTrue(isfield(balanced.downtownCandidates.precisionFilter.rules.pole,'allOf'));
             testCase.verifyFalse(isfield(strict.downtownCandidates.precisionFilter.rules.pole,'alternatives'));
             testCase.verifyEqual(balanced.voxel.voxelSize,strict.voxel.voxelSize);
             testCase.verifyEqual(pillarGridExtent(balanced.voxel),pillarGridExtent(strict.voxel));

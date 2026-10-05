@@ -12,6 +12,10 @@ function [features,names,ids]=measureDowntownPillarStatistics(ground,offGround,s
         [context,contextNames]=curbOffGroundContext(ground,offGround,ids);
         features=[features,context];names=[names,contextNames];
         [features,names]=appendShape(features,names,ids,ground);
+        if isfield(ground,'populationStatistics')
+            [population,columns]=measurePillarMomentContext(ground.populationStatistics,size(ground.curbCellMask),ids);
+            features=[features,population];names=[names,"population_"+columns];
+        end
         return;
     end
     % The common structural descriptor requires no Hough line or point fit.
@@ -24,6 +28,10 @@ function [features,names,ids]=measureDowntownPillarStatistics(ground,offGround,s
     [context,contextNames]=measureDowntownDistributionContext(maps,ids);
     features=[features,context];names=[names,contextNames];
     [features,names]=appendShape(features,names,ids,maps);
+    if isfield(maps,'distributionShape')
+        [population,columns]=measurePillarMomentContext(maps.statistics,maps.mapSize,ids);
+        features=[features,population];names=[names,"population_"+columns];
+    end
     features(~isfinite(features))=0;
 end
 

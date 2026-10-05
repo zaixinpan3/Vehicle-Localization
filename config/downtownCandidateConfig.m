@@ -1,6 +1,8 @@
 function cfg=downtownCandidateConfig(spacing,candidatePolicy)
 % downtownCandidateConfig: Whole-pillar statistical candidate operating points.
 % Downtown's default balances precision with buffered calibration recall.
+% Curb/pole intersect baseline distributions with coverage-checked vetoes.
+% Population CDF and count-weighted covariance descriptors support tuning.
 % Legacy 0.6 m classifiers remain available for explicit configurations only.
     if nargin<2,candidatePolicy="precision";end
     candidatePolicy=string(candidatePolicy);
