@@ -1667,157 +1667,6 @@
       }
     ]
   },
-  "facade": {
-    "alternatives": [
-      {
-        "predicates": [
-          {
-            "feature": "whole_r2_varZZ",
-            "operator": ">",
-            "threshold": 0.4087492972612381
-          },
-          {
-            "feature": "whole_r2_middleVariance",
-            "operator": ">",
-            "threshold": 0.06411665305495262
-          },
-          {
-            "feature": "nonreflective_r2_scattering",
-            "operator": "<=",
-            "threshold": 0.0867498479783535
-          },
-          {
-            "feature": "nonreflective_r2_scattering",
-            "operator": "<=",
-            "threshold": 0.02170476969331503
-          },
-          {
-            "feature": "nonreflective_r1_count",
-            "operator": ">",
-            "threshold": 20.5
-          },
-          {
-            "feature": "reflective_fraction",
-            "operator": "<=",
-            "threshold": 0.0807291641831398
-          },
-          {
-            "feature": "whole_r1_varZZ",
-            "operator": ">",
-            "threshold": 0.975589394569397
-          },
-          {
-            "feature": "nonreflective_r2_varXX",
-            "operator": "<=",
-            "threshold": 0.1254609227180481
-          },
-          {
-            "feature": "nonreflective_r1_middleVariance",
-            "operator": ">",
-            "threshold": 0.0354198906570673
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "whole_r2_varZZ",
-            "operator": ">",
-            "threshold": 0.4087492972612381
-          },
-          {
-            "feature": "whole_r2_middleVariance",
-            "operator": ">",
-            "threshold": 0.06411665305495262
-          },
-          {
-            "feature": "nonreflective_r2_scattering",
-            "operator": "<=",
-            "threshold": 0.0867498479783535
-          },
-          {
-            "feature": "nonreflective_r2_scattering",
-            "operator": "<=",
-            "threshold": 0.02170476969331503
-          },
-          {
-            "feature": "nonreflective_r1_count",
-            "operator": ">",
-            "threshold": 20.5
-          },
-          {
-            "feature": "reflective_fraction",
-            "operator": "<=",
-            "threshold": 0.0807291641831398
-          },
-          {
-            "feature": "whole_r1_varZZ",
-            "operator": ">",
-            "threshold": 0.975589394569397
-          },
-          {
-            "feature": "nonreflective_r2_varXX",
-            "operator": ">",
-            "threshold": 0.1254609227180481
-          },
-          {
-            "feature": "nonreflective_r2_principalVerticalComponent",
-            "operator": ">",
-            "threshold": 0.9934518039226532
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "whole_r2_varZZ",
-            "operator": ">",
-            "threshold": 0.4087492972612381
-          },
-          {
-            "feature": "whole_r2_middleVariance",
-            "operator": ">",
-            "threshold": 0.06411665305495262
-          },
-          {
-            "feature": "nonreflective_r2_scattering",
-            "operator": "<=",
-            "threshold": 0.0867498479783535
-          },
-          {
-            "feature": "nonreflective_r2_scattering",
-            "operator": ">",
-            "threshold": 0.02170476969331503
-          },
-          {
-            "feature": "whole_r2_varXX",
-            "operator": ">",
-            "threshold": 0.13719990849494934
-          },
-          {
-            "feature": "nonreflective_r1_count",
-            "operator": ">",
-            "threshold": 45.5
-          },
-          {
-            "feature": "nonreflective_ground_r4_meanClearance",
-            "operator": ">",
-            "threshold": 3.646360993385315
-          },
-          {
-            "feature": "whole_r1_count",
-            "operator": ">",
-            "threshold": 63.5
-          },
-          {
-            "feature": "nonreflective_ground_r4_meanClearance",
-            "operator": ">",
-            "threshold": 3.978988528251648
-          }
-        ]
-      }
-    ]
-  },
   "pole": {
     "allOf": [
       {
@@ -2040,92 +1889,310 @@
       }
     ]
   },
+  "facade": {
+    "allOf": [
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "whole_r2_varZZ",
+                "operator": ">",
+                "threshold": 0.4087492972612381
+              },
+              {
+                "feature": "whole_r2_middleVariance",
+                "operator": ">",
+                "threshold": 0.06411665305495262
+              },
+              {
+                "feature": "nonreflective_r2_scattering",
+                "operator": "<=",
+                "threshold": 0.0867498479783535
+              },
+              {
+                "feature": "nonreflective_r2_scattering",
+                "operator": "<=",
+                "threshold": 0.02170476969331503
+              },
+              {
+                "feature": "nonreflective_r1_count",
+                "operator": ">",
+                "threshold": 20.5
+              },
+              {
+                "feature": "reflective_fraction",
+                "operator": "<=",
+                "threshold": 0.0807291641831398
+              },
+              {
+                "feature": "whole_r1_varZZ",
+                "operator": ">",
+                "threshold": 0.975589394569397
+              },
+              {
+                "feature": "nonreflective_r2_varXX",
+                "operator": "<=",
+                "threshold": 0.1254609227180481
+              },
+              {
+                "feature": "nonreflective_r1_middleVariance",
+                "operator": ">",
+                "threshold": 0.0354198906570673
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "whole_r2_varZZ",
+                "operator": ">",
+                "threshold": 0.4087492972612381
+              },
+              {
+                "feature": "whole_r2_middleVariance",
+                "operator": ">",
+                "threshold": 0.06411665305495262
+              },
+              {
+                "feature": "nonreflective_r2_scattering",
+                "operator": "<=",
+                "threshold": 0.0867498479783535
+              },
+              {
+                "feature": "nonreflective_r2_scattering",
+                "operator": "<=",
+                "threshold": 0.02170476969331503
+              },
+              {
+                "feature": "nonreflective_r1_count",
+                "operator": ">",
+                "threshold": 20.5
+              },
+              {
+                "feature": "reflective_fraction",
+                "operator": "<=",
+                "threshold": 0.0807291641831398
+              },
+              {
+                "feature": "whole_r1_varZZ",
+                "operator": ">",
+                "threshold": 0.975589394569397
+              },
+              {
+                "feature": "nonreflective_r2_varXX",
+                "operator": ">",
+                "threshold": 0.1254609227180481
+              },
+              {
+                "feature": "nonreflective_r2_principalVerticalComponent",
+                "operator": ">",
+                "threshold": 0.9934518039226532
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "whole_r2_varZZ",
+                "operator": ">",
+                "threshold": 0.4087492972612381
+              },
+              {
+                "feature": "whole_r2_middleVariance",
+                "operator": ">",
+                "threshold": 0.06411665305495262
+              },
+              {
+                "feature": "nonreflective_r2_scattering",
+                "operator": "<=",
+                "threshold": 0.0867498479783535
+              },
+              {
+                "feature": "nonreflective_r2_scattering",
+                "operator": ">",
+                "threshold": 0.02170476969331503
+              },
+              {
+                "feature": "whole_r2_varXX",
+                "operator": ">",
+                "threshold": 0.13719990849494934
+              },
+              {
+                "feature": "nonreflective_r1_count",
+                "operator": ">",
+                "threshold": 45.5
+              },
+              {
+                "feature": "nonreflective_ground_r4_meanClearance",
+                "operator": ">",
+                "threshold": 3.646360993385315
+              },
+              {
+                "feature": "whole_r1_count",
+                "operator": ">",
+                "threshold": 63.5
+              },
+              {
+                "feature": "nonreflective_ground_r4_meanClearance",
+                "operator": ">",
+                "threshold": 3.978988528251648
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_transverseMajorVariance",
+                "threshold": 0.9834504127502441,
+                "operator": "<="
+              },
+              {
+                "feature": "population_r7_count",
+                "threshold": 206.5,
+                "operator": "<="
+              },
+              {
+                "feature": "whole_r2_largestVariance",
+                "threshold": 10.311139583587646,
+                "operator": ">"
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_transverseMajorVariance",
+                "threshold": 0.9834504127502441,
+                "operator": "<="
+              },
+              {
+                "feature": "population_r7_count",
+                "threshold": 206.5,
+                "operator": ">"
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_transverseMajorVariance",
+                "threshold": 0.9834504127502441,
+                "operator": ">"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "trafficSign": {
-    "alternatives": [
+    "allOf": [
       {
-        "predicates": [
+        "alternatives": [
           {
-            "feature": "reflective_fraction",
-            "operator": ">",
-            "threshold": 0.16869919002056122
+            "predicates": [
+              {
+                "feature": "reflective_fraction",
+                "operator": ">",
+                "threshold": 0.16869919002056122
+              },
+              {
+                "feature": "reflective_ground_r4_minimumClearance",
+                "operator": ">",
+                "threshold": 1.3524913787841797
+              },
+              {
+                "feature": "nonreflective_fraction",
+                "operator": "<=",
+                "threshold": 0.6557112038135529
+              },
+              {
+                "feature": "nonreflective_fraction",
+                "operator": "<=",
+                "threshold": 0.3452381044626236
+              },
+              {
+                "feature": "reflective_fraction",
+                "operator": "<=",
+                "threshold": 0.7549999952316284
+              }
+            ]
           },
           {
-            "feature": "reflective_ground_r4_minimumClearance",
-            "operator": ">",
-            "threshold": 1.3524913787841797
+            "predicates": [
+              {
+                "feature": "reflective_fraction",
+                "operator": ">",
+                "threshold": 0.16869919002056122
+              },
+              {
+                "feature": "reflective_ground_r4_minimumClearance",
+                "operator": ">",
+                "threshold": 1.3524913787841797
+              },
+              {
+                "feature": "nonreflective_fraction",
+                "operator": "<=",
+                "threshold": 0.6557112038135529
+              },
+              {
+                "feature": "nonreflective_fraction",
+                "operator": "<=",
+                "threshold": 0.3452381044626236
+              },
+              {
+                "feature": "reflective_fraction",
+                "operator": ">",
+                "threshold": 0.7549999952316284
+              }
+            ]
           },
           {
-            "feature": "nonreflective_fraction",
-            "operator": "<=",
-            "threshold": 0.6557112038135529
-          },
-          {
-            "feature": "nonreflective_fraction",
-            "operator": "<=",
-            "threshold": 0.3452381044626236
-          },
-          {
-            "feature": "reflective_fraction",
-            "operator": "<=",
-            "threshold": 0.7549999952316284
+            "predicates": [
+              {
+                "feature": "reflective_fraction",
+                "operator": ">",
+                "threshold": 0.16869919002056122
+              },
+              {
+                "feature": "reflective_ground_r4_minimumClearance",
+                "operator": ">",
+                "threshold": 1.3524913787841797
+              },
+              {
+                "feature": "nonreflective_fraction",
+                "operator": "<=",
+                "threshold": 0.6557112038135529
+              },
+              {
+                "feature": "nonreflective_fraction",
+                "operator": ">",
+                "threshold": 0.3452381044626236
+              },
+              {
+                "feature": "nonreflective_r1_varYY",
+                "operator": "<=",
+                "threshold": 0.06078399159014225
+              }
+            ]
           }
         ]
       },
       {
-        "predicates": [
+        "alternatives": [
           {
-            "feature": "reflective_fraction",
-            "operator": ">",
-            "threshold": 0.16869919002056122
-          },
-          {
-            "feature": "reflective_ground_r4_minimumClearance",
-            "operator": ">",
-            "threshold": 1.3524913787841797
-          },
-          {
-            "feature": "nonreflective_fraction",
-            "operator": "<=",
-            "threshold": 0.6557112038135529
-          },
-          {
-            "feature": "nonreflective_fraction",
-            "operator": "<=",
-            "threshold": 0.3452381044626236
-          },
-          {
-            "feature": "reflective_fraction",
-            "operator": ">",
-            "threshold": 0.7549999952316284
-          }
-        ]
-      },
-      {
-        "predicates": [
-          {
-            "feature": "reflective_fraction",
-            "operator": ">",
-            "threshold": 0.16869919002056122
-          },
-          {
-            "feature": "reflective_ground_r4_minimumClearance",
-            "operator": ">",
-            "threshold": 1.3524913787841797
-          },
-          {
-            "feature": "nonreflective_fraction",
-            "operator": "<=",
-            "threshold": 0.6557112038135529
-          },
-          {
-            "feature": "nonreflective_fraction",
-            "operator": ">",
-            "threshold": 0.3452381044626236
-          },
-          {
-            "feature": "nonreflective_r1_varYY",
-            "operator": "<=",
-            "threshold": 0.06078399159014225
+            "predicates": [
+              {
+                "feature": "population_r2_count",
+                "threshold": 11.5,
+                "operator": ">"
+              }
+            ]
           }
         ]
       }

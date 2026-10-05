@@ -99,6 +99,11 @@ function interiorMask = buildCurbBoundedInteriorMask(curbCellMask, xyView, seedM
     [curbRows, curbCols] = find(logical(curbCellMask));
     lower = yCenters(curbRows) < referenceY;
     upper = yCenters(curbRows) > referenceY;
+    % A corridor requires observations on both sides of the seed centerline.
+    % Empty logical indexing can produce a 0-by-0 accumarray input.
+    if ~any(lower) || ~any(upper)
+        return;
+    end
     lowerRowsByCol = accumarray(curbCols(lower),curbRows(lower),[numCols 1],@max,NaN);
     upperRowsByCol = accumarray(curbCols(upper),curbRows(upper),[numCols 1],@min,NaN);
 
