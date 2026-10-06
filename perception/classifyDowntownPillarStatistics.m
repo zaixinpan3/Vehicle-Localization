@@ -20,6 +20,7 @@ function [ground,offGround]=classifyDowntownPillarStatistics(ground,offGround,na
     end
     if cfg.spacing<.6 && any(ismember(names,["pole","facade"]))
         occupied=offGround.columnMaps.occupiedMask;
+        gate=[];
         if any(names=="pole") && isfield(cfg,'poleDistributionGate') && cfg.poleDistributionGate.enabled
             gate=filterDowntownPoleDistribution(offGround.columnMaps,cfg.poleDistributionGate);
             offGround.poleCellMask=offGround.poleCellMask & gate;
@@ -29,6 +30,12 @@ function [ground,offGround]=classifyDowntownPillarStatistics(ground,offGround,na
             if name=="facade",halo=cfg.facadeHaloMeters;end
             radius=ceil(halo/cfg.spacing);
             mask=imdilate(offGround.(name+"CellMask"),ones(2*radius+1)) & occupied;
+            if name=="pole" && ~isempty(gate) && ...
+                    isfield(cfg.poleDistributionGate,'requireHaloSupport') && cfg.poleDistributionGate.requireHaloSupport
+                % A neighbor may propose a member, but cannot supply its
+                % missing distribution evidence after seed filtering.
+                mask=mask & gate;
+            end
             offGround.(name+"CellMask")=mask;
             offGround.(name+"Probability")=single(mask.*max(.5,double(offGround.(name+"Probability"))));
         end

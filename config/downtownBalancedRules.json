@@ -2087,6 +2087,28 @@
             ]
           }
         ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_horizontalMajorVariance",
+                "operator": ">",
+                "threshold": 0.88
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_withinVerticalVariance",
+                "operator": ">",
+                "threshold": 0.9
+              }
+            ]
+          }
+        ]
       }
     ]
   },

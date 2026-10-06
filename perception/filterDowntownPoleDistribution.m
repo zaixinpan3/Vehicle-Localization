@@ -3,8 +3,8 @@ function mask=filterDowntownPoleDistribution(maps,cfg)
 % Merge all members of neighboring pillars using population sufficient
 % statistics. No point subset, height slice, fit or point neighborhood is used.
 % Radial variance is the horizontal residual after linear dependence on Z;
-% its threshold has units of square meters. The result gates seed pillars,
-% before a small statistical candidate halo preserves sparse pole members.
+% its threshold has units of square meters. The caller gates seeds and may
+% also require halo members to retain their own pooled distribution support.
     stats=maps.statistics;ids=double(stats.pillarIndices);dims=maps.mapSize;
     mask=false(dims);
     if isempty(ids),return;end
