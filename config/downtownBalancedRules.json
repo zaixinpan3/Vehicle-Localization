@@ -2278,6 +2278,202 @@
             ]
           }
         ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "whole_r2_linearity",
+                "operator": "<=",
+                "threshold": 0.985
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "whole_r2_principalVerticalComponent",
+                "operator": "<=",
+                "threshold": 0.99
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_withinVerticalFraction",
+                "operator": ">=",
+                "threshold": 0.15
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "distribution_heightMaximumGapFraction",
+                "operator": "<=",
+                "threshold": 0.5
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "population_r2_transverseAnisotropy",
+                "threshold": 0.2098906859755516,
+                "operator": "<="
+              },
+              {
+                "feature": "whole_r1_scattering",
+                "threshold": 0.009152459912002087,
+                "operator": "<="
+              },
+              {
+                "feature": "population_r7_cells",
+                "threshold": 149.5,
+                "operator": "<="
+              },
+              {
+                "feature": "population_r1_withinVerticalFraction",
+                "threshold": 0.052525199949741364,
+                "operator": ">"
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r2_transverseAnisotropy",
+                "threshold": 0.2098906859755516,
+                "operator": "<="
+              },
+              {
+                "feature": "whole_r1_scattering",
+                "threshold": 0.009152459912002087,
+                "operator": ">"
+              },
+              {
+                "feature": "distribution_heightSkewness",
+                "threshold": 0.34471386671066284,
+                "operator": "<="
+              },
+              {
+                "feature": "whole_r0_normalVerticalComponent",
+                "threshold": 0.37244510650634766,
+                "operator": "<="
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r2_transverseAnisotropy",
+                "threshold": 0.2098906859755516,
+                "operator": "<="
+              },
+              {
+                "feature": "whole_r1_scattering",
+                "threshold": 0.009152459912002087,
+                "operator": ">"
+              },
+              {
+                "feature": "distribution_heightSkewness",
+                "threshold": 0.34471386671066284,
+                "operator": ">"
+              },
+              {
+                "feature": "whole_r1_middleVariance",
+                "threshold": 0.06380347535014153,
+                "operator": "<="
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r2_transverseAnisotropy",
+                "threshold": 0.2098906859755516,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r4_transverseAnisotropy",
+                "threshold": 0.0422088447958231,
+                "operator": "<="
+              },
+              {
+                "feature": "population_r7_withinVerticalVariance",
+                "threshold": 0.9148119986057281,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r7_transverseAnisotropy",
+                "threshold": 0.2036794349551201,
+                "operator": ">"
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r2_transverseAnisotropy",
+                "threshold": 0.2098906859755516,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r4_transverseAnisotropy",
+                "threshold": 0.0422088447958231,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r4_transverseVariance",
+                "threshold": 0.11379996687173843,
+                "operator": ">"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "height",
+                "operator": ">=",
+                "threshold": 0.3
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r2_transverseAnisotropy",
+                "operator": ">=",
+                "threshold": 0.7
+              },
+              {
+                "feature": "whole_r2_scattering",
+                "operator": "<=",
+                "threshold": 0.01
+              },
+              {
+                "feature": "whole_r2_normalVerticalComponent",
+                "operator": "<=",
+                "threshold": 0.2
+              },
+              {
+                "feature": "whole_r2_planarity",
+                "operator": ">=",
+                "threshold": 0.005
+              }
+            ]
+          }
+        ]
       }
     ]
   },

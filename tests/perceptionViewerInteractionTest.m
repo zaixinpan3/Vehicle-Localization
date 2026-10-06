@@ -62,8 +62,11 @@ classdef perceptionViewerInteractionTest < matlab.unittest.TestCase
                 framePerceptionView(fig,boxes{k});
                 testCase.verifyEqual(ax.CameraTarget,mean(boxes{k},2).','AbsTol',1e-12);
                 testCase.verifyEqual(ax.Projection,'orthographic');
-                testCase.verifyEqual(string(ax.Clipping),"off");
-                testCase.verifyTrue(ax.PCUserData.rotateFromCenter);
+                testCase.verifyEqual(string(ax.Clipping),"on");
+                testCase.verifyFalse(ax.PCUserData.rotateFromCenter);
+                testCase.verifyGreaterThanOrEqual(ax.XLim(2),max(xyz(:,1)));
+                testCase.verifyLessThanOrEqual(ax.XLim(1),min(xyz(:,1)));
+                testCase.verifyEqual(ax.PCUserData.dataLimits,[ax.XLim ax.YLim ax.ZLim]);
                 for angle=0:45:315
                     pointclouds.internal.pcui.rotateAxes(ax,45,10,ax.CameraTarget,'z','up');drawnow;
                     testCase.verifyTrue(all(isfinite([ax.CameraPosition ax.CameraTarget ax.CameraUpVector])));
@@ -80,6 +83,18 @@ classdef perceptionViewerInteractionTest < matlab.unittest.TestCase
                     testCase.verifyEqual(getappdata(cloud,'OriginalFramePointIndices'),indices);
                 end
             end
+        end
+        function refreshPreservesNativeAutomaticGeometry(testCase)
+            fig=makeViewer();cleanup=onCleanup(@() closeIfValid(fig));
+            cloud=findobj(fig,'Tag','pcviewer');ax=ancestor(cloud,'axes');
+            ax.PlotBoxAspectRatioMode='auto';
+            source=getappdata(fig,'PointTipSource');
+            frame=struct('x',[0;1;2],'y',[0;1;0],'z',[0;2;3]);
+            rotate3d(fig,'on');
+            updatePerceptionDisplay(fig,frame,source.featureMasks,source.featureNames,8,12);
+            testCase.verifyEqual(ax.PlotBoxAspectRatioMode,'auto');
+            testCase.verifyEqual(string(rotate3d(fig).Enable),"on");
+            testCase.verifyEqual(cloud.PointCloud.Location,[frame.x frame.y frame.z]);
         end
         function pointTipsPrintSourceIndexAfterFiniteFiltering(testCase)
             fig=figure('Visible','off');cleanup=onCleanup(@() closeIfValid(fig));ax=axes(fig);

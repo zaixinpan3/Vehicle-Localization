@@ -55,5 +55,16 @@ x=[x,max(0,min(eig(matrix)))];names=[names,"whole_r0_smallestVariance"];
 end
 function rule=facadeSupportRule
 cfg=downtownCandidateConfig(.3);groups=cfg.precisionFilter.rules.facade.allOf;
-if iscell(groups),rule=groups{end};else,rule=groups(end);end
+rule=[];
+for k=1:numel(groups)
+    if iscell(groups),group=groups{k};else,group=groups(k);end
+    descriptors=strings(1,0);
+    for alternative=reshape(group.alternatives,1,[])
+        descriptors=[descriptors,string({alternative.predicates.feature})]; %#ok<AGROW>
+    end
+    if all(ismember(["population_r7_cells","whole_r0_smallestVariance"],descriptors))
+        rule=group;break;
+    end
+end
+assert(~isempty(rule),'The distributed-clutter facade rule must exist.');
 end

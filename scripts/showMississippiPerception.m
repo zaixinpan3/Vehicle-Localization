@@ -78,7 +78,8 @@ function result = showMississippiPerception(frameIndex, matPath, mode, cfg)
         displayMasks.(featureNames(featureIndex))=selected(:,featureIndex);
     end
     updatePerceptionDisplay(fig,frame,displayMasks,featureNames,frameIndex,numFrames);
-    datacursormode(fig,'on');
+    % Native rotation is the default; the pcshow toolbar selects Data Tips.
+    datacursormode(fig,'off');rotate3d(fig,'on');
     detail = sprintf("All %d finite source points shown; gray = source cloud", nnz(finiteMask));
     titleLines = {sprintf("%s frame %d | %s: %.3f s", ...
         datasetName, frameIndex, mode, elapsedSeconds), detail};

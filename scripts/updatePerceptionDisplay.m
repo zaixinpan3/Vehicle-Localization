@@ -8,6 +8,11 @@ function updatePerceptionDisplay(fig, frame, masks, featureNames, frameIndex, to
     ax=ancestor(cloud,'axes');
     properties={'XLim','YLim','ZLim','DataAspectRatio','PlotBoxAspectRatio', ...
         'CameraPosition','CameraTarget','CameraUpVector','CameraViewAngle','Projection'};
+    modes={'XLimMode','YLimMode','ZLimMode','DataAspectRatioMode', ...
+        'PlotBoxAspectRatioMode','CameraPositionMode','CameraTargetMode', ...
+        'CameraUpVectorMode','CameraViewAngleMode'};
+    viewModes=struct();
+    for k=1:numel(modes),viewModes.(modes{k})=get(ax,modes{k});end
     viewState=struct();
     for k=1:numel(properties),viewState.(properties{k})=get(ax,properties{k});end
     set(ax,'XLimMode','manual','YLimMode','manual','ZLimMode','manual', ...
@@ -77,4 +82,6 @@ function updatePerceptionDisplay(fig, frame, masks, featureNames, frameIndex, to
     end
     counter.String=sprintf('Frame %d / %d',frameIndex,totalFrames);
     for k=1:numel(properties),set(ax,properties{k},viewState.(properties{k}));end
+    % A refresh must not freeze pcshow's automatic plot-box/camera geometry.
+    for k=1:numel(modes),set(ax,modes{k},viewModes.(modes{k}));end
 end
