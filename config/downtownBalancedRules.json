@@ -1852,6 +1852,45 @@
                 "threshold": 2.0634987354278564
               }
             ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "count",
+                "operator": ">=",
+                "threshold": 40
+              },
+              {
+                "feature": "height",
+                "operator": ">=",
+                "threshold": 1
+              },
+              {
+                "feature": "nonreflective_verticalVarianceFraction",
+                "operator": ">=",
+                "threshold": 0.97
+              },
+              {
+                "feature": "radialVariance",
+                "operator": "<=",
+                "threshold": 0.004
+              },
+              {
+                "feature": "distribution_heightMaximumGapFraction",
+                "operator": "<=",
+                "threshold": 0.1
+              },
+              {
+                "feature": "distribution_heightDecileEntropy",
+                "operator": ">=",
+                "threshold": 0.95
+              },
+              {
+                "feature": "population_r1_centerCountFraction",
+                "operator": ">=",
+                "threshold": 0.9
+              }
+            ]
           }
         ]
       },

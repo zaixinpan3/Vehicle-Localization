@@ -6,6 +6,7 @@ function cfg=downtownCandidateConfig(spacing,candidatePolicy)
 % pooled vertical support. Offline fitting counts pillars once;
 % Complete-height CDF gaps reject disconnected pole owners; conditional
 % height variance distinguishes curb discontinuities from smooth slopes.
+% Dense, continuous and dominant upright owners have a conservative pole alternative.
 % target-point coverage and buffered frame checks protect localization support.
 % Population CDF and count-weighted covariance descriptors support tuning.
 % Legacy 0.6 m classifiers remain available for explicit configurations only.
