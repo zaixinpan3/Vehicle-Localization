@@ -1,7 +1,9 @@
 classdef perceptionViewerInteractionTest < matlab.unittest.TestCase
 % perceptionViewerInteractionTest: Native pcshow identity and saved-view repair.
     methods (TestClassSetup)
-        function paths(~)
+        function paths(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            testCase.applyFixture(matlab.unittest.fixtures.PathFixture(root));
             setupVehicleLocalization;
         end
     end
@@ -49,6 +51,49 @@ classdef perceptionViewerInteractionTest < matlab.unittest.TestCase
             % Repeated restoration must bind one live menu, not accumulate it.
             restorePerceptionFigure(restored);
             verifyRotationMenu(testCase,restored);
+        end
+        function regionalViewsKeepOriginalPointsAndStableOrbit(testCase)
+            fig=makeViewer();cleanup=onCleanup(@() closeIfValid(fig));
+            cloud=findobj(fig,'Tag','pcviewer');ax=ancestor(cloud,'axes');
+            xyz=[cloud.XData(:),cloud.YData(:),cloud.ZData(:)];
+            indices=getappdata(cloud,'OriginalFramePointIndices');
+            boxes={[-5 5;-5 5;-2 5],[.8 1.2;.8 1.2;1.8 2.2]};
+            for k=1:numel(boxes)
+                framePerceptionView(fig,boxes{k});
+                testCase.verifyEqual(ax.CameraTarget,mean(boxes{k},2).','AbsTol',1e-12);
+                testCase.verifyEqual(ax.Projection,'orthographic');
+                testCase.verifyEqual(string(ax.Clipping),"off");
+                testCase.verifyTrue(ax.PCUserData.rotateFromCenter);
+                for angle=0:45:315
+                    pointclouds.internal.pcui.rotateAxes(ax,45,10,ax.CameraTarget,'z','up');drawnow;
+                    testCase.verifyTrue(all(isfinite([ax.CameraPosition ax.CameraTarget ax.CameraUpVector])));
+                    testCase.verifyEqual(ax.CameraTarget,mean(boxes{k},2).','AbsTol',1e-10);
+                    [a,b,c]=ndgrid(boxes{k}(1,:),boxes{k}(2,:),boxes{k}(3,:));
+                    offsets=[a(:),b(:),c(:)]-ax.CameraTarget;
+                    forward=ax.CameraTarget-ax.CameraPosition;distance=norm(forward);forward=forward/distance;
+                    right=cross(forward,ax.CameraUpVector);right=right/norm(right);
+                    up=cross(right,forward);height=distance*tand(ax.CameraViewAngle/2);
+                    pixels=getpixelposition(ax);width=height*pixels(3)/pixels(4);
+                    testCase.verifyLessThanOrEqual(max(abs(offsets*right.')),width+1e-10);
+                    testCase.verifyLessThanOrEqual(max(abs(offsets*up.')),height+1e-10);
+                    testCase.verifyEqual([cloud.XData(:),cloud.YData(:),cloud.ZData(:)],xyz);
+                    testCase.verifyEqual(getappdata(cloud,'OriginalFramePointIndices'),indices);
+                end
+            end
+        end
+        function pointTipsPrintSourceIndexAfterFiniteFiltering(testCase)
+            fig=figure('Visible','off');cleanup=onCleanup(@() closeIfValid(fig));ax=axes(fig);
+            frame=struct('x',[0 NaN;1 2],'y',[0 NaN;1 0],'z',[0 NaN;2 3]);
+            xyz=[frame.x(:),frame.y(:),frame.z(:)];finite=all(isfinite(xyz),2);
+            pcshow(xyz(finite,:),'Parent',ax);masks=struct('pole',logical([0 0;1 0]));
+            setappdata(fig,'PerceptionDataset',"Downtown");
+            updatePerceptionDisplay(fig,frame,masks,"pole",416,500);
+            cloud=findobj(fig,'Tag','pcviewer');
+            output=evalc("perceptionPointTip([],struct('Target',cloud,'DataIndex',3));");
+            testCase.verifyTrue(contains(output,'[Downtown frame 416] OriginalIndex=4'));
+            testCase.verifyTrue(contains(output,'row=2 col=2'));
+            testCase.verifyEqual(evalin('base','lastPickedPoint.originalIndex'),4);
+            testCase.verifyEqual(evalin('base','pickedPointIndices'),4);
         end
     end
 end

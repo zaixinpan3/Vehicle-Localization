@@ -1664,6 +1664,19 @@
             ]
           }
         ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "population_r4_verticalResidualFraction",
+                "operator": ">",
+                "threshold": 0.061
+              }
+            ]
+          }
+        ]
       }
     ]
   },
@@ -1882,6 +1895,28 @@
                 "feature": "whole_r0_count",
                 "threshold": 7.5,
                 "operator": ">"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "count",
+                "operator": "<=",
+                "threshold": 5
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "distribution_heightMaximumGapFraction",
+                "operator": "<=",
+                "threshold": 0.6
               }
             ]
           }

@@ -89,8 +89,7 @@ function result = showMississippiPerception(frameIndex, matPath, mode, cfg)
     xlabel(ax, "X (m)");
     ylabel(ax, "Y (m)");
     zlabel(ax, "Z (m)");
-    view(ax, -35, 55);
-    axis(ax, "tight");
+    framePerceptionView(fig);
     drawnow;
 
     metrics = struct("frameIndex", frameIndex, "numFrames", numFrames, ...

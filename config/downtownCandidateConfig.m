@@ -4,6 +4,8 @@ function cfg=downtownCandidateConfig(spacing,candidatePolicy)
 % Facade vetoes protect point coverage and require horizontal extent or
 % sustained within-pillar height variance. Pole halo members retain their
 % pooled vertical support. Offline fitting counts pillars once;
+% Complete-height CDF gaps reject disconnected pole owners; conditional
+% height variance distinguishes curb discontinuities from smooth slopes.
 % target-point coverage and buffered frame checks protect localization support.
 % Population CDF and count-weighted covariance descriptors support tuning.
 % Legacy 0.6 m classifiers remain available for explicit configurations only.
