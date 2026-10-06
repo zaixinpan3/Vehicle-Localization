@@ -7,6 +7,7 @@ function cfg=downtownCandidateConfig(spacing,candidatePolicy)
 % Complete-height CDF gaps reject disconnected pole owners; conditional
 % height variance distinguishes curb discontinuities from smooth slopes.
 % Dense, continuous and dominant upright owners have a conservative pole alternative.
+% Facade vetoes distinguish distributed clutter from coherent sparse wall support.
 % target-point coverage and buffered frame checks protect localization support.
 % Population CDF and count-weighted covariance descriptors support tuning.
 % Legacy 0.6 m classifiers remain available for explicit configurations only.

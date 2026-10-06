@@ -34,7 +34,18 @@ classdef downtownHaloSupportTest < matlab.unittest.TestCase
                 'meanXYZ',[.1 .1 0;.4 .1 2;.7 .1 4], ...
                 'covarianceXYZ',repmat([.001 0 .001 0 0 .01],3,1));
             p=perceptionConfig('Downtown');groups=p.downtownCandidates.precisionFilter.rules.facade.allOf;
-            if iscell(groups),veto=groups{end};else,veto=groups(end);end
+            veto=[];
+            for k=1:numel(groups)
+                if iscell(groups),group=groups{k};else,group=groups(k);end
+                descriptors=strings(1,0);
+                for alternative=reshape(group.alternatives,1,[])
+                    descriptors=[descriptors,string({alternative.predicates.feature})]; %#ok<AGROW>
+                end
+                if all(ismember(["population_r7_horizontalMajorVariance","population_r7_withinVerticalVariance"],descriptors))
+                    veto=group;break;
+                end
+            end
+            t.assertNotEmpty(veto);
             [x,n]=measurePillarMomentContext(stats,[1 3],[1;2;3]);
             t.verifyFalse(any(evaluatePillarDistributionRules(x,"population_"+n,veto)));
             % A narrow but genuinely tall wall keeps vertical support.

@@ -2183,6 +2183,101 @@
             ]
           }
         ]
+      },
+      {
+        "alternatives": [
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_cells",
+                "threshold": 114.5,
+                "operator": "<="
+              },
+              {
+                "feature": "whole_r0_smallestVariance",
+                "threshold": 0.008979290258139372,
+                "operator": "<="
+              },
+              {
+                "feature": "population_r7_effectiveCells",
+                "threshold": 72.59408569335938,
+                "operator": "<="
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_cells",
+                "threshold": 114.5,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r7_horizontalMinorVariance",
+                "threshold": 0.8458371162414551,
+                "operator": "<="
+              },
+              {
+                "feature": "population_r7_effectiveCells",
+                "threshold": 90.61526489257812,
+                "operator": "<="
+              },
+              {
+                "feature": "population_r1_verticalResidualVariance",
+                "threshold": 0.10910581424832344,
+                "operator": ">"
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_cells",
+                "threshold": 114.5,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r7_horizontalMinorVariance",
+                "threshold": 0.8458371162414551,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r7_centerCountFraction",
+                "threshold": 0.003501754952594638,
+                "operator": "<="
+              },
+              {
+                "feature": "population_r7_verticalResidualVariance",
+                "threshold": 2.8541252613067627,
+                "operator": ">"
+              }
+            ]
+          },
+          {
+            "predicates": [
+              {
+                "feature": "population_r7_cells",
+                "threshold": 114.5,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r7_horizontalMinorVariance",
+                "threshold": 0.8458371162414551,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r7_centerCountFraction",
+                "threshold": 0.003501754952594638,
+                "operator": ">"
+              },
+              {
+                "feature": "population_r4_effectiveCells",
+                "threshold": 40.668701171875,
+                "operator": "<="
+              }
+            ]
+          }
+        ]
       }
     ]
   },
