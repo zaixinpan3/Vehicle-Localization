@@ -352,6 +352,17 @@ calibrated inverse covariance, and the earlier finding that overlap optima
 follow view-dependent sampling density along curbs still applies.
 Registration remains the default channel.
 
+Both losses of lock started at a coarse sign pillar flagged by one or two
+marginally bright returns, all of whose nonground returns (the pole) entered
+the sign Gaussian. Coarse sign moments are now intensity-responsibility
+weighted with a minimum soft sign mass (see the top-level README). With them,
+on the same inputs and map, the exact overlap channel without GNSS gives
+16.3 cm / 0.820 deg (nominal) and 55.3 cm / 0.571 deg (fixed scale), and with
+GNSS 9.9 / 0.691 and 9.4 cm / 0.205 deg. Registration gives 10.2 and 5.7 cm
+without GNSS (nominal, fixed scale) and 7.8 and 6.0 cm with GNSS, with heading
+RMSE 0.11--0.14 deg. Source horizons hold 1.86 signs instead of 2.90; the burst
+frames publish no sign.
+
 ## Historical LiDAR-only motion-aided baseline
 
 The independent historical comparison entry points below are not selectable

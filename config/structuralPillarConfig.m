@@ -13,6 +13,9 @@ function cfg = structuralPillarConfig(spacing)
 
     % Traffic-sign channel: maximum return intensity per whole pillar
     cfg.trafficSignIntensityThreshold = 1800;
+    % Sign moments weight each return by the logistic intensity posterior
+    % 1/(1+exp(-(I-threshold)/softness)) (measureSignResponsibilityMoments).
+    cfg.trafficSignIntensitySoftness = 100;
 
     % Facade line detection by oriented weighted Hough voting on the pillar map
     cfg.thetaResolutionDeg = 5;

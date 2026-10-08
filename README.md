@@ -110,8 +110,16 @@ instead. The low-level standalone Gaussian builder still receives its internal
 Offline facades require robust vertical planes and per-point distance tests.
 Sign pillars use maximum intensity evidence; fine sign points must individually
 exceed `trafficSignIntensityThreshold` (1600 in the recorded sensor's raw units).
-Coarse sign XYZ moments include all nonground members of each candidate pillar.
-These are reflective sign candidates, not sign-type recognition.
+Coarse sign XYZ moments weight every nonground member of a candidate pillar by
+its sign posterior given intensity, `r(I)=1/(1+exp(-(I-threshold)/softness))`
+(`trafficSignIntensitySoftness`, 100 raw units), in `measureSignResponsibilityMoments`.
+This is the M-step of a two-class mixture whose classes differ in intensity
+only: no return is classified, but the dim post, foliage and clutter in a sign
+pillar barely move the sign moments. The component count is the soft sign mass,
+the expected number of sign returns. A coarse sign component needs
+`trafficSignMinimumMass` (3), so a pillar flagged by one or two marginally bright
+returns publishes no sign. The Downtown statistics path still uses all nonground
+members. These are reflective sign candidates, not sign-type recognition.
 
 `featureMapBuildConfig().featureNames` is passed directly to perception and map
 collection, with no additional facade switch. To select all Downtown channels,

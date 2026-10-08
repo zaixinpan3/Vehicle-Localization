@@ -73,6 +73,11 @@ function cfg = validateConfig(cfg)
     end
     assert(isscalar(cfg.minimumConditionalHeightVariance) && ...
         isfinite(cfg.minimumConditionalHeightVariance) && cfg.minimumConditionalHeightVariance > 0);
+    if ~isfield(cfg, "trafficSignMinimumMass")
+        cfg.trafficSignMinimumMass = coarseSemanticProbabilityCloudConfig().trafficSignMinimumMass;
+    end
+    assert(isscalar(cfg.trafficSignMinimumMass) && isfinite(cfg.trafficSignMinimumMass) && ...
+        cfg.trafficSignMinimumMass >= 0, "trafficSignMinimumMass must be a finite nonnegative scalar.");
     requiredFields = ["xMin", "xMax", "yMin", "yMax", "resolution", ...
         "coordinateFrame", "semanticNames", "minimumSemanticProbability", ...
         "occupancySaturationPointCount", "minimumPointsPerComponent", ...
@@ -237,7 +242,11 @@ function components = aggregateComponents(observations, semanticName, semanticId
     sumProbability = accumarray( ...
         cellLinIdx, sourceCount .* evidenceProbability, ...
         [numCells, 1], @sum, 0);
-    validCell = find(countVector >= cfg.minimumPointsPerComponent);
+    % Sign counts are soft sign masses (expected sign returns), so the
+    % evidence gate applies to the pooled component, not to raw pillar returns.
+    minimumCount = cfg.minimumPointsPerComponent;
+    if semanticName == "trafficSign", minimumCount = max(minimumCount, cfg.trafficSignMinimumMass); end
+    validCell = find(countVector >= minimumCount);
     if isempty(validCell)
         return;
     end

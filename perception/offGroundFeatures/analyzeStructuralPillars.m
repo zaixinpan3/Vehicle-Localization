@@ -128,15 +128,27 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
         poleMask=candidates.candidateMask;
     end
     signMask=false(mapSize); signEvidence=zeros(mapSize);
+    maps.trafficSignMoments=maps.moments;
     if any(cloudCfg.semanticNames=="trafficSign") && isfield(stats,'intensity')
         maximum=stats.intensity.maximum;
         selected=isfinite(maximum) & maximum>cfg.trafficSignIntensityThreshold;
         signMask(ids(selected))=true;
         signEvidence(ids(selected))=max(0,1-cfg.trafficSignIntensityThreshold./maximum(selected));
+        if any(selected)
+            % The sign component keeps only the sign-like part of the pillar:
+            % intensity-responsibility moments, whose count is the soft sign mass.
+            softness=structuralPillarConfig(maps.dx).trafficSignIntensitySoftness;
+            if isfield(cfg,'trafficSignIntensitySoftness'),softness=cfg.trafficSignIntensitySoftness;end
+            signStats=measureSignResponsibilityMoments(pillars.points,pillars.pointPillarLinIdx, ...
+                double(pillars.pointAttributes.intensity),ids(selected),cfg.trafficSignIntensityThreshold,softness);
+            weighted=projectStatistics(signStats,prod(mapSize),cloudCfg);rows=double(signStats.pillarIndices);
+            for field=["count","mean","covariance","meanZ","heightCovariance"]
+                maps.trafficSignMoments.(field)(rows,:)=weighted.(field)(rows,:);
+            end
+        end
     end
     maps.trafficSignCellMask=signMask;
     maps.trafficSignEvidence=signEvidence;
-    maps.trafficSignMoments=maps.moments;
     floorProbability=cloudCfg.minimumSemanticProbability;
     poleEvidence=double(maps.pointScore).*(1-double(maps.lineScore));
     if validatedMode && isfield(maps,'poleValidation') && cfg.pole.probabilityEvidence=="validatedShaft"

@@ -22,23 +22,33 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             mapCfg=featureMapBuildConfig();
             testCase.verifyTrue(any(mapCfg.featureNames=="trafficSign"));
         end
-        function signGaussianRetainsNonreflectivePillarHeight(testCase)
-            [frame,cfg,expected,fineCfg]=signScene();
+        function singleBrightReturnPublishesNoCoarseSign(testCase)
+            [frame,cfg,~,fineCfg]=signScene();
             coarse=perceiveFrame(frame,cfg);
             fine=perceiveFrame(frame,fineCfg);
-            c=coarse.probabilityCloud.components;
             testCase.verifyFalse(isfield(coarse,'refinement'));
-            % Each product labels the one sign pillar of its own lattice.
+            % Each product still labels the one sign pillar of its own lattice.
             testCase.verifyNumElements(coarse.candidates.pillarIndices{1},1);
             testCase.verifyNumElements(fine.candidates.pillarIndices{1},1);
             testCase.verifyEqual(coarse.candidates.geometry.cellSize,[0.6 0.6]);
             testCase.verifyEqual(fine.candidates.geometry.cellSize,[0.3 0.3]);
-            testCase.verifyEqual(c.semanticName,"trafficSign");
-            testCase.verifyEqual(double(c.count),size(expected,1));
-            testCase.verifyEqual(c.meanXYZ,mean(expected,1),'AbsTol',1e-10);
-            testCase.verifyGreaterThan(c.covarianceXYZ(3,3),1);
+            % One bright return among four has soft sign mass r(1900)=0.73, below
+            % trafficSignMinimumMass: the coarse cloud publishes no sign Gaussian.
+            testCase.verifyEqual(coarse.probabilityCloud.components.numComponents,0);
             testCase.verifyEqual(nnz(fine.featureMasks.trafficSign),1);
             testCase.verifyGreaterThan(fine.refinement.trafficSign.numEvaluated,1);
+        end
+        function signGaussianFollowsTheReflectiveReturns(testCase)
+            [frame,cfg,panel,post]=panelSignScene();
+            coarse=perceiveFrame(frame,cfg);
+            c=coarse.probabilityCloud.components;
+            testCase.verifyEqual(c.semanticName,"trafficSign");
+            % The dim post sharing the pillar barely enters the sign moments.
+            mass=sum(1./(1+exp(-(2600-1800)/100)))*size(panel,1);
+            testCase.verifyEqual(double(c.count),round(mass));
+            testCase.verifyEqual(c.meanXYZ,mean(panel,1),'AbsTol',1e-6);
+            % Whole-pillar moments would put the sign 0.22 m from the panel.
+            testCase.verifyGreaterThan(norm(mean([panel;post],1)-mean(panel,1)),0.2);
         end
         function fineSignCandidatesHonorConfiguredIntensity(testCase)
             [frame,~,~,cfg]=signScene();
@@ -167,6 +177,19 @@ function [frame,cfg,expected,fineCfg]=signScene()
     cfg.frameCalibration.rotation=eye(3); cfg.frameCalibration.translation=[0 0 0];
     fineCfg=perceptionConfig("Mississippi","offline"); fineCfg.featureNames="trafficSign";
     fineCfg.frameCalibration=cfg.frameCalibration;
+end
+
+function [frame,cfg,panel,post]=panelSignScene()
+% A dim post and five reflective panel returns in one coarse pillar
+% (x in [9.7,10.3), y in [4.9,5.5)), on the ground of signScene.
+    [x,y]=meshgrid(-15:0.3:15,-10:0.3:10);
+    ground=[x(:),y(:),-1.44*ones(numel(x),1)];
+    post=[10.06 4.96 0.5;10.08 4.98 1.5;10.09 4.99 3.5;10.1 5.0 4.5];
+    panel=[10.22 5.25 2.0;10.24 5.30 2.1;10.25 5.35 2.2;10.26 5.40 2.3;10.27 5.45 2.4];
+    xyz=[ground;post;panel];intensity=zeros(size(xyz,1),1);intensity(end-4:end)=2600;
+    frame=struct('x',xyz(:,1),'y',xyz(:,2),'z',xyz(:,3),'intensity',intensity);
+    cfg=perceptionConfig(); cfg.featureNames="trafficSign";
+    cfg.frameCalibration.rotation=eye(3); cfg.frameCalibration.translation=[0 0 0];
 end
 
 function [points,offGround,n]=facadeScene()

@@ -44,6 +44,9 @@ function cfg = coarseSemanticProbabilityCloudConfig(voxelCfg)
     cfg.minimumSemanticProbability = 0.50;
     cfg.occupancySaturationPointCount = 6;
     cfg.minimumPointsPerComponent = 1;
+    % A traffic-sign component needs at least this soft sign mass, the expected
+    % number of sign returns (sum of intensity posteriors), not raw pillar returns.
+    cfg.trafficSignMinimumMass = 3;
     cfg.minCovarianceEigenvalue = 1.0e-2;
     cfg.maxCovarianceEigenvalue = 4.0;
     cfg.regularizationVariance = 1.0e-4;
