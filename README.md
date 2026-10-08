@@ -318,6 +318,17 @@ analyses do not imply mutually exclusive sensor operation. Its current
 zero-delay, sampled implementation has a
 [separate conditional common certificate and outage analysis](research/full_observer_20260916/design.md).
 
+Registration is the default LiDAR channel. The opt-in `data.lidarOverlap`
+channel instead injects the analytic SE(2) gradient of `-log` of the
+class-balanced `semanticGaussianOverlap` between each coarse source horizon
+and the map, evaluated at the observer prediction, with its central-difference
+curvature as information: no pose optimization, frozen correspondences or
+acceptance test. `overlapGradientConfig` holds its settings. On the 1169-frame
+MnCAV replay the exact overlap drifts along the curbs without GNSS; with a
+0.5 m kernel bandwidth and the fixed-scale gains the LiDAR-only position RMSE is
+8.3 cm, against 5.7 cm with registration. See the
+[channel description and measurements](localization/README.md#correspondence-free-overlap-gradient-channel).
+
 ## Configuration (`config/`)
 
 One config per stage. The geometric baseline is retained where experiments
@@ -343,6 +354,7 @@ are explicit:
 | `wheelSpeedObserverConfig` | `estimateWheelLongitudinalSpeed`, `prepareWheelMotionInputs` |
 | `improvedObserverConfig` | `observerAnalysisSupport.designImprovedObserverGains`, `runImprovedVehicleObserver` |
 | `fullObserverConfig` | `fullObserverSupport.designFullObserverGains`, `runFullLocalizationObserver` |
+| `overlapGradientConfig` | `lidarInjectionSupport.evaluateOverlapGradient`, `runFullLocalizationObserver` (`data.lidarOverlap.config`) |
 
 ## Quick start
 
@@ -597,6 +609,10 @@ known-tilt moments, rejection behavior, and recorded point fidelity.
 `distributionRegistrationTest` checks analytic derivatives, anisotropic covariance
 rotation, semantic mass invariance, known-pose recovery, map support units, empty
 inputs, and degeneracy. Existing observer and temporal-map tests remain in the suite.
+`overlapGradientChannelTest` checks the overlap gradient against finite
+differences of `-log` similarity, with and without smoothing, the curvature
+policies, mass invariance, gradient/residual equivalence, unavailable frames,
+input exclusivity and observer convergence without registration.
 `coarsePerceptionPerformanceTest` checks native/MATLAB equivalence, boundary
 cases, conservative ground propagation, compact-raster indexing, and omitted
 inverse lookups. Build the native kernels to execute its native-specific cases.

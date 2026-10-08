@@ -31,6 +31,10 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
 % the local information approximation with its initialization dependence.
 % Optional data.lidar.evaluateResidual(k,predictedPose) supplies residual-level
 % geometry at the post-baseline pose on each valid frame, overriding that model.
+% Optional data.lidarOverlap replaces registration: struct with map, sources
+% (frame-aligned source clouds in current body axes), optional valid and
+% config. Each available frame injects the gradient of -log of the balanced
+% semanticGaussianOverlap evaluated at the post-baseline prediction.
     h=data.highRate;t=h.time(:);n=numel(t);
     assert(n>=2 && all(isfinite(t)) && all(diff(t)>0), ...
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
@@ -50,6 +54,16 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     if onlineMatching
         assert(isa(data.lidarMatcher,'function_handle') && ~isfield(data,'lidar'), ...
             'VehicleLocalization:AmbiguousLidarInput','Supply a matcher or recorded LiDAR measurements, not both.');
+    end
+    overlapChannel=isfield(data,'lidarOverlap');
+    overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
+        'minimumCurvature',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3));
+    if overlapChannel
+        assert(~isfield(data,'lidar') && ~onlineMatching,'VehicleLocalization:AmbiguousLidarInput', ...
+            'Supply exactly one LiDAR channel: recorded measurements, a matcher or overlap sources.');
+        assert(~isfield(cfg.lidar,'errorCalibration'),'VehicleLocalization:OverlapCalibrationUnavailable', ...
+            'The overlap-gradient channel uses the geometric information filter; calibrated error moments are fitted to registration features.');
+        overlap=overlapSource(data.lidarOverlap,n);L.valid=overlap.valid;
     end
     matchingResults=cell(0,1);matchingSeeds=zeros(0,3);
     if onlineMatching,matchingResults=cell(n,1);matchingSeeds=zeros(n,3);end
@@ -114,14 +128,25 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         p=(eye(2)+dt*K)\(x([1,4])+dt*va(1:2)+dt*b);
         x=[p(1);va(1);va(3);p(2);va(2);va(4);yaw];
         baselineStates(k,:)=x.';
+        if L.valid(k) && overlapChannel
+            measurement=lidarInjectionSupport.evaluateOverlapGradient(overlap.map,overlap.sources{k},x([1,4,7]),overlap.config);
+            overlapDiagnostics.evaluated(k)=true;overlapDiagnostics.available(k)=measurement.available;
+            overlapDiagnostics.similarity(k)=measurement.similarity;overlapDiagnostics.seconds(k)=measurement.seconds;
+            overlapDiagnostics.minimumCurvature(k)=measurement.minimumCurvature;
+            overlapDiagnostics.gradient(k,:)=measurement.gradient.';
+            L.valid(k)=measurement.available;
+        end
         if L.valid(k)
-            measurement=struct('pose',L.values(k,:).','information',L.information(:,:,k));
-            if isfield(L,'evaluateResidual')
-                measurement=L.evaluateResidual(k,x([1,4,7]));
-                assert(isfield(measurement,'residual'),'VehicleLocalization:InvalidLidarResidual', ...
-                    'evaluateResidual must return a predicted-pose residual channel.');
-            elseif ~isempty(L.residualModels{k})
-                measurement=lidarInjectionSupport.evaluateLidarRegistrationResidual(L.residualModels{k},x([1,4,7]));
+            if ~overlapChannel
+                % The overlap gradient measurement was evaluated at this prediction above.
+                measurement=struct('pose',L.values(k,:).','information',L.information(:,:,k));
+                if isfield(L,'evaluateResidual')
+                    measurement=L.evaluateResidual(k,x([1,4,7]));
+                    assert(isfield(measurement,'residual'),'VehicleLocalization:InvalidLidarResidual', ...
+                        'evaluateResidual must return a predicted-pose residual channel.');
+                elseif ~isempty(L.residualModels{k})
+                    measurement=lidarInjectionSupport.evaluateLidarRegistrationResidual(L.residualModels{k},x([1,4,7]));
+                end
             end
             if all(isfinite(L.poseErrorVariance(k,:)))
                 measurement.poseErrorVariance=L.poseErrorVariance(k,:).';
@@ -179,6 +204,8 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'lidarValid',nnz(L.valid),'lidarInvalid',nnz(~L.valid)), ...
         'localizationUpdates',n-1,'virtualPoseUpdates',0,'integrationSubsteps',0, ...
         'nominalOutputRateHz',1/median(diff(t)),'referenceUsed',false, ...
+        'lidarChannel',channelName(onlineMatching,overlapChannel,isfield(data,'lidar')), ...
+        'lidarOverlap',overlapDiagnostics, ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
         'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. Continuous ISS is conditional and is not an automatic numerical or arbitrary-outage guarantee. Alignment remains offline.");
     if onlineMatching
@@ -238,6 +265,25 @@ function s=source(data,name,t,width)
         assert(validSpectrum, ...
             'VehicleLocalization:InvalidFullSource','Valid frames require finite symmetric information: PSD LiDAR, PD GNSS.');
     end
+end
+
+function o=overlapSource(o,n)
+    assert(isstruct(o) && isscalar(o) && all(isfield(o,{'map','sources'})) && iscell(o.sources) && ...
+        numel(o.sources)==n && isfield(o.map,'components'),'VehicleLocalization:InvalidOverlapSource', ...
+        'lidarOverlap requires a map cloud and one source-cloud cell per frame.');
+    o.sources=o.sources(:);
+    if ~isfield(o,'valid'),o.valid=~cellfun(@isempty,o.sources);end
+    assert(numel(o.valid)==n && all(ismember(o.valid,[0,1])),'VehicleLocalization:InvalidOverlapSource', ...
+        'lidarOverlap.valid must be one logical value per frame.');
+    o.valid=logical(o.valid(:)) & ~cellfun(@isempty,o.sources);
+    if ~isfield(o,'config'),o.config=overlapGradientConfig();end
+end
+
+function name=channelName(matcher,overlap,recorded)
+    name="none";
+    if recorded,name="recordedPoseOrResidual";end
+    if matcher,name="registrationMatcher";end
+    if overlap,name="overlapGradient";end
 end
 
 function x=wrap(x)

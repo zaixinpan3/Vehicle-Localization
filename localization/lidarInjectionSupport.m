@@ -103,9 +103,13 @@ classdef lidarInjectionSupport
         % computeLidarMatchedCorrection Continuous LiDAR injection and its discretization.
         % C=D\(G*T), xi=-F*D'*J'*W*r or S*(D\(qL-pose)); the continuous
         % correction is kappa*T*(P\(C'*xi)). P is a Lyapunov matrix, not covariance.
-        % Supply either pose/information or residual/jacobian/weights/linearizationPose.
-        % Residuals and physical pose Jacobians MUST be evaluated at POSE, with frozen
-        % associations; a final optimizer gradient is not the predicted-pose residual.
+        % Supply pose/information, residual/jacobian/weights/linearizationPose, or
+        % gradient/information/linearizationPose. Residuals and physical pose
+        % Jacobians MUST be evaluated at POSE, with frozen associations; a final
+        % optimizer gradient is not the predicted-pose residual. A gradient
+        % measurement is the pose gradient of a scalar cost at POSE with a PSD
+        % curvature (for example evaluateOverlapGradient); xi=-F*D'*gradient,
+        % restricted to the directions with positive information.
         % WEIGHTS is an N-vector of diagonal weights or an N-by-N PSD precision matrix.
         % Optional frameReliability and directionReliability lie in [0,1].
         % Continuous mode returns a state derivative. Discrete modes return a state
@@ -131,8 +135,20 @@ classdef lidarInjectionSupport
                 && rcond(T)>eps && isequal(size(G),[3,n]), ...
                 'VehicleLocalization:InvalidLidarMetric','Require SPD P, nonsingular fixed T and a 3-by-n pose Jacobian.');
             validateattributes(kappa,{'numeric'},{'real','finite','nonnegative','scalar'});
-            residualMode=isfield(measurement,'residual');
-            if residualMode
+            residualMode=isfield(measurement,'residual');gradientMode=isfield(measurement,'gradient');
+            unsupportedGradient=0;
+            assert(~(residualMode && gradientMode),'VehicleLocalization:AmbiguousLidarMeasurement', ...
+                'Choose residual or gradient input.');
+            if gradientMode
+                assert(~isfield(measurement,'pose') && isfield(measurement,'information'), ...
+                    'VehicleLocalization:AmbiguousLidarMeasurement','A gradient measurement carries information and no pose.');
+                assert(isfield(measurement,'linearizationPose') && ...
+                    isequal(measurement.linearizationPose(:),pose), ...
+                    'VehicleLocalization:StaleLidarLinearization','Evaluate the cost gradient at the supplied predicted pose.');
+                gradient=measurement.gradient(:);information=measurement.information;
+                assert(numel(gradient)==3 && isreal(gradient) && all(isfinite(gradient)), ...
+                    'VehicleLocalization:InvalidLidarGradient','The pose gradient must contain three finite values.');
+            elseif residualMode
                 assert(~isfield(measurement,'pose') && ~isfield(measurement,'information'), ...
                     'VehicleLocalization:AmbiguousLidarMeasurement','Choose residual or pose information input.');
                 assert(isfield(measurement,'linearizationPose') && ...
@@ -169,6 +185,14 @@ classdef lidarInjectionSupport
             C=filter.D\(G*T);
             if residualMode
                 xi=-filter.F*filter.D.'*gradient;representation="predictedPoseResidual";
+            elseif gradientMode
+                % Like a residual gradient J'*W*r, inject only where the cost has
+                % positive curvature; unsupported directions receive no correction.
+                normalized=filter.D.'*gradient;
+                active=filter.eigenvalues>1e-10*max(1,max(filter.eigenvalues));
+                U=filter.eigenvectors(:,active);supported=U*(U.'*normalized);
+                xi=-filter.F*supported;representation="predictedPoseGradient";
+                unsupportedGradient=norm(normalized-supported);
             else
                 innovation=measurement.pose(:)-pose;
                 assert(numel(innovation)==3 && isreal(innovation) && all(isfinite(innovation)), ...
@@ -202,6 +226,7 @@ classdef lidarInjectionSupport
                 'jumpNonexpansive',energyRatio<=1+1e-10, ...
                 'jumpCertificateApplies',options.Discretization~="continuous", ...
                 'residualNoiseCoefficientBound',gainBound,'representation',representation, ...
+                'unsupportedGradientNorm',unsupportedGradient, ...
                 'scope',"Fixed-metric locally affine LiDAR channel only; no full-system or outage ISS claim");
         end
 
@@ -260,6 +285,82 @@ classdef lidarInjectionSupport
             measurement=struct('residual',r,'jacobian',J,'weights',ones(size(r)), ...
                 'linearizationPose',pose,'conditionedOnPositionAid',frozen.conditionedOnPositionAid, ...
                 'informationCalibrated',false,'geometrySource',"Frozen accepted semantic registration");
+        end
+
+        function measurement=evaluateOverlapGradient(fixedCloud,movingCloud,pose,cfg)
+        % evaluateOverlapGradient Correspondence-free LiDAR gradient at the observer prediction.
+        % The cost is c(p)=-log s(p), where s is the class-balanced normalized
+        % semantic Gaussian overlap of scoreSemanticProbabilityCloudAlignment.
+        % Balanced self energies are one, so s equals the balanced cross energy E.
+        % gradient=-grad(E)/E is the analytic SE(2) derivative returned by
+        % registrationSupport.semanticGaussianOverlap at POSE. The curvature is the
+        % central difference of that gradient. By default the information uses
+        % its absolute eigenvalues (saddle-free Newton): the regularized observer
+        % step -(|H|+lambda*I)^-1*gradient is a bounded descent step also where the
+        % overlap is locally concave; cfg.curvature="positivePart" withholds those
+        % directions instead. A positive cfg.kernelBandwidth evaluates the same
+        % cost on horizontally smoothed mixtures, which widens its basin. No pose is
+        % optimized, no correspondence is selected and no acceptance test is
+        % applied. Empty geometry or zero overlap returns available=false.
+        % Map means are shifted to POSE before evaluation, which leaves the overlap
+        % and its pose derivatives unchanged and avoids UTM-scale cancellation.
+            arguments
+                fixedCloud (1,1) struct
+                movingCloud (1,1) struct
+                pose (3,1) double {mustBeReal,mustBeFinite}
+                cfg (1,1) struct = overlapGradientConfig()
+            end
+            timer=tic;linearization=pose;pose=pose(:).';
+            steps=cfg.differenceSteps(:).';
+            validateattributes(steps,{'double'},{'real','finite','positive','numel',3});
+            measurement=struct('gradient',zeros(3,1),'information',zeros(3),'linearizationPose',linearization, ...
+                'available',false,'similarity',0,'curvature',zeros(3),'minimumCurvature',NaN, ...
+                'mapComponents',0,'sourceComponents',0,'sharedClasses',strings(1,0), ...
+                'informationCalibrated',false,'seconds',0, ...
+                'geometrySource',"semanticGaussianOverlap at the observer prediction; no registration");
+            local=registrationSupport.selectLocalProbabilityCloud(fixedCloud,pose,cfg.localMapRadius);
+            if local.components.numComponents==0 || movingCloud.components.numComponents==0
+                measurement.seconds=toc(timer);return;
+            end
+            if cfg.viewConditioning,local=registrationSupport.conditionSemanticMapOnView(local,pose);end
+            [f,m]=registrationSupport.prepareSemanticRegistration(local,movingCloud,cfg.registration);
+            bandwidth=cfg.kernelBandwidth;
+            validateattributes(bandwidth,{'double'},{'real','finite','nonnegative','scalar'});
+            if bandwidth>0
+                % Convolving both mixtures with N(0,bandwidth^2/2*I) adds bandwidth^2*I to
+                % every pair covariance, so the cross energy is its expectation under an
+                % isotropic horizontal prediction error. Isotropic terms are rotation invariant.
+                inflation=bandwidth^2/2*eye(2);
+                f.covariance(1:2,1:2,:)=f.covariance(1:2,1:2,:)+inflation;
+                m.covariance(1:2,1:2,:)=m.covariance(1:2,1:2,:)+inflation;
+            end
+            [f,m]=registrationSupport.balanceSemanticDistributions(f,m);
+            shared=intersect(unique(f.semanticName(f.mixtureWeight>0)),unique(m.semanticName(m.mixtureWeight>0)));
+            measurement.mapComponents=f.numComponents;measurement.sourceComponents=m.numComponents;
+            measurement.sharedClasses=reshape(string(shared),1,[]);
+            f.mean(:,1:2)=f.mean(:,1:2)-pose(1:2);
+            origin=[0,0,pose(3)];
+            [energy,ascent]=registrationSupport.semanticGaussianOverlap(f,m,origin);
+            if ~(energy>realmin),measurement.seconds=toc(timer);return;end
+            gradient=-ascent(:)/energy;curvature=zeros(3);
+            for j=1:3
+                step=zeros(1,3);step(j)=steps(j);
+                [plusEnergy,plusAscent]=registrationSupport.semanticGaussianOverlap(f,m,origin+step);
+                [minusEnergy,minusAscent]=registrationSupport.semanticGaussianOverlap(f,m,origin-step);
+                if ~(plusEnergy>realmin && minusEnergy>realmin),measurement.seconds=toc(timer);return;end
+                curvature(:,j)=(minusAscent(:)/minusEnergy-plusAscent(:)/plusEnergy)/(2*steps(j));
+            end
+            curvature=(curvature+curvature.')/2;
+            [V,E]=eig(curvature,'vector');
+            switch string(cfg.curvature)
+                case "positivePart",information=V*diag(max(E,0))*V.';
+                case "absolute",information=V*diag(abs(E))*V.';
+                otherwise,error('VehicleLocalization:InvalidOverlapCurvature','Use positivePart or absolute curvature.');
+            end
+            measurement.gradient=gradient;measurement.information=(information+information.')/2;
+            measurement.available=true;measurement.similarity=min(energy,1);
+            measurement.curvature=curvature;measurement.minimumCurvature=min(E);
+            measurement.seconds=toc(timer);
         end
 
         function features=lidarPoseErrorFeatures(model)

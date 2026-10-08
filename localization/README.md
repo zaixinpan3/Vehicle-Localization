@@ -16,7 +16,7 @@ Stages with a single caller are local functions of that entry point.
 | `registrationSupport.m` | Registration utilities: projection, preparation, overlap, pose events, map selection and view conditioning, canonical pyramid, position-aided selection, soft association, line directions, relative height, residual primitives |
 | `runFullLocalizationObserver.m` | Production synchronous seven-state observer with GNSS and LiDAR |
 | `fullObserverSupport.m` | Continuous ISS gain design and certificate, input synchronization, GNSS output point |
-| `lidarInjectionSupport.m` | LiDAR information filter, matched correction, residual reevaluation, calibrated error moments, line measurements |
+| `lidarInjectionSupport.m` | LiDAR information filter, matched correction, residual reevaluation, correspondence-free overlap gradient, calibrated error moments, line measurements |
 | `lidarCalibrationSupport.m` | Causal LiDAR IMU tilt and its provenance check, offline pitch and translation calibration |
 | `poseSupport.m` | Planar pose and rigid transform of recorded pose-table rows |
 | `estimateWheelLongitudinalSpeed.m` | Four-wheel longitudinal speed estimate |
@@ -284,6 +284,73 @@ The earlier 7.8474 cm experiment used stored fine features and per-frame
 reference matching seeds. It is a historical comparison, not an isolated
 coarse-versus-fine test. Both experiments use a same-drive map and shared
 INSPVA reference, rather than independent absolute ground truth.
+
+### Correspondence-free overlap-gradient channel
+
+`data.lidarOverlap=struct('map',map,'sources',{sources},'valid',valid,'config',overlapGradientConfig())`
+replaces the registration channel and is mutually exclusive with `data.lidar`
+and `data.lidarMatcher`. `sources{k}` is the coarse source horizon of frame
+`k` in its current body axes; the optional `valid` defaults to the nonempty
+sources. At every valid frame the runtime calls
+`lidarInjectionSupport.evaluateOverlapGradient(map,sources{k},prediction,config)`
+at the post-baseline prediction. The cost is `c(p)=-log s(p)`, where `s` is the
+class-balanced normalized overlap of
+`registrationSupport.scoreSemanticProbabilityCloudAlignment`. Balanced self
+energies are one, so `s` is the cross energy `E` and the injected gradient
+`g=-grad(E)/E` is the analytic SE(2) derivative of
+`registrationSupport.semanticGaussianOverlap`; the curvature is a central
+difference of that derivative. No pose is optimized, no correspondence is
+selected or frozen and no acceptance test is applied. Empty geometry or zero
+overlap withdraws only the LiDAR correction of that frame.
+
+`computeLidarMatchedCorrection` accepts `gradient`, `information` and a
+`linearizationPose` equal to the prediction in place of a residual, and uses
+`xi=-F*D'*g`; for the same geometry this equals the residual form
+`-F*D'*J'*W*r`. By default the information holds the absolute curvature
+eigenvalues (`curvature="absolute"`). With unit pose scales the nominal
+innovation `-(|H|+lambdaStar*I)\g` is then a saddle-free descent direction, also
+where the overlap is locally concave; `"positivePart"` withholds those directions. Gradient components
+outside the positive-information directions are not injected and are reported as
+`unsupportedGradientNorm`. The calibrated gain profile is rejected because its
+error calibration describes registration poses. `kernelBandwidth` (m) smooths
+both mixtures horizontally and adds `bandwidth^2*I` to every pair covariance, so
+the cross energy is its expectation under an isotropic horizontal prediction
+error of that standard deviation; the default zero keeps the exact score. Diagnostics report
+`lidarChannel="overlapGradient"` and per-frame `lidarOverlap` evaluation,
+availability, similarity, minimum curvature, time and gradient.
+`runMncavFullObserverExperiment(LidarChannel="overlapGradient",OverlapKernelBandwidth=b)`
+runs the recorded scenarios with this channel.
+
+On the 2024-06-07 MnCAV replay with the fixed Route A inputs (1169 frames,
+local study `research/overlap_gradient_channel_20261008`, not versioned):
+
+| LiDAR channel | Gains | LiDAR only: position / heading RMSE | GNSS and LiDAR |
+| --- | --- | --- | --- |
+| Registration | nominal | 10.53 cm / 0.131 deg | 7.83 cm / 0.111 deg |
+| Overlap, exact | nominal | 71.80 cm / 0.991 deg | 9.72 cm / 0.706 deg |
+| Overlap, 0.5 m bandwidth | nominal | 27.32 cm / 0.442 deg | 9.22 cm / 0.151 deg |
+| Overlap, 0.5 m bandwidth | nominal, `lambdaStar=1` | 10.36 cm / 0.198 deg | 7.01 cm / 0.159 deg |
+| Registration | fixed scale | 5.74 cm / 0.103 deg | 6.05 cm / 0.102 deg |
+| Overlap, exact | fixed scale | 117.84 cm / 1.414 deg | 9.06 cm / 0.175 deg |
+| Overlap, 0.5 m bandwidth | fixed scale | 8.29 cm / 0.161 deg | 6.59 cm / 0.128 deg |
+
+Position RMSE covers all frames; heading RMSE excludes the first 2 s. At the
+reference pose the one-step Newton offset of the exact overlap is similar to
+that of the registration objective (median 3.4 versus 2.8 cm along track), but
+its basin along the curbs is narrow. Near frame 970 the nominal LiDAR-only
+along-track error reached 0.35 m, the minimum curvature at the estimate turned
+negative and then flat, and the estimate drifted along track to 2.3 m.
+Smoothing widens the basin: with the fixed-scale gains all
+tested bandwidths from 0.25 to 1.0 m give 8.1--9.0 cm LiDAR-only. The nominal
+saturation scale `lambdaStar=16` suppresses the smaller smoothed curvature;
+the `lambdaStar=1` row is a diagnostic outside the declared nominal profile.
+Bandwidth and information scale were chosen on this evaluation recording, with
+no held-out drive. An overlap evaluation takes 2.6 ms median per frame; a
+fixed-scale replay takes 3--4 s with this channel and 15--18 s with registration.
+The overlap is a similarity, not a likelihood: its curvature is not a
+calibrated inverse covariance, and the earlier finding that overlap optima
+follow view-dependent sampling density along curbs still applies.
+Registration remains the default channel.
 
 ## Historical LiDAR-only motion-aided baseline
 

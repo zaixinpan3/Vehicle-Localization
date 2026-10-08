@@ -8,13 +8,23 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
 % required future-endpoint wait, without motion extrapolation.
 % By default every scenario rematches coarse horizons using its own fused
 % state and available GNSS. Frozen matching is an explicit ablation only.
+% LidarChannel="overlapGradient" replaces registration: every scenario
+% injects the semanticGaussianOverlap gradient of the same coarse horizons at
+% its own prediction (overlapGradientConfig), with no pose optimization.
+% OverlapKernelBandwidth (m) smooths that overlap; zero keeps the exact cost.
     arguments
         outputFolder (1,1) string="output/mncav_coarse_localization/observer"
         options.MatchingFolder (1,1) string="output/mncav_coarse_localization/matching"
         options.RematchWithGnss (1,1) logical=true
         options.CoarseSourceFile (1,1) string=""
+        options.LidarChannel (1,1) string {mustBeMember(options.LidarChannel,["registration","overlapGradient"])}="registration"
+        options.OverlapKernelBandwidth (1,1) double {mustBeNonnegative,mustBeFinite}=0
     end
+    overlapChannel=options.LidarChannel=="overlapGradient";
+    assert(overlapChannel || options.OverlapKernelBandwidth==0,'VehicleLocalization:OverlapOptionWithoutChannel', ...
+        'OverlapKernelBandwidth applies only to LidarChannel="overlapGradient".');
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
+    overlapConfig=overlapGradientConfig();overlapConfig.kernelBandwidth=options.OverlapKernelBandwidth;
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
     parameterFile="";
     [prepared,~,inputMetadata]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
@@ -76,7 +86,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     cfg.initialState=[pose(1);velocity(1);acceleration(1);pose(2);velocity(2);acceleration(2);pose(3)];
     native=readtable('output/receiver_synchronized_inputs/native_reference.csv');
     reference=interp1(native.time,[native.x,native.y,native.psi],t,'linear');
-    if options.RematchWithGnss
+    if options.RematchWithGnss || overlapChannel
         if strlength(options.CoarseSourceFile)>0
             sourceCache=load(options.CoarseSourceFile);
         else
@@ -110,7 +120,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
             current.gnss.valid=valid & mod(floor(time),2)==0;
             current.lidar.valid=lidar.valid & mod(floor(lidar.time),2)==1;
         end
-        if options.RematchWithGnss && isfield(current,'lidar')
+        if (options.RematchWithGnss || overlapChannel) && isfield(current,'lidar')
             available=current.lidar.valid;
             % Initial temporal confirmation remains a matcher decision, while
             % the declared sensor withdrawals remain explicit input masks.
@@ -118,7 +128,12 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
             if ismember(name,["lidar_outage","both_outage"]),available(t>=40 & t<60)=false;end
             if name=="alternating",available=mod(floor(t),2)==1;end
             current=rmfield(current,'lidar');
-            current.lidarMatcher=@(i,seed,aid) onlineMatch(i,seed,aid,available,sourceCache.fixed,sourceClouds,registrationCfg);
+            if overlapChannel
+                current.lidarOverlap=struct('map',sourceCache.fixed,'sources',{sourceClouds}, ...
+                    'valid',available,'config',overlapConfig);
+            else
+                current.lidarMatcher=@(i,seed,aid) onlineMatch(i,seed,aid,available,sourceCache.fixed,sourceClouds,registrationCfg);
+            end
         end
         timer=tic;estimate=runFullLocalizationObserver(current,lateralDesign,cfg,LateralInputs=lateral);seconds=toc(timer);
         runs{k}=struct('scenario',name,'estimate',estimate,'seconds',seconds);
@@ -138,14 +153,15 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'lidarSource',matching.source,'matching',matching, ...
         'inputMetadata',inputMetadata,'synchronization',synchronization, ...
         'evaluation',"INSPVA on native LiDAR frame timestamps, approximately 10 Hz", ...
-        'matchingRerun',matching.rerun,'closedLoopRematching',options.RematchWithGnss, ...
+        'matchingRerun',matching.rerun,'closedLoopRematching',options.RematchWithGnss && ~overlapChannel, ...
+        'lidarChannel',options.LidarChannel,'overlapKernelBandwidth',options.OverlapKernelBandwidth, ...
         'gnssInformationAddedToLidar',false,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
         'offlineSynchronization',true, ...
         'gnssOutputPointCalibration',cfg.gnss.outputPoint, ...
         'initialization',"Common "+initialization+" plus wheel/lateral velocity and IMU acceleration; not a cold-start GNSS-only test", ...
         'limitations',matching.limitations+"; shared receiver reference; empirical planar output-point alignment is not a hardware survey; upstream motion preparation offline"), ...
         'design',runs{1}.estimate.observer,'metrics',metrics);
-    if options.RematchWithGnss
+    if options.RematchWithGnss && ~overlapChannel
         actual=runs{1}.estimate.matchingResults;
         data.lidar.pose=cell2mat(cellfun(@(r)r.poseXYTheta,actual,UniformOutput=false));
         data.lidar.valid=false(numel(actual),1);
@@ -163,6 +179,11 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         report.metadata.alignmentControlsReuseSelectedMatching=true;
     end
     accepted=lidar.valid;
+    if overlapChannel
+        accepted=runs{1}.estimate.diagnostics.lidarOverlap.available;
+        data=rmfield(data,'lidar');
+        data.lidarOverlap=struct('map',sourceCache.fixed,'sources',{sourceClouds},'config',overlapConfig);
+    end
     % Old timestamp-warped trajectories are not paired with corrected epochs.
     % Isolate geometry/uncertainty at the old gain before testing matched gains.
     controlRows=cell(0,8);controlNames=["unaligned","uncertainty_only","geometry_only","aligned_gain1","aligned_gain4"];
