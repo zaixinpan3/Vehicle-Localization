@@ -14,7 +14,7 @@ classdef motionAidedGapReconstructionTest < matlab.unittest.TestCase
             y=a*(1-cos(yaw))/r+b*(-t.*cos(yaw)/r+sin(yaw)/r^2)+c*sin(yaw)/r;
             truth=[x,y,yaw];
             [data,lateral]=fixture(t,vx,vy,.2*ones(size(t)),truth([1,end],:));
-            [actual,meta]=reconstructMotionAidedLidarGaps(data,lateral,t([1,end]));
+            [actual,meta]=observerAnalysisSupport.reconstructMotionAidedLidarGaps(data,lateral,t([1,end]));
             testCase.verifyEqual(actual.lidar.pose,truth,AbsTol=1e-5);
             testCase.verifyGreaterThan(max(vecnorm(data.lidar.pose(:,1:2)-truth(:,1:2),2,2)),.5);
             testCase.verifyTrue(meta.futureEndpointUsed);
@@ -23,28 +23,28 @@ classdef motionAidedGapReconstructionTest < matlab.unittest.TestCase
         function preservesNoisyEndpointsAndInformation(testCase)
             t=(0:.01:1).';endpoint=[10,20,0;14,21,.3];
             [data,lateral]=fixture(t,3+0*t,.1+0*t,.2+0*t,endpoint);
-            actual=reconstructMotionAidedLidarGaps(data,lateral,t([1,end]));
+            actual=observerAnalysisSupport.reconstructMotionAidedLidarGaps(data,lateral,t([1,end]));
             testCase.verifyEqual(actual.lidar.pose([1,end],:),endpoint);
             testCase.verifyEqual(actual.lidar.information,data.lidar.information);
         end
         function leavesFrequentMeasurementsAndTheirIntervalsUnchanged(testCase)
             t=(0:.01:1).';[data,lateral]=fixture(t,3+0*t,0*t,.2+0*t,[0,0,0;3,0,.2]);
-            [actual,meta]=reconstructMotionAidedLidarGaps(data,lateral,t(1:10:end));
+            [actual,meta]=observerAnalysisSupport.reconstructMotionAidedLidarGaps(data,lateral,t(1:10:end));
             testCase.verifyEqual(actual.lidar.pose,data.lidar.pose);
             testCase.verifyEqual(meta.correctedIntervals,0);
         end
         function preservesUnwrappedHeadingAcrossPi(testCase)
             t=(0:.01:1).';yaw=deg2rad(179+2*t);
             [data,lateral]=fixture(t,ones(size(t)),0*t,deg2rad(2)+0*t,[0,0,yaw(1);-1,0,yaw(end)]);
-            actual=reconstructMotionAidedLidarGaps(data,lateral,t([1,end]));
+            actual=observerAnalysisSupport.reconstructMotionAidedLidarGaps(data,lateral,t([1,end]));
             testCase.verifyEqual(actual.lidar.pose(:,3),yaw,AbsTol=1e-12);
         end
         function rejectsDelayAndIncompleteAnchors(testCase)
             t=(0:.01:1).';[data,lateral]=fixture(t,3+0*t,0*t,0*t,[0,0,0;3,0,0]);
-            testCase.verifyError(@()reconstructMotionAidedLidarGaps(data,lateral,t([2,end])), ...
+            testCase.verifyError(@()observerAnalysisSupport.reconstructMotionAidedLidarGaps(data,lateral,t([2,end])), ...
                 'VehicleLocalization:InvalidMotionGapAnchors');
             data.lidar.delay=.1;
-            testCase.verifyError(@()reconstructMotionAidedLidarGaps(data,lateral,t([1,end])), ...
+            testCase.verifyError(@()observerAnalysisSupport.reconstructMotionAidedLidarGaps(data,lateral,t([1,end])), ...
                 'VehicleLocalization:InvalidMotionGapInput');
         end
     end

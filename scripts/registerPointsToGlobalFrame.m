@@ -6,7 +6,7 @@ function globalPoints = registerPointsToGlobalFrame(localPoints, poseRow)
         globalPoints=zeros(0,3);
         return;
     end
-    [rotation,translation]=poseRowToRigidTransform(poseRow);
+    [rotation,translation]=poseSupport.poseRowToRigidTransform(poseRow);
     assert(all(isfinite(translation)), 'VehicleLocalization:MissingHeight', ...
         'Global point projection requires finite XYZ translation.');
     globalPoints=double(localPoints)*rotation.'+translation;

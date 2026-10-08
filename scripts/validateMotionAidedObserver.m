@@ -70,7 +70,7 @@ end
 function truth=plantTruth(vehicle,factor,forwardOffset)
     vehicle.frontCorneringStiffness=vehicle.frontCorneringStiffness*factor;
     vehicle.rearCorneringStiffness=vehicle.rearCorneringStiffness*factor;
-    model=lateralBicycleModel(vehicle);t=(0:.01:40).';n=numel(t);
+    model=lateralObserverSupport.lateralBicycleModel(vehicle);t=(0:.01:40).';n=numel(t);
     vx=8+2*(1-cos(.2*t));vxDot=.4*sin(.2*t);
     steering=deg2rad(2)*(sin(.25*t)+.3*sin(.65*t));state=zeros(n,2);
     for k=2:n

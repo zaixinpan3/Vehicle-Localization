@@ -5,6 +5,6 @@ projectFolder=fileparts(fileparts(mfilename('fullpath')));
 addpath(projectFolder);
 setupVehicleLocalization;
 cfg=improvedObserverConfig("lidar");
-design=designImprovedObserverGains(cfg);
+design=observerAnalysisSupport.designImprovedObserverGains(cfg);
 fprintf('Continuous %s certificate: margin %.6g, rate %.6g /s.\n', ...
     cfg.mode,design.verification.uniformMargin,design.verification.rate);

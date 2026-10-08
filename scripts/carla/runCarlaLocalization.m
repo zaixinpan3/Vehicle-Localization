@@ -24,7 +24,7 @@ function report=runCarlaLocalization(datasetFolder,mapFile,outputFolder,options)
     frames=options.FrameIndices;if isempty(frames),frames=1:height(poseTable);end
     poses=readFramePoseTable(fullfile(datasetFolder,'poses.csv'),frames);
     n=numel(frames);reference=zeros(n,3);
-    for k=1:n,reference(k,:)=poseRowToPlanarPose(poses(k,:));end
+    for k=1:n,reference(k,:)=poseSupport.poseRowToPlanarPose(poses(k,:));end
     scanTime=poses.lidar_stamp_sec;
     motionTable=readtable(fullfile(datasetFolder,'motion.csv'));
     twist=[motionTable.wheel_speed_mps,zeros(height(motionTable),1),motionTable.gyro_yaw_rate_radps];
@@ -44,7 +44,7 @@ function report=runCarlaLocalization(datasetFolder,mapFile,outputFolder,options)
         predicted=state;
         frame=store.pointClouds(1,frames(k));
         timer=tic;
-        local=selectLocalProbabilityCloud(map,predicted,options.MapCropRadius);
+        local=registrationSupport.selectLocalProbabilityCloud(map,predicted,options.MapCropRadius);
         [event,result,history]=localizeLidarFrame(frame,local,predicted,scanTime(k),cfg,history,motion(k,:));
         elapsed=toc(timer);
         if ~isempty(event),state=event.pose;end

@@ -22,7 +22,7 @@ function report=designMncavMotionAidedGains(outputFolder,options)
     gains=[p(:),v(:),a(:),y(:)];values=NaN(size(gains));margins=zeros(size(gains,1),1);
     for k=1:size(gains,1)
         cfg=motionAidedObserverConfig;cfg.gains=gains(k,:);
-        design=designMotionAidedObserverGains(cfg);margins(k)=design.translationDissipationMargin;
+        design=observerAnalysisSupport.designMotionAidedObserverGains(cfg);margins(k)=design.translationDissipationMargin;
         estimate=runMotionAidedVehicleObserver(data,lateral,cfg);
         values(k,:)=metrics(estimate.pose(indices,:),reference);
         if mod(k,24)==0,fprintf('Completed %d/%d design-segment gain candidates.\n',k,size(gains,1));end
@@ -30,7 +30,7 @@ function report=designMncavMotionAidedGains(outputFolder,options)
     feasible=all(values<=raw+1e-10,2);
     assert(any(feasible),'VehicleLocalization:MotionAccuracyGateFailed','No tested gain satisfies all design criteria.');
     candidates=find(feasible);[~,best]=min(values(candidates,1));winner=candidates(best);
-    cfg=motionAidedObserverConfig;cfg.gains=gains(winner,:);design=designMotionAidedObserverGains(cfg);
+    cfg=motionAidedObserverConfig;cfg.gains=gains(winner,:);design=observerAnalysisSupport.designMotionAidedObserverGains(cfg);
     tableOut=array2table([gains,values,margins,feasible],VariableNames= ...
         {'positionGain','velocityGain','accelerationGain','headingGain','positionRmseM', ...
         'positionMaximumM','positionP95M','headingRmseDeg','certificateMargin','accuracyFeasible'});

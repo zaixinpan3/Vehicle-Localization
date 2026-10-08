@@ -22,7 +22,7 @@ function cloud=buildViewConditionedLandmarkMap(base,featureData,cfg,observationI
     assert(height(featureData.framePoseTable)==nFrames && ...
         isequal(size(featureData.pointsByFeatureFrame),[numel(featureData.featureNames),nFrames]), ...
         'VehicleLocalization:InvalidMapObservations','Map observations and acquisition poses must align.');
-    [canonical,groups]=canonicalizeSemanticCloud(base,cfg.mergeRadius,cfg.pointClasses);
+    [canonical,groups]=registrationSupport.canonicalizeSemanticCloud(base,cfg.mergeRadius,cfg.pointClasses);
     c=canonical.components;n=c.numComponents;
     cloud=struct('dimension',2,'frameCalibration',base.frameCalibration);
     if isfield(base,'coordinateFrame'),cloud.coordinateFrame=base.coordinateFrame;end
@@ -30,7 +30,7 @@ function cloud=buildViewConditionedLandmarkMap(base,featureData,cfg,observationI
     cloud.components=struct('mean',c.mean(:,1:2),'covariance',c.covariance(1:2,1:2,:), ...
         'mixtureWeight',c.mixtureWeight,'semanticName',c.semanticName,'numComponents',n);
     observations=cell(n,1);acquisition=zeros(nFrames,3);
-    for k=observationIndices,acquisition(k,:)=poseRowToPlanarPose(featureData.framePoseTable(k,:));end
+    for k=observationIndices,acquisition(k,:)=poseSupport.poseRowToPlanarPose(featureData.framePoseTable(k,:));end
     for name=cfg.pointClasses
         ids=find(c.semanticName==name);row=find(string(featureData.featureNames)==name);
         if isempty(ids)||isempty(row),continue;end

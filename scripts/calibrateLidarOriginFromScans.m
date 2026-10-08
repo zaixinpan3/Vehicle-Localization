@@ -13,7 +13,7 @@ function report=calibrateLidarOriginFromScans(inputFolder,outputFolder)
         p=[double(s.frame.x(:)),double(s.frame.y(:)),double(s.frame.z(:))];r=vecnorm(p(:,1:2),2,2);
         p=p(all(isfinite(p),2)&r>3&r<45&p(:,3)>-4&p(:,3)<6,:);
         clouds{k}=pcdownsample(pointCloud(p),'gridAverage',.20);
-        [rotation(:,:,k),position(k,:)]=poseRowToRigidTransform(poses(k,:));planar(k,:)=poseRowToPlanarPose(poses(k,:));
+        [rotation(:,:,k),position(k,:)]=poseSupport.poseRowToRigidTransform(poses(k,:));planar(k,:)=poseSupport.poseRowToPlanarPose(poses(k,:));
     end
     rows=cell(0,13);queryPose=zeros(0,3);fixedPose=queryPose;matchedPose=queryPose;transforms=cell(0,1);
     for q=1:n
@@ -41,7 +41,7 @@ function report=calibrateLidarOriginFromScans(inputFolder,outputFolder)
         'errorX','errorY','yawErrorRad','queryPoints','fixedPoints','referenceYawChangeDeg','overlap','medianDistanceM'});
     save(fullfile(outputFolder,'raw_pairs.mat'),'pairs','queryPose','fixedPose','matchedPose','transforms');
     use=pairs.training & pairs.qualityPassed;
-    [calibration,fit]=fitLidarTranslationCalibration(queryPose(use,:),fixedPose(use,:),matchedPose(use,:));
+    [calibration,fit]=lidarCalibrationSupport.fitLidarTranslationCalibration(queryPose(use,:),fixedPose(use,:),matchedPose(use,:));
     calibration.identifier="mncav-front-lidar-reference-12-11-24-raw-planar-v1";
     pred=zeros(height(pairs),2);
     for k=1:height(pairs)

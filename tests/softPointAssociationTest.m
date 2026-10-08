@@ -6,26 +6,26 @@ classdef softPointAssociationTest < matlab.unittest.TestCase
     methods (Test)
         function symmetricModesRetainBetweenModeScatter(t)
             cfg=softPointAssociationTest.settings();means=[-.3 0;.3 0];covs=repmat(.01*eye(2),1,1,2);
-            [mu,cov,n]=softPointAssociationTarget(means,covs,[1;1],[0;0],1,cfg);
+            [mu,cov,n]=registrationSupport.softPointAssociationTarget(means,covs,[1;1],[0;0],1,cfg);
             t.verifyEqual(mu,[0 0],AbsTol=1e-12);t.verifyEqual(cov,diag([.10,.01]),AbsTol=1e-12);t.verifyEqual(n,2);
         end
         function dominantPriorKeepsSharpTarget(t)
             cfg=softPointAssociationTest.settings();means=[0 0;.3 0];covs=repmat(.01*eye(2),1,1,2);prior=[0;2*log(19)];
-            [mu,cov,n]=softPointAssociationTarget(means,covs,prior,prior,1,cfg);
+            [mu,cov,n]=registrationSupport.softPointAssociationTarget(means,covs,prior,prior,1,cfg);
             t.verifyEqual(mu,[0 0]);t.verifyEqual(cov,.01*eye(2));t.verifyEqual(n,1);
         end
         function remoteTemperedModeCannotEraseLocalSupport(t)
             cfg=softPointAssociationTest.settings();means=[0 0;10 0];covs=repmat(.01*eye(2),1,1,2);
             % Geometry tempering makes the remote mode cheaper, but it lies
             % outside the local ambiguity neighborhood of the MAP target.
-            [mu,cov,n]=softPointAssociationTarget(means,covs,[100;101],[100;0],1,cfg);
+            [mu,cov,n]=registrationSupport.softPointAssociationTarget(means,covs,[100;101],[100;0],1,cfg);
             t.verifyEqual(mu,[0 0]);t.verifyEqual(cov,.01*eye(2));t.verifyEqual(n,1);
         end
         function invariantToPermutationTranslationAndCommonPriorCost(t)
             cfg=softPointAssociationTest.settings();means=[-.3 .1;.3 -.1;4 0];covs=repmat(.01*eye(2),1,1,3);cost=[1;2;Inf];prior=[0;.2;1];
-            [mu,cov,n]=softPointAssociationTarget(means,covs,cost,prior,1,cfg);
+            [mu,cov,n]=registrationSupport.softPointAssociationTarget(means,covs,cost,prior,1,cfg);
             order=[3 2 1];shift=[1e3 -50];
-            [other,otherCov,otherN]=softPointAssociationTarget(means(order,:)+shift,covs(:,:,order),cost(order)+50,prior(order)+50,3,cfg);
+            [other,otherCov,otherN]=registrationSupport.softPointAssociationTarget(means(order,:)+shift,covs(:,:,order),cost(order)+50,prior(order)+50,3,cfg);
             t.verifyEqual(other,mu+shift,AbsTol=1e-10);t.verifyEqual(otherCov,cov,AbsTol=1e-10);t.verifyEqual(otherN,n);
         end
         function independentPoleAnchorsRetainAccurateFineSolve(t)
@@ -54,12 +54,12 @@ classdef softPointAssociationTest < matlab.unittest.TestCase
             t.verifyFalse(result.positionAiding.gnssInformationAdded);
         end
         function invalidConfigurationFailsBeforeSolving(t)
-            cfg=softPointAssociationTest.settings();validateSoftPointAssociation(cfg);
+            cfg=softPointAssociationTest.settings();registrationSupport.validateSoftPointAssociation(cfg);
             for field=["temperature","radius","minimumPosterior","hardWithUnmergedAnchors"]
                 bad=cfg;bad.(field)=NaN;
-                t.verifyError(@()validateSoftPointAssociation(bad),'VehicleLocalization:InvalidSoftPointAssociation');
+                t.verifyError(@()registrationSupport.validateSoftPointAssociation(bad),'VehicleLocalization:InvalidSoftPointAssociation');
             end
-            cfg.hardWithUnmergedAnchors=1;t.verifyError(@()validateSoftPointAssociation(cfg),'VehicleLocalization:InvalidSoftPointAssociation');
+            cfg.hardWithUnmergedAnchors=1;t.verifyError(@()registrationSupport.validateSoftPointAssociation(cfg),'VehicleLocalization:InvalidSoftPointAssociation');
         end
     end
     methods (Static)

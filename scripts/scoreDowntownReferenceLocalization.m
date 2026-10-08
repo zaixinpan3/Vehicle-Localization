@@ -3,7 +3,7 @@ function metrics=scoreDowntownReferenceLocalization(datasetFolder,localizationFo
 % Direct map-frame planar discrepancies; no fit or trajectory alignment.
     truth=readtable(fullfile(datasetFolder,'mapping_poses.csv'));run=readtable(fullfile(localizationFolder,'trajectory.csv'));
     [covered,index]=ismember(run.frame_index,truth.frame_index);ref=truth(index(covered),:);run=run(covered,:);reference=zeros(height(run),3);
-    for k=1:height(run),reference(k,:)=poseRowToPlanarPose(ref(k,:));end
+    for k=1:height(run),reference(k,:)=poseSupport.poseRowToPlanarPose(ref(k,:));end
     delta=[run.x_m,run.y_m,run.yaw_rad]-reference;delta(:,3)=atan2(sin(delta(:,3)),cos(delta(:,3)));
     e=vecnorm(delta(:,1:2),2,2);heading=rad2deg(delta(:,3));
     metrics=struct('samples',numel(e),'positionRmseM',sqrt(mean(e.^2)),'positionMedianM',median(e), ...

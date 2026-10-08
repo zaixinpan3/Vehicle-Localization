@@ -29,7 +29,7 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
         function heightReferenceMatchesOfflineCoordinateTransform(testCase)
             row=array2table([10 -20 123 cos(0.1) 0 sin(0.1) 0], ...
                 'VariableNames',{'odom_x_m','odom_y_m','odom_z_m','odom_qw','odom_qx','odom_qy','odom_qz'});
-            [pose,tilt,height]=poseRowToPlanarPose(row);
+            [pose,tilt,height]=poseSupport.poseRowToPlanarPose(row);
             points=[1 2 3;4 -1 2];
             yaw=[cos(pose(3)) -sin(pose(3)) 0;sin(pose(3)) cos(pose(3)) 0;0 0 1];
             actual=points*tilt.'*yaw.'+[pose(1:2),height];
@@ -75,9 +75,9 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             cfg=heightProbabilityCloudTest.exactHeightConfig(5);
             pose=[1.1 -0.6 0.12];
             step=zeros(1,3); step(poseAxis)=1e-6;
-            [~,details]=scoreSemanticProbabilityCloudAlignment(fixed,moving,pose,cfg);
-            numerical=(scoreSemanticProbabilityCloudAlignment(fixed,moving,pose+step,cfg)- ...
-                scoreSemanticProbabilityCloudAlignment(fixed,moving,pose-step,cfg))/(2e-6);
+            [~,details]=registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose,cfg);
+            numerical=(registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose+step,cfg)- ...
+                registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose-step,cfg))/(2e-6);
             testCase.verifyEqual(details.gradient(poseAxis),numerical,'AbsTol',1e-7);
         end
         function recoversPlanarPoseWithKnownGlobalHeight(testCase)
@@ -94,8 +94,8 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             moving=heightProbabilityCloudTest.spatialCloud();
             fixed=heightProbabilityCloudTest.transform(moving,[1 -2 0.1],100);
             cfg=distributionRegistrationConfig(); cfg.heightMode="auto";
-            [score,details]=scoreSemanticProbabilityCloudAlignment(fixed,moving,[0.9 -1.9 0.08],cfg);
-            expected=scoreSemanticProbabilityCloudAlignment(registrationSupport.projectSemanticProbabilityCloud(fixed,2), ...
+            [score,details]=registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,[0.9 -1.9 0.08],cfg);
+            expected=registrationSupport.scoreSemanticProbabilityCloudAlignment(registrationSupport.projectSemanticProbabilityCloud(fixed,2), ...
                 registrationSupport.projectSemanticProbabilityCloud(moving,2),[0.9 -1.9 0.08]);
             testCase.verifyEqual(score,expected,'AbsTol',0);
             testCase.verifyEqual(details.height.heightReason,"verticalReferenceUnavailable");
@@ -109,7 +109,7 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
         function defaultKeepsHeightWithoutEnablingExperimentalMatcher(testCase)
             cloud=heightProbabilityCloudTest.spatialCloud();
             cfg=distributionRegistrationConfig(); cfg.heightTranslation=0;
-            [~,details]=scoreSemanticProbabilityCloudAlignment(cloud,cloud,[0 0 0],cfg);
+            [~,details]=registrationSupport.scoreSemanticProbabilityCloudAlignment(cloud,cloud,[0 0 0],cfg);
             testCase.verifyFalse(details.height.heightUsed);
             testCase.verifyEqual(details.height.heightReason,"explicitXY");
         end
@@ -117,8 +117,8 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             cloud=heightProbabilityCloudTest.spatialCloud();
             wrong=cloud; wrong.components.mean(:,3)=wrong.components.mean(:,3)+2;
             cfg=heightProbabilityCloudTest.exactHeightConfig(0);
-            xy=scoreSemanticProbabilityCloudAlignment(wrong,cloud,[0 0 0]);
-            xyz=scoreSemanticProbabilityCloudAlignment(wrong,cloud,[0 0 0],cfg);
+            xy=registrationSupport.scoreSemanticProbabilityCloudAlignment(wrong,cloud,[0 0 0]);
+            xyz=registrationSupport.scoreSemanticProbabilityCloudAlignment(wrong,cloud,[0 0 0],cfg);
             testCase.verifyEqual(xy,1,'AbsTol',1e-12);
             testCase.verifyLessThan(xyz,0.01);
         end
@@ -126,9 +126,9 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             cloud=heightProbabilityCloudTest.spatialCloud();
             shifted=cloud; shifted.components.mean(:,3)=shifted.components.mean(:,3)+0.3;
             cfg=heightProbabilityCloudTest.exactHeightConfig(0);
-            exact=scoreSemanticProbabilityCloudAlignment(shifted,cloud,[0 0 0],cfg);
+            exact=registrationSupport.scoreSemanticProbabilityCloudAlignment(shifted,cloud,[0 0 0],cfg);
             cfg.heightStandardDeviation=0.3;
-            tolerant=scoreSemanticProbabilityCloudAlignment(shifted,cloud,[0 0 0],cfg);
+            tolerant=registrationSupport.scoreSemanticProbabilityCloudAlignment(shifted,cloud,[0 0 0],cfg);
             testCase.verifyGreaterThan(tolerant,exact);
         end
         function invalidRetainedCovarianceIsRejected(testCase)

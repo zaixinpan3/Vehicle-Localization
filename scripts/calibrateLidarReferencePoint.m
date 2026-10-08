@@ -15,12 +15,12 @@ function report=calibrateLidarReferencePoint(inputFolder,outputFolder)
     for k=1:n
         loaded=load(fullfile(inputFolder,sprintf('frame_%04d.mat',frames(k))),'frame');frame=loaded.frame;
         result=perceiveFrame(frame,pcfg);points=[double(frame.x(:)),double(frame.y(:)),double(frame.z(:))];
-        [R,t]=poseRowToRigidTransform(poses(k,:));
+        [R,t]=poseSupport.poseRowToRigidTransform(poses(k,:));
         for c=1:numel(pcfg.featureNames)
             mask=result.featureMasks.(pcfg.featureNames(c));p=points(mask(:),:);
             data.pointsByFeatureFrame{c,k}=p*R.'+t;
         end
-        reference(k,:)=poseRowToPlanarPose(poses(k,:));
+        reference(k,:)=poseSupport.poseRowToPlanarPose(poses(k,:));
         cloud{k}=buildSavedFeatureProbabilityCloud(data,k,reference(k,:),adapter.pcfg);
     end
     cfg=distributionRegistrationConfig();rows=cell(0,12);queryPose=zeros(0,3);fixedPose=queryPose;matchedPose=queryPose;
@@ -42,7 +42,7 @@ function report=calibrateLidarReferencePoint(inputFolder,outputFolder)
     pairs=cell2table(rows,VariableNames={'queryFrame','fixedFrame','training','qualityPassed','accepted','reason', ...
         'errorX','errorY','yawErrorRad','similarity','matchedFraction','matches'});
     use=pairs.training & pairs.qualityPassed;
-    [calibration,fit]=fitLidarTranslationCalibration(queryPose(use,:),fixedPose(use,:),matchedPose(use,:));
+    [calibration,fit]=lidarCalibrationSupport.fitLidarTranslationCalibration(queryPose(use,:),fixedPose(use,:),matchedPose(use,:));
     calibration.identifier="mncav-front-lidar-reference-12-11-24-planar-v1";
     prediction=zeros(height(pairs),2);
     for k=1:height(pairs)

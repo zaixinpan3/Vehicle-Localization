@@ -9,7 +9,7 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
     methods (Test)
         function retainsBetweenAcquisitionScatter(t)
             cloud=landmarkViewMapTest.example();
-            [actual,details]=conditionSemanticMapOnView(cloud,[0 0 0]);
+            [actual,details]=registrationSupport.conditionSemanticMapOnView(cloud,[0 0 0]);
             t.verifyTrue(details.enabled);
             t.verifyEqual(actual.components.mean(1,:),[.2 0],AbsTol=1e-14);
             t.verifyEqual(actual.components.covariance(:,:,1),diag([.05 .02]),AbsTol=1e-14);
@@ -21,7 +21,7 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
         function densityDoesNotReplaceAcquisitionWeight(t)
             cloud=landmarkViewMapTest.example();other=cloud;
             other.landmarkViews.observations{1}(:,9)=[3;30000];
-            a=conditionSemanticMapOnView(cloud,[1 0 0]);b=conditionSemanticMapOnView(other,[1 0 0]);
+            a=registrationSupport.conditionSemanticMapOnView(cloud,[1 0 0]);b=registrationSupport.conditionSemanticMapOnView(other,[1 0 0]);
             t.verifyEqual(a.components,b.components);
         end
         function unsupportedDirectionsContributeNoPoseInformation(t)
@@ -50,32 +50,32 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
             cloud=landmarkViewMapTest.example();pose=[.7 -.1 .05];angle=.8;shift=[7e5 4e6];
             R=[cos(angle) -sin(angle);sin(angle) cos(angle)];
             transformed=landmarkViewMapTest.transform(cloud,R,shift,angle);
-            a=conditionSemanticMapOnView(cloud,pose);
-            b=conditionSemanticMapOnView(transformed,[pose(1:2)*R.'+shift,pose(3)+angle]);
+            a=registrationSupport.conditionSemanticMapOnView(cloud,pose);
+            b=registrationSupport.conditionSemanticMapOnView(transformed,[pose(1:2)*R.'+shift,pose(3)+angle]);
             t.verifyEqual(b.components.mean,a.components.mean*R.'+shift,AbsTol=2e-9);
             t.verifyEqual(b.components.covariance,pagemtimes(pagemtimes(R,a.components.covariance),R.'),AbsTol=1e-10);
             t.verifyEqual(b.components.viewReliability,a.components.viewReliability,AbsTol=1e-10);
         end
         function cropAndProjectionPreserveViewIndices(t)
-            cloud=landmarkViewMapTest.example();[local,ids]=selectLocalProbabilityCloud(cloud,[0 0 0],1);
+            cloud=landmarkViewMapTest.example();[local,ids]=registrationSupport.selectLocalProbabilityCloud(cloud,[0 0 0],1);
             projected=registrationSupport.projectSemanticProbabilityCloud(local,2);
             t.verifyEqual(ids,1);t.verifyEqual(projected.landmarkViews.observations,cloud.landmarkViews.observations(1));
-            actual=conditionSemanticMapOnView(projected,[0 0 0]);
+            actual=registrationSupport.conditionSemanticMapOnView(projected,[0 0 0]);
             t.verifyEqual(actual.components.mean,[.2 0],AbsTol=1e-14);
         end
         function sparseCoverageChangesContinuously(t)
-            cloud=landmarkViewMapTest.example();a=conditionSemanticMapOnView(cloud,[15-1e-5 0 0]);b=conditionSemanticMapOnView(cloud,[15+1e-5 0 0]);
+            cloud=landmarkViewMapTest.example();a=registrationSupport.conditionSemanticMapOnView(cloud,[15-1e-5 0 0]);b=registrationSupport.conditionSemanticMapOnView(cloud,[15+1e-5 0 0]);
             t.verifyLessThan(norm(a.components.mean-b.components.mean),1e-5);
             t.verifyLessThan(norm(a.components.viewReliability-b.components.viewReliability),1e-5);
             t.verifyGreaterThan(min(a.components.viewReliability),0);
         end
         function oppositeHeadingHasNoSupportedView(t)
-            actual=conditionSemanticMapOnView(landmarkViewMapTest.example(),[0 0 pi]);
+            actual=registrationSupport.conditionSemanticMapOnView(landmarkViewMapTest.example(),[0 0 pi]);
             t.verifyEqual(actual.components.viewReliability,[0;1]);
         end
         function legacyCloudIsUnchanged(t)
             cloud=rmfield(landmarkViewMapTest.example(),'landmarkViews');
-            [actual,details]=conditionSemanticMapOnView(cloud,[0 0 0]);
+            [actual,details]=registrationSupport.conditionSemanticMapOnView(cloud,[0 0 0]);
             t.verifyEqual(actual,cloud);t.verifyFalse(details.enabled);
         end
         function builderUsesOnlySelectedOfflineAcquisitions(t)
@@ -104,7 +104,7 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
         end
         function rejectsMisalignedViewArrays(t)
             cloud=landmarkViewMapTest.example();cloud.landmarkViews.observations(2)=[];
-            t.verifyError(@()conditionSemanticMapOnView(cloud,[0 0 0]),'VehicleLocalization:InvalidLandmarkViews');
+            t.verifyError(@()registrationSupport.conditionSemanticMapOnView(cloud,[0 0 0]),'VehicleLocalization:InvalidLandmarkViews');
         end
         function rejectsUncalibratedSupportOutsideUnitInterval(t)
             cloud=distributionRegistrationTest.exampleCloud();cloud.components.viewReliability=-ones(cloud.components.numComponents,1);
@@ -113,7 +113,7 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
         end
         function preventsSecondCanonicalization(t)
             cloud=landmarkViewMapTest.example();
-            t.verifyError(@()canonicalizeSemanticCloud(cloud,1.5),'VehicleLocalization:ViewMapAlreadyCanonical');
+            t.verifyError(@()registrationSupport.canonicalizeSemanticCloud(cloud,1.5),'VehicleLocalization:ViewMapAlreadyCanonical');
         end
     end
     methods (Static)

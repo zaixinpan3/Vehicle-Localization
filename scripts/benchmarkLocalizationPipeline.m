@@ -38,7 +38,7 @@ function report = benchmarkLocalizationPipeline(outputFolder, repetitions, mapFr
         item.frame = loadPointCloudFrame(matPath,frameIndex);
         preparation(index,1) = 1000*toc(timer);
         row = readFramePoseTable(posePath,frameIndex);
-        item.pose = poseRowToPlanarPose(row);
+        item.pose = poseSupport.poseRowToPlanarPose(row);
         item.tilt = sensorTilt.rotation(:,:,frameIndex);
         item.tiltProvenance = rmfield(sensorTilt,{'rotation','time','angles','valid','aligned','ageSeconds','sourceIndex'});
         timer=tic;item.history=[];

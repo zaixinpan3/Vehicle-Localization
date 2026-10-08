@@ -45,9 +45,9 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
                 coarseSemanticProbabilityCloudTest.syntheticVoxelFeatures();
             cloud = buildCoarseSemanticProbabilityCloud(ground, offGround, cfg);
             [selfScore, selfDetails] = ...
-                scoreSemanticProbabilityCloudAlignment(cloud, cloud, [0, 0, 0]);
+                registrationSupport.scoreSemanticProbabilityCloudAlignment(cloud, cloud, [0, 0, 0]);
             shiftedScore = ...
-                scoreSemanticProbabilityCloudAlignment(cloud, cloud, [1.8, 0, 0]);
+                registrationSupport.scoreSemanticProbabilityCloudAlignment(cloud, cloud, [1.8, 0, 0]);
 
             testCase.verifyEqual(selfScore, 1, AbsTol=1.0e-12);
             testCase.verifyEqual(selfDetails.squaredL2Distance, 0, AbsTol=1.0e-12);

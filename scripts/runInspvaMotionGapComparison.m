@@ -16,7 +16,7 @@ function report=runInspvaMotionGapComparison(outputFolder)
         f=frames(frames.mode==mode,:);accepted=f.fullMeasurement==1;
         frameTime=e.data.highRate.time(e.frameIndices);
         assert(max(abs(frameTime-f.time))<1e-9,'Frame CSV must retain the same capture clock.');
-        [data,reconstruction]=reconstructMotionAidedLidarGaps(e.data,e.lateralInput,frameTime(accepted));
+        [data,reconstruction]=observerAnalysisSupport.reconstructMotionAidedLidarGaps(e.data,e.lateralInput,frameTime(accepted));
         reconstruction.maximumFrameCsvTimeDifferenceSeconds=max(abs(frameTime-f.time));
         estimate=runMotionAidedVehicleObserver(data,e.lateralInput,saved.cfg);
         t=data.highRate.time;ix=e.uniformIndices;native=e.frameIndices;
@@ -45,7 +45,7 @@ function report=runInspvaMotionGapComparison(outputFolder)
             assert(numerical.repeatedStateDifference==0 && numerical.halfStepMaximumPositionDifferenceM<1e-5);
             zeroLateral=e.lateralInput;
             for name=["lateralVelocity","sideSlipAngle","sideSlipAngleRate"],zeroLateral.(name)(:)=0;end
-            zeroData=reconstructMotionAidedLidarGaps(e.data,zeroLateral,frameTime(accepted));
+            zeroData=observerAnalysisSupport.reconstructMotionAidedLidarGaps(e.data,zeroLateral,frameTime(accepted));
             zeroEstimate=runMotionAidedVehicleObserver(zeroData,zeroLateral,saved.cfg);
             nativeError=vecnorm(zeroEstimate.position(native(accepted),:)-e.frameReference(accepted,1:2),2,2);
             ablation=struct('change',"Zero lateral estimates in both reconstruction and observer; all other inputs and gains fixed", ...

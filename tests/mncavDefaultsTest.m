@@ -43,7 +43,7 @@ classdef mncavDefaultsTest < matlab.unittest.TestCase
         end
         function staleDesignIsRejectedBeforeUsingMeasurements(testCase)
             changed=lateralObserverConfig();changed.vehicle.mass=1.1*changed.vehicle.mass;
-            design=struct('model',lateralBicycleModel(changed.vehicle));
+            design=struct('model',lateralObserverSupport.lateralBicycleModel(changed.vehicle));
             testCase.verifyError(@() runLateralVelocityObserver(struct(),design), ...
                 'VehicleLocalization:VehicleParameterMismatch');
             testCase.verifyError(@() simulateLateralObserverScenario(design), ...
@@ -68,8 +68,8 @@ classdef mncavDefaultsTest < matlab.unittest.TestCase
         function explicitSensitivityConfigurationRemainsSupported(testCase)
             current=lateralObserverConfig();changed=current;
             changed.vehicle.mass=1.1*current.vehicle.mass;
-            testCase.verifyWarningFree(@() assertLateralVehicleMatches(struct('model',lateralBicycleModel(changed.vehicle)),changed));
-            testCase.verifyWarningFree(@() assertLateralVehicleMatches(struct('model',lateralBicycleModel(current.vehicle)),current));
+            testCase.verifyWarningFree(@() lateralObserverSupport.assertLateralVehicleMatches(struct('model',lateralObserverSupport.lateralBicycleModel(changed.vehicle)),changed));
+            testCase.verifyWarningFree(@() lateralObserverSupport.assertLateralVehicleMatches(struct('model',lateralObserverSupport.lateralBicycleModel(current.vehicle)),current));
         end
     end
 end

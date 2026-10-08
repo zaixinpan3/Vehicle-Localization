@@ -1,7 +1,7 @@
 function [sensorData,reference,metadata] = prepareMncavObserverReplay(sensorFolder,parameterFile,calls,fixedLidarDelay,options)
 % prepareMncavObserverReplay Export recorded inputs and physical pose samples.
 % This is a data exporter. Its physical timestamp metadata is not an observer
-% timing model. reconstructContinuousObserverSignals supplies the separately
+% timing model. observerAnalysisSupport.reconstructContinuousObserverSignals supplies the separately
 % declared offline input reconstruction for the current continuous runner.
 % Vx comes exclusively from four-wheel fusion. IMU/steering use offline
 % linear reconstruction and independent-drive fixed corrections.

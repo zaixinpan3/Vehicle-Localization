@@ -8,7 +8,7 @@ classdef canonicalPyramidTest < matlab.unittest.TestCase
     methods (Test)
         function momentMatchingPreservesClassMassAndMoments(testCase)
             cloud=canonicalPyramidTest.splitScene();c=cloud.components;
-            [merged,groups]=canonicalizeSemanticCloud(cloud,1.5);m=merged.components;
+            [merged,groups]=registrationSupport.canonicalizeSemanticCloud(cloud,1.5);m=merged.components;
             testCase.verifyEqual(m.numComponents,c.numComponents-2);
             testCase.verifyEqual(numel(groups),m.numComponents);
             testCase.verifyEqual(sort(vertcat(groups{:})),(1:c.numComponents).');
@@ -28,15 +28,15 @@ classdef canonicalPyramidTest < matlab.unittest.TestCase
         end
         function zeroRadiusIsTheIdentity(testCase)
             cloud=canonicalPyramidTest.splitScene();
-            [same,groups]=canonicalizeSemanticCloud(cloud,0);
+            [same,groups]=registrationSupport.canonicalizeSemanticCloud(cloud,0);
             testCase.verifyEqual(same,cloud);
             testCase.verifyEqual(groups,num2cell((1:cloud.components.numComponents).'));
         end
         function commonWeightScaleDoesNotChangeTheGrouping(testCase)
             cloud=canonicalPyramidTest.splitScene();
-            [a,ga]=canonicalizeSemanticCloud(cloud,1.5);
+            [a,ga]=registrationSupport.canonicalizeSemanticCloud(cloud,1.5);
             cloud.components.mixtureWeight=1e-200*cloud.components.mixtureWeight;
-            [b,gb]=canonicalizeSemanticCloud(cloud,1.5);
+            [b,gb]=registrationSupport.canonicalizeSemanticCloud(cloud,1.5);
             testCase.verifyEqual(gb,ga);
             testCase.verifyEqual(b.components.mean,a.components.mean,AbsTol=1e-12);
             testCase.verifyEqual(b.components.covariance,a.components.covariance,AbsTol=1e-12);
@@ -46,14 +46,14 @@ classdef canonicalPyramidTest < matlab.unittest.TestCase
             c.meanXYZ=[c.mean,(1:n).'];c.covarianceXYZ=repmat(eye(3),1,1,n);
             for k=1:n,c.covarianceXYZ(1:2,1:2,k)=c.covariance(:,:,k);end
             c.heightAvailable=true(n,1);cloud.components=c;
-            merged=canonicalizeSemanticCloud(cloud,1.5);m=merged.components;
+            merged=registrationSupport.canonicalizeSemanticCloud(cloud,1.5);m=merged.components;
             testCase.verifyTrue(all(m.heightAvailable));
             testCase.verifyEqual(m.meanXYZ(:,1:2),m.mean,AbsTol=0);
             testCase.verifyEqual(m.covarianceXYZ(1:2,1:2,:),m.covariance,AbsTol=0);
             for k=1:m.numComponents,testCase.verifyGreaterThan(min(eig(m.covarianceXYZ(:,:,k))),0);end
             % One member without height removes height from its merged group.
             c.heightAvailable(2)=false;cloud.components=c;
-            [partial,groups]=canonicalizeSemanticCloud(cloud,1.5);
+            [partial,groups]=registrationSupport.canonicalizeSemanticCloud(cloud,1.5);
             g=find(cellfun(@(x)any(x==2),groups));
             testCase.verifyFalse(partial.components.heightAvailable(g));
             testCase.verifyTrue(all(partial.components.heightAvailable(setdiff(1:numel(groups),g))));
@@ -63,7 +63,7 @@ classdef canonicalPyramidTest < matlab.unittest.TestCase
             cloud.heightEvidence=struct('mean',[cloud.components.mean,ones(n,1)],'covariance',repmat(eye(3),1,1,n), ...
                 'available',true(n,1),'scope',"test");
             cloud.heightEvidence.available(3)=false;
-            [merged,groups]=canonicalizeSemanticCloud(cloud,1.5);e=merged.heightEvidence;
+            [merged,groups]=registrationSupport.canonicalizeSemanticCloud(cloud,1.5);e=merged.heightEvidence;
             testCase.verifyEqual(numel(e.available),numel(groups));
             testCase.verifyEqual(e.scope,"test");
             g=find(cellfun(@(x)any(x==3),groups));

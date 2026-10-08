@@ -101,7 +101,7 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
         end
         function croppingKeepsHeightIndicesAligned(testCase)
             [fixed,~,~]=scene();
-            [local,ids]=selectLocalProbabilityCloud(fixed,[2 3 0],.1);
+            [local,ids]=registrationSupport.selectLocalProbabilityCloud(fixed,[2 3 0],.1);
             testCase.verifyEqual(ids,8);
             testCase.verifyEqual(local.components.meanXYZ,fixed.components.meanXYZ(8,:),AbsTol=0);
             testCase.verifyEqual(local.components.covarianceXYZ,fixed.components.covarianceXYZ(:,:,8),AbsTol=0);
@@ -121,7 +121,7 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
             [fixed,moving,cfg]=scene();
             fixed.queryRelationship="exactIntensityNormalization";
             fixed.totalMass=80;fixed.components.mass=10*ones(8,1);
-            [local,ids]=selectLocalProbabilityCloud(fixed,[0 0 0],6);
+            [local,ids]=registrationSupport.selectLocalProbabilityCloud(fixed,[0 0 0],6);
             result=registerSemanticProbabilityCloud(local,moving,[0 0 0],cfg);
             testCase.verifyTrue(result.accepted,result.reason);
             testCase.verifyFalse(isfield(local,'queryRelationship'));
@@ -131,7 +131,7 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
             [fixed,moving,cfg]=scene();
             fixed.components.covarianceXYZ(:,:,7)=[.02 0 .2;0 .02 0;.2 0 4];
             pairs=struct('source',(1:4).','target',(1:4).','semanticName',repmat("curb",4,1));
-            model=prepareRelativeHeightAssociation(fixed,moving,[0 0 0],pairs,cfg.relativeHeight);
+            model=registrationSupport.prepareRelativeHeightAssociation(fixed,moving,[0 0 0],pairs,cfg.relativeHeight);
             [nearCost,nearResidual]=model.cost(5,7,[0 0 0]);
             [shiftedCost,shiftedResidual]=model.cost(5,7,[1 0 0]);
             testCase.verifyEqual(nearResidual,0,AbsTol=1e-10);

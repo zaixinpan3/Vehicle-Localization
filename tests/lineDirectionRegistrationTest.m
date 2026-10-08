@@ -9,13 +9,13 @@ classdef lineDirectionRegistrationTest < matlab.unittest.TestCase
     methods (Test)
         function ignoresSparseOrNonlinearNeighborhoods(testCase)
             c=road();cfg=settings();c.components.mean=c.components.mean(1:2,:);c.components.semanticName=c.components.semanticName(1:2);c.components.numComponents=2;c.components.mixtureWeight=ones(2,1);
-            [~,valid]=sourceLineDirections(c.components,cfg.lineDirection);testCase.verifyFalse(any(valid));
+            [~,valid]=registrationSupport.sourceLineDirections(c.components,cfg.lineDirection);testCase.verifyFalse(any(valid));
             c.components.mean=[0 0;1 0;0 1;1 1];c.components.semanticName=repmat("curb",4,1);c.components.numComponents=4;c.components.mixtureWeight=ones(4,1);
-            [~,valid]=sourceLineDirections(c.components,cfg.lineDirection);testCase.verifyFalse(any(valid));
+            [~,valid]=registrationSupport.sourceLineDirections(c.components,cfg.lineDirection);testCase.verifyFalse(any(valid));
         end
         function duplicatedMeansCannotCreateDirectionSupport(testCase)
             c=road();cfg=settings();c.components.mean=repmat([0 0;3 0],4,1);
-            [~,valid]=sourceLineDirections(c.components,cfg.lineDirection);
+            [~,valid]=registrationSupport.sourceLineDirections(c.components,cfg.lineDirection);
             testCase.verifyFalse(any(valid));
         end
         function disabledFactorPreservesLegacyConfiguration(testCase)
@@ -27,7 +27,7 @@ classdef lineDirectionRegistrationTest < matlab.unittest.TestCase
         end
         function rejectsInvalidDirectionScale(testCase)
             c=road();cfg=settings();cfg.lineDirection.standardDeviation=0;
-            testCase.verifyError(@() sourceLineDirections(c.components,cfg.lineDirection), ...
+            testCase.verifyError(@() registrationSupport.sourceLineDirections(c.components,cfg.lineDirection), ...
                 'VehicleLocalization:InvalidLineDirectionConfiguration');
         end
         function roadDirectionCannotInventAlongRoadInformation(testCase)
@@ -72,9 +72,9 @@ classdef lineDirectionRegistrationTest < matlab.unittest.TestCase
             testCase.verifyEqual(gradient,2*sys.gradient,'AbsTol',1e-6);
         end
         function directionIsInvariantToAxisSign(testCase)
-            c=road();cfg=settings();[t,valid]=sourceLineDirections(c.components,cfg.lineDirection);
+            c=road();cfg=settings();[t,valid]=registrationSupport.sourceLineDirections(c.components,cfg.lineDirection);
             c.components.mean=-c.components.mean;
-            [u,other]=sourceLineDirections(c.components,cfg.lineDirection);
+            [u,other]=registrationSupport.sourceLineDirections(c.components,cfg.lineDirection);
             testCase.verifyEqual(other,valid);testCase.verifyEqual(abs(sum(t(valid,:).*u(valid,:),2)),ones(nnz(valid),1),'AbsTol',1e-12);
         end
     end

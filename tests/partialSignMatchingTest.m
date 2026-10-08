@@ -6,7 +6,7 @@ classdef partialSignMatchingTest < matlab.unittest.TestCase
     methods (Test)
         function intrinsicShapeExcludesBetweenViewCenterDrift(t)
             cloud=landmarkViewMapTest.example();
-            conditioned=conditionSemanticMapOnView(cloud,[0 0 0]);
+            conditioned=registrationSupport.conditionSemanticMapOnView(cloud,[0 0 0]);
             t.verifyEqual(conditioned.components.intrinsicCovariance(:,:,1),diag([.01 .02]),AbsTol=1e-14);
             t.verifyEqual(conditioned.components.covariance(:,:,1),diag([.05 .02]),AbsTol=1e-14);
         end
@@ -53,7 +53,7 @@ classdef partialSignMatchingTest < matlab.unittest.TestCase
         end
         function cropAndProjectionPreserveIntrinsicShape(t)
             [fixed,~,~]=partialSignMatchingTest.fixture();
-            [cropped,ids]=selectLocalProbabilityCloud(fixed,[3 1 0],.1);
+            [cropped,ids]=registrationSupport.selectLocalProbabilityCloud(fixed,[3 1 0],.1);
             projected=registrationSupport.projectSemanticProbabilityCloud(cropped,2);
             t.verifyEqual(ids,11);
             t.verifyEqual(projected.components.intrinsicCovariance,diag([.001 .1]),AbsTol=1e-14);
@@ -66,7 +66,7 @@ classdef partialSignMatchingTest < matlab.unittest.TestCase
         end
         function emptyMapCropRejectsCleanly(t)
             [fixed,moving,cfg]=partialSignMatchingTest.fixture();
-            fixed=selectLocalProbabilityCloud(fixed,[1000 1000 0],.1);
+            fixed=registrationSupport.selectLocalProbabilityCloud(fixed,[1000 1000 0],.1);
             actual=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
             t.verifyFalse(actual.accepted||actual.directionalAccepted);
             t.verifyEqual(actual.reason,"insufficientComponents");

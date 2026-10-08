@@ -24,7 +24,7 @@ function report=runMncavZeroDelayExperiment(outputFolder,options)
     cfg.measurement.fixedLidarDelay=0;cfg.lidar.gainInformationScale=options.InformationScale;
     % Keep the same physical gains for a timing-only comparison. Reverify
     % the existing matrices at d=0; do not require an unnecessary new SDP.
-    design=improvedObserverReferenceDesign(cfg);
+    design=observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
     if strlength(options.MatchingFolder)==0
         matchingFolder=fullfile(outputFolder,'matching');
         motion=struct('time',raw.highRate.time,'longitudinalSpeed',raw.highRate.longitudinalSpeed, ...
@@ -63,7 +63,7 @@ function report=runMncavZeroDelayExperiment(outputFolder,options)
     writetable(calls,fullfile(outputFolder,'precomputed_calls.csv'));
     % Explicit phase boundary: the global observer consumes the completed file.
     loaded=load(cacheFile,'cache');cache=loaded.cache;accepted=cache.accepted;
-    [data,lateralInput,reconstruction]=reconstructFrameAlignedLidarSignals(raw.highRate,lateral, ...
+    [data,lateralInput,reconstruction]=observerAnalysisSupport.reconstructFrameAlignedLidarSignals(raw.highRate,lateral, ...
         cache.time,cache.time(accepted),cache.pose(accepted,:),cache.information(:,:,accepted),cfg, ...
         MaximumOfflineGap=options.MaximumOfflineGap);
     p0=[calls.referenceX(1),calls.referenceY(1),calls.referencePsi(1)]+matching.metadata.initialOffset;
@@ -125,7 +125,7 @@ function report=runMncavZeroDelayExperiment(outputFolder,options)
     report=struct('summary',summary,'metadata',metadata);
     save(fullfile(outputFolder,'experiment.mat'),'report','cfg','design','lateralCfg','lateralDesign','lateral', ...
         'data','lateralInput','estimate','referencePose','pvaPose','uniformIndices','-v7.3');
-    gainData=buildImprovedObserverCertificateData(cfg);
+    gainData=observerAnalysisSupport.buildImprovedObserverCertificateData(cfg);
     gains=struct('lateralVertexGains',lateralDesign.vertexGains,'theta',cfg.observer.theta,'K',design.K,'N',design.N, ...
         'physicalPoseGain',gainData.T*design.K,'physicalAuxiliaryGain',gainData.T*design.N/cfg.observer.theta^3, ...
         'verification',design.verification);

@@ -15,7 +15,7 @@ function report = matchSavedPerception(observationPath,mapPath,outputDirectory,f
     sourceClouds=cell(numel(frameIndices),1); index=0;
     for k=1:numel(frameIndices)
         fi=find(data.frameIndices==frameIndices(k)); assert(isscalar(fi),'Missing/duplicate frame.');
-        row=data.framePoseTable(fi,:); reference=poseRowToPlanarPose(row);
+        row=data.framePoseTable(fi,:); reference=poseSupport.poseRowToPlanarPose(row);
         [moving,roundTripError]=buildSavedFeatureProbabilityCloud(data,fi,reference,pcfg);
         sourceClouds{k}=moving;
         for start=1:size(offsets,1)

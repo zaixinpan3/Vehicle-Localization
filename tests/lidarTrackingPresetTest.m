@@ -10,8 +10,8 @@ classdef lidarTrackingPresetTest < matlab.unittest.TestCase
     methods (Test)
         function presetKeepsTheSameDelayAndOperatingBounds(testCase)
             reference=improvedObserverConfig("lidar");cfg=improvedObserverConfig("lidar","tracking");
-            design=improvedObserverReferenceDesign(cfg);original=improvedObserverReferenceDesign(reference);
-            check=verifyImprovedObserverDesign(design,cfg);
+            design=observerAnalysisSupport.improvedObserverReferenceDesign(cfg);original=observerAnalysisSupport.improvedObserverReferenceDesign(reference);
+            check=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);
             testCase.verifyEqual(cfg.operating,reference.operating);
             testCase.verifyEqual(cfg.measurement,reference.measurement);
             testCase.verifyEqual(cfg.lidar,reference.lidar);
@@ -25,15 +25,15 @@ classdef lidarTrackingPresetTest < matlab.unittest.TestCase
                 'VehicleLocalization:UnsupportedObserverProfile');
         end
         function changedDelayMustStillPassVerification(testCase)
-            cfg=improvedObserverConfig("lidar","tracking");design=improvedObserverReferenceDesign(cfg);
+            cfg=improvedObserverConfig("lidar","tracking");design=observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
             cfg.measurement.fixedLidarDelay=1;
-            check=verifyImprovedObserverDesign(design,cfg);
+            check=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);
             testCase.verifyFalse(check.certified);
         end
         function gainChangesCannotReuseASuccessFlag(testCase)
-            cfg=improvedObserverConfig("lidar","tracking");design=improvedObserverReferenceDesign(cfg);
+            cfg=improvedObserverConfig("lidar","tracking");design=observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
             design.K=10*design.K;
-            check=verifyImprovedObserverDesign(design,cfg);
+            check=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);
             testCase.verifyFalse(check.certified);
         end
     end

@@ -11,9 +11,9 @@ classdef observerLowPeakingTest < matlab.unittest.TestCase
         function presetVerifiesAtOriginalOperatingBounds(testCase)
             cfg=improvedObserverConfig("gnss","lowPeaking");
             reference=improvedObserverConfig("gnss");
-            design=improvedObserverReferenceDesign(cfg);
-            verification=verifyImprovedObserverDesign(design,cfg);
-            data=buildImprovedObserverCertificateData(cfg);
+            design=observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
+            verification=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);
+            data=observerAnalysisSupport.buildImprovedObserverCertificateData(cfg);
             testCase.verifyEqual(cfg.operating,reference.operating);
             testCase.verifyTrue(verification.certified);
             testCase.verifyGreaterThan(verification.uniformMargin,.14);
@@ -44,5 +44,5 @@ function result=trial(profile)
     cfg.simulation.courseRate=.04;
     cfg.simulation.initialError=[1;.3;.1;-1;-.2;-.1;deg2rad(10)];
     cfg.simulation.positionNoiseAmplitude=.05;
-    result=simulateImprovedObserverScenario(improvedObserverReferenceDesign(cfg),struct(),cfg);
+    result=observerAnalysisSupport.simulateImprovedObserverScenario(observerAnalysisSupport.improvedObserverReferenceDesign(cfg),struct(),cfg);
 end

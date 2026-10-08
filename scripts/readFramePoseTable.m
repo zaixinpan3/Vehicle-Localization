@@ -28,5 +28,5 @@ function framePoseTable = readFramePoseTable(poseMatchCsvPath, frameIndices)
     assert(isempty(missingFrames), "Pose match CSV does not contain requested frame(s): %s.", strjoin(string(missingFrames(:).'), ", "));
     [~, keepIdx] = ismember(double(frameIndices(:)), availableFrames);
     framePoseTable = framePoseTable(keepIdx, :);
-    for k=1:height(framePoseTable),poseRowToRigidTransform(framePoseTable(k,:));end
+    for k=1:height(framePoseTable),poseSupport.poseRowToRigidTransform(framePoseTable(k,:));end
 end

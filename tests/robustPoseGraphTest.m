@@ -12,9 +12,9 @@ classdef robustPoseGraphTest < matlab.unittest.TestCase
             map.components.semanticName=[repmat("curb",4,1);repmat("pole",2,1)];
             map.components.covariance=cat(3,repmat(diag([1 .01]),1,1,4),repmat(.02*eye(2),1,1,2));
             packet.source.components=map.components;packet.positionAid.valid=false;
-            [first,state]=updateRobustPoseGraph([],packet,map,cfg);
+            [first,state]=poseGraphSupport.updateRobustPoseGraph([],packet,map,cfg);
             packet.time=.1;packet.source.acquisitionTime=.1;packet.seed=[.1 -.1 .02];
-            [actual,~]=updateRobustPoseGraph(state,packet,map,cfg);
+            [actual,~]=poseGraphSupport.updateRobustPoseGraph(state,packet,map,cfg);
             testCase.verifyTrue(any(first.correspondences.lineDirectionUsed));
             testCase.verifyLessThan(norm(actual.poseXYTheta),1e-4);
             testCase.verifyTrue(all(isfinite(actual.information),'all'));
@@ -40,12 +40,12 @@ classdef robustPoseGraphTest < matlab.unittest.TestCase
         end
         function overlappingStacksCannotBecomeGraphFactors(testCase)
             [packet,map,cfg]=fixture();packet.source.observationScope="stackedHorizon";
-            testCase.verifyError(@()updateRobustPoseGraph([],packet,map,cfg), ...
+            testCase.verifyError(@()poseGraphSupport.updateRobustPoseGraph([],packet,map,cfg), ...
                 'VehicleLocalization:GraphNeedsCurrentScan');
         end
         function duplicateAcquisitionIsRejected(testCase)
-            [packet,map,cfg]=fixture();[~,s]=updateRobustPoseGraph([],packet,map,cfg);
-            testCase.verifyError(@()updateRobustPoseGraph(s,packet,map,cfg), ...
+            [packet,map,cfg]=fixture();[~,s]=poseGraphSupport.updateRobustPoseGraph([],packet,map,cfg);
+            testCase.verifyError(@()poseGraphSupport.updateRobustPoseGraph(s,packet,map,cfg), ...
                 'VehicleLocalization:DuplicateGraphAcquisition');
         end
         function outputCannotBeMistakenForIndependentLidar(testCase)
@@ -59,9 +59,9 @@ classdef robustPoseGraphTest < matlab.unittest.TestCase
         end
         function withoutGnssGeometryStillLocalizes(testCase)
             [packet,map,cfg]=fixture();packet.positionAid.valid=false;
-            [~,s]=updateRobustPoseGraph([],packet,map,cfg);
+            [~,s]=poseGraphSupport.updateRobustPoseGraph([],packet,map,cfg);
             packet.time=.1;packet.source.acquisitionTime=.1;packet.seed=[.1 .1 .01];
-            [r,~]=updateRobustPoseGraph(s,packet,map,cfg);
+            [r,~]=poseGraphSupport.updateRobustPoseGraph(s,packet,map,cfg);
             testCase.verifyLessThan(norm(r.poseXYTheta),1e-4);
             testCase.verifyFalse(r.containsGnss);
         end
@@ -105,7 +105,7 @@ function [result,truth]=turning(origin)
         source.observationScope="confirmedCurrentAcquisition";source.acquisitionTime=.1*(k-1);
         packet.source=source;packet.time=source.acquisitionTime;packet.seed=truth;
         packet.relativeMotion=[.4 .02 .04];packet.positionAid.position=truth(1:2);packet.positionAid.timestamp=packet.time;
-        [result,state]=updateRobustPoseGraph(state,packet,map,cfg);
+        [result,state]=poseGraphSupport.updateRobustPoseGraph(state,packet,map,cfg);
     end
 end
 
@@ -124,6 +124,6 @@ function [result,state]=sequence(loss,outlier,maximumFrames,empty)
     for k=1:8
         packet.time=(k-1)*.1;packet.source.acquisitionTime=packet.time;packet.positionAid.timestamp=packet.time;
         if outlier && k>=3,packet.source.components.mean(2,:)=[0 1.5];end
-        [result,state]=updateRobustPoseGraph(state,packet,map,cfg);packet.seed=result.poseXYTheta;
+        [result,state]=poseGraphSupport.updateRobustPoseGraph(state,packet,map,cfg);packet.seed=result.poseXYTheta;
     end
 end

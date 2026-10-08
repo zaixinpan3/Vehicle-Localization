@@ -11,8 +11,8 @@ function report = validateStandaloneObserver(outputFolder)
         for noisy=[false,true]
             index=index+1;cfg=improvedObserverConfig(mode);
             if ~noisy,cfg.simulation.positionNoiseAmplitude=0;cfg.simulation.headingNoiseAmplitude=0;end
-            design=improvedObserverReferenceDesign(cfg);
-            started=tic;result=simulateImprovedObserverScenario(design,struct(),cfg);seconds=toc(started);
+            design=observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
+            started=tic;result=observerAnalysisSupport.simulateImprovedObserverScenario(design,struct(),cfg);seconds=toc(started);
             row=result.metrics;row.mode=mode;row.noisy=noisy;row.runtimeSeconds=seconds;
             row.matrixCertificateVerified=result.estimate.observer.certificateVerified;
             row.coefficientBoundsSatisfied=result.estimate.diagnostics.certificateConditions.coefficientBoundsSatisfied;
@@ -21,7 +21,7 @@ function report = validateStandaloneObserver(outputFolder)
     end
     % Refine the same smooth LiDAR scenario without changing its measurements.
     refinedCfg=results{end}.cfg;refinedCfg.measurement.maximumIntegrationStep=.0025;
-    refined=simulateImprovedObserverScenario(improvedObserverReferenceDesign(refinedCfg),struct(),refinedCfg);
+    refined=observerAnalysisSupport.simulateImprovedObserverScenario(observerAnalysisSupport.improvedObserverReferenceDesign(refinedCfg),struct(),refinedCfg);
     refinement=max(abs(refined.estimate.z-results{end}.estimate.z),[],1);
     report=struct('metrics',struct2table([rows{:}]),'maximumStateRefinementDifference',refinement, ...
         'scope',"Continuous ODE/DDE simulation; finite experiments are not an unconditional ISS proof.");

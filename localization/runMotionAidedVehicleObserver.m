@@ -13,7 +13,7 @@ function estimate=runMotionAidedVehicleObserver(data,lateral,cfg)
         lateral (1,1) struct
         cfg (1,1) struct=motionAidedObserverConfig()
     end
-    design=designMotionAidedObserverGains(cfg);
+    design=observerAnalysisSupport.designMotionAidedObserverGains(cfg);
     assert(isscalar(cfg.maximumIntegrationStep) && isfinite(cfg.maximumIntegrationStep) ...
         && cfg.maximumIntegrationStep>0 && isfinite(cfg.lidar.gainInformationScale) ...
         && cfg.lidar.gainInformationScale>0, ...
@@ -101,7 +101,7 @@ function [t,u,p,W]=inputs(data,lateral,cfg)
         h.lateralAcceleration(:),h.yawRate(:),lateral.sideSlipAngleRate(:)];p=source.pose;
     W=zeros(3,3,n);
     for k=1:n
-        [~,~,audit,W(:,:,k)]=computeLidarInformationWeights(source.information(:,:,k),cfg);
+        [~,~,audit,W(:,:,k)]=observerAnalysisSupport.computeLidarInformationWeights(source.information(:,:,k),cfg);
         assert(audit.qualified,'VehicleLocalization:InsufficientLidarInformation', ...
             'Every continuous reconstruction knot must satisfy the declared information sector.');
     end

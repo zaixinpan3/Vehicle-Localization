@@ -15,7 +15,7 @@ function report=runSavedPerceptionMatchingBaseline(outputFolder,options)
     loaded=load(options.MapFile,'cloud');fixed=loaded.cloud;
     cfg=distributionRegistrationConfig();pcfg=coarseSemanticProbabilityCloudConfig();
     n=data.numFrames;assert(isequal(data.frameIndices(:),(1:n).') && n==1170);
-    reference=zeros(n,3);for k=1:n,reference(k,:)=poseRowToPlanarPose(data.framePoseTable(k,:));end
+    reference=zeros(n,3);for k=1:n,reference(k,:)=poseSupport.poseRowToPlanarPose(data.framePoseTable(k,:));end
     % The prior exact frame clock and PVA reference are evaluation metadata.
     % No prior matching pose, motion measurement or observer state is used.
     if ismember('pose_source',data.framePoseTable.Properties.VariableNames)

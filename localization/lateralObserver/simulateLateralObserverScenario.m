@@ -18,7 +18,7 @@ function result = simulateLateralObserverScenario(design, cfg)
     if nargin < 2 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
-    assertLateralVehicleMatches(design,cfg);
+    lateralObserverSupport.assertLateralVehicleMatches(design,cfg);
     truth = simulateTruth(cfg);
     measurements = buildMeasurements(truth, cfg);
 
@@ -55,7 +55,7 @@ function truth = simulateTruth(cfg)
     if isempty(plantVehicle)
         plantVehicle = cfg.vehicle;
     end
-    model = lateralBicycleModel(plantVehicle);
+    model = lateralObserverSupport.lateralBicycleModel(plantVehicle);
 
     state = zeros(numel(time), 2);
     for sampleIdx = 1:(numel(time) - 1)
@@ -72,7 +72,7 @@ function truth = simulateTruth(cfg)
     lateralVelocityRate = zeros(numel(time), 1);
     yawRateRate = zeros(numel(time), 1);
     for sampleIdx = 1:numel(time)
-        [~, C] = evaluateLateralModel(model, [longitudinalSpeed(sampleIdx); 1.0 ./ longitudinalSpeed(sampleIdx)]);
+        [~, C] = lateralObserverSupport.evaluateLateralModel(model, [longitudinalSpeed(sampleIdx); 1.0 ./ longitudinalSpeed(sampleIdx)]);
         lateralAcceleration(sampleIdx) = (C(1, :) * state(sampleIdx, :).') + (model.D(1) .* steeringAngle(sampleIdx));
         derivative = plantDerivative(state(sampleIdx, :).', sampleIdx, 0.0, longitudinalSpeed, steeringAngle, model, nonlinearity);
         lateralVelocityRate(sampleIdx) = derivative(1);
@@ -116,7 +116,7 @@ function derivative = plantDerivative(state, sampleIdx, stepFraction, longitudin
 %   sampleIdx: index of the interval start
 %   stepFraction: position inside the interval, in [0, 1]
 %   longitudinalSpeed, steeringAngle: input series
-%   model: struct from lateralBicycleModel
+%   model: struct from lateralObserverSupport.lateralBicycleModel
 %   nonlinearity: function handle f(x)
 %
 % Output:
@@ -124,7 +124,7 @@ function derivative = plantDerivative(state, sampleIdx, stepFraction, longitudin
     nextIdx = min(sampleIdx + 1, numel(longitudinalSpeed));
     speed = ((1.0 - stepFraction) .* longitudinalSpeed(sampleIdx)) + (stepFraction .* longitudinalSpeed(nextIdx));
     steering = ((1.0 - stepFraction) .* steeringAngle(sampleIdx)) + (stepFraction .* steeringAngle(nextIdx));
-    A = evaluateLateralModel(model, [speed; 1.0 ./ speed]);
+    A = lateralObserverSupport.evaluateLateralModel(model, [speed; 1.0 ./ speed]);
     nonlinearTerm = double(nonlinearity(state));
     derivative = (A * state) + (model.B .* steering) + nonlinearTerm(:);
 end

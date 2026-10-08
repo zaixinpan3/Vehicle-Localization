@@ -18,7 +18,7 @@ classdef mncavVehicleConfigTest < matlab.unittest.TestCase
         end
         function mncavProfileBuildsTheIntendedBicycleModel(testCase)
             p=mncavVehicleConfig();cfg=lateralObserverConfig("mncav");
-            model=lateralBicycleModel(cfg.vehicle);
+            model=lateralObserverSupport.lateralBicycleModel(cfg.vehicle);
             testCase.verifyEqual(model.vehicle,p.vehicle);
             testCase.verifyEqual(model.B(1),p.vehicle.frontCorneringStiffness/p.vehicle.mass,AbsTol=1e-12);
             testCase.verifyEqual(model.B(2),p.vehicle.lf*p.vehicle.frontCorneringStiffness/p.vehicle.yawInertia,AbsTol=1e-12);

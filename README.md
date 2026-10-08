@@ -222,12 +222,16 @@ This replaces the former standalone validation helper.
 Dataset loading, frame/pose matching, global coordinate transforms, feature
 collection, and the `buildFeatureMap` offline workflow live in `scripts/`.
 Cloud registration, registration preparation, projection, scoring, and pitch
-calibration live in `localization/`, alongside `poseRowToPlanarPose`. Their
-existing entry-point names are retained. Run `setupVehicleLocalization` to add
-all three modules. Existing map formats, configuration fields, numerical
+calibration live in `localization/`, alongside `poseSupport.poseRowToPlanarPose`.
+Run `setupVehicleLocalization` to add all three modules. Existing map formats, configuration fields, numerical
 algorithms, and builder/query error identifiers are preserved.
 
 ### Localization (`localization/`)
+
+The module has 19 MATLAB files: entry points plus static `*Support` classes,
+called with the class prefix (for example
+`lidarInjectionSupport.filterLidarPoseInformation`). The complete file table
+is in [the localization README](localization/README.md#file-layout).
 
 Two estimator stages live here and form the current one-way cascade.
 
@@ -244,7 +248,7 @@ smallest input-to-state gain from axle-force model mismatch and measurement
 error to the estimation error at the configured decay rate. The mismatch
 channel (`model.E`, `model.F`) carries any error of the modeled tire forces,
 so the gains trade trust in the bicycle model against trust in the IMU.
-`scheduleLateralObserverGain` blends the three gains with the barycentric
+`lateralObserverSupport.scheduleLateralObserverGain` blends the three gains with the barycentric
 coordinates of the current speed, and the synthesis re-checks that blend
 against the original certificate at every design point.
 
@@ -337,8 +341,8 @@ are explicit:
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |
 | `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` (`.outputPoint` from `mncavMotionOutputPoint.json` for MnCAV) |
 | `wheelSpeedObserverConfig` | `estimateWheelLongitudinalSpeed`, `prepareWheelMotionInputs` |
-| `improvedObserverConfig` | `designImprovedObserverGains`, `runImprovedVehicleObserver` |
-| `fullObserverConfig` | `designFullObserverGains`, `runFullLocalizationObserver` |
+| `improvedObserverConfig` | `observerAnalysisSupport.designImprovedObserverGains`, `runImprovedVehicleObserver` |
+| `fullObserverConfig` | `fullObserverSupport.designFullObserverGains`, `runFullLocalizationObserver` |
 
 ## Quick start
 
@@ -397,7 +401,7 @@ fine = perceiveFrame(frame, perceptionConfig("Mississippi", "offline")); % 0.3 m
 nnz(fine.featureMasks.curb)                       % accepted offline curb points
 
 localCloud = perceiveCoarseProbabilityCloud(frame, perceptionConfig());
-selfScore = scoreSemanticProbabilityCloudAlignment( ...
+selfScore = registrationSupport.scoreSemanticProbabilityCloudAlignment( ...
     localCloud, localCloud, [0, 0, 0]);           % semantic D2D-NDT score
 
 [probabilityCloudMap, featureData] = buildFeatureMap("data");   % offline map
@@ -408,8 +412,8 @@ design = designLateralObserverGains(lateralObserverConfig("mncav")); % nominal M
 estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
 
 lateral = designLateralObserverGains(); % current MnCAV; requires YALMIP/SDP
-improved = improvedObserverReferenceDesign();
-result = simulateImprovedObserverScenario( ...
+improved = observerAnalysisSupport.improvedObserverReferenceDesign();
+result = observerAnalysisSupport.simulateImprovedObserverScenario( ...
     improved, lateral, improvedObserverConfig());        % complete cascade
 ```
 
@@ -445,11 +449,11 @@ Positive mixture masses do not attract the solution toward sampling-density
 peaks. Full-pose acceptance requires three observable directions and class
 consistency. A rejected result produces no observer event; partial geometry
 is available only as a diagnostic. Its normal matrix is not calibrated sensor
-information. The separate `scoreSemanticProbabilityCloudAlignment` function
+information. The separate `registrationSupport.scoreSemanticProbabilityCloudAlignment` function
 evaluates a Gaussian-overlap diagnostic; it does not select another pose solver.
 
 Registration is coarse to fine on a **canonical map pyramid**
-(`cfg.pyramid`). `canonicalizeSemanticCloud` merges same-class point
+(`cfg.pyramid`). `registrationSupport.canonicalizeSemanticCloud` merges same-class point
 components closer than `mapMergeRadius` (1.5 m) in the local map and
 `sourceMergeRadius` (0.5 m) in the source window into one moment-matched
 Gaussian each, which removes the sub-metre association aliases of split or
@@ -466,14 +470,14 @@ Full XYZ means/covariances, including xz and yz, remain in every supported
 probability-cloud component. The default `heightMode="xy"` uses the XY
 marginal. Opt-in `"xyz"` makes geometric D2D check conditional height
 compatibility; it never estimates Z, roll, or pitch. Supply `heightTranslation`
-as the moving origin's map Z (the third output of `poseRowToPlanarPose`).
+as the moving origin's map Z (the third output of `poseSupport.poseRowToPlanarPose`).
 `"auto"` falls back to XY when height or its reference is absent. Small
 compatible height residuals do not exert a planar pose force.
 
 Optional `perceptionConfig().frameCalibration` and
 `featureMapBuildConfig().frameCalibration` specify the same rigid increment
 from stored points to the recorded body frame. Their default is identity.
-`fitLidarPitchCalibration` produces an **offline pitch-only candidate** from
+`lidarCalibrationSupport.fitLidarPitchCalibration` produces an **offline pitch-only candidate** from
 static feature observations; it does not add a localization state or claim a
 complete sensor extrinsic calibration. Rebuild a map with the chosen transform
 before using it online. Missing or mismatched calibration provenance is rejected.

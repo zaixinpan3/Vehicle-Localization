@@ -19,7 +19,7 @@ function report=scoreMncavVdbLocalization(estimateFolder,referenceFile,scoreFold
         assert(all(abs(prediction.time-reference.lidar_stamp_sec(frames))<1e-7), ...
             'VehicleLocalization:ReferenceAlignment','Scoring timestamps differ from saved predictions.');
         truth=zeros(height(prediction),3);
-        for k=1:height(prediction),truth(k,:)=poseRowToPlanarPose(reference(frames(k),:));end
+        for k=1:height(prediction),truth(k,:)=poseSupport.poseRowToPlanarPose(reference(frames(k),:));end
         error=prediction{:,{'x','y','yaw'}}-truth;error(:,3)=atan2(sin(error(:,3)),cos(error(:,3)));
         position=hypot(error(:,1),error(:,2));steady=prediction.time>=prediction.time(1)+2;
         scenario=erase(string(file.name),'_trajectory.csv');

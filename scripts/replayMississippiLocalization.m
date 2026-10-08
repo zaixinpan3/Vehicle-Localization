@@ -47,7 +47,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
     end
     poseReference=zeros(n,3);
     for k=1:n
-        poseReference(k,:)=poseRowToPlanarPose(poses(k,:));
+        poseReference(k,:)=poseSupport.poseRowToPlanarPose(poses(k,:));
     end
     tilt=prepareMississippiLidarTilt(poses.lidar_stamp_sec,sensorFolder);
     gnssFolder=fileparts(posePath); stem="raw_data_2024-06-07-12-09-31_0";
@@ -130,7 +130,7 @@ function report = replayMississippiLocalization(mapFile, sensorFolder, outputFol
         end
         cfg.perception.coarseProbabilityCloud.projectionRotation=tilt.rotation(:,:,k);
         timer=tic; selectionTimer=tic;
-        local=selectLocalProbabilityCloud(cloud,predicted,radius);
+        local=registrationSupport.selectLocalProbabilityCloud(cloud,predicted,radius);
         selectionSeconds=toc(selectionTimer);
         [event,result,sourceHistory]=localizeLidarFrame(frame,local,predicted,scanTime(k),cfg,sourceHistory,motion(k,:));
         candidatePoses(k,:)=result.poseXYTheta;

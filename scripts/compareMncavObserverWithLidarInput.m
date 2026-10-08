@@ -27,14 +27,14 @@ function report=compareMncavObserverWithLidarInput(outputFolder)
         design.K(1,1)=c.positionGain;design.K(4,2)=c.positionGain;
         errorMessage="";status="completed";witnessDelay=0;duration=NaN;
         try
-            verification=verifyImprovedObserverDesign(design,cfg);
+            verification=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);
             if ~verification.certified
                 % Positive-delay synthesis is only a numerical certificate
                 % construction. The actual measurement and runtime delay stay 0.
                 witnessDelay=min(.15,.9/(c.theta*c.positionGain));
                 witnessCfg=cfg;witnessCfg.measurement.fixedLidarDelay=witnessDelay;
                 design=synthesizeFixedGains(design,witnessCfg);
-                verification=verifyImprovedObserverDesign(design,cfg);
+                verification=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);
             end
             assert(verification.certified,'VehicleLocalization:InfeasibleCertificate','Zero-delay matrix check failed.');
             design.verification=verification;design.certified=true;
@@ -100,8 +100,8 @@ function value=emptyMetrics(example)
 end
 
 function design=synthesizeFixedGains(design,cfg)
-    data=buildImprovedObserverCertificateData(cfg);
-    [vertices,uncertainty]=continuousLidarCertificateVertices(design,cfg);
+    data=observerAnalysisSupport.buildImprovedObserverCertificateData(cfg);
+    [vertices,uncertainty]=observerAnalysisSupport.continuousLidarCertificateVertices(design,cfg);
     Ad=-cfg.observer.theta*design.K*data.C;delay=cfg.measurement.fixedLidarDelay;
     yalmip('clear');P=sdpvar(7,7,'symmetric');Q=sdpvar(7,7,'symmetric');R=sdpvar(7,7,'symmetric');
     g=sdpvar(1);margin=sdpvar(1);pBound=sdpvar(1);rBound=sdpvar(1);
@@ -109,12 +109,12 @@ function design=synthesizeFixedGains(design,cfg)
         P<=pBound*eye(7),R<=rBound*eye(7),trace(P)==7,trace(Q)+trace(R)<=1000, ...
         g>=1e-5,g<=1000,margin>=1e-6];
     for k=1:size(vertices,3)
-        block=continuousObserverDelayLmi(vertices(:,:,k),Ad,P,Q,R,g,delay,design.rate);
+        block=observerAnalysisSupport.continuousObserverDelayLmi(vertices(:,:,k),Ad,P,Q,R,g,delay,design.rate);
         constraints=[constraints,block<=-(margin+2*uncertainty*(pBound+delay*rBound))*eye(28)]; %#ok<AGROW>
     end
     result=optimize(constraints,-margin,sdpsettings('solver',char(cfg.synthesis.solver),'verbose',0));
     assert(result.problem==0,'VehicleLocalization:InfeasibleCertificate','Fixed-gain synthesis failed: %s',result.info);
     design.P=double(P);design.Q=double(Q);design.R=double(R);design.g=double(g);
     for name=["P","Q","R"],design.(name)=(design.(name)+design.(name).')/2;end
-    verification=verifyImprovedObserverDesign(design,cfg);assert(verification.certified);
+    verification=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);assert(verification.certified);
 end

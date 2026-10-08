@@ -28,10 +28,10 @@ audit=struct('commonScanCount',nnz(mask),'observerAtScanPositionRmseM',rms(vecno
  'dynamicModelSamples',nnz(f.lateral.diagnostics.dynamicModelEvaluated), ...
  'stationarySamples',nnz(f.lateral.diagnostics.stationaryDetected), ...
  'maximumLateralVelocityMps',max(abs(f.lateral.lateralVelocity)), ...
- 'lateralGainAt8Mps',scheduleLateralObserverGain(f.lateralDesign,8));
-D=buildImprovedObserverCertificateData(f.cfg);audit.physicalPoseGain=D.T*f.design.K;
+ 'lateralGainAt8Mps',lateralObserverSupport.scheduleLateralObserverGain(f.lateralDesign,8));
+D=observerAnalysisSupport.buildImprovedObserverCertificateData(f.cfg);audit.physicalPoseGain=D.T*f.design.K;
 audit.physicalAuxiliaryGain=D.T*f.design.N/f.cfg.observer.theta^3;
-[~,~,strictWeight]=computeLidarInformationWeights(f.data.lidar.information(:,:,1),improvedObserverConfig('lidar','mncav'));
+[~,~,strictWeight]=observerAnalysisSupport.computeLidarInformationWeights(f.data.lidar.information(:,:,1),improvedObserverConfig('lidar','mncav'));
 audit.firstReconstructedWeightPassesHistoricalScale=strictWeight.qualified;
 
 fid=fopen(fullfile(folder,'audit.json'),'w');fprintf(fid,'%s\n',jsonencode(audit,PrettyPrint=true));fclose(fid);disp(audit);

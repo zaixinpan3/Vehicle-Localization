@@ -18,7 +18,7 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
     calls=table();if mode=="lidar",calls=readtable(fullfile(replayFolder,'calls.csv'));end
     [raw,reference,metadata]=prepareMncavObserverReplay(folder,parameterFile,calls,fixedLidarDelay);
     loaded=load(designFile,'observerDesign','observerCfg','lateralDesign');cfg=loaded.observerCfg;
-    assertLateralVehicleMatches(loaded.lateralDesign,lateralObserverConfig());
+    lateralObserverSupport.assertLateralVehicleMatches(loaded.lateralDesign,lateralObserverConfig());
     assert(isfield(cfg,'mode') && cfg.mode==mode,'VehicleLocalization:CertificateMismatch', ...
         'Generate a design for the selected continuous mode first.');
     cfg.measurement.fixedLidarDelay=fixedLidarDelay;
@@ -26,7 +26,7 @@ function report = runMncavObserverReplay(replayFolder,designFile,parameterFile,o
     try
         if mode=="gnss",recorded=raw.gps;information=[];
         else,recorded=raw.lidar;information=recorded.information;end
-        [data,reconstruction]=reconstructContinuousObserverSignals(raw.highRate,recorded.timestamp, ...
+        [data,reconstruction]=observerAnalysisSupport.reconstructContinuousObserverSignals(raw.highRate,recorded.timestamp, ...
             recorded.pose,information,cfg,MaximumGap=options.MaximumReconstructionGap);
         t=data.highRate.time;
         referencePose=interp1(reference.time,[reference.x,reference.y,reference.psi],t,'linear');

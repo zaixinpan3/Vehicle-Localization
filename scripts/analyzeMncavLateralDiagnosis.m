@@ -9,7 +9,7 @@ function report=analyzeMncavLateralDiagnosis(outputFolder)
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     source="output/mncav_inspva_observer_20260915/experiment.mat";
     z=load(source,'high','lateralCfg','lateralDesign','lateral');
-    assertLateralVehicleMatches(z.lateralDesign,lateralObserverConfig());
+    lateralObserverSupport.assertLateralVehicleMatches(z.lateralDesign,lateralObserverConfig());
     h=z.high;t=h.time;cfg=z.lateralCfg;design=z.lateralDesign;n=numel(t);
     audit=readtable('output/mncav_inspva_median_20260915/motion_audit.csv');
     reference=interp1(audit.time,audit{:,{'insVx','insVy','insDerivedAx','insDerivedAy','insDerivedYawRate'}},t);
@@ -47,7 +47,7 @@ function report=analyzeMncavLateralDiagnosis(outputFolder)
                 if startsWith(name,"front")||startsWith(name,"tires"),c.vehicle.frontCorneringStiffness=factor*c.vehicle.frontCorneringStiffness;end
                 if startsWith(name,"rear")||startsWith(name,"tires"),c.vehicle.rearCorneringStiffness=factor*c.vehicle.rearCorneringStiffness;end
                 if startsWith(name,"inertia"),c.vehicle.yawInertia=factor*c.vehicle.yawInertia;end
-                d.model=lateralBicycleModel(c.vehicle);resynth=endsWith(name,"resynth");
+                d.model=lateralObserverSupport.lateralBicycleModel(c.vehicle);resynth=endsWith(name,"resynth");
             case "steering_scale_07",u.steeringAngle=.7*h.steeringAngle;
             case "steering_scale_13",u.steeringAngle=1.3*h.steeringAngle;
             case "weight_vy_100_resynth",c.synthesis.errorWeight=diag([100,1]);resynth=true;
@@ -94,8 +94,8 @@ function report=analyzeMncavLateralDiagnosis(outputFolder)
     nominalMismatch=zeros(n,2);nominalOutputMismatch=zeros(n,2);identityResidual=zeros(n,2);
     eigenMax=NaN(n,1);gainEntries=NaN(n,4);masterDifference=z.lateral.lateralVelocity-z.lateral.dynamicState(:,1);
     for i=find(moving).'
-        [A,C]=evaluateLateralModel(design.model,[h.longitudinalSpeed(i);1/h.longitudinalSpeed(i)]);
-        L=scheduleLateralObserverGain(design,h.longitudinalSpeed(i));
+        [A,C]=lateralObserverSupport.evaluateLateralModel(design.model,[h.longitudinalSpeed(i);1/h.longitudinalSpeed(i)]);
+        L=lateralObserverSupport.scheduleLateralObserverGain(design,h.longitudinalSpeed(i));
         x=reference(i,[2,5]).';y=[ay(i);r(i)];
         f=A*x+design.model.B*delta(i);pred=C*x+design.model.D*delta(i);
         referenceFlow(i,:)=(f+L*(y-pred)).';referenceInnovation(i,:)=(y-pred).';

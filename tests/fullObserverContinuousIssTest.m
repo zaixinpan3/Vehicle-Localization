@@ -9,61 +9,56 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
     end
     methods (Test)
         function currentVehicleHasACompleteContinuousCertificate(testCase)
-            cfg=mncavFullObserverConfig();d=designFullObserverGains(cfg);
-            v=verifyFullObserverIssCertificate(d.continuousCertificate,cfg);
+            cfg=mncavFullObserverConfig();d=fullObserverSupport.designFullObserverGains(cfg);
+            v=fullObserverSupport.verifyFullObserverIssCertificate(d.continuousCertificate,cfg);
             testCase.verifyTrue(v.certified);
             testCase.verifyGreaterThan(v.verifiedDecayRate,cfg.iss.decayRate);
             testCase.verifySize(v.P,[7,7]);
             testCase.verifyFalse(v.sampledSystemCertified);
         end
         function timingIsNotAGainDesignSelector(testCase)
-            cfg=fullObserverConfig();a=designFullObserverGains(cfg);
-            b=designFullObserverGains(rmfield(cfg,'timing'));
+            cfg=fullObserverConfig();a=fullObserverSupport.designFullObserverGains(cfg);
+            b=fullObserverSupport.designFullObserverGains(rmfield(cfg,'timing'));
             testCase.verifyEqual(a.continuousCertificate,b.continuousCertificate);
             testCase.verifyEqual(a.gains,b.gains,AbsTol=0);
             cfg.timing="historical_transport";
-            testCase.verifyError(@()designFullObserverGains(cfg),'VehicleLocalization:ObsoleteFullConfig');
-        end
-        function continuousEntryAndRuntimeUseTheSameDesign(testCase)
-            cfg=fullObserverConfig();a=designContinuousObserverGains(cfg);
-            b=designFullObserverGains(cfg);
-            testCase.verifyEqual(a,b);
+            testCase.verifyError(@()fullObserverSupport.designFullObserverGains(cfg),'VehicleLocalization:ObsoleteFullConfig');
         end
         function modifiedGainsInvalidatePreviousCertificate(testCase)
-            cfg=fullObserverConfig();s=solveFullObserverIssLmi(cfg);cfg.gains(1)=40;
-            testCase.verifyError(@()verifyFullObserverIssCertificate(s,cfg), ...
+            cfg=fullObserverConfig();s=fullObserverSupport.solveFullObserverIssLmi(cfg);cfg.gains(1)=40;
+            testCase.verifyError(@()fullObserverSupport.verifyFullObserverIssCertificate(s,cfg), ...
                 'VehicleLocalization:StaleFullIssCertificate');
         end
         function modifiedInformationScaleInvalidatesPreviousCertificate(testCase)
-            cfg=fullObserverConfig();s=solveFullObserverIssLmi(cfg);cfg.lidar.gainInformationScale=64;
-            testCase.verifyError(@()verifyFullObserverIssCertificate(s,cfg), ...
+            cfg=fullObserverConfig();s=fullObserverSupport.solveFullObserverIssLmi(cfg);cfg.lidar.gainInformationScale=64;
+            testCase.verifyError(@()fullObserverSupport.verifyFullObserverIssCertificate(s,cfg), ...
                 'VehicleLocalization:StaleFullIssCertificate');
         end
         function invalidGnssWeightCannotUseTheCertificate(testCase)
             cfg=fullObserverConfig();cfg.gnss.gainInformationScale=-1;
-            testCase.verifyError(@()solveFullObserverIssLmi(cfg), ...
+            testCase.verifyError(@()fullObserverSupport.solveFullObserverIssLmi(cfg), ...
                 'VehicleLocalization:InvalidGnssInformationScale');
         end
         function solverFlagCannotReplaceNumericVerification(testCase)
-            cfg=fullObserverConfig();s=solveFullObserverIssLmi(cfg);
+            cfg=fullObserverConfig();s=fullObserverSupport.solveFullObserverIssLmi(cfg);
             s.weights=ones(3,1);s.certified=true;
-            v=verifyFullObserverIssCertificate(s,cfg);
+            v=fullObserverSupport.verifyFullObserverIssCertificate(s,cfg);
             testCase.verifyFalse(v.certified);
         end
         function unstableContinuousCounterexampleIsRejected(testCase)
-            cfg=counterexampleConfig(4);s=solveFullObserverIssLmi(cfg);
+            cfg=counterexampleConfig(4);s=fullObserverSupport.solveFullObserverIssLmi(cfg);
             testCase.verifyFalse(s.certified);
-            testCase.verifyError(@()designFullObserverGains(cfg), ...
+            testCase.verifyError(@()fullObserverSupport.designFullObserverGains(cfg), ...
                 'VehicleLocalization:InfeasibleFullCertificate');
         end
         function strongerPositionGainCertifiesSameContinuousDomain(testCase)
-            cfg=counterexampleConfig(16);s=solveFullObserverIssLmi(cfg);
+            cfg=counterexampleConfig(16);s=fullObserverSupport.solveFullObserverIssLmi(cfg);
             testCase.verifyTrue(s.certified);
             testCase.verifyGreaterThan(s.verification.verifiedDecayRate,cfg.iss.decayRate);
         end
         function widelySeparatedGainsStillRequireVerifiedMargins(testCase)
             cfg=mncavFullObserverConfig();cfg.gains([1,4])=[160,.125];
-            s=solveFullObserverIssLmi(cfg);v=verifyFullObserverIssCertificate(s,cfg);
+            s=fullObserverSupport.solveFullObserverIssLmi(cfg);v=fullObserverSupport.verifyFullObserverIssCertificate(s,cfg);
             testCase.verifyTrue(s.certified);
             testCase.verifyGreaterThan(min(v.normalizedMargins),cfg.iss.tolerance);
         end
@@ -78,7 +73,7 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
         end
         function insufficientGeometryIsReportedWithoutInventingInformation(testCase)
             [data,lateral,cfg]=oneStep(.1);data.lidar.information(:)=0;
-            r=runSynchronousLocalizationObserver(data,cfg,lateral);
+            r=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral);
             testCase.verifyTrue(r.diagnostics.continuousLmiVerified);
             testCase.verifyFalse(any(r.diagnostics.continuousInformationQualified));
             testCase.verifyEqual(r.diagnostics.poseWeight,zeros(3,3,2),AbsTol=0);
@@ -96,7 +91,7 @@ end
 
 function violation=derivativeAudit()
     original=rng;cleanup=onCleanup(@()rng(original));rng(20261002,'twister');
-    cfg=mncavFullObserverConfig();s=solveFullObserverIssLmi(cfg);P=s.verification.P;
+    cfg=mncavFullObserverConfig();s=fullObserverSupport.solveFullObserverIssLmi(cfg);P=s.verification.P;
     g=cfg.gains;J=[0,-1;1,0];violation=-Inf;
     for k=1:2000
         e=randn(7,1);v=cfg.iss.maximumSpeed*rand*unit();a=cfg.iss.maximumAcceleration*rand*unit();
@@ -122,7 +117,7 @@ function errors=consistencyAudit()
     steps=[.02,.01,.005];errors=zeros(1,3);
     for k=1:3
         h=steps(k);[data,lateral,cfg,S]=oneStep(h);
-        r=runSynchronousLocalizationObserver(data,cfg,lateral);
+        r=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral);
         options=odeset('RelTol',1e-12,'AbsTol',1e-13);
         [~,z]=ode45(@(~,x)derivative(x,cfg,S),[0,h],cfg.initialState,options);
         errors(k)=norm(r.z(end,:)-z(end,:));

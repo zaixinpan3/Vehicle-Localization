@@ -54,7 +54,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'information',information,'valid',valid,'delay',0);
     data=struct('highRate',h,'gnss',gnss,'lidar',lidar);
     cfg=mncavFullObserverConfig();
-    [data,lateral,synchronization]=synchronizeLocalizationInputs(data,lateral,cfg);
+    [data,lateral,synchronization]=fullObserverSupport.synchronizeLocalizationInputs(data,lateral,cfg);
     h=data.highRate;t=h.time;gnss=data.gnss;lidar=data.lidar;time=gnss.time;valid=gnss.valid;
     % Identical initial state in every ablation, including GNSS-only replay.
     assert(lidar.time(1)==t(1),'Initial acquisition clocks must agree.');
@@ -84,7 +84,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         end
         assert(isfield(sourceCache,'tilt'),'VehicleLocalization:ReferenceTiltCache', ...
             'Legacy coarse caches must be regenerated with sensor-only tilt.');
-        assertSensorOnlyLidarTilt(sourceCache.tilt);
+        lidarCalibrationSupport.assertSensorOnlyLidarTilt(sourceCache.tilt);
         [covered,sourceIndex]=ismember(calls.frame,sourceCache.calls.frame);
         assert(all(covered) && isequaln(sourceCache.cfg.sourceWindow,localizationSourceWindowConfig()) && ...
             max(abs(sourceCache.calls.timeSeconds(sourceIndex)-calls.time))<1e-7 && ...
@@ -205,7 +205,7 @@ end
 
 function r=onlineMatch(k,seed,aid,available,map,sources,cfg)
     if available(k)
-        r=matchLocalProbabilityCloud(map,sources{k},seed,cfg,aid);
+        r=registrationSupport.matchLocalProbabilityCloud(map,sources{k},seed,cfg,aid);
     else
         r=struct('poseXYTheta',seed,'information',zeros(3),'accepted',false, ...
             'directionalAccepted',false,'reason',"declaredLidarOutage");

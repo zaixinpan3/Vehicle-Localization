@@ -21,7 +21,7 @@ function report=validateMncavObserverParameters(outputFolder,options)
         s=makeScenario(vehicle,parameters.steeringRatio,options.SteeringScale);scenarios{k}=s;
         for j=1:numel(options.Profiles)
             profiles=options.Profiles;cfg=improvedObserverConfig("lidar",profiles(j));
-            cfg.observer.initialState=s.initialState;design=improvedObserverReferenceDesign(cfg);
+            cfg.observer.initialState=s.initialState;design=observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
             e=runImprovedVehicleObserver(s.data,struct(),design,cfg, ...
                 LateralInputs=s.lateral,InitialHistory=s.history);runs{k,j}=e;
             d=e.z-s.truth;mask=s.time>=20;
@@ -49,9 +49,9 @@ function report=validateMncavObserverParameters(outputFolder,options)
 end
 
 function s=makeScenario(vehicle,steeringRatio,steeringScale)
-    t=(0:.01:40).';model=lateralBicycleModel(vehicle);start=-.15;
+    t=(0:.01:40).';model=lateralObserverSupport.lateralBicycleModel(vehicle);start=-.15;
     [vx,~,steering]=inputs(start,steeringRatio,steeringScale);
-    A=evaluateLateralModel(model,[vx;1/vx]);body0=-A\(model.B*steering);
+    A=lateralObserverSupport.evaluateLateralModel(model,[vx;1/vx]);body0=-A\(model.B*steering);
     sol=ode45(@(time,x) plant(time,x,model,steeringRatio,steeringScale),[start,40], ...
         [body0;.2;0;0],odeset('RelTol',1e-10,'AbsTol',1e-12));
     [z,high,lateral,q]=sampleTruth(t,sol,model,steeringRatio,steeringScale);
@@ -69,7 +69,7 @@ function s=makeScenario(vehicle,steeringRatio,steeringScale)
 end
 
 function dx=plant(t,x,model,ratio,steeringScale)
-    [vx,~,delta]=inputs(t,ratio,steeringScale);A=evaluateLateralModel(model,[vx;1/vx]);
+    [vx,~,delta]=inputs(t,ratio,steeringScale);A=lateralObserverSupport.evaluateLateralModel(model,[vx;1/vx]);
     body=A*x(1:2)+model.B*delta;psi=x(3);
     dx=[body;x(2);vx*cos(psi)-x(1)*sin(psi);vx*sin(psi)+x(1)*cos(psi)];
 end
@@ -78,7 +78,7 @@ function [z,high,lateral,q]=sampleTruth(t,sol,model,ratio,steeringScale)
     t=t(:);x=deval(sol,t).';[vx,vxdot,delta]=inputs(t,ratio,steeringScale);vy=x(:,1);r=x(:,2);psi=x(:,3);
     bodyDerivative=zeros(numel(t),2);
     for k=1:numel(t)
-        A=evaluateLateralModel(model,[vx(k);1/vx(k)]);
+        A=lateralObserverSupport.evaluateLateralModel(model,[vx(k);1/vx(k)]);
         bodyDerivative(k,:)=(A*x(k,1:2).'+model.B*delta(k)).';
     end
     ax=vxdot-vy.*r;ay=bodyDerivative(:,1)+vx.*r;

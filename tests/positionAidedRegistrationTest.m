@@ -43,8 +43,8 @@ classdef positionAidedRegistrationTest < matlab.unittest.TestCase
         end
         function repeatedAlternativeOptimumIsNotCountedTwice(testCase)
             cfg=distributionRegistrationConfig();aid=struct('position',[0 0],'covariance',.25*eye(2));
-            base=selectPositionAidedRegistration(@twoOptima,[.48 0 0],aid,cfg);
-            extra=selectPositionAidedRegistration(@twoOptima,[.48 0 0],aid,cfg,[.6 0 0]);
+            base=registrationSupport.selectPositionAidedRegistration(@twoOptima,[.48 0 0],aid,cfg);
+            extra=registrationSupport.selectPositionAidedRegistration(@twoOptima,[.48 0 0],aid,cfg,[.6 0 0]);
             testCase.verifyEqual(extra.poseXYTheta,base.poseXYTheta,AbsTol=1e-6);
             testCase.verifyEqual(extra.information,base.information,AbsTol=1e-7);
             testCase.verifyEqual(nnz(extra.positionAiding.relativeSupport),2);

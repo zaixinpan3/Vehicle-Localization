@@ -16,7 +16,7 @@ function report=runMncavMotionAidedExperiment(outputFolder,options)
     assert(isequal(calls.frame,(1:1170).'),'VehicleLocalization:IncompletePrecomputation','All processed frames are required.');
     cfg=motionAidedObserverConfig;
     if strlength(options.DesignFile)>0,chosen=load(options.DesignFile,'cfg');cfg=chosen.cfg;end
-    design=designMotionAidedObserverGains(cfg);
+    design=observerAnalysisSupport.designMotionAidedObserverGains(cfg);
     lateralCfg=lateralObserverConfig("mncav");lateralDesign=designLateralObserverGains(lateralCfg);
     high=base.data.highRate;
     for name=string(fieldnames(high)).',high.(name)=high.(name)(base.uniformIndices);end

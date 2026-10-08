@@ -24,7 +24,7 @@ function report=runMncavFullLocalizationExperiment(outputFolder,options)
     timer=tic;lateral=runLateralVelocityObserver(raw.highRate,lateralDesign,lateralCfg);lateralSeconds=toc(timer);
     cfg=improvedObserverConfig("lidar","mncav");
     cfg.lidar.gainInformationScale=options.InformationScale;
-    timer=tic;design=designImprovedObserverGains(cfg);globalSynthesisSeconds=toc(timer);
+    timer=tic;design=observerAnalysisSupport.designImprovedObserverGains(cfg);globalSynthesisSeconds=toc(timer);
     if strlength(options.MatchingFolder)==0
         matchingFolder=fullfile(outputFolder,'matching');
         motion=struct('time',raw.highRate.time,'longitudinalSpeed',raw.highRate.longitudinalSpeed, ...
@@ -58,11 +58,11 @@ function report=runMncavFullLocalizationExperiment(outputFolder,options)
     end
     strictCfg=improvedObserverConfig("lidar","mncav");strictOutcome="completed";
     try
-        reconstructContinuousObserverSignals(raw.highRate,poseTime,pose,information,strictCfg);
+        observerAnalysisSupport.reconstructContinuousObserverSignals(raw.highRate,poseTime,pose,information,strictCfg);
     catch exception
         strictOutcome=string(exception.identifier)+": "+string(exception.message);
     end
-    [data,reconstruction]=reconstructContinuousObserverSignals(raw.highRate,poseTime,pose,information,cfg, ...
+    [data,reconstruction]=observerAnalysisSupport.reconstructContinuousObserverSignals(raw.highRate,poseTime,pose,information,cfg, ...
         MaximumGap=options.MaximumOfflineGap);
     t=data.highRate.time;[covered,index]=ismember(t,lateral.time);assert(all(covered));
     lateralInput=struct('time',t,'lateralVelocity',lateral.lateralVelocity(index), ...

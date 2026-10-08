@@ -35,15 +35,15 @@ function report=diagnoseMncavLocalizationError(outputFolder)
         if any(name==["delay_zero","reference_pose_delay_zero"]),cfg.measurement.fixedLidarDelay=0;end
         if name=="delay_075ms",cfg.measurement.fixedLidarDelay=.075;end
         if name=="theta_15"
-            cfg.observer.theta=1.5;design=designImprovedObserverGains(cfg);
+            cfg.observer.theta=1.5;design=observerAnalysisSupport.designImprovedObserverGains(cfg);
         end
         if any(name==["delay_zero","delay_075ms","reference_pose_delay_zero"])
-            data=reconstructContinuousObserverSignals(f.data.highRate,poseTime,pose,information,cfg,MaximumGap=1);
+            data=observerAnalysisSupport.reconstructContinuousObserverSignals(f.data.highRate,poseTime,pose,information,cfg,MaximumGap=1);
         end
         if any(name==["reference_pose","reference_pose_delay_zero"])
             data.lidar.pose=interp1(reference.time,referenceRaw,t-cfg.measurement.fixedLidarDelay,'linear');
         end
-        verification=verifyImprovedObserverDesign(design,cfg);assert(verification.certified);
+        verification=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);assert(verification.certified);
         initial=cfg.observer.initialState;timer=tic;
         e=runImprovedVehicleObserver(data,struct(),design,cfg,LateralInputs=li,InitialHistory=@(~) initial);
         duration=toc(timer);error=e.pose-f.referencePose;error(:,3)=atan2(sin(error(:,3)),cos(error(:,3)));

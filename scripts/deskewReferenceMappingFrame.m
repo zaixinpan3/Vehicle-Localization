@@ -16,7 +16,7 @@ function frame=deskewReferenceMappingFrame(frame,poses)
     p=[poses.pose_x_m,poses.pose_y_m,poses.pose_z_m];position=interp1(t,p,uq,'linear');
     qq=qq(group,:);position=position(group,:);
     qw=qq(:,1);v=qq(:,2:4);rotated=xyz+2*cross(v,cross(v,xyz,2)+qw.*xyz,2);
-    [R,p0]=poseRowToRigidTransform(poses(find(abs(t-frame.timestamp)<1e-7,1),:));
+    [R,p0]=poseSupport.poseRowToRigidTransform(poses(find(abs(t-frame.timestamp)<1e-7,1),:));
     local=(rotated+position-p0)*R;
     local(noReturn,:)=NaN;
     frame.x=reshape(single(local(:,1)),size(frame.x));frame.y=reshape(single(local(:,2)),size(frame.y));frame.z=reshape(single(local(:,3)),size(frame.z));

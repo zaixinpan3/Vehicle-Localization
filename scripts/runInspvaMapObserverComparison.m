@@ -27,7 +27,7 @@ function report=runInspvaMapObserverComparison(outputFolder,options)
     lateralReproduction=max(abs(lateral.lateralVelocity-base.lateral.lateralVelocity));
     assert(lateralReproduction<1e-8,'VehicleLocalization:LateralReplayMismatch','Expected unchanged lateral replay.');
     cfg=motionAidedObserverConfig();cfg.gains=options.Gains;
-    design=designMotionAidedObserverGains(cfg);
+    design=observerAnalysisSupport.designMotionAidedObserverGains(cfg);
     adapter=improvedObserverConfig("lidar","mncav");
     adapter.measurement.fixedLidarDelay=0;adapter.lidar=cfg.lidar;
     calls=readtable(fullfile(options.MatchingFolder,'calls.csv'),TextType="string");
@@ -47,7 +47,7 @@ function report=runInspvaMapObserverComparison(outputFolder,options)
                 c.informationXY,c.informationYY,c.informationYPsi;c.informationXPsi,c.informationYPsi,c.informationPsiPsi];
         end
         originalPose=[current.measurementX,current.measurementY,current.measurementPsi];
-        [data,lateralInput,reconstruction]=reconstructFrameAlignedLidarSignals(high,lateral, ...
+        [data,lateralInput,reconstruction]=observerAnalysisSupport.reconstructFrameAlignedLidarSignals(high,lateral, ...
             frameTime,frameTime(accepted),originalPose(accepted,:),information(:,:,accepted),adapter, ...
             MaximumOfflineGap=options.MaximumOfflineGap);
         t=data.highRate.time;frames=reconstruction.frameIndicesInIntegrationGrid;

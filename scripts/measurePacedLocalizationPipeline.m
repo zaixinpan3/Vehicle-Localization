@@ -22,7 +22,7 @@ function calls = measurePacedLocalizationPipeline(folder, period, repetitions)
     item = loaded.inputs{1}; cfg = loaded.cfg;
     assert(isfield(item,'tiltProvenance'),'VehicleLocalization:ReferenceTiltCache', ...
         'Regenerate benchmark inputs with sensor-only tilt.');
-    assertSensorOnlyLidarTilt(item.tiltProvenance);
+    lidarCalibrationSupport.assertSensorOnlyLidarTilt(item.tiltProvenance);
     assert(all(isfield(item,{'history','timestamp','motionPose'})), ...
         'VehicleLocalization:BenchmarkHorizonRequired','Regenerate benchmark inputs with temporal source history.');
     cfg.perception.coarseProbabilityCloud.projectionRotation = item.tilt;
@@ -32,7 +32,7 @@ function calls = measurePacedLocalizationPipeline(folder, period, repetitions)
         scene = floor((order(index)-1)/3)+1;
         start = mod(order(index)-1,3)+1;
         item = loaded.inputs{scene};
-        assertSensorOnlyLidarTilt(item.tiltProvenance);
+        lidarCalibrationSupport.assertSensorOnlyLidarTilt(item.tiltProvenance);
         cfg.perception.coarseProbabilityCloud.projectionRotation = item.tilt;
         available = (index-1)*period;
         remaining = available-toc(clockStart);

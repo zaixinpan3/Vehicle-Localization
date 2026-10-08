@@ -24,7 +24,7 @@ function design = designLateralObserverGains(cfg)
 %   P(rho) = sum_i alpha_i P_i,    L(rho) = sum_i alpha_i L_i,
 %
 % so the online observer only blends the three vertex gains with the alpha
-% that reproduces rho (scheduleLateralObserverGain). With V = e' P(rho) e,
+% that reproduces rho (lateralObserverSupport.scheduleLateralObserverGain). With V = e' P(rho) e,
 % bounding 2 e' P df by Young's inequality with a fixed scalar tau, and the
 % decay rate kappa, the certificate
 %
@@ -85,8 +85,8 @@ function design = designLateralObserverGains(cfg)
         "cfg.synthesis.etaFloor, errorWeight, and pFloor are obsolete: the ISS synthesis normalizes " + ...
         "P >= I and uses decayRate, axleForceMismatchScale, and measurementErrorScale. Remove them.");
 
-    model = lateralBicycleModel(cfg.vehicle);
-    polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
+    model = lateralObserverSupport.lateralBicycleModel(cfg.vehicle);
+    polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
     grid = buildDesignGrid(model, polytope, cfg.scheduling);
     scales = disturbanceScales(cfg.synthesis);
 
@@ -205,8 +205,8 @@ function grid = buildDesignGrid(model, polytope, schedulingCfg)
 % the whole interval.
 %
 % Input:
-%   model: struct from lateralBicycleModel
-%   polytope: struct from buildSchedulingPolytope
+%   model: struct from lateralObserverSupport.lateralBicycleModel
+%   polytope: struct from lateralObserverSupport.buildSchedulingPolytope
 %   schedulingCfg: cfg.scheduling struct with the ranges and grid counts
 %
 % Output:
@@ -235,8 +235,8 @@ function grid = buildDesignGrid(model, polytope, schedulingCfg)
         for acceleration = accelerations
             pointIdx = pointIdx + 1;
             rho = [speed; 1.0 ./ speed];
-            [alpha, alphaRate] = schedulingCoordinates(polytope, speed, acceleration);
-            [A, C] = evaluateLateralModel(model, rho);
+            [alpha, alphaRate] = lateralObserverSupport.schedulingCoordinates(polytope, speed, acceleration);
+            [A, C] = lateralObserverSupport.evaluateLateralModel(model, rho);
             points(pointIdx).speed = speed;
             points(pointIdx).acceleration = acceleration;
             points(pointIdx).rho = rho;
@@ -261,7 +261,7 @@ function solution = solveMinimumIssGain(grid, model, scales, synthesisCfg, tau, 
 %
 % Input:
 %   grid: struct from buildDesignGrid
-%   model: struct from lateralBicycleModel with the mismatch channel E, F
+%   model: struct from lateralObserverSupport.lateralBicycleModel with the mismatch channel E, F
 %   scales: struct from disturbanceScales
 %   synthesisCfg: cfg.synthesis struct
 %   tau: fixed positive scalar of the Lipschitz Young inequality
@@ -294,7 +294,7 @@ function solution = solveMinimumGain(grid, model, scales, synthesisCfg, tau, sla
 %
 % Input:
 %   grid: struct from buildDesignGrid
-%   model: struct from lateralBicycleModel with the mismatch channel E, F
+%   model: struct from lateralObserverSupport.lateralBicycleModel with the mismatch channel E, F
 %   scales: struct from disturbanceScales
 %   synthesisCfg: cfg.synthesis struct
 %   tau: fixed positive scalar of the Lipschitz Young inequality
@@ -370,7 +370,7 @@ function constraints = certificateConstraints(variables, issGainSquared, grid, m
 %   variables: struct from synthesisVariables
 %   issGainSquared: squared ISS gain, a decision variable or a number
 %   grid: struct from buildDesignGrid
-%   model: struct from lateralBicycleModel with the mismatch channel E, F
+%   model: struct from lateralObserverSupport.lateralBicycleModel with the mismatch channel E, F
 %   scales: struct from disturbanceScales
 %   synthesisCfg: cfg.synthesis struct
 %   tau: fixed positive scalar of the Lipschitz Young inequality
@@ -419,10 +419,10 @@ end
 function candidate = recoverVertexGains(polytope, solution)
 % recoverVertexGains: Recover the vertex gains L_i = X \ Y_i and arrange
 % them with the Lyapunov basis, the slack matrix, and the polytope as the
-% struct that scheduleLateralObserverGain evaluates online.
+% struct that lateralObserverSupport.scheduleLateralObserverGain evaluates online.
 %
 % Input:
-%   polytope: struct from buildSchedulingPolytope
+%   polytope: struct from lateralObserverSupport.buildSchedulingPolytope
 %   solution: struct from solveMinimumGain
 %
 % Output:
@@ -441,7 +441,7 @@ function verification = verifyCertificate(grid, model, scales, candidate, synthe
 % verifyCertificate: Re-evaluate the original, non-convexified certificate
 % with the recovered vertex gains and compute the resulting ISS gain. The
 % gain and the Lyapunov matrix of every grid point come from
-% scheduleLateralObserverGain, so the check covers the scheduling the
+% lateralObserverSupport.scheduleLateralObserverGain, so the check covers the scheduling the
 % observer runs online as well as the Finsler and Young steps: Psi must be
 % negative definite, P must respect its normalization, and the
 % disturbance-free error matrix must be stable at every grid point. The ISS
@@ -451,7 +451,7 @@ function verification = verifyCertificate(grid, model, scales, candidate, synthe
 %
 % Input:
 %   grid: struct from buildDesignGrid
-%   model: struct from lateralBicycleModel
+%   model: struct from lateralObserverSupport.lateralBicycleModel
 %   scales: struct from disturbanceScales
 %   candidate: struct from recoverVertexGains
 %   synthesisCfg: cfg.synthesis struct
@@ -471,7 +471,7 @@ function verification = verifyCertificate(grid, model, scales, candidate, synthe
     minLyapunovEigenvalue = inf;
     for pointIdx = 1:grid.numPoints
         point = grid.points(pointIdx);
-        [L, Pk] = scheduleLateralObserverGain(candidate, point.speed);
+        [L, Pk] = lateralObserverSupport.scheduleLateralObserverGain(candidate, point.speed);
         PkRate = blendVertexMatrices(candidate.lyapunovBasis, point.alphaRate);
         closedLoop = point.A - (L * point.C);
         certificate = (Pk * closedLoop) + (closedLoop.' * Pk) + PkRate + (2.0 .* decayRate .* Pk) + ...

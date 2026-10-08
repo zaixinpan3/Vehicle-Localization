@@ -55,13 +55,13 @@ classdef motionAidedObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(result.diagnostics.stateResets,0);
         end
         function certificateCoversRotatingAnisotropicWeights(testCase)
-            cfg=motionAidedObserverConfig;design=designMotionAidedObserverGains(cfg);
+            cfg=motionAidedObserverConfig;design=observerAnalysisSupport.designMotionAidedObserverGains(cfg);
             margin=independentDissipationMinimum(cfg);
             testCase.verifyGreaterThanOrEqual(margin,design.translationDissipationMargin-1e-10);
         end
         function weakGainsFailTheCertificate(testCase)
             cfg=motionAidedObserverConfig;cfg.gains=[.01,.01,.01,1];
-            testCase.verifyError(@() designMotionAidedObserverGains(cfg),'VehicleLocalization:InfeasibleMotionCertificate');
+            testCase.verifyError(@() observerAnalysisSupport.designMotionAidedObserverGains(cfg),'VehicleLocalization:InfeasibleMotionCertificate');
         end
         function nonzeroDelayIsRejected(testCase)
             f=fixture(1);f.data.lidar.delay=.1;

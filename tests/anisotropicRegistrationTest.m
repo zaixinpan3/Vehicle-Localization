@@ -28,10 +28,10 @@ classdef anisotropicRegistrationTest < matlab.unittest.TestCase
             c.acquisitionTime=0;cfg=robustPoseGraphConfig();cfg.registration=anisotropicRegistrationConfig();
             packet=struct('time',0,'seed',[0 0 0],'source',c,'relativeMotion',[0 0 0], ...
                 'motionCovariance',diag([.04 .04 .003].^2),'positionAid',struct('valid',false));
-            [first,state]=updateRobustPoseGraph([],packet,c,cfg);
+            [first,state]=poseGraphSupport.updateRobustPoseGraph([],packet,c,cfg);
             t.verifyTrue(any(first.correspondences.shapeRotationUsed));
             packet.time=.1;packet.source.acquisitionTime=.1;packet.seed=[.1 -.1 .02];
-            actual=updateRobustPoseGraph(state,packet,c,cfg);
+            actual=poseGraphSupport.updateRobustPoseGraph(state,packet,c,cfg);
             t.verifyLessThan(norm(actual.poseXYTheta),1e-4);
             t.verifyTrue(all(isfinite(actual.information),'all'));
         end

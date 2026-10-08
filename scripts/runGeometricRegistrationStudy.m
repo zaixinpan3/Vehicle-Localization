@@ -12,7 +12,7 @@ function reports = runGeometricRegistrationStudy(outputFolder)
     frames=260:266;
     poses=readFramePoseTable(fullfile(root,'data',cfg.poseMatchCsvPath),frames);
     observations=collectFeatureObservations(fullfile(root,'data',cfg.pointCloudMatPath),frames,poses,perceptionConfig(),cfg);
-    [vlGeoCalibration,vlGeoCalibrationFit]=fitLidarPitchCalibration(observations, ...
+    [vlGeoCalibration,vlGeoCalibrationFit]=lidarCalibrationSupport.fitLidarPitchCalibration(observations, ...
         Identifier="Mississippi260CurbPitchCandidate");
     save(fullfile(outputFolder,'pitch_calibration.mat'),'vlGeoCalibration','vlGeoCalibrationFit');
     frames=[260 550 900 120 350 700 1050];

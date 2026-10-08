@@ -31,7 +31,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     if ~isfolder(outputFolder),mkdir(outputFolder);end
     cache=fullfile(outputFolder,'processed_inputs.mat');
     if isfile(cache)
-        a=load(cache,'inputs');inputs=a.inputs;assertLateralVehicleMatches(inputs.lateralDesign,lateralObserverConfig());
+        a=load(cache,'inputs');inputs=a.inputs;lateralObserverSupport.assertLateralVehicleMatches(inputs.lateralDesign,lateralObserverConfig());
         assert(isfield(inputs,'signature') && inputs.signature==mncavVdbInputSignature(datasetFolder,interfaceFile), ...
             'VehicleLocalization:StaleVdbInputs','Input cache is stale. Regenerate processed_inputs.mat.');
     else
@@ -97,7 +97,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     f=fopen(fullfile(outputFolder,'summary.json'),'w');fprintf(f,'%s\n',jsonencode(report,PrettyPrint=true));fclose(f);
     function result=matchFrame(k,seed,aid)
         frameTimer=tic;cfg=matcher;cfg.perception.coarseProbabilityCloud.projectionRotation=inputs.tilt(:,:,idx(k));
-        local=selectLocalProbabilityCloud(map,seed,100);frame=store.pointClouds(1,frames(k));
+        local=registrationSupport.selectLocalProbabilityCloud(map,seed,100);frame=store.pointClouds(1,frames(k));
         frame=struct('x',frame.x,'y',frame.y,'z',frame.z);
         frame=reframeLidarForCalibration(frame,physicalCalibration,cfg.perception.frameCalibration);
         [~,result,history]=localizeLidarFrame(frame,local,seed,t(k),cfg,history,motion(k,:),aid);

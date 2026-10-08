@@ -24,8 +24,8 @@ function [featureData,metadata] = reprojectSavedFeatureObservations(original,new
     featureData=original;featureData.framePoseTable=newPoses;featureData.frameCalibration=newCalibration;
     maximumRoundTrip=0;maximumLocalDifference=0;
     for k=1:height(newPoses)
-        [oldR,oldT]=poseRowToRigidTransform(original.framePoseTable(k,:));
-        [newR,newT]=poseRowToRigidTransform(newPoses(k,:));
+        [oldR,oldT]=poseSupport.poseRowToRigidTransform(original.framePoseTable(k,:));
+        [newR,newT]=poseSupport.poseRowToRigidTransform(newPoses(k,:));
         for j=1:numel(original.featureNames)
             points=double(original.pointsByFeatureFrame{j,k});
             if isempty(points),continue;end

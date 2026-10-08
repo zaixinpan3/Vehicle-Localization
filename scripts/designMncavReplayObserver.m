@@ -21,7 +21,7 @@ function designMncavReplayObserver(parameterFile,outputFile,dynamicsFactor,mode)
     % No missing-information override: D2D must supply its actual matrix.
     timer=tic;
     lateralDesign=designLateralObserverGains(lateralCfg);
-    observerDesign=designImprovedObserverGains(observerCfg);
+    observerDesign=observerAnalysisSupport.designImprovedObserverGains(observerCfg);
     synthesisSeconds=toc(timer);
     save(outputFile,'parameters','dynamicsFactor','lateralCfg','observerCfg', ...
         'lateralDesign','observerDesign','synthesisSeconds');

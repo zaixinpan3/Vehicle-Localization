@@ -11,7 +11,7 @@ classdef inspvaMappingPoseTest < matlab.unittest.TestCase
             row.odom_x_m=1e6;row.odom_y_m=-1e6;row.odom_z_m=100;
             row.odom_qw=1;row.odom_qx=0;row.odom_qy=0;row.odom_qz=0;
             actual=registerPointsToGlobalFrame([1,0,0;0,1,0],row);
-            [pose,tilt,height]=poseRowToPlanarPose(row);
+            [pose,tilt,height]=poseSupport.poseRowToPlanarPose(row);
             testCase.verifyEqual(actual,[10,21,30;9,20,30],'AbsTol',1e-12);
             testCase.verifyEqual(pose,[10,20,pi/2],'AbsTol',1e-12);
             testCase.verifyEqual(tilt,eye(3),'AbsTol',1e-12);
@@ -20,7 +20,7 @@ classdef inspvaMappingPoseTest < matlab.unittest.TestCase
         function incompleteCanonicalPoseCannotFallBack(testCase)
             row=inspvaMappingPoseTest.canonicalPose();row.pose_qz=[];
             row.odom_x_m=0;row.odom_y_m=0;row.azimuth_deg=0;
-            testCase.verifyError(@()poseRowToPlanarPose(row),'VehicleLocalization:IncompletePose');
+            testCase.verifyError(@()poseSupport.poseRowToPlanarPose(row),'VehicleLocalization:IncompletePose');
         end
         function invalidCanonicalQuaternionIsRejected(testCase)
             row=inspvaMappingPoseTest.canonicalPose();row.pose_qw=0;row.pose_qz=0;

@@ -10,7 +10,7 @@ function report=validateMncavInputAmplification(outputFolder)
     gains=zeros(numel(selected),numel(frequency));rows=cell(numel(selected),1);
     for k=1:numel(selected)
         cfg=s.configs{selected(k)};design=s.designs{selected(k)};
-        D=buildImprovedObserverCertificateData(cfg);physical=D.T*design.K;
+        D=observerAnalysisSupport.buildImprovedObserverCertificateData(cfg);physical=D.T*design.K;
         k1=physical(1,1);k2=physical(2,1);k3=physical(3,1);
         numerator=k1*z.^2+k2*z+k3;response=numerator./(z.^3+numerator);
         gains(k,:)=abs(response);[peak,j]=max(gains(k,:));omega=2*pi*frequency(j);

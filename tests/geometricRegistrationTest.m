@@ -156,7 +156,7 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
         end
         function recoversOfflinePitchWithoutAddingPoseStates(testCase)
             [observations,rotation]=geometricRegistrationTest.calibrationFixture();
-            [calibration,report]=fitLidarPitchCalibration(observations);
+            [calibration,report]=lidarCalibrationSupport.fitLidarPitchCalibration(observations);
             testCase.verifyEqual(calibration.rotation,rotation,'AbsTol',1e-7);
             testCase.verifyEqual(calibration.translation,[0 0 0],'AbsTol',0);
             testCase.verifyLessThan(report.rmsFrameMedianAfterM,1e-7);
@@ -166,7 +166,7 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
         function refusesStationaryCalibrationData(testCase)
             [observations,~]=geometricRegistrationTest.calibrationFixture();
             observations.framePoseTable.odom_x_m(:)=0;
-            testCase.verifyError(@() fitLidarPitchCalibration(observations), ...
+            testCase.verifyError(@() lidarCalibrationSupport.fitLidarPitchCalibration(observations), ...
                 'VehicleLocalization:InsufficientCalibrationExcitation');
         end
         function projectionPreservesCalibrationAndGeometricEvidence(testCase)

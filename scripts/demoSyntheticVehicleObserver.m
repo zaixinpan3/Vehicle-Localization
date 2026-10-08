@@ -37,7 +37,7 @@ function report = demoSyntheticVehicleObserver(outputFolder)
         refinedCfg.measurement.maximumIntegrationStep = .0025;
         lateralDesign.cfg = result.lateralCfg;
         refined = runImprovedVehicleObserver(result.sensorData,lateralDesign, ...
-            improvedObserverReferenceDesign(refinedCfg),refinedCfg, ...
+            observerAnalysisSupport.improvedObserverReferenceDesign(refinedCfg),refinedCfg, ...
             InitialHistory=result.initialHistory);
         refinement{k} = struct('mode',result.mode, ...
             'maximumAbsoluteStateDifference',max(abs(refined.z-result.estimate.z),[],1));
@@ -59,7 +59,7 @@ function result = runScenario(mode,noisy,lateralDesign)
     q = .04;
     if mode=="lidar", q = .001; end
     % Solve A*[vy;q]+B*delta=0 for a physically consistent steady turn.
-    A = evaluateLateralModel(lateralDesign.model,[vx;1/vx]);
+    A = lateralObserverSupport.evaluateLateralModel(lateralDesign.model,[vx;1/vx]);
     equilibrium = [A(:,1),lateralDesign.model.B]\(-A(:,2)*q);
     vy = equilibrium(1);
     steering = equilibrium(2);
@@ -92,7 +92,7 @@ function result = runScenario(mode,noisy,lateralDesign)
     lateralDesign.cfg.observer.initialState = [vy+.3;q+.01];
     lateralDesign.cfg.hybrid.initialMasterState = [vy+.3;0];
     lateralDesign.cfg.hybrid.sideSlip.initialState = [beta;0];
-    design = improvedObserverReferenceDesign(cfg);
+    design = observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
     estimate = runImprovedVehicleObserver(data,lateralDesign,design,cfg,InitialHistory=history);
     e = estimate.z-truth;
     settled = t>=20;

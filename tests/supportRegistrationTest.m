@@ -54,9 +54,9 @@ classdef supportRegistrationTest < matlab.unittest.TestCase
         end
         function unequalScalesRetainAlignedAngularCurvature(t)
             source=diag([.16 .01]);target=diag([3 .03]);
-            [residual,J]=gaussianRegistrationResiduals([0 0],source,[0 0],target,[0 0 0],.1);
-            plus=gaussianRegistrationResiduals([0 0],source,[0 0],target,[0 0 1e-4],.1);
-            minus=gaussianRegistrationResiduals([0 0],source,[0 0],target,[0 0 -1e-4],.1);
+            [residual,J]=registrationSupport.gaussianRegistrationResiduals([0 0],source,[0 0],target,[0 0 0],.1);
+            plus=registrationSupport.gaussianRegistrationResiduals([0 0],source,[0 0],target,[0 0 1e-4],.1);
+            minus=registrationSupport.gaussianRegistrationResiduals([0 0],source,[0 0],target,[0 0 -1e-4],.1);
             curvature=(sum(plus.^2)-2*sum(residual.^2)+sum(minus.^2))/(2e-8);
             t.verifyEqual(J(3,3)^2,curvature,AbsTol=2e-6);
             t.verifyGreaterThan(J(3,3)^2,2.8);
@@ -95,9 +95,9 @@ classdef supportRegistrationTest < matlab.unittest.TestCase
             cloud.acquisitionTime=0;cfg=robustPoseGraphConfig();
             packet=struct('time',0,'seed',[0 0 0],'source',cloud,'relativeMotion',[0 0 0], ...
                 'motionCovariance',diag([.04 .04 .003].^2),'positionAid',struct('valid',false));
-            [first,state]=updateRobustPoseGraph([],packet,cloud,cfg);
+            [first,state]=poseGraphSupport.updateRobustPoseGraph([],packet,cloud,cfg);
             packet.time=.1;packet.source.acquisitionTime=.1;packet.seed=[.1 -.1 .02];
-            actual=updateRobustPoseGraph(state,packet,cloud,cfg);
+            actual=poseGraphSupport.updateRobustPoseGraph(state,packet,cloud,cfg);
             t.verifyEqual(cfg.registration.method,"supportD2D");
             t.verifyTrue(any(first.correspondences.shapeRotationUsed));
             t.verifyLessThan(norm(actual.poseXYTheta),1e-4);

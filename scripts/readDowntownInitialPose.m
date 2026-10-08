@@ -16,7 +16,7 @@ function packet=readDowntownInitialPose(datasetFolder,frameIndex,nativeTime)
         values=cellfun(@str2double,tokens(columns));
         assert(all(isfinite(values)) && abs(values(2)-nativeTime)<1e-7, ...
             'VehicleLocalization:InitialReferenceClock','Initial reference must match the exact first query clock.');
-        row=array2table(values,'VariableNames',cellstr(fields));pose=poseRowToPlanarPose(row);found=true;break;
+        row=array2table(values,'VariableNames',cellstr(fields));pose=poseSupport.poseRowToPlanarPose(row);found=true;break;
     end
     assert(found,'VehicleLocalization:InitialReferenceMissing','No reference exists for the first query; extrapolation is forbidden.');
     packet=struct('schemaVersion',1,'mode',"reference_pose_once",'frameIndex',frameIndex, ...

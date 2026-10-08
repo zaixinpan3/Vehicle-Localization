@@ -9,20 +9,20 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
     methods (Test)
         function rotatedPointUsesForwardLeftSign(testCase)
             alignment=struct('bodyOffset',[2;.5],'bodyCovariance',zeros(2),'headingStdRad',0);
-            [p,I]=correctGnssOutputPoint([9.5,22],eye(2),pi/2,alignment);
+            [p,I]=fullObserverSupport.correctGnssOutputPoint([9.5,22],eye(2),pi/2,alignment);
             testCase.verifyEqual(p,[10,20],AbsTol=1e-12);
             testCase.verifyEqual(I,eye(2),AbsTol=1e-12);
         end
         function calibrationAndHeadingUncertaintyReduceInformation(testCase)
             alignment=struct('bodyOffset',[2;0],'bodyCovariance',diag([.01,.04]),'headingStdRad',.1);
-            [p,I]=correctGnssOutputPoint([0,2],100*eye(2),pi/2,alignment);
+            [p,I]=fullObserverSupport.correctGnssOutputPoint([0,2],100*eye(2),pi/2,alignment);
             testCase.verifyEqual(p,[0,0],AbsTol=1e-12);
             testCase.verifyEqual(I,diag([1/.09,1/.02]),AbsTol=1e-11);
             testCase.verifyLessThan(max(eig(I)),100);
         end
         function invalidCalibrationRejected(testCase)
             alignment=struct('bodyOffset',[2;0],'bodyCovariance',diag([-.01,.04]),'headingStdRad',.1);
-            testCase.verifyError(@()correctGnssOutputPoint([0,2],eye(2),0,alignment), ...
+            testCase.verifyError(@()fullObserverSupport.correctGnssOutputPoint([0,2],eye(2),0,alignment), ...
                 'VehicleLocalization:InvalidGnssAlignment');
         end
         function turningReceiverPointMatchesCoincidentInput(testCase)
@@ -52,7 +52,7 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
                 f.data.gnss.position(1,:)-([cos(.1),-sin(.1);sin(.1),cos(.1)]*[2;.5]).',AbsTol=1e-12);
         end
         function independentPointConfigurationHasCommonPositionBandwidth(testCase)
-            cfg=mncavFullObserverConfig();design=designFullObserverGains(cfg);
+            cfg=mncavFullObserverConfig();design=fullObserverSupport.designFullObserverGains(cfg);
             testCase.verifyEqual(cfg.gnss.positionGain,cfg.gains(1),AbsTol=0);
             testCase.verifyFalse(cfg.gnss.outputPoint.evaluationDriveUsed);
             testCase.verifyGreaterThan(design.continuousCertificate.verification.verifiedDecayRate,cfg.iss.decayRate);

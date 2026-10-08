@@ -15,7 +15,7 @@ function report=runMncavInterfaceCorrectionComparison(outputFolder)
     audit=readtable('output/mncav_inspva_median_20260915/motion_audit.csv');
     interface=jsondecode(fileread('config/mncavReplayInterface.json'));
     parameters=mncavReplayConfig(fullfile(outputFolder,'vehicle_parameters.json'));
-    assertLateralVehicleMatches(old.lateralDesign,lateralObserverConfig());
+    lateralObserverSupport.assertLateralVehicleMatches(old.lateralDesign,lateralObserverConfig());
     h=old.high;
     h.steeringAngle=h.steeringAngle-interface.steeringWheelOffsetRad/parameters.steeringRatio;
     assert(isequal(h.time,old.high.time));
@@ -46,7 +46,7 @@ function report=runMncavInterfaceCorrectionComparison(outputFolder)
             if v==1
                 data=gaps.experiments{j}.data;estimate=gaps.experiments{j}.estimate;
             else
-                [data,reconstruction]=reconstructMotionAidedLidarGaps(data,input,poseTime);
+                [data,reconstruction]=observerAnalysisSupport.reconstructMotionAidedLidarGaps(data,input,poseTime);
                 estimate=runMotionAidedVehicleObserver(data,input,old.cfg);
                 assert(reconstruction.maximumAcceptedPoseMismatch==0);
             end

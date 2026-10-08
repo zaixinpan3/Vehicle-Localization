@@ -61,7 +61,7 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     function result=matchFrame(k,seed,aid)
         assert(~aid.valid,'VehicleLocalization:UnexpectedGnss','GNSS must remain absent.');
         timerFrame=tic;frame=loadPointCloudFrame(fullfile(datasetFolder,'pointClouds.mat'),ids(k));frame=deskewDowntownMotionFrame(frame,inputs);
-        local=selectLocalProbabilityCloud(map,seed,matching.registration.localMapRadius);
+        local=registrationSupport.selectLocalProbabilityCloud(map,seed,matching.registration.localMapRadius);
         [~,result,history]=localizeLidarFrame(frame,local,seed,t(k),matching,history,motion(k,:),aid);
         timings(k,:)=[result.perceptionSeconds,result.registrationSeconds,toc(timerFrame)];accepted(k)=result.accepted;directional(k)=result.directionalAccepted;candidates(k,:)=result.poseXYTheta;
         result=rmfield(result,intersect(fieldnames(result),{'currentProbabilityCloud','probabilityCloud'}));

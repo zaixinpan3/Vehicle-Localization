@@ -14,7 +14,7 @@ classdef lidarOriginCalibrationTest < matlab.unittest.TestCase
         end
         function recoversOffsetFromTurningSensorPoses(testCase)
             [q,f,m,b]=lidarOriginCalibrationTest.turningPairs();
-            [calibration,report]=fitLidarTranslationCalibration(q,f,m);
+            [calibration,report]=lidarCalibrationSupport.fitLidarTranslationCalibration(q,f,m);
             testCase.verifyEqual(calibration.translation,[b.',0],AbsTol=1e-10);
             testCase.verifyLessThan(report.afterRmseM,1e-10);
             testCase.verifyFalse(report.verticalTranslationEstimated);
@@ -22,12 +22,12 @@ classdef lidarOriginCalibrationTest < matlab.unittest.TestCase
         function isolatedWrongPairDoesNotDominateFit(testCase)
             [q,f,m,b]=lidarOriginCalibrationTest.turningPairs();
             m(end,1:2)=m(end,1:2)+[4,-3];
-            calibration=fitLidarTranslationCalibration(q,f,m);
+            calibration=lidarCalibrationSupport.fitLidarTranslationCalibration(q,f,m);
             testCase.verifyLessThan(norm(calibration.translation(1:2).'-b),.06);
         end
         function straightMotionDoesNotIdentifyOffset(testCase)
             [q,f,m,~]=lidarOriginCalibrationTest.turningPairs();q(:,3)=f(:,3);
-            testCase.verifyError(@()fitLidarTranslationCalibration(q,f,m), ...
+            testCase.verifyError(@()lidarCalibrationSupport.fitLidarTranslationCalibration(q,f,m), ...
                 'VehicleLocalization:InsufficientCalibrationExcitation');
         end
         function recalibrationReversesOldRotationAndTranslation(testCase)
@@ -69,7 +69,7 @@ classdef lidarOriginCalibrationTest < matlab.unittest.TestCase
                 'pointsByFeatureFrame',{{raw*old.rotation.'+old.translation+[10,20,30]}}, ...
                 'counts',3,'frameCalibration',old);
             poses=pose(pi/2,[100,200,300]);calibration=lidarFrameCalibrationConfig();calibration.translation=[2.3,.15,0];
-            [R,t]=poseRowToRigidTransform(poses);expected=(raw+calibration.translation)*R.'+t;
+            [R,t]=poseSupport.poseRowToRigidTransform(poses);expected=(raw+calibration.translation)*R.'+t;
         end
     end
 end

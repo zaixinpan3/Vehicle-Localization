@@ -176,7 +176,7 @@ function [components,audit]=splitPositionError(data,estimate,reference,cfg)
 % grid for this diagnostic. The reconstruction residual is reported explicitly.
     t=data.highRate.time;n=numel(t);K=zeros(2,2,n);weightRange=zeros(n,2);
     for k=1:n
-        [~,~,~,W]=computeLidarInformationWeights(data.lidar.information(:,:,k),cfg);
+        [~,~,~,W]=observerAnalysisSupport.computeLidarInformationWeights(data.lidar.information(:,:,k),cfg);
         K(:,:,k)=cfg.gains(1)*W(1:2,1:2);weightRange(k,:)=eig(W(1:2,1:2)).';
     end
     noise=data.lidar.pose(:,1:2)-reference(:,1:2);velocity=estimate.velocity;

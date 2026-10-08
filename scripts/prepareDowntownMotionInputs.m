@@ -18,7 +18,7 @@ function inputs=prepareDowntownMotionInputs(datasetFolder,lateralDesign)
     wheel=estimateWheelLongitudinalSpeed(input,wheelSpeedObserverConfig());
     assert(all(wheel.valid) && all(isfinite(wheel.longitudinalSpeed)),'VehicleLocalization:WheelSpeedCoverage','No speed fallback is allowed.');
     h.longitudinalSpeed=max(0,wheel.longitudinalSpeed);
-    cfg=lateralObserverConfig();assertLateralVehicleMatches(lateralDesign,cfg);lateral=runLateralVelocityObserver(h,lateralDesign,cfg);
+    cfg=lateralObserverConfig();lateralObserverSupport.assertLateralVehicleMatches(lateralDesign,cfg);lateral=runLateralVelocityObserver(h,lateralDesign,cfg);
     root=fileparts(fileparts(mfilename('fullpath')));alignment=jsondecode(fileread(fullfile(root,'config','offlineReferenceFrontLidarMotion.json')));
     lever=alignment.leverLidarToInsMeters(:);r=h.yawRate;rdot=gradient(r,t);
     % Existing calibrated output point is the INS point. LiDAR lies at -lever.

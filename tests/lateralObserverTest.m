@@ -32,9 +32,9 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % vydot = ay - Vx r.
             cfg = lateralObserverConfig();
             vehicle = cfg.vehicle;
-            model = lateralBicycleModel(vehicle);
+            model = lateralObserverSupport.lateralBicycleModel(vehicle);
             longitudinalSpeed = 15.0;
-            [A, C] = evaluateLateralModel(model, [longitudinalSpeed; 1.0 ./ longitudinalSpeed]);
+            [A, C] = lateralObserverSupport.evaluateLateralModel(model, [longitudinalSpeed; 1.0 ./ longitudinalSpeed]);
 
             stiffnessSum = vehicle.frontCorneringStiffness + vehicle.rearCorneringStiffness;
             stiffnessMoment = (vehicle.lr .* vehicle.rearCorneringStiffness) - ...
@@ -59,17 +59,17 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % which is the disturbance the synthesis is designed against.
             cfg = lateralObserverConfig();
             vehicle = cfg.vehicle;
-            model = lateralBicycleModel(vehicle);
+            model = lateralObserverSupport.lateralBicycleModel(vehicle);
             trueVehicle = vehicle;
             trueVehicle.frontCorneringStiffness = 0.8 .* vehicle.frontCorneringStiffness;
             trueVehicle.rearCorneringStiffness = 1.25 .* vehicle.rearCorneringStiffness;
-            trueModel = lateralBicycleModel(trueVehicle);
+            trueModel = lateralObserverSupport.lateralBicycleModel(trueVehicle);
             longitudinalSpeed = 17.0;
             state = [0.4; -0.12];
             steeringAngle = 0.03;
             rho = [longitudinalSpeed; 1.0 ./ longitudinalSpeed];
-            [A, C] = evaluateLateralModel(model, rho);
-            [trueA, trueC] = evaluateLateralModel(trueModel, rho);
+            [A, C] = lateralObserverSupport.evaluateLateralModel(model, rho);
+            [trueA, trueC] = lateralObserverSupport.evaluateLateralModel(trueModel, rho);
 
             frontSlip = steeringAngle - ((state(1) + (vehicle.lf .* state(2))) ./ longitudinalSpeed);
             rearSlip = -(state(1) - (vehicle.lr .* state(2))) ./ longitudinalSpeed;
@@ -88,10 +88,10 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % one, which is exactly the statement that the triangle contains the
         % curve rho(Vx) = [Vx; 1/Vx].
             cfg = lateralObserverConfig();
-            polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
+            polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
             speeds = linspace(cfg.scheduling.speedRange(1), cfg.scheduling.speedRange(2), 401);
             for speed = speeds
-                alpha = schedulingCoordinates(polytope, speed);
+                alpha = lateralObserverSupport.schedulingCoordinates(polytope, speed);
                 testCase.verifyGreaterThanOrEqual(alpha, -1.0e-12 .* ones(3, 1));
                 testCase.verifyEqual(sum(alpha), 1.0, AbsTol=1.0e-12);
                 testCase.verifyEqual(polytope.vertices * alpha, [speed; 1.0 ./ speed], AbsTol=1.0e-10);
@@ -103,18 +103,18 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % their values equal the convex combination of the vertex values with
         % the same barycentric coordinates.
             cfg = lateralObserverConfig();
-            model = lateralBicycleModel(cfg.vehicle);
-            polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
+            model = lateralObserverSupport.lateralBicycleModel(cfg.vehicle);
+            polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
             vertexA = zeros(2, 2, 3);
             vertexC = zeros(2, 2, 3);
             for vertexIdx = 1:3
                 [vertexA(:, :, vertexIdx), vertexC(:, :, vertexIdx)] = ...
-                    evaluateLateralModel(model, polytope.vertices(:, vertexIdx));
+                    lateralObserverSupport.evaluateLateralModel(model, polytope.vertices(:, vertexIdx));
             end
 
             for speed = linspace(cfg.scheduling.speedRange(1), cfg.scheduling.speedRange(2), 51)
-                alpha = schedulingCoordinates(polytope, speed);
-                [A, C] = evaluateLateralModel(model, [speed; 1.0 ./ speed]);
+                alpha = lateralObserverSupport.schedulingCoordinates(polytope, speed);
+                [A, C] = lateralObserverSupport.evaluateLateralModel(model, [speed; 1.0 ./ speed]);
                 blendedA = (alpha(1) .* vertexA(:, :, 1)) + (alpha(2) .* vertexA(:, :, 2)) + (alpha(3) .* vertexA(:, :, 3));
                 blendedC = (alpha(1) .* vertexC(:, :, 1)) + (alpha(2) .* vertexC(:, :, 2)) + (alpha(3) .* vertexC(:, :, 3));
                 testCase.verifyEqual(blendedA, A, AbsTol=1.0e-10);
@@ -127,14 +127,14 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % by the Pdot term agrees with a finite difference of alpha along a
         % speed trajectory of the given longitudinal acceleration.
             cfg = lateralObserverConfig();
-            polytope = buildSchedulingPolytope(cfg.scheduling.speedRange);
+            polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
             speed = 12.0;
             acceleration = 2.5;
             stepTime = 1.0e-6;
 
-            [~, alphaRate] = schedulingCoordinates(polytope, speed, acceleration);
-            alphaBefore = schedulingCoordinates(polytope, speed - (acceleration .* stepTime));
-            alphaAfter = schedulingCoordinates(polytope, speed + (acceleration .* stepTime));
+            [~, alphaRate] = lateralObserverSupport.schedulingCoordinates(polytope, speed, acceleration);
+            alphaBefore = lateralObserverSupport.schedulingCoordinates(polytope, speed - (acceleration .* stepTime));
+            alphaAfter = lateralObserverSupport.schedulingCoordinates(polytope, speed + (acceleration .* stepTime));
             numericalRate = (alphaAfter - alphaBefore) ./ (2.0 .* stepTime);
 
             testCase.verifyEqual(alphaRate, numericalRate, AbsTol=1.0e-6);
@@ -175,7 +175,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             measurementWeight = diag(design.measurementErrorScale);
 
             for point = design.grid.points.'
-                [L, P] = scheduleLateralObserverGain(design, point.speed);
+                [L, P] = lateralObserverSupport.scheduleLateralObserverGain(design, point.speed);
                 testCase.verifyGreaterThanOrEqual(min(eig((P + P.') ./ 2.0)), 1.0 - 1.0e-6);
                 PRate = (point.alphaRate(1) .* design.lyapunovBasis(:, :, 1)) + ...
                     (point.alphaRate(2) .* design.lyapunovBasis(:, :, 2)) + ...
@@ -202,25 +202,25 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             polytope = design.polytope;
             vertexGains = design.vertexGains;
 
-            atMinimum = scheduleLateralObserverGain(design, polytope.speedRange(1));
+            atMinimum = lateralObserverSupport.scheduleLateralObserverGain(design, polytope.speedRange(1));
             testCase.verifyEqual(atMinimum, vertexGains(:, :, 1), AbsTol=1.0e-10);
-            atMaximum = scheduleLateralObserverGain(design, polytope.speedRange(2));
+            atMaximum = lateralObserverSupport.scheduleLateralObserverGain(design, polytope.speedRange(2));
             testCase.verifyEqual(atMaximum, vertexGains(:, :, 2), AbsTol=1.0e-10);
 
             interiorSpeed = 12.3;
-            alpha = schedulingCoordinates(polytope, interiorSpeed);
+            alpha = lateralObserverSupport.schedulingCoordinates(polytope, interiorSpeed);
             expected = (alpha(1) .* vertexGains(:, :, 1)) + (alpha(2) .* vertexGains(:, :, 2)) + ...
                 (alpha(3) .* vertexGains(:, :, 3));
-            [interiorGain, interiorP] = scheduleLateralObserverGain(design, interiorSpeed);
+            [interiorGain, interiorP] = lateralObserverSupport.scheduleLateralObserverGain(design, interiorSpeed);
             testCase.verifyEqual(interiorGain, expected, AbsTol=1.0e-12);
             expectedP = (alpha(1) .* design.lyapunovBasis(:, :, 1)) + (alpha(2) .* design.lyapunovBasis(:, :, 2)) + ...
                 (alpha(3) .* design.lyapunovBasis(:, :, 3));
             testCase.verifyEqual(interiorP, expectedP, AbsTol=1.0e-12);
             testCase.verifyGreaterThan(min(alpha), 0, "The interior speed should use all three vertices.");
 
-            belowRange = scheduleLateralObserverGain(design, polytope.speedRange(1) - 5.0);
+            belowRange = lateralObserverSupport.scheduleLateralObserverGain(design, polytope.speedRange(1) - 5.0);
             testCase.verifyEqual(belowRange, atMinimum, AbsTol=1.0e-12);
-            aboveRange = scheduleLateralObserverGain(design, polytope.speedRange(2) + 5.0);
+            aboveRange = lateralObserverSupport.scheduleLateralObserverGain(design, polytope.speedRange(2) + 5.0);
             testCase.verifyEqual(aboveRange, atMaximum, AbsTol=1.0e-12);
         end
 
@@ -234,7 +234,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             regressors = [ones(numel(speeds), 1), speeds(:), 1.0 ./ speeds(:)];
             gains = zeros(numel(speeds), 4);
             for speedIdx = 1:numel(speeds)
-                L = scheduleLateralObserverGain(design, speeds(speedIdx));
+                L = lateralObserverSupport.scheduleLateralObserverGain(design, speeds(speedIdx));
                 gains(speedIdx, :) = L(:).';
             end
             coefficients = regressors \ gains;

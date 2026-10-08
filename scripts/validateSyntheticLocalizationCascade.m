@@ -28,7 +28,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
     mismatchVehicle=lateralCfg.vehicle;
     mismatchVehicle.frontCorneringStiffness=settings.mismatch.front*mismatchVehicle.frontCorneringStiffness;
     mismatchVehicle.rearCorneringStiffness=settings.mismatch.rear*mismatchVehicle.rearCorneringStiffness;
-    mismatch=simulateTruth(lateralBicycleModel(mismatchVehicle),settings);
+    mismatch=simulateTruth(lateralObserverSupport.lateralBicycleModel(mismatchVehicle),settings);
     definitions={ ...
         "clean_both_truth_init",nominal,"clean","truth",["gnss","lidar"],[]; ...
         "clean_dead_reckoning",nominal,"clean","truth",strings(1,0),[]; ...
@@ -52,7 +52,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
         signals=synthesizeSignals(truth,settings,noise);
         timer=tic;lateral=runLateralVelocityObserver(signals.highRate,design,lateralCfg);lateralSeconds=toc(timer);
         data=struct('highRate',signals.highRate,'gnss',signals.gnss,'lidar',signals.lidar);
-        [aligned,alignedLateral,synchronization]=synchronizeLocalizationInputs(data,lateral,cfg);
+        [aligned,alignedLateral,synchronization]=fullObserverSupport.synchronizeLocalizationInputs(data,lateral,cfg);
         t=aligned.highRate.time;frameTruth=truthAt(truth,t);
         current=aligned;
         if ~ismember("gnss",sources),current=rmfield(current,'gnss');end
@@ -154,7 +154,7 @@ function truth=simulateTruth(model,s)
         'lateralSpecificForce',rates(:,1)+vx.*x(:,2), ...
         'outputAcceleration',[ax-vyOut.*x(:,2),vyOutRate+vx.*x(:,2)], ...
         'sideSlipAngleRate',(vyOutRate.*vx-vyOut.*ax)./(vx.^2+vyOut.^2), ...
-        'mismatch',~isequal(model.A2,lateralBicycleModel(lateralObserverConfig().vehicle).A2));
+        'mismatch',~isequal(model.A2,lateralObserverSupport.lateralBicycleModel(lateralObserverConfig().vehicle).A2));
 end
 
 function dz=plant(t,z,model,s,d)

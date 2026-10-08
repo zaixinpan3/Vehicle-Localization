@@ -37,7 +37,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
         "VehicleLocalization:MissingOutputPointConfiguration", ...
         "Use the current lateralObserverConfig with an outputPoint.forwardOffsetM entry.");
     forwardOffset = double(cfg.outputPoint.forwardOffsetM);
-    assertLateralVehicleMatches(design,cfg);
+    lateralObserverSupport.assertLateralVehicleMatches(design,cfg);
     measurements = normalizeMeasurements(measurements);
     settings = validateRuntimeConfiguration(cfg, design);
     layout = stateLayout();
@@ -259,8 +259,8 @@ function [derivative, innovation, gain] = dynamicObserverDerivative( ...
         state, sample, design, nonlinearity)
 % dynamicObserverDerivative Evaluate the certified reciprocal-speed branch.
     rho = [sample.longitudinalSpeed; 1.0 ./ sample.longitudinalSpeed];
-    [A, C] = evaluateLateralModel(design.model, rho);
-    gain = scheduleLateralObserverGain(design, sample.longitudinalSpeed);
+    [A, C] = lateralObserverSupport.evaluateLateralModel(design.model, rho);
+    gain = lateralObserverSupport.scheduleLateralObserverGain(design, sample.longitudinalSpeed);
     measuredOutput = [sample.lateralAcceleration; sample.yawRate];
     predictedOutput = (C * state) + (design.model.D .* sample.steeringAngle);
     innovation = measuredOutput - predictedOutput;

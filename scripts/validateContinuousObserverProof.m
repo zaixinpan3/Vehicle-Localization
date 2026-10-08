@@ -92,8 +92,8 @@ function report = validateContinuousObserverProof(outputFolder)
         pastTrue = randn(7,1); pastEstimated = randn(7,1);
         plantDisturbance = .01*randn(7,1); poseNoise = .01*randn(3,1);
         poseWeight = .9*eye(3);
-        truth = evaluateImprovedObserverChannels(trueState,sample,operating);
-        estimate = evaluateImprovedObserverChannels(estimated,sample,operating);
+        truth = observerAnalysisSupport.evaluateImprovedObserverChannels(trueState,sample,operating);
+        estimate = observerAnalysisSupport.evaluateImprovedObserverChannels(estimated,sample,operating);
         measuredAuxiliary = truth.invariantPrediction+.01*randn(4,1);
         derivativeTrue = truth.modelDerivative+plantDisturbance;
         derivativeEstimate = estimate.modelDerivative+K*poseWeight* ...

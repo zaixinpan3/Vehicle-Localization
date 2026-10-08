@@ -112,7 +112,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         function fullInformationCrossTermsAreRetained(testCase)
             cfg=improvedObserverConfig;rotation=[cos(.7),0,-sin(.7);0,1,0;sin(.7),0,cos(.7)];
             info=rotation*diag([1e4,2e4,1e6])*rotation.';
-            [~,~,details,W]=computeLidarInformationWeights(info,cfg);
+            [~,~,details,W]=observerAnalysisSupport.computeLidarInformationWeights(info,cfg);
             expected=rotation*diag([1e4/10005,2e4/20005,1e6/1000005])*rotation.';
             testCase.verifyTrue(details.qualified);
             testCase.verifyEqual(W,expected,AbsTol=1e-12);
@@ -120,12 +120,12 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
         function weightsUseNormalizedPoseUnits(testCase)
             cfg=improvedObserverConfig;cfg.lidar.poseScales=[2;.5;3];S=diag(cfg.lidar.poseScales);
-            [~,~,~,W]=computeLidarInformationWeights(S\diag([1e4,2e4,3e4])/S,cfg);
+            [~,~,~,W]=observerAnalysisSupport.computeLidarInformationWeights(S\diag([1e4,2e4,3e4])/S,cfg);
             testCase.verifyEqual(W,diag([1e4/10005,2e4/20005,3e4/30005]),AbsTol=1e-12);
         end
         function asymmetricInformationIsRejected(testCase)
             cfg=improvedObserverConfig;
-            [~,~,info]=computeLidarInformationWeights([1e6,100,0;0,1e6,0;0,0,1e6],cfg);
+            [~,~,info]=observerAnalysisSupport.computeLidarInformationWeights([1e6,100,0;0,1e6,0;0,0,1e6],cfg);
             testCase.verifyFalse(info.qualified);
             testCase.verifyEqual(info.reason,"asymmetricInformation");
         end
@@ -156,14 +156,14 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
         function nonGridDelayStillPreservesZeroError(testCase)
             f=fixture("lidar",.5);f.cfg.measurement.fixedLidarDelay=.137;
-            f.design=improvedObserverReferenceDesign(f.cfg);f.data.lidar.delay=.137;
+            f.design=observerAnalysisSupport.improvedObserverReferenceDesign(f.cfg);f.data.lidar.delay=.137;
             f.data.lidar.evaluate=@(t) struct('pose',[8*(t-.137);0;0],'information',1e6*eye(3));
             result=runFixture(f);
             testCase.verifyEqual(result.z(:,1),8*result.time,AbsTol=1e-10);
         end
         function delaySmallerThanStepUsesMethodOfSteps(testCase)
             f=fixture("lidar",.05);f.cfg.measurement.fixedLidarDelay=.001;
-            f.design=improvedObserverReferenceDesign(f.cfg);f.data.lidar.delay=.001;
+            f.design=observerAnalysisSupport.improvedObserverReferenceDesign(f.cfg);f.data.lidar.delay=.001;
             f.data.lidar.evaluate=@(t) struct('pose',[8*(t-.001);0;0],'information',1e6*eye(3));
             result=runFixture(f);
             testCase.verifyGreaterThanOrEqual(result.diagnostics.integrationStepCount,50);
@@ -171,7 +171,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
         function zeroDelayReducesToCurrentCorrection(testCase)
             f=fixture("lidar",.1);f.cfg.measurement.fixedLidarDelay=0;
-            f.design=improvedObserverReferenceDesign(f.cfg);f.data.lidar.delay=0;f.history=[];
+            f.design=observerAnalysisSupport.improvedObserverReferenceDesign(f.cfg);f.data.lidar.delay=0;f.history=[];
             f.data.lidar.evaluate=@(t) struct('pose',[8*t;0;0],'information',1e6*eye(3));
             result=runFixture(f);
             testCase.verifyEqual(result.z(:,1),8*result.time,AbsTol=1e-10);
@@ -229,20 +229,20 @@ classdef improvedObserverTest < matlab.unittest.TestCase
                 'longitudinalAcceleration',vd,'lateralAcceleration',v*q,'yawRate',used, ...
                 'sideSlipAngle',0,'sideSlipAngleRate',0);
             z=[0;velocity(1);acceleration(1);0;velocity(2);acceleration(2);angle];
-            channels=evaluateImprovedObserverChannels(z,sample);
+            channels=observerAnalysisSupport.evaluateImprovedObserverChannels(z,sample);
             residual=vdd*direction+qd*J*velocity+(q^2-used^2)*velocity+2*(q-used)*J*acceleration;
             testCase.verifyEqual(jerk-channels.modelDerivative([3,6]),residual,AbsTol=1e-12);
         end
         function reconstructedGnssSamplesFollowPhysicalTime(testCase)
             f=fixture("gnss",.2);t=f.data.highRate.time;
-            [data,meta]=reconstructContinuousObserverSignals(f.data.highRate,t,[8*t,zeros(size(t))],[],f.cfg);
+            [data,meta]=observerAnalysisSupport.reconstructContinuousObserverSignals(f.data.highRate,t,[8*t,zeros(size(t))],[],f.cfg);
             f.data=data;result=runFixture(f);
             testCase.verifyEqual(result.position(:,1),8*result.time,AbsTol=1e-10);
             testCase.verifyFalse(meta.physicalContinuityVerified);
         end
         function reconstructedLidarAppliesExactlyOneFixedDelay(testCase)
             f=fixture("lidar",.4);t=(-.2:.01:.4).';
-            [data,meta]=reconstructContinuousObserverSignals(f.data.highRate,t,[8*t,zeros(numel(t),2)], ...
+            [data,meta]=observerAnalysisSupport.reconstructContinuousObserverSignals(f.data.highRate,t,[8*t,zeros(numel(t),2)], ...
                 repmat(1e6*eye(3),1,1,numel(t)),f.cfg);
             f.data=data;result=runFixture(f);
             testCase.verifyEqual(result.position(:,1),8*result.time,AbsTol=1e-10);
@@ -250,25 +250,25 @@ classdef improvedObserverTest < matlab.unittest.TestCase
         end
         function reconstructionRejectsOriginalPoseOutages(testCase)
             f=fixture("gnss",.4);
-            testCase.verifyError(@() reconstructContinuousObserverSignals(f.data.highRate,[0;.4], ...
+            testCase.verifyError(@() observerAnalysisSupport.reconstructContinuousObserverSignals(f.data.highRate,[0;.4], ...
                 [0,0;3.2,0],[],f.cfg),'VehicleLocalization:ReconstructionGap');
         end
         function reconstructionRejectsInsufficientLidarInformation(testCase)
             f=fixture("lidar",.4);t=(-.2:.1:.4).';
-            testCase.verifyError(@() reconstructContinuousObserverSignals(f.data.highRate,t, ...
+            testCase.verifyError(@() observerAnalysisSupport.reconstructContinuousObserverSignals(f.data.highRate,t, ...
                 zeros(numel(t),3),repmat(eye(3),1,1,numel(t)),f.cfg), ...
                 'VehicleLocalization:InsufficientLidarInformation');
         end
         function delayRefinementWithIncompatibleHistoryConverges(testCase)
             f=fixture("lidar",.5);f=stationary(f);f.cfg.measurement.fixedLidarDelay=.137;
-            f.design=improvedObserverReferenceDesign(f.cfg);f.data.lidar.delay=.137;
+            f.design=observerAnalysisSupport.improvedObserverReferenceDesign(f.cfg);f.data.lidar.delay=.137;
             f.cfg.observer.initialState(7)=.2;f.history=@(~) [zeros(6,1);.2];
             coarse=runFixture(f);f.cfg.measurement.maximumIntegrationStep=.0025;fine=runFixture(f);
             testCase.verifyEqual(coarse.headingUnwrapped,fine.headingUnwrapped,AbsTol=1e-8);
         end
         function gnssSynthesisVerifiesItsActualMatrices(testCase)
-            cfg=improvedObserverConfig("gnss");design=designImprovedObserverGains(cfg);
-            verified=verifyImprovedObserverDesign(design,cfg);
+            cfg=improvedObserverConfig("gnss");design=observerAnalysisSupport.designImprovedObserverGains(cfg);
+            verified=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);
             testCase.verifyTrue(verified.certified);
             testCase.verifyGreaterThan(verified.uniformMargin,0);
         end
@@ -276,7 +276,7 @@ classdef improvedObserverTest < matlab.unittest.TestCase
 end
 
 function f=fixture(mode,duration)
-    f.cfg=improvedObserverConfig(mode);f.design=improvedObserverReferenceDesign(f.cfg);
+    f.cfg=improvedObserverConfig(mode);f.design=observerAnalysisSupport.improvedObserverReferenceDesign(f.cfg);
     t=(0:.01:duration).';n=numel(t);
     f.data.highRate=struct('time',t,'steeringAngle',zeros(n,1),'longitudinalSpeed',8*ones(n,1), ...
         'longitudinalAcceleration',zeros(n,1),'lateralAcceleration',zeros(n,1),'yawRate',zeros(n,1));

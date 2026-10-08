@@ -70,7 +70,7 @@ function report = tuneSyntheticObserverPeaking(outputFolder)
     report.metrics = struct2table([rows{:}]);
     report.scope = "Same 40 s synthetic inputs and initialization; fixed coefficients and original operating bounds.";
     report.recommendedCfg = improvedObserverConfig("gnss","lowPeaking");
-    report.recommendedDesign = improvedObserverReferenceDesign(report.recommendedCfg);
+    report.recommendedDesign = observerAnalysisSupport.improvedObserverReferenceDesign(report.recommendedCfg);
     selected = find(report.metrics.name=="shaped8_yaw01" & report.metrics.noisy);
     baseline = stored.results{2};
     selectedRun = runs{selected};
@@ -119,16 +119,16 @@ end
 
 function design = candidateDesign(cfg,chainGain)
     original = improvedObserverConfig("gnss");
-    design = improvedObserverReferenceDesign(original);
+    design = observerAnalysisSupport.improvedObserverReferenceDesign(original);
     design.theta = cfg.observer.theta;
     design.K = [chainGain,zeros(3,1);zeros(3,1),chainGain;zeros(1,2)];
     design.N(7,4) = -cfg.observer.yawGain*design.theta^2;
-    data = buildImprovedObserverCertificateData(cfg);
+    data = observerAnalysisSupport.buildImprovedObserverCertificateData(cfg);
     F = data.A(1:6,1:6)-design.K(1:6,:)*data.Cg;
     identity = eye(6);
     operator = kron(identity,F.')+kron(F.',identity);
     design.P = reshape(operator\(-identity(:)),6,6);
     design.P = (design.P+design.P.')/2;
-    design.verification = verifyImprovedObserverDesign(design,cfg);
+    design.verification = observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);
     design.certified = design.verification.certified;
 end

@@ -4,7 +4,7 @@ function [measurement, result, history] = localizeLidarFrame(frame, localMapClou
 % initialPose is [mapX mapY yaw] in meters/radians, timestamp is acquisition
 % time in seconds. The caller supplies a vehicle-aligned frame and may set
 % causal sensor-derived tilt in cfg.perception.coarseProbabilityCloud.projectionRotation.
-% Reference-pose roll/pitch must not be used here. updateLidarImuTilt provides
+% Reference-pose roll/pitch must not be used here. lidarCalibrationSupport.updateLidarImuTilt provides
 % sensor-only compensation; this routine does not estimate extrinsics/tilt.
 % The temporal source uses XY because its motion input is planar. The state
 % and event pose are [X Y psi]; Z/roll/pitch are not optimized.

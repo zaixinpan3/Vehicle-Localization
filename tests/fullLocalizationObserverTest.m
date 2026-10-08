@@ -57,9 +57,9 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(r.heading,.2*ones(size(r.time)),AbsTol=1e-12);
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end
-        function publicEntryUsesTheSoleSynchronizedRuntime(testCase)
+        function publicEntryIsDeterministicAndIgnoresLateralDesign(testCase)
             f=turnFixture(4);r=run(f);
-            direct=runSynchronousLocalizationObserver(f.data,f.cfg,f.lateral);
+            direct=runFullLocalizationObserver(f.data,struct('unused',true),f.cfg,LateralInputs=f.lateral);
             testCase.verifyEqual(r,direct);
         end
         function turningGnssKeepsTheGyroHeading(testCase)
@@ -100,8 +100,6 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
         function historicalRuntimeIsRejected(testCase)
             f=fixture(1,"both");f.cfg.timing="historical_transport";
             testCase.verifyError(@()run(f),'VehicleLocalization:ObsoleteFullConfig');
-            testCase.verifyError(@()runSynchronousLocalizationObserver(f.data,f.cfg,f.lateral), ...
-                'VehicleLocalization:ObsoleteFullConfig');
         end
         function missingIssDomainCannotBypassDesign(testCase)
             f=fixture(1,"both");f.cfg=rmfield(f.cfg,'iss');
@@ -116,7 +114,7 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
         end
         function lidarCertificateDoesNotRequireGnssCorrection(testCase)
             cfg=fullObserverConfig;cfg.gnss.positionGain=0;
-            design=designFullObserverGains(cfg);
+            design=fullObserverSupport.designFullObserverGains(cfg);
             testCase.verifyTrue(design.fullContinuousStateCertified);
             testCase.verifyGreaterThan(design.continuousCertificate.verification.verifiedDecayRate,cfg.iss.decayRate);
         end

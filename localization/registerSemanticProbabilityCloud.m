@@ -24,15 +24,15 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
     if nargin<5,positionAid=[];end
     if nargin<6,additionalSeeds=zeros(0,3);end
     initialPose=double(initialPose(:).');pyramid=validatePyramid(cfg);
-    [fixedCloud,viewConditioning]=conditionSemanticMapOnView(fixedCloud,initialPose);
+    [fixedCloud,viewConditioning]=registrationSupport.conditionSemanticMapOnView(fixedCloud,initialPose);
     if viewConditioning.enabled
         % This map has already grouped aliases offline; merging conditioned
         % centers again would erase their acquisition-specific geometry.
         pyramid.mapMergeRadius=0;
     end
-    if isfield(cfg,'softPointAssociation'),validateSoftPointAssociation(cfg.softPointAssociation);end
-    [coarseFixed,groups]=canonicalizeSemanticCloud(fixedCloud,pyramid.mapMergeRadius,pyramid.pointClasses);
-    [coarseMoving,sourceGroups]=canonicalizeSemanticCloud(movingCloud,pyramid.sourceMergeRadius,pyramid.pointClasses);
+    if isfield(cfg,'softPointAssociation'),registrationSupport.validateSoftPointAssociation(cfg.softPointAssociation);end
+    [coarseFixed,groups]=registrationSupport.canonicalizeSemanticCloud(fixedCloud,pyramid.mapMergeRadius,pyramid.pointClasses);
+    [coarseMoving,sourceGroups]=registrationSupport.canonicalizeSemanticCloud(movingCloud,pyramid.sourceMergeRadius,pyramid.pointClasses);
     coarse=solveGeometry(coarseFixed,coarseMoving,initialPose,cfg);
     independentAnchors=0;
     if isfield(coarse,'correspondences')
@@ -49,7 +49,7 @@ function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initia
         fineCfg=rmfield(fineCfg,'softPointAssociation');
     end
     solve=@(pose) solveGeometry(fixedCloud,movingCloud,pose,fineCfg);
-    result=selectPositionAidedRegistration(solve,fineSeed,positionAid,cfg,additionalSeeds);
+    result=registrationSupport.selectPositionAidedRegistration(solve,fineSeed,positionAid,cfg,additionalSeeds);
     % A refinement informed by evidence beyond planar geometry, position aid
     % or relative-height association, may legitimately move to another
     % sub-component; planar-only refinement may not leave the coarse basin.
@@ -87,7 +87,7 @@ end
 
 function available=informativePositionAid(aid,cfg)
 % An unavailable/uncertain aid must leave the LiDAR-only objective unchanged.
-% selectPositionAidedRegistration remains responsible for input validation.
+% registrationSupport.selectPositionAidedRegistration remains responsible for input validation.
     available=false;
     if isempty(aid) || (isfield(aid,'valid') && ~aid.valid) || ~isfield(aid,'covariance'),return;end
     C=double(aid.covariance);
@@ -269,4 +269,22 @@ function diagnostics=classDiagnostics(system,cfg)
     end
     diagnostics=table(classes,matches,ranks,correction,weighted, ...
         'VariableNames',{'semanticName','matchedComponents','observableRank','observableCorrection','informationWeightedCorrection'});
+end
+
+function [step,projector,rank,eigenvalues]=registrationObservableStep(h,gradient,ratio,partitionTranslation)
+% registrationObservableStep Remove unsupported spatial directions before yaw.
+% For finite elongated clouds, tiny center forces can tilt a full-matrix null
+% eigenvector into yaw. Spatial projection keeps a rejected road tangent from
+% leaking into the accepted pose event through those cross terms.
+    h=(h+h.')/2;
+    if partitionTranslation
+        [axes,values]=eig(h(1:2,1:2),'vector');
+        keep=values>max(1e-8,ratio*max(values));
+        translation=axes(:,keep)*axes(:,keep).';
+        subspace=blkdiag(translation,1);h=subspace*h*subspace;
+    end
+    [v,eigenvalues]=eig((h+h.')/2,'vector');
+    keep=eigenvalues>max(1e-8,ratio*max(eigenvalues));rank=nnz(keep);
+    projector=v(:,keep)*v(:,keep).';
+    step=-v(:,keep)*((v(:,keep).'*gradient)./eigenvalues(keep));
 end

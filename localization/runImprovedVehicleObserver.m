@@ -21,7 +21,7 @@ function estimate = runImprovedVehicleObserver(sensorData,lateralDesign,observer
         options.LateralInputs (1,1) struct = struct()
         options.InitialHistory = []
     end
-    verification=verifyImprovedObserverDesign(observerDesign,cfg);
+    verification=observerAnalysisSupport.verifyImprovedObserverDesign(observerDesign,cfg);
     assert(verification.certified,'VehicleLocalization:CertificateMismatch', ...
         'The supplied matrices fail the continuous ISS certificate.');
     validateRuntimeConfig(cfg);
@@ -45,7 +45,7 @@ function estimate = runImprovedVehicleObserver(sensorData,lateralDesign,observer
             'VehicleLocalization:InitialHistoryMismatch','InitialHistory(t0) must match the initial state.');
         historyValue(options.InitialHistory,initialTime-delay);
     end
-    data=buildImprovedObserverCertificateData(cfg);
+    data=observerAnalysisSupport.buildImprovedObserverCertificateData(cfg);
     observerDesign.poseGain=data.T*observerDesign.K;
     observerDesign.auxiliaryGain=data.T*observerDesign.N/cfg.observer.theta^3;
     observerDesign.C=data.C;
@@ -154,7 +154,7 @@ function estimate = runImprovedVehicleObserver(sensorData,lateralDesign,observer
 end
 
 function [value,details]=derivative(time,state,past,sample,source,design,cfg)
-    channels=evaluateImprovedObserverChannels(state,sample,cfg.operating);
+    channels=observerAnalysisSupport.evaluateImprovedObserverChannels(state,sample,cfg.operating);
     auxiliary=channels.invariantInnovation;
     measurement=sourceValue(source,time,cfg);
     if cfg.mode=="gnss"
@@ -265,7 +265,7 @@ function source=normalizeSource(data,cfg,time)
             assert(isfield(source,'information') && isequal(size(source.information),[3,3,numel(time)]), ...
                 'VehicleLocalization:InvalidContinuousSignal','LiDAR requires aligned 3-by-3 information matrices.');
             for k=1:numel(time)
-                [~,~,info]=computeLidarInformationWeights(source.information(:,:,k),cfg);
+                [~,~,info]=observerAnalysisSupport.computeLidarInformationWeights(source.information(:,:,k),cfg);
                 assert(info.qualified,'VehicleLocalization:InsufficientLidarInformation', ...
                     'Every LiDAR direction must satisfy the declared information bound.');
             end
@@ -295,7 +295,7 @@ function measurement=sourceValue(source,time,cfg)
     if cfg.mode=="lidar"
         assert(isfield(measurement,'information'),'VehicleLocalization:InsufficientLidarInformation', ...
             'Continuous LiDAR requires full pose information.');
-        [~,~,info,measurement.weight]=computeLidarInformationWeights(measurement.information,cfg);
+        [~,~,info,measurement.weight]=observerAnalysisSupport.computeLidarInformationWeights(measurement.information,cfg);
         assert(info.qualified,'VehicleLocalization:InsufficientLidarInformation', ...
             'The LiDAR signal left its uniformly informative sector.');
     end

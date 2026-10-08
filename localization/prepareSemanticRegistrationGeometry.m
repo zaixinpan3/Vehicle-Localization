@@ -41,7 +41,7 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
     m.lineTangent=zeros(m.numComponents,2);m.lineDirectionValid=false(m.numComponents,1);
     m.lineDirectionSigma=ones(m.numComponents,1);
     if isfield(cfg,'lineDirection') && cfg.lineDirection.enabled
-        [m.lineTangent,m.lineDirectionValid,scatter]=sourceLineDirections(m,cfg.lineDirection);
+        [m.lineTangent,m.lineDirectionValid,scatter]=registrationSupport.sourceLineDirections(m,cfg.lineDirection);
         m.lineDirectionSigma(:)=cfg.lineDirection.standardDeviation;
         if isfield(cfg.lineDirection,'scatterScale')
             assert(isscalar(cfg.lineDirection.scatterScale) && isreal(cfg.lineDirection.scatterScale) && ...
@@ -80,14 +80,14 @@ function model=prepareSemanticRegistrationGeometry(fixedCloud,movingCloud,initia
     association=[];
     if isfield(cfg,'softPointAssociation')
         association=cfg.softPointAssociation;
-        validateSoftPointAssociation(association);
+        registrationSupport.validateSoftPointAssociation(association);
     end
     relative=[];
     if isfield(cfg,'relativeHeight') && cfg.relativeHeight.enabled
         assert(~height.heightUsed,'VehicleLocalization:ConflictingHeightModes', ...
             'Choose relative-height evidence or externally referenced XYZ compatibility.');
         initial=linearize(f,m,[0 0 initialPose(3)],gcfg,[1;1;1/cfg.yawLeverArm],groups,[],association);
-        relative=prepareRelativeHeightAssociation(fixedCloud,movingCloud,initialPose,initial.pairs,cfg.relativeHeight);
+        relative=registrationSupport.prepareRelativeHeightAssociation(fixedCloud,movingCloud,initialPose,initial.pairs,cfg.relativeHeight);
         height.relativeAssociation=relative.details;
     end
     model=struct('fixed',f,'moving',m,'height',height,'origin',initialPose(1:2));
@@ -215,7 +215,7 @@ function system=linearize(f,m,pose,cfg,scale,groups,relative,association)
             if ~group.line && ~isempty(association)
                 for col=find(keep)
                     sourceId=source(col);
-                    [mu,scatter,count]=softPointAssociationTarget( ...
+                    [mu,scatter,count]=registrationSupport.softPointAssociationTarget( ...
                         f.mean(targets,1:2),f.covariance(1:2,1:2,targets), ...
                         distance(:,col),group.priorCost+heightCost(:,col),index(col),association);
                     softMean(sourceId,:)=mu;softCov(:,:,sourceId)=scatter;
@@ -363,4 +363,511 @@ function validateParameters(cfg,g)
     assert(numel(cfg.maximumPoseCorrection)==3&&all(isfinite(cfg.maximumPoseCorrection)&cfg.maximumPoseCorrection>0));
     values=struct2array(g); assert(all(isfinite(values)&values>0),'Invalid geometric configuration.');
     assert(g.minimumObservabilityRatio<1&&g.minimumMatchFraction<=1&&g.minimumLineAnisotropy>1);
+end
+
+function model=prepareSupportRegistrationGeometry(fixedCloud,movingCloud,initialPose,cfg)
+% prepareSupportRegistrationGeometry Continuous partial-support Gaussian model.
+% The target coordinates are relative to initialPose XY. Geometry information
+% uses spatial scatter and class-balanced weights, not calibrated pose noise.
+% Every semantic class uses the same latent sliding displacement and angular
+% factor. Anisotropy continuously relaxes long-axis position and supplies yaw.
+    [f,m,height]=registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
+    initialPose=double(initialPose(:).');
+    assert(numel(initialPose)==3 && all(isfinite(initialPose)),'Expected finite [x y yaw].');
+    gcfg=cfg.geometric;gcfg.support=cfg.support;
+    supportValidateParameters(cfg,gcfg);
+    m.quality=quality(m);
+    f.viewReliability=ones(f.numComponents,1);
+    if isfield(fixedCloud.components,'viewReliability')
+        reliability=double(fixedCloud.components.viewReliability(:));
+        assert(numel(reliability)==f.numComponents && isreal(reliability)&& ...
+            all(isfinite(reliability)&reliability>=0&reliability<=1), ...
+            'VehicleLocalization:InvalidViewReliability','Map view reliability must be in [0,1].');
+        f.viewReliability=reliability;
+    end
+
+    m.temporalStability=ones(m.numComponents,1);
+    if isfield(movingCloud.components,'temporalStability')
+        m.temporalStability=double(movingCloud.components.temporalStability(:));
+        assert(numel(m.temporalStability)==m.numComponents && isreal(m.temporalStability) && ...
+            all(isfinite(m.temporalStability)&m.temporalStability>=0&m.temporalStability<=1), ...
+            'VehicleLocalization:InvalidTemporalStability','Temporal stability must be in [0,1].');
+        m.quality(m.temporalStability==0)=0;
+    end
+    % Height/tilt uncertainty belongs to the compatibility calculation. Keep
+    % the planar metric identical when only height mode/reference changes.
+    m.planarCovariance=movingCloud.components.covariance(1:2,1:2,:);
+    [f,m]=supportRegistrationGeometry(f,m,gcfg.support);
+    f.planarCovariance=f.covariance(1:2,1:2,:);
+    f.mean(:,1:2)=f.mean(:,1:2)-initialPose(1:2);
+    if height.heightUsed
+        f.mean(:,3)=f.mean(:,3)-height.heightTranslation;
+        m.mean(:,3)=m.mean(:,3)-height.heightTranslation;
+    end
+    height.strategy="conditionalDistributionCompatibility";
+    height.planarForce=false;
+    if height.heightUsed, f=prepareConditionalHeight(f); end
+    groups=supportCorrespondenceGroups(f,m);
+    association=[];
+    if isfield(cfg,'softPointAssociation')
+        association=cfg.softPointAssociation;
+        registrationSupport.validateSoftPointAssociation(association);
+    end
+    relative=[];
+    if isfield(cfg,'relativeHeight') && cfg.relativeHeight.enabled
+        assert(~height.heightUsed,'VehicleLocalization:ConflictingHeightModes', ...
+            'Choose relative-height evidence or externally referenced XYZ compatibility.');
+        initial=supportLinearize(f,m,[0 0 initialPose(3)],gcfg,[1;1;1/cfg.yawLeverArm],groups,[],association);
+        relative=registrationSupport.prepareRelativeHeightAssociation(fixedCloud,movingCloud,initialPose,initial.pairs,cfg.relativeHeight);
+        height.relativeAssociation=relative.details;
+    end
+    model=struct('fixed',f,'moving',m,'height',height,'origin',initialPose(1:2));
+    model.linearize=@(pose,scale) supportLinearize(f,m,pose,gcfg,scale,groups,relative,association);
+    model.squaredResidual=@(system,pose) supportSquaredResidual(system,m,pose);
+    model.frozenCost=@(system,pose) sum(system.weights.*gcfg.robustStandardizedDistance^2.* ...
+        log1p(supportSquaredResidual(system,m,pose)/gcfg.robustStandardizedDistance^2));
+end
+
+function groups=supportCorrespondenceGroups(f,m)
+% Class membership and positive-mass targets are invariant during one solve.
+    names=intersect(unique(f.semanticName),unique(m.semanticName));
+    groups=repmat(struct('source',[],'target',[],'priorCost',[]),numel(names),1);
+    for k=1:numel(names)
+        groups(k).source=find(m.semanticName==names(k) & m.quality>0);
+        keep=f.semanticName==names(k) & f.mixtureWeight>0;
+        groups(k).target=find(keep);
+        prior=f.mixtureWeight(keep);
+        % Subtracting a common log mass preserves the MAP assignment while
+        % making global map-weight scaling immaterial. No new stability score.
+        groups(k).priorCost=-2*(log(prior)-log(max(prior)));
+    end
+end
+
+function system=supportLinearize(f,m,pose,cfg,scale,groups,relative,association)
+% Compare each semantic class in a matrix, preserving first-target tie order.
+% Workspace scales with one class rather than the full all-class product.
+    r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
+    means=m.mean(:,1:2)*r.'+pose(1:2);
+    n=m.numComponents;
+    rotated=pagemtimes(pagemtimes(r,m.planarCovariance),r.');
+    chosen=zeros(n,1); chosenZ=nan(n,1); chosenHeightCost=zeros(n,1);
+    softMean=zeros(n,2);softCov=zeros(2,2,n);softUsed=false(n,1);softCount=ones(n,1);
+    for group=groups.'
+        source=group.source; targets=group.target;
+        if isempty(source) || isempty(targets), continue; end
+        % Bound temporary pair matrices for larger externally supplied maps.
+        allSource=source; blockSize=max(1,floor(65536/numel(targets)));
+        for first=1:blockSize:numel(allSource)
+            source=allSource(first:min(first+blockSize-1,numel(allSource)));
+            dx=means(source,1).'-f.mean(targets,1);
+            dy=means(source,2).'-f.mean(targets,2);
+            cf=f.planarCovariance(:,:,targets)+f.slidingCovariance(:,:,targets);
+            cm=rotated(:,:,source);
+            a=reshape(cf(1,1,:),[],1)+reshape(cm(1,1,:),1,[])+cfg.noiseStandardDeviation^2;
+            b=reshape(cf(1,2,:),[],1)+reshape(cm(1,2,:),1,[]);
+            d=reshape(cf(2,2,:),[],1)+reshape(cm(2,2,:),1,[])+cfg.noiseStandardDeviation^2;
+            determinant=a.*d-b.^2;
+            positionCost=(d.*dx.^2-2*b.*dx.*dy+a.*dy.^2)./determinant;
+            sourceAxis=m.supportTangent(source,:)*r.';
+            angular=(f.orientationNormal(targets,:)*sourceAxis.').^2.* ...
+                (f.axisConfidence(targets)*m.axisConfidence(source).')./ ...
+                (cfg.support.angularFloor^2+f.angularVariance(targets)+m.angularVariance(source).');
+            tangentOffset=-dx.*f.supportNormal(targets,2)+dy.*f.supportNormal(targets,1);
+            distance=positionCost+angular+tangentOffset.^2.*f.slidingFraction(targets)/cfg.maximumMatchDistance^2;
+            % A common covariance-aware gate admits sliding along an extended
+            % cloud without switching any class to a line model.
+            ga=9*a+cfg.maximumMatchDistance^2;gb=9*b;gd=9*d+cfg.maximumMatchDistance^2;
+            valid=(gd.*dx.^2-2*gb.*dx.*dy+ga.*dy.^2)<=ga.*gd-gb.^2;
+            dz=nan(size(distance));
+            if size(f.mean,2)==3
+                for k=1:numel(source)
+                    [dz(:,k),zVariance]=conditionalHeightResidual(f,m,source(k),targets,means(source(k),:),pose(3));
+                    valid(:,k)=valid(:,k) & abs(dz(:,k))<=cfg.heightCompatibilitySigma*sqrt(zVariance);
+                end
+            end
+            heightCost=zeros(size(distance));
+            if ~isempty(relative) && relative.details.enabled
+                [heightCost,dz]=relative.cost(source,targets,pose);
+                distance=distance+heightCost;
+            end
+            distance=distance+group.priorCost;
+            distance(~valid)=Inf;
+            [best,index]=min(distance,[],1);
+            keep=isfinite(best); selected=source(keep);
+            chosen(selected)=targets(index(keep));
+            linear=index(keep)+(find(keep)-1)*numel(targets);
+            chosenZ(selected)=dz(linear);
+            chosenHeightCost(selected)=heightCost(linear);
+            if ~isempty(association)
+                for col=find(keep)
+                    sourceId=source(col);
+                    localAssociation=association;
+                    localAssociation.temperature=association.temperature* ...
+                        max(1e-6,1-f.slidingFraction(targets(index(col))))^2;
+                    [mu,scatter,count]=registrationSupport.softPointAssociationTarget( ...
+                        f.mean(targets,1:2),f.planarCovariance(:,:,targets), ...
+                        distance(:,col),group.priorCost+heightCost(:,col),index(col),localAssociation);
+                    softMean(sourceId,:)=mu;softCov(:,:,sourceId)=scatter;
+                    softUsed(sourceId)=true;softCount(sourceId)=count;
+                end
+            end
+        end
+    end
+    source=find(chosen); target=chosen(source); rows=numel(source);
+    cf=f.planarCovariance(:,:,target);targetMean=f.mean(target,1:2);
+    soft=softUsed(source);cf(:,:,soft)=softCov(:,:,source(soft));targetMean(soft,:)=softMean(source(soft),:);
+    slidingCoverage=max(0,1-m.supportMajor(source)./f.supportMajor(target)).^cfg.support.coveragePower;
+    slidingCoverage=max(slidingCoverage,f.slidingFraction(target).^cfg.support.directionPower);
+    partial=partialSupport(f,m,means,chosen,cfg.support);
+    slidingCoverage(partial(source))=1;
+    cf=cf+f.slidingCovariance(:,:,target).*reshape(slidingCoverage,1,1,[]);
+    directionScale=sqrt(f.axisConfidence(target).*m.axisConfidence(source)./ ...
+        (cfg.support.angularFloor^2+f.angularVariance(target)+m.angularVariance(source)));
+    [residual,jacobian,precision]=registrationSupport.supportRegistrationResiduals( ...
+        m.mean(source,1:2),m.planarCovariance(:,:,source),targetMean,cf, ...
+        m.supportTangent(source,:),f.orientationNormal(target,:),directionScale,pose,cfg.noiseStandardDeviation);
+    shapeUsed=directionScale>0;
+    jacobian=jacobian.*reshape(scale,1,3,1);
+    weights=m.quality(source);
+    qvalue=sum(residual.^2,1).'; zResidual=chosenZ(source);
+    names=m.semanticName(source); classes=intersect(unique(f.semanticName),unique(m.semanticName));
+    similarity=0;
+    for name=classes.'
+        selected=names==name; possible=m.semanticName==name & m.quality>0;
+        weights(selected)=weights(selected)/max(sum(weights(selected)),eps)/max(1,numel(classes));
+        % Apply after class balancing: sparse temporal evidence must not be
+        % normalized back to the influence of a fully repeated class.
+        weights(selected)=weights(selected).*m.temporalStability(source(selected));
+        % View coverage is an absolute target-support factor. Applying it
+        % after class balancing avoids restoring an unsupported class's force.
+        weights(selected)=weights(selected).*f.viewReliability(target(selected));
+        coverage=nnz(selected)/max(1,nnz(possible));
+        similarity=similarity+coverage*sum(weights(selected).*exp(-qvalue(selected)/2));
+    end
+    robust=1./(1+qvalue/cfg.robustStandardizedDistance^2);
+    stacked=reshape(permute(jacobian,[1 3 2]),[],3);
+    % Preserve a column even when exactly one correspondence remains.
+    rowWeights=repelem(weights.*robust,size(residual,1),1);
+    h=stacked.'*(stacked.*rowWeights);
+    gradient=stacked.'*(residual(:).*rowWeights);
+    pairs=struct('source',source,'target',target,'semanticName',names, ...
+        'squaredStandardizedResidual',qvalue,'heightResidual',zResidual(1:rows), ...
+        'heightAssociationCost',chosenHeightCost(source), ...
+        'mapMixtureWeight',f.mixtureWeight(target),'temporalStability',m.temporalStability(source), ...
+        'weight',weights,'robustWeight',weights.*robust, ...
+        'shapeRotationUsed',shapeUsed,'shapeResidual',residual(3,:).', ...
+        'slidingFraction',slidingCoverage,'partialSupport',partial(source));
+    pairs.associationComponents=softCount(source);
+    pairs.sourceMeanXY=m.mean(source,1:2);
+    pairs.targetMeanXY=targetMean;
+    pairs.targetCovarianceXY=[reshape(cf(1,1,:),[],1),reshape(cf(1,2,:),[],1),reshape(cf(2,2,:),[],1)];
+    system=struct('H',h,'gradient',gradient,'numPairs',rows,'pairs',pairs, ...
+        'J',jacobian,'residual',residual,'weights',weights,'robust',robust, ...
+        'precision',precision(:,:,1:rows),'targetMean',targetMean, ...
+        'targetCovariance',cf,'noiseStandardDeviation',cfg.noiseStandardDeviation, ...
+        'sourceTangent',m.supportTangent(source,:),'targetNormal',f.orientationNormal(target,:),'directionScale',directionScale, ...
+        'cost',sum(weights.*cfg.robustStandardizedDistance^2.*log1p(qvalue/cfg.robustStandardizedDistance^2)), ...
+        'similarity',similarity);
+end
+
+function q=supportSquaredResidual(system,m,pose)
+% Freeze associations and weights, but rotate source scatter at every trial.
+    residual=registrationSupport.supportRegistrationResiduals(m.mean(system.pairs.source,1:2), ...
+        m.planarCovariance(:,:,system.pairs.source),system.targetMean, ...
+        system.targetCovariance,system.sourceTangent,system.targetNormal,system.directionScale,pose,system.noiseStandardDeviation);
+    q=sum(residual.^2,1).';
+end
+
+function supportValidateParameters(cfg,g)
+    assert(isscalar(cfg.yawLeverArm)&&isfinite(cfg.yawLeverArm)&&cfg.yawLeverArm>0);
+    assert(numel(cfg.maximumPoseCorrection)==3&&all(isfinite(cfg.maximumPoseCorrection)&cfg.maximumPoseCorrection>0));
+    values=struct2array(rmfield(g,'support')); assert(all(isfinite(values)&values>0),'Invalid geometric configuration.');
+    assert(g.minimumObservabilityRatio<1&&g.minimumMatchFraction<=1);
+end
+
+function partial=partialSupport(f,m,means,chosen,cfg)
+% Repeated off-center patches retain surface support without center attraction.
+    partial=false(m.numComponents,1);
+    for target=unique(chosen(chosen>0)).'
+        ids=find(chosen==target);if numel(ids)<3,continue;end
+        normal=f.supportNormal(target,:);tangent=[-normal(2),normal(1)];
+        positions=means(ids,:)*tangent.';normalPositions=means(ids,:)*normal.';
+        neighbors=abs(positions-positions.')<=cfg.consensusRadius;
+        quality=m.quality(ids).*m.temporalStability(ids);
+        mass=neighbors*quality;mass(sum(neighbors,2)<2)=0;
+        [support,best]=max(mass);if support<=0,continue;end
+        coherent=neighbors(best,:).';
+        if support<=sum(quality(~coherent)),continue;end
+        center=sum(normalPositions(coherent).*quality(coherent))/sum(quality(coherent));
+        compatible=abs(normalPositions-center)<=cfg.normalConsensus;
+        partial(ids(~coherent & compatible))=true;
+    end
+end
+
+function model=prepareAnisotropicRegistrationGeometry(fixedCloud,movingCloud,initialPose,cfg)
+% prepareAnisotropicRegistrationGeometry Full Gaussian association and residual model.
+% The target coordinates are relative to initialPose XY. Geometry information
+% uses spatial scatter and class-balanced weights, not calibrated pose noise.
+% Every semantic class uses normalized Gaussian overlap with the same complete
+% covariance metric. Anisotropy controls position and shape forces continuously.
+    [f,m,height]=registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
+    initialPose=double(initialPose(:).');
+    assert(numel(initialPose)==3 && all(isfinite(initialPose)),'Expected finite [x y yaw].');
+    gcfg=cfg.geometric;
+    anisotropicValidateParameters(cfg,gcfg);
+    m.quality=quality(m);
+    f.viewReliability=ones(f.numComponents,1);
+    if isfield(fixedCloud.components,'viewReliability')
+        reliability=double(fixedCloud.components.viewReliability(:));
+        assert(numel(reliability)==f.numComponents && isreal(reliability)&& ...
+            all(isfinite(reliability)&reliability>=0&reliability<=1), ...
+            'VehicleLocalization:InvalidViewReliability','Map view reliability must be in [0,1].');
+        f.viewReliability=reliability;
+    end
+
+    m.temporalStability=ones(m.numComponents,1);
+    if isfield(movingCloud.components,'temporalStability')
+        m.temporalStability=double(movingCloud.components.temporalStability(:));
+        assert(numel(m.temporalStability)==m.numComponents && isreal(m.temporalStability) && ...
+            all(isfinite(m.temporalStability)&m.temporalStability>=0&m.temporalStability<=1), ...
+            'VehicleLocalization:InvalidTemporalStability','Temporal stability must be in [0,1].');
+        m.quality(m.temporalStability==0)=0;
+    end
+    % Height/tilt uncertainty belongs to the compatibility calculation. Keep
+    % the planar metric identical when only height mode/reference changes.
+    m.planarCovariance=movingCloud.components.covariance(1:2,1:2,:);
+    f.planarCovariance=f.covariance(1:2,1:2,:);
+    f.mean(:,1:2)=f.mean(:,1:2)-initialPose(1:2);
+    if height.heightUsed
+        f.mean(:,3)=f.mean(:,3)-height.heightTranslation;
+        m.mean(:,3)=m.mean(:,3)-height.heightTranslation;
+    end
+    height.strategy="conditionalDistributionCompatibility";
+    height.planarForce=false;
+    if height.heightUsed, f=prepareConditionalHeight(f); end
+    groups=supportCorrespondenceGroups(f,m);
+    association=[];
+    if isfield(cfg,'softPointAssociation')
+        association=cfg.softPointAssociation;
+        registrationSupport.validateSoftPointAssociation(association);
+    end
+    relative=[];
+    if isfield(cfg,'relativeHeight') && cfg.relativeHeight.enabled
+        assert(~height.heightUsed,'VehicleLocalization:ConflictingHeightModes', ...
+            'Choose relative-height evidence or externally referenced XYZ compatibility.');
+        initial=anisotropicLinearize(f,m,[0 0 initialPose(3)],gcfg,[1;1;1/cfg.yawLeverArm],groups,[],association);
+        relative=registrationSupport.prepareRelativeHeightAssociation(fixedCloud,movingCloud,initialPose,initial.pairs,cfg.relativeHeight);
+        height.relativeAssociation=relative.details;
+    end
+    model=struct('fixed',f,'moving',m,'height',height,'origin',initialPose(1:2));
+    model.linearize=@(pose,scale) anisotropicLinearize(f,m,pose,gcfg,scale,groups,relative,association);
+    model.squaredResidual=@(system,pose) anisotropicSquaredResidual(system,m,pose);
+    model.frozenCost=@(system,pose) sum(system.weights.*gcfg.robustStandardizedDistance^2.* ...
+        log1p(anisotropicSquaredResidual(system,m,pose)/gcfg.robustStandardizedDistance^2));
+end
+
+function system=anisotropicLinearize(f,m,pose,cfg,scale,groups,relative,association)
+% Compare each semantic class in a matrix, preserving first-target tie order.
+% Workspace scales with one class rather than the full all-class product.
+    r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
+    means=m.mean(:,1:2)*r.'+pose(1:2);
+    n=m.numComponents;
+    rotated=pagemtimes(pagemtimes(r,m.planarCovariance),r.');
+    chosen=zeros(n,1); chosenZ=nan(n,1); chosenHeightCost=zeros(n,1);
+    softMean=zeros(n,2);softCov=zeros(2,2,n);softUsed=false(n,1);softCount=ones(n,1);
+    for group=groups.'
+        source=group.source; targets=group.target;
+        if isempty(source) || isempty(targets), continue; end
+        % Bound temporary pair matrices for larger externally supplied maps.
+        allSource=source; blockSize=max(1,floor(65536/numel(targets)));
+        for first=1:blockSize:numel(allSource)
+            source=allSource(first:min(first+blockSize-1,numel(allSource)));
+            dx=means(source,1).'-f.mean(targets,1);
+            dy=means(source,2).'-f.mean(targets,2);
+            cf=f.planarCovariance(:,:,targets);
+            cm=rotated(:,:,source);
+            a=reshape(cf(1,1,:),[],1)+reshape(cm(1,1,:),1,[])+cfg.noiseStandardDeviation^2;
+            b=reshape(cf(1,2,:),[],1)+reshape(cm(1,2,:),1,[]);
+            d=reshape(cf(2,2,:),[],1)+reshape(cm(2,2,:),1,[])+cfg.noiseStandardDeviation^2;
+            determinant=a.*d-b.^2;
+            positionCost=(d.*dx.^2-2*b.*dx.*dy+a.*dy.^2)./determinant;
+            noise=cfg.noiseStandardDeviation^2/2;
+            detF=(reshape(cf(1,1,:),[],1)+noise).*(reshape(cf(2,2,:),[],1)+noise)-reshape(cf(1,2,:),[],1).^2;
+            detM=(reshape(cm(1,1,:),1,[])+noise).*(reshape(cm(2,2,:),1,[])+noise)-reshape(cm(1,2,:),1,[]).^2;
+            distance=positionCost+max(0,log(determinant)-log(4)-.5*(log(detF)+log(detM)));
+            % A common covariance-aware gate admits sliding along an extended
+            % cloud without switching any class to a line model.
+            ga=9*a+cfg.maximumMatchDistance^2;gb=9*b;gd=9*d+cfg.maximumMatchDistance^2;
+            valid=(gd.*dx.^2-2*gb.*dx.*dy+ga.*dy.^2)<=ga.*gd-gb.^2;
+            dz=nan(size(distance));
+            if size(f.mean,2)==3
+                for k=1:numel(source)
+                    [dz(:,k),zVariance]=conditionalHeightResidual(f,m,source(k),targets,means(source(k),:),pose(3));
+                    valid(:,k)=valid(:,k) & abs(dz(:,k))<=cfg.heightCompatibilitySigma*sqrt(zVariance);
+                end
+            end
+            heightCost=zeros(size(distance));
+            if ~isempty(relative) && relative.details.enabled
+                [heightCost,dz]=relative.cost(source,targets,pose);
+                distance=distance+heightCost;
+            end
+            distance=distance+group.priorCost;
+            distance(~valid)=Inf;
+            [best,index]=min(distance,[],1);
+            keep=isfinite(best); selected=source(keep);
+            chosen(selected)=targets(index(keep));
+            linear=index(keep)+(find(keep)-1)*numel(targets);
+            chosenZ(selected)=dz(linear);
+            chosenHeightCost(selected)=heightCost(linear);
+            if ~isempty(association)
+                for col=find(keep)
+                    sourceId=source(col);
+                    [mu,scatter,count]=registrationSupport.softPointAssociationTarget( ...
+                        f.mean(targets,1:2),f.planarCovariance(:,:,targets), ...
+                        distance(:,col),group.priorCost+heightCost(:,col),index(col),association);
+                    softMean(sourceId,:)=mu;softCov(:,:,sourceId)=scatter;
+                    softUsed(sourceId)=true;softCount(sourceId)=count;
+                end
+            end
+        end
+    end
+    source=find(chosen); target=chosen(source); rows=numel(source);
+    cf=f.planarCovariance(:,:,target);targetMean=f.mean(target,1:2);
+    soft=softUsed(source);cf(:,:,soft)=softCov(:,:,source(soft));targetMean(soft,:)=softMean(source(soft),:);
+    [residual,jacobian,precision,shapeUsed]=registrationSupport.gaussianRegistrationResiduals( ...
+        m.mean(source,1:2),m.planarCovariance(:,:,source),targetMean,cf,pose,cfg.noiseStandardDeviation);
+    jacobian=jacobian.*reshape(scale,1,3,1);
+    weights=m.quality(source);
+    qvalue=sum(residual.^2,1).'; zResidual=chosenZ(source);
+    names=m.semanticName(source); classes=intersect(unique(f.semanticName),unique(m.semanticName));
+    similarity=0;
+    for name=classes.'
+        selected=names==name; possible=m.semanticName==name & m.quality>0;
+        weights(selected)=weights(selected)/max(sum(weights(selected)),eps)/max(1,numel(classes));
+        % Apply after class balancing: sparse temporal evidence must not be
+        % normalized back to the influence of a fully repeated class.
+        weights(selected)=weights(selected).*m.temporalStability(source(selected));
+        % View coverage is an absolute target-support factor. Applying it
+        % after class balancing avoids restoring an unsupported class's force.
+        weights(selected)=weights(selected).*f.viewReliability(target(selected));
+        coverage=nnz(selected)/max(1,nnz(possible));
+        similarity=similarity+coverage*sum(weights(selected).*exp(-qvalue(selected)/2));
+    end
+    robust=1./(1+qvalue/cfg.robustStandardizedDistance^2);
+    stacked=reshape(permute(jacobian,[1 3 2]),[],3);
+    % Preserve a column even when exactly one correspondence remains.
+    rowWeights=repelem(weights.*robust,size(residual,1),1);
+    h=stacked.'*(stacked.*rowWeights);
+    gradient=stacked.'*(residual(:).*rowWeights);
+    pairs=struct('source',source,'target',target,'semanticName',names, ...
+        'squaredStandardizedResidual',qvalue,'heightResidual',zResidual(1:rows), ...
+        'heightAssociationCost',chosenHeightCost(source), ...
+        'mapMixtureWeight',f.mixtureWeight(target),'temporalStability',m.temporalStability(source), ...
+        'weight',weights,'robustWeight',weights.*robust, ...
+        'shapeRotationUsed',shapeUsed,'shapeResidual',sqrt(sum(residual(3:4,:).^2,1)).');
+    pairs.associationComponents=softCount(source);
+    pairs.sourceMeanXY=m.mean(source,1:2);
+    pairs.targetMeanXY=targetMean;
+    pairs.targetCovarianceXY=[reshape(cf(1,1,:),[],1),reshape(cf(1,2,:),[],1),reshape(cf(2,2,:),[],1)];
+    system=struct('H',h,'gradient',gradient,'numPairs',rows,'pairs',pairs, ...
+        'J',jacobian,'residual',residual,'weights',weights,'robust',robust, ...
+        'precision',precision(:,:,1:rows),'targetMean',targetMean, ...
+        'targetCovariance',cf,'noiseStandardDeviation',cfg.noiseStandardDeviation, ...
+        'cost',sum(weights.*cfg.robustStandardizedDistance^2.*log1p(qvalue/cfg.robustStandardizedDistance^2)), ...
+        'similarity',similarity);
+end
+
+function q=anisotropicSquaredResidual(system,m,pose)
+% Freeze associations and weights, but rotate source scatter at every trial.
+    residual=registrationSupport.gaussianRegistrationResiduals(m.mean(system.pairs.source,1:2), ...
+        m.planarCovariance(:,:,system.pairs.source),system.targetMean, ...
+        system.targetCovariance,pose,system.noiseStandardDeviation);
+    q=sum(residual.^2,1).';
+end
+
+function anisotropicValidateParameters(cfg,g)
+    assert(isscalar(cfg.yawLeverArm)&&isfinite(cfg.yawLeverArm)&&cfg.yawLeverArm>0);
+    assert(numel(cfg.maximumPoseCorrection)==3&&all(isfinite(cfg.maximumPoseCorrection)&cfg.maximumPoseCorrection>0));
+    values=struct2array(g); assert(all(isfinite(values)&values>0),'Invalid geometric configuration.');
+    assert(g.minimumObservabilityRatio<1&&g.minimumMatchFraction<=1);
+end
+
+function [f,m]=supportRegistrationGeometry(f,m,cfg)
+% supportRegistrationGeometry Estimate geometric support without class rules.
+% A latent displacement along an elongated target marginalizes partial-view
+% center drift. Neighborhood moments supply orientation at extended support.
+    values=[cfg.slidingPower,cfg.angularFloor,cfg.scatterScale,cfg.neighborhoodRadius, ...
+        cfg.minimumSpan,cfg.directionPower,cfg.coveragePower,cfg.consensusRadius,cfg.normalConsensus,cfg.maximumGap];
+    assert(isreal(values)&&all(isfinite(values)&values>0)&&cfg.angularFloor<pi/2 && ...
+        isscalar(cfg.directionResolution)&&isreal(cfg.directionResolution)&& ...
+        isfinite(cfg.directionResolution)&&cfg.directionResolution>=0, ...
+        'VehicleLocalization:InvalidSupportGeometry','Require finite positive support geometry scales.');
+    count=f.numComponents;f.slidingCovariance=zeros(2,2,count);
+    if isfield(f,'intrinsicCovariance')
+        C=f.intrinsicCovariance;
+        assert(isnumeric(C)&&isreal(C)&&size(C,1)==2&&size(C,2)==2&&size(C,3)==count && ...
+            all(isfinite(C),'all')&&all(abs(C-permute(C,[2 1 3]))<1e-9,'all'), ...
+            'VehicleLocalization:InvalidIntrinsicShape','Require aligned finite symmetric intrinsic scatter.');
+    end
+    f.supportNormal=zeros(count,2);f.orientationNormal=zeros(count,2);f.axisConfidence=zeros(count,1);
+    f.angularVariance=zeros(count,1);f.slidingFraction=zeros(count,1);f.supportMajor=zeros(count,1);
+    for k=1:count
+        C=f.covariance(1:2,1:2,k);
+        if isfield(f,'intrinsicCovariance') && any(f.intrinsicCovariance(:,:,k),'all')
+            C=f.intrinsicCovariance(:,:,k);
+        end
+        [~,~,~,intrinsicConfidence]=geometry(C);
+        orientation=orientationMoment(f,k,C,cfg);
+        [axis,minor,major,confidence]=geometry(orientation);
+        f.supportNormal(k,:)=[-axis(2),axis(1)];
+        f.orientationNormal(k,:)=f.supportNormal(k,:);
+        f.axisConfidence(k)=intrinsicConfidence*confidence^(cfg.directionPower/2)*major/(major+cfg.directionResolution^2);
+        f.angularVariance(k)=cfg.scatterScale^2*minor/major;
+        f.slidingFraction(k)=intrinsicConfidence*confidence;f.supportMajor(k)=major;
+        variance=intrinsicConfidence*(major-minor)*((major/minor)^cfg.slidingPower-1);
+        f.slidingCovariance(:,:,k)=variance*(axis.'*axis);
+    end
+    count=m.numComponents;m.supportTangent=zeros(count,2);
+    m.axisConfidence=zeros(count,1);m.angularVariance=zeros(count,1);m.supportMajor=zeros(count,1);
+    for k=1:count
+        C=m.planarCovariance(:,:,k);
+        m.supportMajor(k)=max(eig(C));
+        C=orientationMoment(m,k,C,cfg);
+        [axis,minor,major,confidence]=geometry(C);
+        m.supportTangent(k,:)=axis;m.axisConfidence(k)=confidence^(cfg.directionPower/2)*major/(major+cfg.directionResolution^2);
+        m.angularVariance(k)=cfg.scatterScale^2*minor/major;
+    end
+end
+
+function [axis,minor,major,confidence]=geometry(C)
+    [v,e]=eig((C+C.')/2,'vector');[major,k]=max(e);minor=max(min(e),1e-6);
+    assert(min(e)>=-1e-10,'VehicleLocalization:InvalidIntrinsicShape','Scatter must be positive semidefinite.');
+    major=max(major,minor);axis=v(:,k).';
+    confidence=((major-minor)/(major+minor))^2;
+end
+
+function C=orientationMoment(c,k,C,cfg)
+% Use the same support-scale rule on both sides of a correspondence.
+    if 12*max(eig(C))>=cfg.minimumSpan^2,return;end
+    eligible=c.mixtureWeight>0;
+    if isfield(c,'quality'),eligible=eligible & c.quality>0;end
+    if isfield(c,'viewReliability'),eligible=eligible & c.viewReliability>0;end
+    ids=c.semanticName==c.semanticName(k) & eligible & ...
+        sum((c.mean(:,1:2)-c.mean(k,1:2)).^2,2)<=cfg.neighborhoodRadius^2+64*eps(max(1,cfg.neighborhoodRadius^2));
+    points=unique(c.mean(ids,1:2),'rows');
+    delta=permute(points,[1 3 2])-permute(points,[3 1 2]);
+    links=sum(delta.^2,3)<=cfg.maximumGap^2+64*eps(max(1,cfg.maximumGap^2));
+    [~,anchor]=min(sum((points-c.mean(k,1:2)).^2,2));
+    reached=false(size(points,1),1);reached(anchor)=true;
+    while true
+        expanded=any(links(:,reached),2);
+        if isequal(expanded,reached),break;end
+        reached=expanded;
+    end
+    points=points(reached,:);
+    if size(points,1)>=3
+        centered=points-mean(points,1);neighborhood=centered.'*centered/size(points,1);
+        [axis,~,~,~]=geometry(neighborhood);span=centered*axis.';
+        if max(span)-min(span)>=cfg.minimumSpan-64*eps(max(1,cfg.minimumSpan)),C=neighborhood;end
+    end
 end

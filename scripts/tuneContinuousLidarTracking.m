@@ -7,7 +7,7 @@ function report=tuneContinuousLidarTracking(outputFolder)
     end
     setupVehicleLocalization;
     if ~isfolder(outputFolder),mkdir(outputFolder);end
-    cfg=improvedObserverConfig('lidar');reference=improvedObserverReferenceDesign(cfg);
+    cfg=improvedObserverConfig('lidar');reference=observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
     candidates=[3,3,1;3,3,1.5;3,4,2;3,5,3;3,6,4; ...
         4,4,2;4,5,3;4,6,4;4,8,6;4,10,8; ...
         5,5,3;5,6,4;5,8,6;5,10,8;5,12,10; ...
@@ -77,13 +77,13 @@ function report=tuneContinuousLidarTracking(outputFolder)
 end
 
 function [design,info]=synthesizeCandidate(design,cfg)
-    data=buildImprovedObserverCertificateData(cfg);theta=cfg.observer.theta;delay=cfg.measurement.fixedLidarDelay;
+    data=observerAnalysisSupport.buildImprovedObserverCertificateData(cfg);theta=cfg.observer.theta;delay=cfg.measurement.fixedLidarDelay;
     A0=theta*data.A;Ad=-theta*design.K*data.C;
     uncertainty=data.modelPerturbation+norm(design.N,2)*data.outputBound4 ...
         +theta*norm(design.K,2)*norm(data.C,2)*(1-cfg.lidar.minimumPoseWeight);
     yalmip('clear');P=sdpvar(7,7,'symmetric');Q=sdpvar(7,7,'symmetric');R=sdpvar(7,7,'symmetric');
     g=sdpvar(1);margin=sdpvar(1);pb=sdpvar(1);rb=sdpvar(1);
-    block=continuousObserverDelayLmi(A0,Ad,P,Q,R,g,delay,design.rate);
+    block=observerAnalysisSupport.continuousObserverDelayLmi(A0,Ad,P,Q,R,g,delay,design.rate);
     constraints=[P>=1e-5*eye(7),Q>=1e-5*eye(7),R>=1e-5*eye(7),P<=pb*eye(7), ...
         R<=rb*eye(7),trace(P)==7,trace(Q)+trace(R)<=1000,g>=1e-5,g<=1000,margin>=1e-6, ...
         block<=-(margin+2*uncertainty*(pb+delay*rb))*eye(28)];
@@ -92,7 +92,7 @@ function [design,info]=synthesizeCandidate(design,cfg)
     if result.problem~=0,design=[];return;end
     design.P=double(P);design.Q=double(Q);design.R=double(R);design.g=double(g);
     for name=["P","Q","R"],design.(name)=(design.(name)+design.(name).')/2;end
-    design.verification=verifyImprovedObserverDesign(design,cfg);design.certified=design.verification.certified;
+    design.verification=observerAnalysisSupport.verifyImprovedObserverDesign(design,cfg);design.certified=design.verification.certified;
     if ~design.certified,info="Independent verification failed";design=[];end
 end
 
