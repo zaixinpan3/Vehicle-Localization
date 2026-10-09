@@ -334,6 +334,13 @@ classdef lidarInjectionSupport
                 f.covariance(1:2,1:2,:)=f.covariance(1:2,1:2,:)+inflation;
                 m.covariance(1:2,1:2,:)=m.covariance(1:2,1:2,:)+inflation;
             end
+            if cfg.evidenceWeights
+                % As in registration: map view reliability and source temporal
+                % stability scale the mixture masses before class balancing, so an
+                % unsupported or flickering landmark cannot carry a whole class.
+                if isfield(f,'viewReliability'),f.mixtureWeight=f.mixtureWeight.*double(f.viewReliability(:));end
+                if isfield(m,'temporalStability'),m.mixtureWeight=m.mixtureWeight.*double(m.temporalStability(:));end
+            end
             [f,m]=registrationSupport.balanceSemanticDistributions(f,m);
             shared=intersect(unique(f.semanticName(f.mixtureWeight>0)),unique(m.semanticName(m.mixtureWeight>0)));
             measurement.mapComponents=f.numComponents;measurement.sourceComponents=m.numComponents;
@@ -358,8 +365,12 @@ classdef lidarInjectionSupport
                 otherwise,error('VehicleLocalization:InvalidOverlapCurvature','Use positivePart or absolute curvature.');
             end
             measurement.gradient=gradient;measurement.information=(information+information.')/2;
-            measurement.available=true;measurement.similarity=min(energy,1);
+            measurement.similarity=min(energy,1);
             measurement.curvature=curvature;measurement.minimumCurvature=min(E);
+            % Frame gates on the evaluated quantities themselves: a weak overlap or
+            % a flat cost withdraws this frame's correction. No pose is solved.
+            measurement.available=measurement.similarity>=cfg.minimumSimilarity && ...
+                max(E)>=cfg.minimumCurvature && min(abs(E))>=cfg.minimumCurvatureRatio*max(abs(E));
             measurement.seconds=toc(timer);
         end
 

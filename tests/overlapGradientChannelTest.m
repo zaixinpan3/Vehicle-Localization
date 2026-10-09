@@ -152,6 +152,35 @@ classdef overlapGradientChannelTest < matlab.unittest.TestCase
             testCase.verifyFalse(any(r.diagnostics.lidarOverlap.evaluated(8:12)));
             testCase.verifyEqual(r.diagnostics.positionCorrection(8:12,3:4),zeros(5,2));
         end
+        function evidenceWeightsScaleMassesBeforeBalancing(testCase)
+            [map,source,truth]=scene();pose=(truth+[0.2,-0.1,deg2rad(1)]).';
+            % Halving one pole's temporal stability changes the balanced gradient;
+            % a uniform factor on a class does not (balancing removes it).
+            off=overlapGradientConfig();off.evidenceWeights=false;
+            source.components.temporalStability=ones(6,1);source.components.temporalStability(4)=0.5;
+            plain=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,off);
+            weighted=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose);
+            testCase.verifyGreaterThan(norm(weighted.gradient-plain.gradient),1e-6*norm(plain.gradient));
+            uniform=source;uniform.components.temporalStability=0.5*ones(6,1);
+            same=lidarInjectionSupport.evaluateOverlapGradient(map,uniform,pose);
+            testCase.verifyEqual(same.gradient,plain.gradient,RelTol=1e-9,AbsTol=1e-12);
+            zeroed=source;zeroed.components.temporalStability(4:5)=0;
+            noPoles=lidarInjectionSupport.evaluateOverlapGradient(map,zeroed,pose);
+            testCase.verifyFalse(ismember("pole",noPoles.sharedClasses));
+        end
+        function frameGatesWithholdWeakOrFlatFrames(testCase)
+            [map,source,truth]=scene();pose=(truth+[0.2,-0.1,deg2rad(1)]).';
+            cfg=overlapGradientConfig();
+            open=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
+            testCase.verifyTrue(open.available);
+            cfg.minimumSimilarity=open.similarity+1e-6;
+            gated=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
+            testCase.verifyFalse(gated.available);
+            testCase.verifyEqual(gated.gradient,open.gradient); % evaluated, only withheld
+            cfg=overlapGradientConfig();cfg.minimumCurvatureRatio=1.01;
+            flat=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
+            testCase.verifyFalse(flat.available);
+        end
         function overlapChannelIsExclusiveAndRejectsCalibratedWeights(testCase)
             f=movingFixture(1);
             ambiguous=f.data;ambiguous.lidarMatcher=@(~,~,~)struct();
