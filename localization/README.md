@@ -427,9 +427,10 @@ for registration on the same frames. Three mechanisms were identified:
 - The L2 overlap barely measures orientation. For two elongated Gaussians with
   variances `a` along and `b` across, the curvature of `-log N` in relative
   rotation is `(a-b)^2/(4ab)`, about 20 rad^-2 for a curb pair. Registration's
-  angular residual, with its 1 deg floor, contributes about 1800--3300 rad^-2
-  per pair. Without it registration's yaw RMS rises from 0.152 to 0.174 deg,
-  and without its robust weights to 0.200 deg.
+  angular residual, with its 1 deg floor, contributes up to `1/floor^2`, about
+  3300 rad^-2 per pair at full axis confidence, and about 1400 rad^-2 for the
+  test scene's curbs. Without it registration's yaw RMS rises from 0.152 to
+  0.174 deg, and without its robust weights to 0.200 deg.
 
 Per-landmark aggregation lowers the overlap fixed point's yaw RMS to 0.186 deg,
 and orientation lowers it further to 0.162 deg. Registration's sliding
