@@ -337,7 +337,10 @@ pose optimization, frozen correspondences or acceptance test.
 position RMSE is 9.7, 7.3, 6.4 and 5.9 cm, against 10.2, 7.8, 5.7 and 6.0 cm
 for registration. The four settings are nominal and fixed-scale gains, each
 without and with GNSS. Its heading RMSE is 0.15--0.23 deg, against
-0.11--0.14 deg. See the
+0.11--0.14 deg. The opt-in `aggregation="landmark"` with `orientation` replaces
+the frame-level overlap by the per-landmark mixture likelihood of oriented
+components. This closes the heading gap: 9.3, 7.1, 5.9 and 5.7 cm, with
+0.115--0.131 deg heading RMSE. See the
 [channel description and measurements](localization/README.md#correspondence-free-overlap-gradient-channel).
 
 ## Configuration (`config/`)
@@ -630,7 +633,12 @@ inputs, and degeneracy. Existing observer and temporal-map tests remain in the s
 - gradient/residual equivalence;
 - unavailable frames and input exclusivity;
 - observer convergence without registration, and acquisition beyond the exact
-  basin.
+  basin;
+- for the landmark likelihood: the analytic gradient against finite
+  differences, with and without orientation; the exact single-pair step; yaw
+  from the axis kernel when there is no lever arm; the outlier floor; observer
+  convergence; and option validation.
+
 `coarsePerceptionPerformanceTest` checks native/MATLAB equivalence, boundary
 cases, conservative ground propagation, compact-raster indexing, and omitted
 inverse lookups. Build the native kernels to execute its native-specific cases.

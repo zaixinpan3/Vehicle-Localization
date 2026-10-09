@@ -390,6 +390,78 @@ metric. From 12 m the ladder also diverges, while the exact channel finds no
 overlap and stays silent. The ladder therefore widens the basin but does not
 make it global. Registration remains the default channel.
 
+#### Per-landmark likelihood with oriented components (opt-in)
+
+Three `overlapGradientConfig` fields replace the frame-level cost at every
+ladder scale: `aggregation="landmark"`, `outlierDensity` and `orientation`. The
+new cost is
+
+`c_sigma(p) = -sum_j v_j log(outlierDensity + sum_i u_i N_ij K_ij)`
+
+from `registrationSupport.semanticLandmarkLikelihood`. It is the mixture
+likelihood of every source landmark under the map's class density, with a
+uniform outlier floor. The terms are:
+
+- `N_ij`: the same Gaussian overlap integral as the frame-level cost.
+- `u_i`: map masses, normalized to one per class.
+- `v_j`: source masses, with a share of 1/C per class.
+- `K_ij`: with `orientation`, every component carries registration's support
+  axis (from `prepareSemanticRegistrationGeometry`), and each pair is weighted
+  by `exp(-kappa_ij*sin(dtheta_ij)^2/2)`, with
+  `kappa_ij=c_i*c_j/(angularFloor^2+a_i+a_j)`.
+
+The evidence factors multiply after the class normalization, as in
+registration. The injected gradient and Gauss-Newton metric are analytic; the
+metric adds `kappa_ij*(d dtheta_ij/d psi)^2` to yaw.
+
+The local study `research/heading_gap_20261008` (not versioned) traced why the
+frame-level overlap has worse heading. Started at the INSPVA reference, the
+overlap cost's own fixed point has a yaw RMS of 0.212 deg, against 0.151 deg
+for registration on the same frames. Three mechanisms were identified:
+
+- The frame-level `-log sum` gives the responsibilities to the sharpest pairs,
+  about 3 effective pairs at the sharp scale. A few poles and signs then set
+  yaw through their lever arms.
+- Evidence factors applied before class balancing are normalized away, so a
+  weakly supported singleton sign keeps its full class share.
+- The L2 overlap barely measures orientation. For two elongated Gaussians with
+  variances `a` along and `b` across, the curvature of `-log N` in relative
+  rotation is `(a-b)^2/(4ab)`, about 20 rad^-2 for a curb pair. Registration's
+  angular residual, with its 1 deg floor, contributes about 1800--3300 rad^-2
+  per pair. Without it registration's yaw RMS rises from 0.152 to 0.174 deg,
+  and without its robust weights to 0.200 deg.
+
+Per-landmark aggregation lowers the overlap fixed point's yaw RMS to 0.186 deg,
+and orientation lowers it further to 0.162 deg. Registration's sliding
+covariance made the overlap worse (0.287 deg), so it is not used. Among the
+tested settings, an outlier floor of 1e-4 m^-2 (from 1e-6 to 1e-3) and an
+angular floor of 1 deg (from 0.5 to 2 deg) were best; all reasonable settings
+gave 0.154--0.172 deg.
+
+Observer replays on the same inputs, run in one session; position RMSE /
+heading RMSE after the first 2 s:
+
+| Variant | Nominal, LiDAR only | Nominal, GNSS and LiDAR | Fixed scale, LiDAR only | Fixed scale, GNSS and LiDAR |
+| --- | --- | --- | --- | --- |
+| Overlap, frame (default) | 9.72 cm / 0.228 deg | 7.28 cm / 0.160 deg | 6.35 cm / 0.161 deg | 5.90 cm / 0.150 deg |
+| Landmark | 9.62 cm / 0.196 deg | 7.12 cm / 0.142 deg | 6.10 cm / 0.145 deg | 5.76 cm / 0.136 deg |
+| Landmark with orientation | 9.27 cm / 0.131 deg | 7.08 cm / 0.127 deg | 5.91 cm / 0.115 deg | 5.67 cm / 0.115 deg |
+| Registration (Route A) | 10.20 cm / 0.138 deg | 7.84 cm / 0.123 deg | 5.66 cm / 0.114 deg | 5.99 cm / 0.112 deg |
+
+With orientation, heading RMSE is within 0.004 deg of registration in every
+setting, and the mean heading error is smaller: -0.040 to -0.052 deg, against
+-0.050 to -0.076 deg. Position is better than registration in three settings
+and 0.25 cm worse in the fixed-scale LiDAR-only run, where the 0.35 m excursion
+near frame 894 remains. The support geometry raises the per-frame cost by about
+15--40%, to 4--10 ms in these runs.
+
+In the unit-test scene, the landmark likelihood with the ladder converges from
+1 to 9 m across the curbs and does not diverge from 12 m. With the exact scale
+alone it stays silent beyond about 3 m, because of the outlier floor. Unlike the
+frame overlap, the mixture likelihood is not exactly unbiased when same-class
+components overlap: the noise-free scene settles 2e-5 m and 4e-5 deg from the
+truth. The option stays off until it is adopted.
+
 Earlier versions of this channel used the exact score with a central-difference
 curvature, and they lost lock twice. Both losses started at a coarse sign
 pillar flagged by one or two marginally bright returns; all of that pillar's

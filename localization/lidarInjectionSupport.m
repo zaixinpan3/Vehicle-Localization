@@ -310,6 +310,13 @@ classdef lidarInjectionSupport
         % ladder entry with nonzero overlap. Map means are shifted to POSE before
         % evaluation, which leaves the overlap and its pose derivatives unchanged
         % and avoids UTM-scale cancellation.
+        % With cfg.aggregation="landmark" the cost at each scale is instead the
+        % per-landmark mixture likelihood -sum_j v_j log(eps + sum_i u_i N_ij) of
+        % registrationSupport.semanticLandmarkLikelihood, with registration's support
+        % geometry and, with cfg.orientation, its axis kernel. Map masses form one
+        % density per class, source masses carry 1/C per class, and the evidence
+        % factors multiply after this normalization. similarity is then the share
+        % of source mass the map explains.
             arguments
                 fixedCloud (1,1) struct
                 movingCloud (1,1) struct
@@ -319,6 +326,10 @@ classdef lidarInjectionSupport
             timer=tic;linearization=pose;pose=pose(:).';
             ladder=cfg.scaleLadder(:).';
             validateattributes(ladder,{'double'},{'real','finite','nonnegative','nonempty','vector'});
+            assert(isscalar(cfg.aggregation) && ismember(cfg.aggregation,["frame","landmark"]) && ...
+                (~cfg.orientation || cfg.aggregation=="landmark"),'VehicleLocalization:InvalidOverlapAggregation', ...
+                'aggregation is "frame" or "landmark"; orientation requires landmark aggregation.');
+            validateattributes(cfg.outlierDensity,{'double'},{'real','finite','positive','scalar'});
             measurement=struct('gradient',zeros(3,1),'information',zeros(3),'linearizationPose',linearization, ...
                 'available',false,'similarity',0,'minimumInformation',NaN,'scaleLadder',ladder, ...
                 'scaleSimilarity',nan(size(ladder)),'mapComponents',0,'sourceComponents',0, ...
@@ -329,6 +340,10 @@ classdef lidarInjectionSupport
                 measurement.seconds=toc(timer);return;
             end
             if cfg.viewConditioning,local=registrationSupport.conditionSemanticMapOnView(local,pose);end
+            if cfg.aggregation=="landmark"
+                measurement=landmarkLikelihoodGradient(local,movingCloud,pose,cfg,measurement);
+                measurement.seconds=toc(timer);return;
+            end
             [f,m]=registrationSupport.prepareSemanticRegistration(local,movingCloud,cfg.registration);
             if cfg.evidenceWeights
                 % Map view reliability and source temporal stability scale the masses
@@ -446,4 +461,48 @@ function [r,J]=lineAndPointResiduals(f,pose)
     J(1:2,3,:)=pagemtimes(B,reshape(derivative.',2,1,n));
     r(3,:)=(sum((f.sourceAxis*R.').*f.targetNormal,2).*f.directionScale).';
     J(3,3,:)=sum((f.sourceAxis*dR.').*f.targetNormal,2).*f.directionScale;
+end
+
+function measurement=landmarkLikelihoodGradient(local,movingCloud,pose,cfg,measurement)
+% Per-landmark mixture likelihood at every ladder scale (semanticLandmarkLikelihood).
+% Map masses form one density per class and source masses carry 1/C per class;
+% evidence factors multiply after this normalization, as registration's weights.
+% The support geometry (axes, confidences, angular variances) is registration's.
+    ladder=measurement.scaleLadder;
+    geometry=prepareSemanticRegistrationGeometry(local,movingCloud,pose,cfg.registration);
+    f=geometry.fixed;m=geometry.moving; % map means relative to POSE
+    f.mean=f.mean(:,1:2);m.mean=m.mean(:,1:2);f.covariance=f.planarCovariance;m.covariance=m.planarCovariance;
+    names=intersect(unique(f.semanticName(f.mixtureWeight>0)),unique(m.semanticName(m.mixtureWeight>0)));
+    measurement.mapComponents=f.numComponents;measurement.sourceComponents=m.numComponents;
+    measurement.sharedClasses=reshape(string(names),1,[]);
+    if isempty(names),return;end
+    u=zeros(size(f.mixtureWeight));v=zeros(size(m.mixtureWeight));
+    for name=names.'
+        I=f.semanticName==name & f.mixtureWeight>0;J=m.semanticName==name & m.mixtureWeight>0;
+        u(I)=f.mixtureWeight(I)/sum(f.mixtureWeight(I));v(J)=m.mixtureWeight(J)/sum(m.mixtureWeight(J))/numel(names);
+    end
+    if cfg.evidenceWeights,u=u.*f.viewReliability(:);v=v.*m.temporalStability(:);end
+    f.mixtureWeight=u;m.mixtureWeight=v;
+    angularFloor=NaN;if cfg.orientation,angularFloor=cfg.registration.support.angularFloor;end
+    origin=[0,0,pose(3)];gradient=zeros(3,1);information=zeros(3);
+    for k=1:numel(ladder)
+        fk=f;mk=m;
+        if ladder(k)>0
+            inflation=ladder(k)^2/2*eye(2);
+            fk.covariance=fk.covariance+inflation;mk.covariance=mk.covariance+inflation;
+        end
+        [~,g,M,explained]=registrationSupport.semanticLandmarkLikelihood(fk,mk,origin,cfg.outlierDensity,angularFloor);
+        if ~(explained>0),continue;end
+        gradient=gradient+g;information=information+M;
+        measurement.scaleSimilarity(k)=explained/max(sum(v),realmin);
+    end
+    evaluated=isfinite(measurement.scaleSimilarity);
+    if any(evaluated)
+        information=(information+information.')/2;
+        measurement.gradient=gradient;measurement.information=information;
+        measurement.similarity=measurement.scaleSimilarity(find(evaluated,1));
+        measurement.minimumInformation=min(eig(information));
+        measurement.available=true;
+        measurement.geometrySource="semanticLandmarkLikelihood scale ladder at the observer prediction; no registration";
+    end
 end

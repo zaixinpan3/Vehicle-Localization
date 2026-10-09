@@ -224,6 +224,87 @@ classdef registrationSupport
             end
         end
 
+        function [cost, gradient, metric, explained] = semanticLandmarkLikelihood(fixed, moving, pose, outlierDensity, angularFloor)
+        % semanticLandmarkLikelihood: Per-landmark mixture likelihood and SE(2) derivatives.
+        %   cost = -sum_j v_j log(outlierDensity + sum_i u_i N_ij K_ij)
+        % over same-class pairs. N_ij = N(mu_i; R*mu_j+t, A_i+R*B_j*R') is the
+        % Gaussian overlap integral, u the fixed masses (one density per class),
+        % v the moving masses and outlierDensity (1/m^2) a uniform outlier floor,
+        % so an unexplained landmark loses its influence. With a finite
+        % angularFloor, components also carry an axis: K_ij = exp(-kappa_ij*s_ij^2/2)
+        % with s_ij the sine between the fixed axis and the rotated moving axis and
+        % kappa_ij = c_i*c_j/(angularFloor^2+a_i+a_j), from the support geometry of
+        % prepareSemanticRegistrationGeometry (orientationNormal or supportTangent,
+        % axisConfidence c, angularVariance a). GRADIENT is d(cost)/d[x y psi]
+        % (3-by-1) and METRIC the Gauss-Newton metric sum_j v_j sum_i r_ij
+        % (J_ij'*Sigma_ij^-1*J_ij + kappa_ij*ds_ij^2*e3*e3'), with responsibilities
+        % r_ij = u_i N_ij K_ij/(outlierDensity + sum_i u_i N_ij K_ij). EXPLAINED is
+        % the moving mass explained by the fixed mixture, sum_j v_j(1-r_0j).
+            assert(size(fixed.mean,2)==2 && size(moving.mean,2)==2,'VehicleLocalization:LikelihoodRequiresXY', ...
+                'The landmark likelihood is defined for the XY marginal only.');
+            oriented = isfinite(angularFloor);
+            c = cos(pose(3)); s = sin(pose(3));
+            rotation = [c -s; s c]; rate = [-s -c; c -s];
+            means = moving.mean*rotation.' + pose(1:2);
+            lever = moving.mean*rate.';
+            a0 = reshape(moving.covariance(1,1,:), [], 1);
+            b0 = reshape(moving.covariance(1,2,:), [], 1);
+            d0 = reshape(moving.covariance(2,2,:), [], 1);
+            ma = c*c*a0 - 2*c*s*b0 + s*s*d0;
+            mb = c*s*(a0-d0) + (c*c-s*s)*b0;
+            md = s*s*a0 + 2*c*s*b0 + c*c*d0;
+            if oriented
+                axis = moving.supportTangent*rotation.'; axisRate = moving.supportTangent*rate.';
+            end
+            cost = 0; gradient = zeros(3,1); metric = zeros(3); explained = 0;
+            names = intersect(unique(fixed.semanticName(fixed.mixtureWeight>0)), ...
+                unique(moving.semanticName(moving.mixtureWeight>0)));
+            for name = names.'
+                f = find(fixed.semanticName == name & fixed.mixtureWeight > 0);
+                allMoving = find(moving.semanticName == name & moving.mixtureWeight > 0);
+                u = fixed.mixtureWeight(f);
+                fa = reshape(fixed.covariance(1,1,f), [], 1);
+                fb = reshape(fixed.covariance(1,2,f), [], 1);
+                fd = reshape(fixed.covariance(2,2,f), [], 1);
+                blockSize = max(1, floor(250000/max(numel(f),1)));
+                for start = 1:blockSize:numel(allMoving)
+                    m = allMoving(start:min(start+blockSize-1,end));
+                    a = fa + ma(m).'; b = fb + mb(m).'; d = fd + md(m).';
+                    determinant = a.*d - b.*b;
+                    dx = fixed.mean(f,1) - means(m,1).';
+                    dy = fixed.mean(f,2) - means(m,2).';
+                    qx = (d.*dx-b.*dy)./determinant;
+                    qy = (a.*dy-b.*dx)./determinant;
+                    kernel = exp(-0.5*(dx.*qx+dy.*qy))./(2*pi*sqrt(determinant));
+                    lx = lever(m,1).'; ly = lever(m,2).';
+                    da = -2*mb(m).'; db = (ma(m)-md(m)).'; dd = 2*mb(m).';
+                    yaw = qx.*lx + qy.*ly + 0.5*(qx.^2.*da+2*qx.*qy.*db+qy.^2.*dd - ...
+                        (d.*da+a.*dd-2*b.*db)./determinant);
+                    sx = (d.*lx-b.*ly)./determinant; sy = (a.*ly-b.*lx)./determinant;
+                    yawMetric = lx.*sx + ly.*sy;
+                    if oriented
+                        sine = fixed.orientationNormal(f,:)*axis(m,:).';
+                        sineRate = fixed.orientationNormal(f,:)*axisRate(m,:).';
+                        kappa = (fixed.axisConfidence(f)*moving.axisConfidence(m).')./ ...
+                            (angularFloor^2 + fixed.angularVariance(f) + moving.angularVariance(m).');
+                        kernel = kernel.*exp(-0.5*kappa.*sine.^2);
+                        yaw = yaw - kappa.*sine.*sineRate;
+                        yawMetric = yawMetric + kappa.*sineRate.^2;
+                    end
+                    v = moving.mixtureWeight(m).';
+                    density = u.'*kernel;
+                    omega = (u.*kernel)./(outlierDensity+density).*v;
+                    cost = cost - sum(v.*log(outlierDensity+density));
+                    explained = explained + sum(v.*density./(outlierDensity+density));
+                    gradient = gradient - [sum(omega.*qx,'all'); sum(omega.*qy,'all'); sum(omega.*yaw,'all')];
+                    metric = metric + [sum(omega.*d./determinant,'all'), -sum(omega.*b./determinant,'all'), sum(omega.*sx,'all'); ...
+                        0, sum(omega.*a./determinant,'all'), sum(omega.*sy,'all'); ...
+                        0, 0, sum(omega.*yawMetric,'all')];
+                end
+            end
+            metric = metric + triu(metric,1).';
+        end
+
         function measurement = registrationPoseMeasurement(result,timestamp,arrivalTime)
         % registrationPoseMeasurement Export full or explicitly accepted directional data.
         % partialPoseAvailable alone never authorizes export. Optional arrivalTime
