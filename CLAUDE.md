@@ -15,7 +15,7 @@ distribution, or state a legal conclusion about immigration compliance.
 
 Standing closure for every substantive task, in this order:
 
-1. Commit the in-scope project work.
+1. Commit the in-scope code changes (source, configuration, tests, scripts).
 2. Push to `origin main` (`https://github.com/zaixinpan3/Vehicle-Localization`).
 3. Append the operation to
    `../Pan_Dynamics_OPT_Archive_Kit/00_Project_Activity_Ledger.jsonl` with
@@ -24,6 +24,19 @@ Standing closure for every substantive task, in this order:
 4. Update the current unsigned weekly work log under
    `../Pan_Dynamics_OPT_Archive_Kit/03_Weekly_Records/`. One report covers both
    projects; add a Project A row rather than starting a second series.
+
+Research output is not code (user decision, `2026-10-01`): a dated study
+folder under `research/` stays a local, untracked folder and is neither
+committed nor pushed. A research-only task skips steps 1 and 2 and records the
+study path and artifact hashes in steps 3 and 4 instead of a commit SHA.
+
+Generated numerical data is not retained (user decision, `2026-10-08`):
+replay outputs, cached features, point-cloud dumps and similar files (`.mat`,
+`.npz`, `.npy`, `.bin`, cache `.json`/`.csv`) are deleted when the task ends,
+never left in a study folder, never copied into the archive root, and never
+hashed or cited by path in the ledger. A study keeps only its report, small
+tables, figures, scripts and manifest; code is identified by commit SHA, not
+by a copied snapshot. See `AGENTS.md` §"Research Data Retention".
 
 The archive root is intentionally not under version control (user decision,
 `2026-09-03`): write its records directly, take no archive commit, and do not

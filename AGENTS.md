@@ -18,6 +18,13 @@ Pole-like Feature, and Building Facade*. Three modules mirror the paper:
   reference `tests/reference/pipelineReference.mat`.
 - `scripts/` — bag extraction and map-building entry points.
 
+## Literature Sources
+
+The local Zotero library is a valuable source of papers for this project.
+When looking for papers or related research, it can be searched using the
+available Zotero tools and skills for relevant bibliographic records, attached
+PDFs, and notes.
+
 ## Default Vehicle Configuration
 
 All new simulations and experiment scripts default to the adopted MnCAV
@@ -38,11 +45,45 @@ language the request was made in.
 
 ## OPT Self-Employment Evidence Archiving
 
-These rules are mandatory for every substantive project task performed in this
-repository or on its related research materials. They cover literature review,
-algorithm and estimator design, source-code or configuration changes,
-simulations and tests, data generation or analysis, manuscript work, and
-research reporting.
+These rules apply only to substantive engineering or academic research progress
+in this repository or its related research materials. Do not archive every
+conversation, task, command, or file edit.
+
+### Archiving Eligibility
+
+Archive work only when it produces an identifiable implementation, technical
+decision, research finding, or experimental result, for example:
+
+- Actual code implementation, fixes, refactoring, or configuration changes that
+  advance project behavior, correctness, performance, or maintainability.
+- Algorithm, estimator, controller, or model design and improvements, including
+  concrete derivations, assumptions, comparisons, and design decisions.
+- Academic research such as literature analysis with project-relevant findings,
+  theoretical analysis, or substantive manuscript, figure, and research-report
+  development.
+- Experiments, simulations, tests, and data processing or analysis that produce
+  meaningful validation, measurements, findings, or reusable research outputs.
+
+Do not trigger archiving for ordinary questions and explanations, status
+updates, navigation, file searches, routine inspections or repeated checks,
+general brainstorming or scheduling without a concrete technical result,
+environment or tool administration, agent-instruction edits, cosmetic-only
+changes, or archive housekeeping. A command run, file changed, or commit made
+does not by itself establish substantive project progress. Research reading or
+discussion qualifies when it yields an identifiable analysis, derivation,
+finding, or design decision; a source-code change is not required.
+
+Partial or failed engineering and research attempts qualify when they produce
+meaningful implementation progress, diagnostic evidence, or a research finding.
+Record their actual outcome without claiming success. For mixed tasks, archive
+only the qualifying work and combine closely related steps into one record.
+
+This eligibility gate governs all ledger, weekly/monthly report, Evidence Index,
+and archive-related commit/push/completion requirements below. If no work
+qualifies, skip that workflow and its final-response checklist. Explicitly
+requested archive maintenance or required integrity corrections may still be
+performed, but must not be presented as new engineering or research progress
+or recursively generate records merely for maintaining records.
 
 The purpose of the archive is to preserve truthful, contemporaneous, and
 verifiable evidence of work. It is not permission to manufacture evidence,
@@ -112,9 +153,11 @@ Use `../Pan_Dynamics_OPT_Archive_Kit/` as the archive root.
   `../Pan_Dynamics_OPT_Archive_Kit/05_Evidence_Response_Packet_Index.csv` as the
   canonical EV-number index unless a later archive status file expressly names
   a replacement.
-- Keep operational code, configurations, and research data in their normal
-  repository locations. Put evidentiary manifests, report exports, and archive
-  copies under the archive root.
+- Keep operational code and configurations in their normal repository
+  locations. Put evidentiary manifests, report exports, and archive copies
+  under the archive root. Archive copies hold text, tables, figures, PDFs and
+  videos only; generated numerical data is never copied into the archive root
+  (see Research Data Retention).
 - Preserve original evidence. An export or copy must be identified as an export
   or copy and must not replace the original.
 - All editable archive documents use standalone LaTeX (`.tex`) as the canonical
@@ -130,6 +173,17 @@ performed.
 
 Git closure applies to this repository only. The archive root is not versioned
 and takes no commit of its own.
+
+Git closure applies to **code** only: production source, configuration, tests
+and entry-point scripts. Research output is not code and is not committed or
+pushed (user decision, `2026-10-01`). Research output means a dated study
+folder under `research/` with its report, tables, figures and diagnostic
+scripts. Keep such a study as local files. A task that produces only research
+output takes no project commit and no push: skip steps 1--3 below, and in
+step 4 identify the work by its study path and by hashes of its inputs and
+artifacts instead of a commit SHA. A task that changes code and also produces
+a study commits and pushes the code and leaves the study untracked. This rule
+does not by itself remove study folders that are already tracked.
 
 The GitHub remote is `origin`
 (`https://github.com/zaixinpan3/Vehicle-Localization`), default branch `main`.
@@ -162,13 +216,49 @@ activity ledger, weekly or monthly work records, or Evidence Index unless the
 user explicitly identifies a separate underlying project operation that must be
 archived.
 
-### Record Every Substantive Operation
+### Research Data Retention
 
-After each substantive operation, append one JSON object on one line to the
-activity ledger. Closely coupled edits made for one engineering purpose may be
-one operation. Routine navigation, file discovery, and no-op commands do not
-need separate records unless they themselves constitute literature review or
-produce a relevant research finding.
+Generated numerical data is not retained (user decision, `2026-10-08`). It
+has no evidentiary value for the archive and dominates disk use: on that date
+the research tree held 9.1 GB of which under 0.7 GB was text, and 9.8 GB of
+data files and code snapshots were deleted from the repository and the archive
+copies (ledger record `PDVL-20261008-015`).
+
+- Generated data means replay and simulation outputs, cached or extracted
+  features, point-cloud and frame dumps, intermediate arrays and similar
+  machine products, whatever the format: `.mat`, `.npz`, `.npy`, `.bin`,
+  `.pkl`, `.h5`, and `.json` or `.csv` files that serve only as caches.
+- A study folder under `research/` keeps only what a reader needs to follow
+  the finding: the report, small summary tables, figures, the scripts and
+  configuration that produced them, and a manifest listing those files. Write
+  bulk data to `output/` or a temporary location and delete it when the task
+  ends; do not leave it in the study folder for later cleanup.
+- Do not copy source code into a study folder (`source_snapshot`,
+  `baseline_source`, `development_cache` or similar). Record the executed Git
+  commit SHA in the report and the ledger instead; the code is recoverable
+  from the repository.
+- Do not copy generated data into the archive root. Export copies under
+  `04_Project_A_LiDAR/` contain text, tables, figures, PDFs and videos only.
+- Ledger and weekly entries record the metrics, the study path, the commit SHA
+  and hashes of retained text artifacts. Do not hash or cite by path a data
+  file that will not be kept, and list only retained files in a study's
+  manifest.
+- Data files absent from studies dated before `2026-10-08` were removed under
+  the decision above. Their absence is explained by `PDVL-20261008-015` and is
+  not a blocker, an integrity failure, or a reason to recreate them.
+- Raw recordings, reference datasets and the regression reference
+  `tests/reference/pipelineReference.mat` are inputs, not generated data, and
+  are unaffected by this rule.
+
+### Record Qualifying Work
+
+For each coherent unit of work that meets Archiving Eligibility, append one
+JSON object on one line to the activity ledger. Group implementation,
+investigation, and validation steps serving the same engineering or research
+purpose into one record; do not create a record per command or minor edit.
+Describe the concrete progress or finding and its supporting artifacts or
+methods. Do not append a duplicate record at task completion for work already
+recorded.
 
 Each ledger object must contain:
 
@@ -217,9 +307,11 @@ Use concrete descriptions that another person can verify:
   frame or sequence identifiers, parameters and random seed, command actually
   run, result location, key metrics, and whether it passed, failed, or was
   inconclusive.
-- Data work: record the input bag or sequence, processing method, output files,
-  units, and metrics such as map size, point count, registration residual, or
-  computation time when applicable.
+- Data work: record the input bag or sequence, processing method, units, and
+  metrics such as map size, point count, registration residual, or computation
+  time when applicable. Name output data files only if they are retained
+  (see Research Data Retention); otherwise record the metrics and the script
+  that regenerates them.
 - Manuscript work: record the section, equation, figure, table, or claim
   changed and the source or PDF version produced.
 - Failed and partial work must be recorded honestly. Do not describe an
@@ -321,12 +413,14 @@ Use concrete descriptions that another person can verify:
 - Do not copy EAD, passport, I-20, SEVIS, tax, or banking documents into this
   repository. This repository has a public GitHub remote; immigration and
   personal documents belong only in the archive root, which is not published.
-- At the end of every substantive task, update the activity ledger and current
-  unsigned weekly log. Update the evidence index only if new evidence was
-  admitted.
+- At the end of a task with qualifying engineering or research progress, ensure
+  that the activity ledger and current unsigned weekly log capture that work.
+  Update the evidence index only if new evidence was admitted. Tasks that do
+  not meet Archiving Eligibility require no archive update.
 - Complete the closure in this order: project commit, push to `origin`, then
-  the archival record of that commit. Do not leave substantive in-scope changes
-  uncommitted unless a concrete blocker is recorded and reported.
+  the archival record of that commit. Research-only work has no commit or push
+  and goes straight to the archival record. Do not leave substantive in-scope
+  code changes uncommitted unless a concrete blocker is recorded and reported.
 - In the final response, state which archive records were updated, whether the
   applicable standing total was applied (`20.0` per active project and `40.0`
   when both projects are active), and whether any document still requires
