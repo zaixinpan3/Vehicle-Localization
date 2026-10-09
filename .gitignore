@@ -35,3 +35,7 @@ results/
 data/
 *.bag
 *.pcap
+
+# Local agent instructions (not project code)
+AGENTS.md
+CLAUDE.md
