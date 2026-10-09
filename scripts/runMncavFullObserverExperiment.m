@@ -11,20 +11,21 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
 % LidarChannel="overlapGradient" replaces registration: every scenario
 % injects the semanticGaussianOverlap gradient of the same coarse horizons at
 % its own prediction (overlapGradientConfig), with no pose optimization.
-% OverlapKernelBandwidth (m) smooths that overlap; zero keeps the exact cost.
+% OverlapScaleLadder (m) replaces the configured scale ladder; empty keeps it.
     arguments
         outputFolder (1,1) string="output/mncav_coarse_localization/observer"
         options.MatchingFolder (1,1) string="output/mncav_coarse_localization/matching"
         options.RematchWithGnss (1,1) logical=true
         options.CoarseSourceFile (1,1) string=""
         options.LidarChannel (1,1) string {mustBeMember(options.LidarChannel,["registration","overlapGradient"])}="registration"
-        options.OverlapKernelBandwidth (1,1) double {mustBeNonnegative,mustBeFinite}=0
+        options.OverlapScaleLadder (1,:) double {mustBeNonnegative,mustBeFinite}=[]
     end
     overlapChannel=options.LidarChannel=="overlapGradient";
-    assert(overlapChannel || options.OverlapKernelBandwidth==0,'VehicleLocalization:OverlapOptionWithoutChannel', ...
-        'OverlapKernelBandwidth applies only to LidarChannel="overlapGradient".');
+    assert(overlapChannel || isempty(options.OverlapScaleLadder),'VehicleLocalization:OverlapOptionWithoutChannel', ...
+        'OverlapScaleLadder applies only to LidarChannel="overlapGradient".');
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
-    overlapConfig=overlapGradientConfig();overlapConfig.kernelBandwidth=options.OverlapKernelBandwidth;
+    overlapConfig=overlapGradientConfig();
+    if ~isempty(options.OverlapScaleLadder),overlapConfig.scaleLadder=options.OverlapScaleLadder;end
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
     parameterFile="";
     [prepared,~,inputMetadata]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
@@ -154,7 +155,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'inputMetadata',inputMetadata,'synchronization',synchronization, ...
         'evaluation',"INSPVA on native LiDAR frame timestamps, approximately 10 Hz", ...
         'matchingRerun',matching.rerun,'closedLoopRematching',options.RematchWithGnss && ~overlapChannel, ...
-        'lidarChannel',options.LidarChannel,'overlapKernelBandwidth',options.OverlapKernelBandwidth, ...
+        'lidarChannel',options.LidarChannel,'overlapScaleLadder',overlapConfig.scaleLadder, ...
         'gnssInformationAddedToLidar',false,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
         'offlineSynchronization',true, ...
         'gnssOutputPointCalibration',cfg.gnss.outputPoint, ...

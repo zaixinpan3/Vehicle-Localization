@@ -293,75 +293,110 @@ and `data.lidarMatcher`. `sources{k}` is the coarse source horizon of frame
 `k` in its current body axes; the optional `valid` defaults to the nonempty
 sources. At every valid frame the runtime calls
 `lidarInjectionSupport.evaluateOverlapGradient(map,sources{k},prediction,config)`
-at the post-baseline prediction. The cost is `c(p)=-log s(p)`, where `s` is the
-class-balanced normalized overlap of
-`registrationSupport.scoreSemanticProbabilityCloudAlignment`. Balanced self
-energies are one, so `s` is the cross energy `E` and the injected gradient
-`g=-grad(E)/E` is the analytic SE(2) derivative of
-`registrationSupport.semanticGaussianOverlap`; the curvature is a central
-difference of that derivative. No pose is optimized, no correspondence is
-selected or frozen and no acceptance test is applied. Empty geometry or zero
-overlap withdraws only the LiDAR correction of that frame.
+at the post-baseline prediction. For every bandwidth `sigma` of
+`config.scaleLadder` both mixtures are smoothed horizontally by
+`N(0,sigma^2/2*I)`, which adds `sigma^2*I` to every pair covariance. The
+class-balanced cross energy `E_sigma` is then the expected overlap under an
+isotropic horizontal prediction error of that size; `sigma=0` is the exact
+score of `registrationSupport.scoreSemanticProbabilityCloudAlignment`. Balanced
+self energies are one, so `E_sigma` is the normalized similarity. The channel
+injects
+
+- the gradient `g=sum_sigma -grad(E_sigma)/E_sigma`, the analytic SE(2)
+  derivative of `registrationSupport.semanticGaussianOverlap`, and
+- the information `M=sum_sigma sum_ij pi_ij*J_ij'*inv(Sigma_ij)*J_ij`, the
+  Gauss-Newton (EM) metric of each `-log E_sigma`. Here `pi_ij` are the pair
+  responsibilities at that scale and `J_ij` is the pair residual Jacobian in
+  `[X,Y,psi]`, whose yaw column carries the lever arm.
+  `semanticGaussianOverlap` returns this metric as its third output.
+
+The metric is positive semidefinite and exact for one pair at any translation.
+The regularized observer step therefore stays bounded and points to the optimum
+even where the exact Hessian is indefinite. Summing the scales fuses them in
+information form: the sharp scale dominates near alignment, and the wide scales
+keep a restoring force where the sharp kernels have decayed. With
+`evidenceWeights` (default true), the map view reliability and the source
+temporal stability scale the mixture masses before class balancing, as
+registration weights its correspondences. The channel optimizes no pose,
+selects or freezes no correspondence, and applies no acceptance test. Zero
+overlap at every scale withdraws only that frame's LiDAR correction.
 
 `computeLidarMatchedCorrection` accepts `gradient`, `information` and a
 `linearizationPose` equal to the prediction in place of a residual, and uses
 `xi=-F*D'*g`; for the same geometry this equals the residual form
-`-F*D'*J'*W*r`. By default the information holds the absolute curvature
-eigenvalues (`curvature="absolute"`). With unit pose scales the nominal
-innovation `-(|H|+lambdaStar*I)\g` is then a saddle-free descent direction, also
-where the overlap is locally concave; `"positivePart"` withholds those directions. Gradient components
-outside the positive-information directions are not injected and are reported as
-`unsupportedGradientNorm`. The calibrated gain profile is rejected because its
-error calibration describes registration poses. `kernelBandwidth` (m) smooths
-both mixtures horizontally and adds `bandwidth^2*I` to every pair covariance, so
-the cross energy is its expectation under an isotropic horizontal prediction
-error of that standard deviation; the default zero keeps the exact score. Diagnostics report
-`lidarChannel="overlapGradient"` and per-frame `lidarOverlap` evaluation,
-availability, similarity, minimum curvature, time and gradient.
-`runMncavFullObserverExperiment(LidarChannel="overlapGradient",OverlapKernelBandwidth=b)`
-runs the recorded scenarios with this channel.
+`-F*D'*J'*W*r`. Gradient components outside the positive-information directions
+are not injected and are reported as `unsupportedGradientNorm`. The calibrated
+gain profile is rejected because its error calibration describes registration
+poses. Diagnostics report `lidarChannel="overlapGradient"` and, per frame, the
+`lidarOverlap` evaluation, availability, similarity (first ladder entry),
+minimum information eigenvalue, time and gradient.
+`runMncavFullObserverExperiment(LidarChannel="overlapGradient",OverlapScaleLadder=ladder)`
+runs the recorded scenarios with this channel; an empty ladder keeps the
+configured one.
 
-On the 2024-06-07 MnCAV replay with the fixed Route A inputs (1169 frames,
-local study `research/overlap_gradient_channel_20261008`, not versioned):
+The results below come from the 2024-06-07 MnCAV replay with the fixed Route A
+inputs: 1169 frames, intensity-responsibility sign moments and evidence weights
+on. The local study `research/channel_comparison_20261008` is not versioned.
+Each cell gives position RMSE over all frames and heading RMSE after the first
+2 s:
 
-| LiDAR channel | Gains | LiDAR only: position / heading RMSE | GNSS and LiDAR |
-| --- | --- | --- | --- |
-| Registration | nominal | 10.53 cm / 0.131 deg | 7.83 cm / 0.111 deg |
-| Overlap, exact | nominal | 71.80 cm / 0.991 deg | 9.72 cm / 0.706 deg |
-| Overlap, 0.5 m bandwidth | nominal | 27.32 cm / 0.442 deg | 9.22 cm / 0.151 deg |
-| Overlap, 0.5 m bandwidth | nominal, `lambdaStar=1` | 10.36 cm / 0.198 deg | 7.01 cm / 0.159 deg |
-| Registration | fixed scale | 5.74 cm / 0.103 deg | 6.05 cm / 0.102 deg |
-| Overlap, exact | fixed scale | 117.84 cm / 1.414 deg | 9.06 cm / 0.175 deg |
-| Overlap, 0.5 m bandwidth | fixed scale | 8.29 cm / 0.161 deg | 6.59 cm / 0.128 deg |
+| LiDAR channel | Nominal, LiDAR only | Nominal, GNSS and LiDAR | Fixed scale, LiDAR only | Fixed scale, GNSS and LiDAR |
+| --- | --- | --- | --- | --- |
+| Registration (Route A) | 10.20 cm / 0.138 deg | 7.84 cm / 0.123 deg | 5.66 cm / 0.114 deg | 5.99 cm / 0.112 deg |
+| Overlap, ladder `[0 0.5 1 2]` m (default) | 9.72 cm / 0.228 deg | 7.28 cm / 0.160 deg | 6.35 cm / 0.161 deg | 5.90 cm / 0.150 deg |
+| Overlap, exact scale only | 16.60 cm / 0.859 deg | 7.51 cm / 0.164 deg | 6.45 cm / 0.163 deg | 5.86 cm / 0.152 deg |
+| Overlap, scale-normalized ladder | 8.20 cm / 0.249 deg | 6.79 cm / 0.197 deg | 7.66 cm / 0.187 deg | 7.19 cm / 0.182 deg |
 
-Position RMSE covers all frames; heading RMSE excludes the first 2 s. At the
-reference pose the one-step Newton offset of the exact overlap is similar to
-that of the registration objective (median 3.4 versus 2.8 cm along track), but
-its basin along the curbs is narrow. Near frame 970 the nominal LiDAR-only
-along-track error reached 0.35 m, the minimum curvature at the estimate turned
-negative and then flat, and the estimate drifted along track to 2.3 m.
-Smoothing widens the basin: with the fixed-scale gains all
-tested bandwidths from 0.25 to 1.0 m give 8.1--9.0 cm LiDAR-only. The nominal
-saturation scale `lambdaStar=16` suppresses the smaller smoothed curvature;
-the `lambdaStar=1` row is a diagnostic outside the declared nominal profile.
-Bandwidth and information scale were chosen on this evaluation recording, with
-no held-out drive. An overlap evaluation takes 2.6 ms median per frame; a
-fixed-scale replay takes 3--4 s with this channel and 15--18 s with registration.
-The overlap is a similarity, not a likelihood: its curvature is not a
-calibrated inverse covariance, and the earlier finding that overlap optima
-follow view-dependent sampling density along curbs still applies.
-Registration remains the default channel.
+The default ladder has lower position RMSE than registration in three settings
+and is 0.7 cm worse in the fixed-scale LiDAR-only run. Its heading RMSE is
+0.04--0.09 deg worse in every setting. The heading gap is not a weaker yaw gain:
+both channels inject nearly the full yaw innovation, with median strength 0.997
+for the overlap and 0.994 for registration. Its median body-axis information is
+48 along track, 50 across track and 6.7e3 in yaw, against 17, 21 and 3.2e3 for
+registration. So the gap comes from the yaw that the overlap gradient implies.
 
-Both losses of lock started at a coarse sign pillar flagged by one or two
-marginally bright returns, all of whose nonground returns (the pole) entered
-the sign Gaussian. Coarse sign moments are now intensity-responsibility
-weighted with a minimum soft sign mass (see the top-level README). With them,
-on the same inputs and map, the exact overlap channel without GNSS gives
-16.3 cm / 0.820 deg (nominal) and 55.3 cm / 0.571 deg (fixed scale), and with
-GNSS 9.9 / 0.691 and 9.4 cm / 0.205 deg. Registration gives 10.2 and 5.7 cm
-without GNSS (nominal, fixed scale) and 7.8 and 6.0 cm with GNSS, with heading
-RMSE 0.11--0.14 deg. Source horizons hold 1.86 signs instead of 2.90; the burst
-frames publish no sign.
+Ladder sensitivity:
+
+- `[0 0.5 1]` and `[0 0.5 1 2 4]` m agree with the default within 1 mm.
+- `[0 1 2]` is worse without GNSS: 12.0 cm with nominal gains.
+- Scale-space normalization weights each scale by `1+sigma^2/sigmaBar^2`. This
+  gives every scale equal precision and overstates the information about
+  fourfold. With the fixed-scale gains the normalized ladder loses lock near
+  frame 598. The default ladder is therefore an unweighted sum.
+
+The following options were removed:
+
+- The exact Hessian as information, with absolute or positive-part
+  eigenvalues. A Hessian ladder diverged with the fixed-scale gains (123 m).
+- A single smoothing bandwidth.
+- Similarity and curvature frame gates. The curvature gates removed the only
+  along-track information in weakly observable stretches. A similarity gate
+  blocked acquisition, because the overlap at the 0.9 m initial offset is 0.002.
+
+An overlap evaluation takes 3.6 ms median per frame, against 11--15 ms for
+registration; a replay takes 5 s against 15--19 s. The ladder, the weights and
+the information scale were all chosen on this evaluation recording, with no
+held-out drive. The overlap is a similarity, not a likelihood: its metric is not
+a calibrated inverse covariance, and overlap optima still follow view-dependent
+sampling density along curbs.
+
+The unit-test scene shows where the ladder's reach ends. The ladder converges
+from 6 and 9 m across the curbs, where the exact scale diverges. At those
+offsets the exact responsibilities collapse onto a single pole pair: the
+effective pair count is 1.0 and the metric has rank two. The minimum-norm step
+then turns part of the translation error into a rotation, 8.9 deg in the first
+update. The wider scales keep about five effective pairs and a full-rank
+metric. From 12 m the ladder also diverges, while the exact channel finds no
+overlap and stays silent. The ladder therefore widens the basin but does not
+make it global. Registration remains the default channel.
+
+Earlier versions of this channel used the exact score with a central-difference
+curvature, and they lost lock twice. Both losses started at a coarse sign
+pillar flagged by one or two marginally bright returns; all of that pillar's
+nonground returns (the pole) entered the sign Gaussian. Coarse sign moments are
+now weighted by intensity responsibility, with a minimum soft sign mass (see the
+top-level README). Source horizons now hold 1.86 signs instead of 2.90, and the
+burst frames publish no sign.
 
 ## Historical LiDAR-only motion-aided baseline
 

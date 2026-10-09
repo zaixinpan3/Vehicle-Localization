@@ -148,11 +148,18 @@ classdef registrationSupport
             moving.mixtureWeight=movingWeights;
         end
 
-        function [energy, gradient] = semanticGaussianOverlap(fixed, moving, pose)
+        function [energy, gradient, metric] = semanticGaussianOverlap(fixed, moving, pose)
         % semanticGaussianOverlap: Exact same-class integral and SE(2) derivatives.
         % Integral N(x;a,A) N(x;b,B) dx = N(a;b,A+B). Covariance is
         % rotated with the mean; derivatives include the rotating covariance term.
+        % The optional third output is the Gauss-Newton metric of -log(energy):
+        % the responsibility-weighted sum of pair precisions in pose coordinates,
+        % sum_ij pi_ij J_ij' Sigma_ij^-1 J_ij with pi_ij = w_i w_j N_ij / energy and
+        % J_ij = d(delta_ij)/d[x y psi], so the yaw block carries the lever arm. It is
+        % positive semidefinite and exact for a single pair at any translation.
         % Inputs are component structs already validated at the API boundary.
+            assert(nargout<3 || size(fixed.mean,2)==2,'VehicleLocalization:MetricRequiresXY', ...
+                'The Gauss-Newton overlap metric is defined for the XY marginal only.');
             if size(fixed.mean,2)==3
                 if nargout > 1
                     [energy,gradient]=spatialGaussianOverlap(fixed,moving,pose);
@@ -171,7 +178,7 @@ classdef registrationSupport
             ma = c*c*a0 - 2*c*s*b0 + s*s*d0;
             mb = c*s*(a0-d0) + (c*c-s*s)*b0;
             md = s*s*a0 + 2*c*s*b0 + c*c*d0;
-            energy = 0; gradient = zeros(1,3);
+            energy = 0; gradient = zeros(1,3); metric = zeros(3);
             fixedActive = fixed.mixtureWeight > 0;
             movingActive = moving.mixtureWeight > 0;
             names = intersect(unique(fixed.semanticName(fixedActive)), unique(moving.semanticName(movingActive)));
@@ -202,7 +209,18 @@ classdef registrationSupport
                         gradient = gradient + [sum(weighted.*qx,'all'), sum(weighted.*qy,'all'), ...
                             sum(weighted.*rotationTerm,'all')];
                     end
+                    if nargout > 2
+                        lx = meanDerivative(m,1).'; ly = meanDerivative(m,2).';
+                        sx = (d.*lx-b.*ly)./determinant; sy = (a.*ly-b.*lx)./determinant;
+                        metric = metric + [sum(weighted.*d./determinant,'all'), -sum(weighted.*b./determinant,'all'), sum(weighted.*sx,'all'); ...
+                            0, sum(weighted.*a./determinant,'all'), sum(weighted.*sy,'all'); ...
+                            0, 0, sum(weighted.*(lx.*sx+ly.*sy),'all')];
+                    end
                 end
+            end
+            if nargout > 2
+                metric = metric + triu(metric,1).';
+                if energy > 0, metric = metric/energy; end
             end
         end
 

@@ -8,7 +8,7 @@ classdef overlapGradientChannelTest < matlab.unittest.TestCase
     end
     methods (Test)
         function gradientIsTheDerivativeOfNegativeLogScore(testCase)
-            [map,source,truth]=scene();cfg=overlapGradientConfig();
+            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0;
             pose=truth+[0.15,-0.10,deg2rad(1.5)];
             m=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose(:),cfg);
             steps=[1e-6,1e-6,1e-7];expected=zeros(3,1);
@@ -24,18 +24,31 @@ classdef overlapGradientChannelTest < matlab.unittest.TestCase
             testCase.verifyEqual(m.gradient,expected,RelTol=1e-5,AbsTol=1e-8);
             testCase.verifyEqual(m.linearizationPose,pose(:));
         end
-        function informationFollowsTheCurvaturePolicy(testCase)
-            [map,source,truth]=scene();pose=(truth+[0.6,0.4,deg2rad(6)]).';
-            m=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose);
-            [V,E]=eig((m.curvature+m.curvature.')/2,'vector');
-            testCase.verifyLessThan(min(E),0);
-            testCase.verifyEqual(m.curvature,m.curvature.',AbsTol=1e-12);
-            testCase.verifyEqual(m.information,V*diag(abs(E))*V.',AbsTol=1e-9*max(1,norm(m.curvature)));
-            cfg=overlapGradientConfig();cfg.curvature="positivePart";
-            p=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
-            testCase.verifyEqual(p.information,V*diag(max(E,0))*V.',AbsTol=1e-9*max(1,norm(m.curvature)));
-            testCase.verifyGreaterThanOrEqual(min(eig(m.information)),-1e-9*max(1,norm(m.information)));
-            testCase.verifyEqual(m.minimumCurvature,min(E),AbsTol=1e-12);
+        function gaussNewtonMetricIsExactForOnePairAtAnyDistance(testCase)
+            % One sign in map and source: every -log E_sigma is quadratic in
+            % translation with the common residual, so the ladder metric is the sum
+            % of the inflated pair precisions and the translation Gauss-Newton step
+            % from any offset lands on the optimum. With one pair the 3-by-3 metric
+            % has rank two.
+            [map,source,truth]=scene();
+            map.components=selectComponents(map.components,6);source.components=selectComponents(source.components,6);
+            R=[cos(truth(3)) -sin(truth(3));sin(truth(3)) cos(truth(3))];
+            pair=map.components.covariance(:,:,1)+R*source.components.covariance(:,:,1)*R.';
+            precision=zeros(2);
+            for sigma=overlapGradientConfig().scaleLadder,precision=precision+inv(pair+sigma^2*eye(2));end
+            offsets=[0.1 0;1 0;0 2;-3 1.5];
+            for k=1:size(offsets,1)
+                pose=truth(:);pose(1:2)=pose(1:2)+offsets(k,:).';
+                m=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose);
+                testCase.verifyTrue(m.available);
+                testCase.verifyEqual(m.information(1:2,1:2),precision,RelTol=1e-8);
+                step=-m.information(1:2,1:2)\m.gradient(1:2);
+                testCase.verifyEqual(pose(1:2)+step,truth(1:2).',AbsTol=1e-8);
+                testCase.verifyEqual(rank(m.information,1e-9*norm(m.information)),2);
+            end
+            full=lidarInjectionSupport.evaluateOverlapGradient(map,source,(truth+[0.3,-0.2,deg2rad(3)]).');
+            testCase.verifyGreaterThanOrEqual(min(eig(full.information)),0);
+            testCase.verifyEqual(full.information,full.information.',AbsTol=1e-12);
         end
         function exactAlignmentIsStationary(testCase)
             [map,source,truth]=scene();
@@ -45,7 +58,7 @@ classdef overlapGradientChannelTest < matlab.unittest.TestCase
             testCase.verifyEqual(m.similarity,1,AbsTol=1e-12);
         end
         function smoothedGradientIsTheDerivativeOfItsNegativeLogSimilarity(testCase)
-            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.kernelBandwidth=0.5;
+            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0.5;
             pose=(truth+[0.15,-0.10,deg2rad(1.5)]).';
             m=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
             steps=[1e-6;1e-6;1e-7];expected=zeros(3,1);
@@ -57,23 +70,11 @@ classdef overlapGradientChannelTest < matlab.unittest.TestCase
             end
             testCase.verifyEqual(m.gradient,expected,RelTol=1e-5,AbsTol=1e-8);
             aligned=lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:),cfg);
-            exact=lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:));
+            sharp=cfg;sharp.scaleLadder=0;
+            exact=lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:),sharp);
             testCase.verifyLessThan(norm(aligned.gradient),1e-9);
             testCase.verifyEqual(aligned.similarity,1,AbsTol=1e-12);
             testCase.verifyLessThan(trace(aligned.information),trace(exact.information));
-        end
-        function smoothingExtendsTheConvexBasin(testCase)
-            [map,source,truth]=scene();pose=truth(:);heading=[cos(truth(3));sin(truth(3))];
-            pose(1:2)=pose(1:2)+heading; % one metre along the curbs
-            cfg=overlapGradientConfig();cfg.kernelBandwidth=1;
-            exact=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose);
-            smoothed=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
-            testCase.verifyLessThan(exact.minimumCurvature,0);
-            testCase.verifyGreaterThan(smoothed.minimumCurvature,0);
-            testCase.verifyLessThan(-smoothed.gradient(1:2).'*heading,0);
-            invalid=cfg;invalid.kernelBandwidth=-1;
-            testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,invalid), ...
-                'MATLAB:expectedNonnegative');
         end
         function mixtureMassScaleDoesNotChangeTheChannel(testCase)
             [map,source,truth]=scene();pose=(truth+[0.2,0.1,deg2rad(2)]).';
@@ -168,18 +169,41 @@ classdef overlapGradientChannelTest < matlab.unittest.TestCase
             noPoles=lidarInjectionSupport.evaluateOverlapGradient(map,zeroed,pose);
             testCase.verifyFalse(ismember("pole",noPoles.sharedClasses));
         end
-        function frameGatesWithholdWeakOrFlatFrames(testCase)
-            [map,source,truth]=scene();pose=(truth+[0.2,-0.1,deg2rad(1)]).';
-            cfg=overlapGradientConfig();
-            open=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
-            testCase.verifyTrue(open.available);
-            cfg.minimumSimilarity=open.similarity+1e-6;
-            gated=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
-            testCase.verifyFalse(gated.available);
-            testCase.verifyEqual(gated.gradient,open.gradient); % evaluated, only withheld
-            cfg=overlapGradientConfig();cfg.minimumCurvatureRatio=1.01;
-            flat=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
-            testCase.verifyFalse(flat.available);
+        function scaleLadderIsTheSumOfSingleScales(testCase)
+            [map,source,truth]=scene();pose=(truth+[0.4,-0.2,deg2rad(2)]).';
+            cfg=overlapGradientConfig();ladder=cfg.scaleLadder;
+            multi=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
+            gradient=zeros(3,1);information=zeros(3);
+            for k=1:numel(ladder)
+                single=cfg;single.scaleLadder=ladder(k);
+                m=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,single);
+                testCase.verifyEqual(multi.scaleSimilarity(k),m.similarity,RelTol=1e-12);
+                gradient=gradient+m.gradient;information=information+m.information;
+            end
+            testCase.verifyEqual(multi.gradient,gradient,RelTol=1e-9,AbsTol=1e-12);
+            testCase.verifyEqual(multi.information,information,RelTol=1e-9,AbsTol=1e-9);
+            testCase.verifyEqual(multi.similarity,multi.scaleSimilarity(1));
+            testCase.verifyEqual(multi.minimumInformation,min(eig(multi.information)),AbsTol=1e-12);
+            invalid=cfg;invalid.scaleLadder=[0 -1];
+            testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,invalid), ...
+                'MATLAB:expectedNonnegative');
+            invalid.scaleLadder=[];
+            testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,invalid), ...
+                'MATLAB:expectedNonempty');
+        end
+        function scaleLadderAcquiresBeyondTheExactBasin(testCase)
+            % Six metres across the curbs: the exact-scale observer leaves the
+            % basin, while the ladder's wide scales pull the estimate in and the
+            % exact scale then finishes the alignment.
+            [~,~,start]=scene();
+            f=movingFixture(5,6*[-sin(start(3)),cos(start(3)),0]);
+            exact=f.data;exact.lidarOverlap.config=overlapGradientConfig();exact.lidarOverlap.config.scaleLadder=0;
+            a=runFullLocalizationObserver(exact,struct(),f.cfg,LateralInputs=f.lateral);
+            b=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
+            error=b.pose(end,:)-f.truth(end,:);
+            testCase.verifyGreaterThan(norm(a.pose(end,1:2)-f.truth(end,1:2)),1);
+            testCase.verifyLessThan(norm(error(1:2)),1e-4);
+            testCase.verifyLessThan(abs(rad2deg(atan2(sin(error(3)),cos(error(3))))),1e-3);
         end
         function overlapChannelIsExclusiveAndRejectsCalibratedWeights(testCase)
             f=movingFixture(1);
@@ -219,8 +243,13 @@ function c=selectComponents(c,keep)
     c.mixtureWeight=c.mixtureWeight(keep);c.repeatability=c.repeatability(keep);c.numComponents=numel(keep);
 end
 
-function f=movingFixture(duration)
+function f=movingFixture(duration,offset)
 % Constant-speed straight drive; every source is the map in current body axes.
+% OFFSET is the initial [x y psi] estimate error in world axes.
+    arguments
+        duration (1,1) double
+        offset (1,3) double=[0.25,-0.20,deg2rad(1)]
+    end
     [map,source,start]=scene();
     t=(0:.1:duration).';n=numel(t);zero=zeros(n,1);speed=2;
     truth=[start(1)+speed*cos(start(3))*t,start(2)+speed*sin(start(3))*t,start(3)+zero];
@@ -234,7 +263,7 @@ function f=movingFixture(duration)
     lateral=struct('time',t,'lateralVelocity',zero,'sideSlipAngleRate',zero);
     data=struct('highRate',high,'lidarOverlap',struct('map',map,'sources',{sources}));
     cfg=fullObserverConfig();
-    initial=truth(1,:)+[0.25,-0.20,deg2rad(1)];
+    initial=truth(1,:)+offset;
     cfg.initialState=[initial(1);speed*cos(start(3));0;initial(2);speed*sin(start(3));0;initial(3)];
     f=struct('data',data,'lateral',lateral,'cfg',cfg,'truth',truth);
 end

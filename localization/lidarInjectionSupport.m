@@ -289,21 +289,27 @@ classdef lidarInjectionSupport
 
         function measurement=evaluateOverlapGradient(fixedCloud,movingCloud,pose,cfg)
         % evaluateOverlapGradient Correspondence-free LiDAR gradient at the observer prediction.
-        % The cost is c(p)=-log s(p), where s is the class-balanced normalized
-        % semantic Gaussian overlap of scoreSemanticProbabilityCloudAlignment.
-        % Balanced self energies are one, so s equals the balanced cross energy E.
-        % gradient=-grad(E)/E is the analytic SE(2) derivative returned by
-        % registrationSupport.semanticGaussianOverlap at POSE. The curvature is the
-        % central difference of that gradient. By default the information uses
-        % its absolute eigenvalues (saddle-free Newton): the regularized observer
-        % step -(|H|+lambda*I)^-1*gradient is a bounded descent step also where the
-        % overlap is locally concave; cfg.curvature="positivePart" withholds those
-        % directions instead. A positive cfg.kernelBandwidth evaluates the same
-        % cost on horizontally smoothed mixtures, which widens its basin. No pose is
-        % optimized, no correspondence is selected and no acceptance test is
-        % applied. Empty geometry or zero overlap returns available=false.
-        % Map means are shifted to POSE before evaluation, which leaves the overlap
-        % and its pose derivatives unchanged and avoids UTM-scale cancellation.
+        % For every bandwidth sigma of cfg.scaleLadder both mixtures are smoothed by
+        % N(0,sigma^2/2*I), which adds sigma^2*I to every pair covariance, so the
+        % class-balanced cross energy E_sigma is the expected overlap under an
+        % isotropic horizontal prediction error of that size; sigma=0 is the exact
+        % score of scoreSemanticProbabilityCloudAlignment. The channel injects
+        %   gradient    g = sum_sigma -grad(E_sigma)/E_sigma          (analytic SE(2))
+        %   information M = sum_sigma sum_ij pi_ij J_ij' Sigma_ij^-1 J_ij
+        % with pi_ij the pair responsibilities at scale sigma: the Gauss-Newton (EM)
+        % metric of each -log E_sigma. It is positive semidefinite, exact for one
+        % pair at any translation, and does not vanish at a kernel inflection, so
+        % the regularized observer step stays bounded and points to the optimum.
+        % Summing the scales fuses them in information form: the sharp scale
+        % dominates near alignment, the wide ones keep a restoring force where the
+        % sharp kernels have decayed. With cfg.evidenceWeights, map view
+        % reliability and source temporal stability scale the mixture masses before
+        % class balancing, as in registration. No pose is optimized, no
+        % correspondence is selected and no acceptance test is applied; zero overlap
+        % at every scale returns available=false. similarity reports the first
+        % ladder entry with nonzero overlap. Map means are shifted to POSE before
+        % evaluation, which leaves the overlap and its pose derivatives unchanged
+        % and avoids UTM-scale cancellation.
             arguments
                 fixedCloud (1,1) struct
                 movingCloud (1,1) struct
@@ -311,66 +317,54 @@ classdef lidarInjectionSupport
                 cfg (1,1) struct = overlapGradientConfig()
             end
             timer=tic;linearization=pose;pose=pose(:).';
-            steps=cfg.differenceSteps(:).';
-            validateattributes(steps,{'double'},{'real','finite','positive','numel',3});
+            ladder=cfg.scaleLadder(:).';
+            validateattributes(ladder,{'double'},{'real','finite','nonnegative','nonempty','vector'});
             measurement=struct('gradient',zeros(3,1),'information',zeros(3),'linearizationPose',linearization, ...
-                'available',false,'similarity',0,'curvature',zeros(3),'minimumCurvature',NaN, ...
-                'mapComponents',0,'sourceComponents',0,'sharedClasses',strings(1,0), ...
-                'informationCalibrated',false,'seconds',0, ...
-                'geometrySource',"semanticGaussianOverlap at the observer prediction; no registration");
+                'available',false,'similarity',0,'minimumInformation',NaN,'scaleLadder',ladder, ...
+                'scaleSimilarity',nan(size(ladder)),'mapComponents',0,'sourceComponents',0, ...
+                'sharedClasses',strings(1,0),'informationCalibrated',false,'seconds',0, ...
+                'geometrySource',"semanticGaussianOverlap scale ladder at the observer prediction; no registration");
             local=registrationSupport.selectLocalProbabilityCloud(fixedCloud,pose,cfg.localMapRadius);
             if local.components.numComponents==0 || movingCloud.components.numComponents==0
                 measurement.seconds=toc(timer);return;
             end
             if cfg.viewConditioning,local=registrationSupport.conditionSemanticMapOnView(local,pose);end
             [f,m]=registrationSupport.prepareSemanticRegistration(local,movingCloud,cfg.registration);
-            bandwidth=cfg.kernelBandwidth;
-            validateattributes(bandwidth,{'double'},{'real','finite','nonnegative','scalar'});
-            if bandwidth>0
-                % Convolving both mixtures with N(0,bandwidth^2/2*I) adds bandwidth^2*I to
-                % every pair covariance, so the cross energy is its expectation under an
-                % isotropic horizontal prediction error. Isotropic terms are rotation invariant.
-                inflation=bandwidth^2/2*eye(2);
-                f.covariance(1:2,1:2,:)=f.covariance(1:2,1:2,:)+inflation;
-                m.covariance(1:2,1:2,:)=m.covariance(1:2,1:2,:)+inflation;
-            end
             if cfg.evidenceWeights
-                % As in registration: map view reliability and source temporal
-                % stability scale the mixture masses before class balancing, so an
-                % unsupported or flickering landmark cannot carry a whole class.
+                % Map view reliability and source temporal stability scale the masses
+                % before class balancing, so an unsupported or flickering landmark
+                % cannot carry a whole class.
                 if isfield(f,'viewReliability'),f.mixtureWeight=f.mixtureWeight.*double(f.viewReliability(:));end
                 if isfield(m,'temporalStability'),m.mixtureWeight=m.mixtureWeight.*double(m.temporalStability(:));end
             end
-            [f,m]=registrationSupport.balanceSemanticDistributions(f,m);
-            shared=intersect(unique(f.semanticName(f.mixtureWeight>0)),unique(m.semanticName(m.mixtureWeight>0)));
             measurement.mapComponents=f.numComponents;measurement.sourceComponents=m.numComponents;
-            measurement.sharedClasses=reshape(string(shared),1,[]);
             f.mean(:,1:2)=f.mean(:,1:2)-pose(1:2);
-            origin=[0,0,pose(3)];
-            [energy,ascent]=registrationSupport.semanticGaussianOverlap(f,m,origin);
-            if ~(energy>realmin),measurement.seconds=toc(timer);return;end
-            gradient=-ascent(:)/energy;curvature=zeros(3);
-            for j=1:3
-                step=zeros(1,3);step(j)=steps(j);
-                [plusEnergy,plusAscent]=registrationSupport.semanticGaussianOverlap(f,m,origin+step);
-                [minusEnergy,minusAscent]=registrationSupport.semanticGaussianOverlap(f,m,origin-step);
-                if ~(plusEnergy>realmin && minusEnergy>realmin),measurement.seconds=toc(timer);return;end
-                curvature(:,j)=(minusAscent(:)/minusEnergy-plusAscent(:)/plusEnergy)/(2*steps(j));
+            origin=[0,0,pose(3)];gradient=zeros(3,1);information=zeros(3);
+            for k=1:numel(ladder)
+                fk=f;mk=m;
+                if ladder(k)>0
+                    inflation=ladder(k)^2/2*eye(2); % isotropic, hence rotation invariant
+                    fk.covariance(1:2,1:2,:)=fk.covariance(1:2,1:2,:)+inflation;
+                    mk.covariance(1:2,1:2,:)=mk.covariance(1:2,1:2,:)+inflation;
+                end
+                [fk,mk]=registrationSupport.balanceSemanticDistributions(fk,mk);
+                if k==1
+                    shared=intersect(unique(fk.semanticName(fk.mixtureWeight>0)),unique(mk.semanticName(mk.mixtureWeight>0)));
+                    measurement.sharedClasses=reshape(string(shared),1,[]);
+                end
+                [energy,ascent,metric]=registrationSupport.semanticGaussianOverlap(fk,mk,origin);
+                if ~(energy>realmin),continue;end
+                gradient=gradient-ascent(:)/energy;information=information+metric;
+                measurement.scaleSimilarity(k)=min(energy,1);
             end
-            curvature=(curvature+curvature.')/2;
-            [V,E]=eig(curvature,'vector');
-            switch string(cfg.curvature)
-                case "positivePart",information=V*diag(max(E,0))*V.';
-                case "absolute",information=V*diag(abs(E))*V.';
-                otherwise,error('VehicleLocalization:InvalidOverlapCurvature','Use positivePart or absolute curvature.');
+            evaluated=isfinite(measurement.scaleSimilarity);
+            if any(evaluated)
+                information=(information+information.')/2;
+                measurement.gradient=gradient;measurement.information=information;
+                measurement.similarity=measurement.scaleSimilarity(find(evaluated,1));
+                measurement.minimumInformation=min(eig(information));
+                measurement.available=true;
             end
-            measurement.gradient=gradient;measurement.information=(information+information.')/2;
-            measurement.similarity=min(energy,1);
-            measurement.curvature=curvature;measurement.minimumCurvature=min(E);
-            % Frame gates on the evaluated quantities themselves: a weak overlap or
-            % a flat cost withdraws this frame's correction. No pose is solved.
-            measurement.available=measurement.similarity>=cfg.minimumSimilarity && ...
-                max(E)>=cfg.minimumCurvature && min(abs(E))>=cfg.minimumCurvatureRatio*max(abs(E));
             measurement.seconds=toc(timer);
         end
 

@@ -33,8 +33,9 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
 % geometry at the post-baseline pose on each valid frame, overriding that model.
 % Optional data.lidarOverlap replaces registration: struct with map, sources
 % (frame-aligned source clouds in current body axes), optional valid and
-% config. Each available frame injects the gradient of -log of the balanced
-% semanticGaussianOverlap evaluated at the post-baseline prediction.
+% config. Each available frame injects the scale-ladder gradient of -log of the
+% balanced semanticGaussianOverlap at the post-baseline prediction, with its
+% Gauss-Newton metric as information (lidarInjectionSupport.evaluateOverlapGradient).
     h=data.highRate;t=h.time(:);n=numel(t);
     assert(n>=2 && all(isfinite(t)) && all(diff(t)>0), ...
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
@@ -57,7 +58,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     end
     overlapChannel=isfield(data,'lidarOverlap');
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
-        'minimumCurvature',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3));
+        'minimumInformation',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3));
     if overlapChannel
         assert(~isfield(data,'lidar') && ~onlineMatching,'VehicleLocalization:AmbiguousLidarInput', ...
             'Supply exactly one LiDAR channel: recorded measurements, a matcher or overlap sources.');
@@ -132,7 +133,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             measurement=lidarInjectionSupport.evaluateOverlapGradient(overlap.map,overlap.sources{k},x([1,4,7]),overlap.config);
             overlapDiagnostics.evaluated(k)=true;overlapDiagnostics.available(k)=measurement.available;
             overlapDiagnostics.similarity(k)=measurement.similarity;overlapDiagnostics.seconds(k)=measurement.seconds;
-            overlapDiagnostics.minimumCurvature(k)=measurement.minimumCurvature;
+            overlapDiagnostics.minimumInformation(k)=measurement.minimumInformation;
             overlapDiagnostics.gradient(k,:)=measurement.gradient.';
             L.valid(k)=measurement.available;
         end

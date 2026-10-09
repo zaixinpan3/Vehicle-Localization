@@ -327,14 +327,17 @@ zero-delay, sampled implementation has a
 [separate conditional common certificate and outage analysis](research/full_observer_20260916/design.md).
 
 Registration is the default LiDAR channel. The opt-in `data.lidarOverlap`
-channel instead injects the analytic SE(2) gradient of `-log` of the
-class-balanced `semanticGaussianOverlap` between each coarse source horizon
-and the map, evaluated at the observer prediction, with its central-difference
-curvature as information: no pose optimization, frozen correspondences or
-acceptance test. `overlapGradientConfig` holds its settings. On the 1169-frame
-MnCAV replay the exact overlap drifts along the curbs without GNSS; with a
-0.5 m kernel bandwidth and the fixed-scale gains the LiDAR-only position RMSE is
-8.3 cm, against 5.7 cm with registration. See the
+channel works at the observer prediction instead. It sums, over a ladder of
+horizontal smoothing bandwidths, the analytic SE(2) gradient of `-log` of the
+class-balanced `semanticGaussianOverlap` between each coarse source horizon and
+the map. Its information is the summed Gauss-Newton metric (responsibility-weighted
+pair precisions), and it applies registration's evidence weights. It uses no
+pose optimization, frozen correspondences or acceptance test.
+`overlapGradientConfig` holds its settings. On the 1169-frame MnCAV replay, its
+position RMSE is 9.7, 7.3, 6.4 and 5.9 cm, against 10.2, 7.8, 5.7 and 6.0 cm
+for registration. The four settings are nominal and fixed-scale gains, each
+without and with GNSS. Its heading RMSE is 0.15--0.23 deg, against
+0.11--0.14 deg. See the
 [channel description and measurements](localization/README.md#correspondence-free-overlap-gradient-channel).
 
 ## Configuration (`config/`)
@@ -617,10 +620,17 @@ known-tilt moments, rejection behavior, and recorded point fidelity.
 `distributionRegistrationTest` checks analytic derivatives, anisotropic covariance
 rotation, semantic mass invariance, known-pose recovery, map support units, empty
 inputs, and degeneracy. Existing observer and temporal-map tests remain in the suite.
-`overlapGradientChannelTest` checks the overlap gradient against finite
-differences of `-log` similarity, with and without smoothing, the curvature
-policies, mass invariance, gradient/residual equivalence, unavailable frames,
-input exclusivity and observer convergence without registration.
+`overlapGradientChannelTest` checks:
+
+- the overlap gradient against finite differences of `-log` similarity, at the
+  exact scale and at a smoothed scale;
+- the scale ladder as the sum of single scales;
+- the exactness of the Gauss-Newton metric for one pair;
+- evidence weights and mass invariance;
+- gradient/residual equivalence;
+- unavailable frames and input exclusivity;
+- observer convergence without registration, and acquisition beyond the exact
+  basin.
 `coarsePerceptionPerformanceTest` checks native/MATLAB equivalence, boundary
 cases, conservative ground propagation, compact-raster indexing, and omitted
 inverse lookups. Build the native kernels to execute its native-specific cases.
