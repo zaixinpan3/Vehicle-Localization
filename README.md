@@ -335,8 +335,9 @@ pair precisions), and it applies registration's evidence weights. It uses no
 pose optimization, frozen correspondences or acceptance test.
 `overlapGradientConfig` holds its settings. On the 1169-frame MnCAV replay, its
 position RMSE is 9.7, 7.3, 6.4 and 5.9 cm, against 10.2, 7.8, 5.7 and 6.0 cm
-for registration. The four settings are nominal and fixed-scale gains, each
-without and with GNSS. Its heading RMSE is 0.15--0.23 deg, against
+for registration. The four settings are the former nominal and fixed-scale
+gains (both replaced by the single tuned set on 2026-10-10), each without and
+with GNSS. Its heading RMSE is 0.15--0.23 deg, against
 0.11--0.14 deg. The opt-in `aggregation="landmark"` with `orientation` replaces
 the frame-level overlap by the per-landmark mixture likelihood of oriented
 components. This closes the heading gap: 9.3, 7.1, 5.9 and 5.7 cm, with

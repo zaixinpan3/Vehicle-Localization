@@ -1,0 +1,30 @@
+{
+  "profile": "mncav-20261010-tuned",
+  "label": "Single tuned MnCAV gain set; replaces the former nominal default and the mississippi-20240607-fixed-scale profile",
+  "recording": "raw_data_2024-06-07-12-09-31_0",
+  "referenceAndMap": "Receiver-reference-v3 study inputs and fixed map; coarse source horizons regenerated with the perception of commit b49ad5f (intensity-responsibility sign moments)",
+  "positionGain": 80,
+  "headingGain": 1,
+  "lidarInformationScale": 64,
+  "gnssPositionGain": 4,
+  "gnssInformationScale": 16,
+  "lidarChannels": [
+    "registration (default)",
+    "overlapGradient"
+  ],
+  "scenarios": [
+    "lidar_only",
+    "both"
+  ],
+  "objective": "Square root of the mean of four squared RMSE ratios (position all frames, heading after 2 s; LiDAR only and GNSS+LiDAR) to the former nominal gains [4,4,12,4] with scale 16, computed separately on the tuning segment (frames 1-700) and the held-out segment (701-1169); the selected set minimizes the mean of both segments averaged over the two LiDAR channels",
+  "searchScope": "Grid plus refinement: overlap 280 candidates (kp 2-160, kpsi 0.125-8, scale 1-256), registration 72 candidates (kp 4-80, kpsi 0.5-4, scale 4-128); 24 candidates at kp<=4 failed the continuous ISS LMIs; no exhaustive or global optimum claim",
+  "scores": {
+    "overlapTune": 0.747,
+    "overlapHoldout": 0.87,
+    "registrationTune": 0.732,
+    "registrationHoldout": 0.871
+  },
+  "designRoute": "Continuous seven-state ISS-LMI verification of every candidate, then the same numerical discretization",
+  "study": "research/gain_retune_20261010/",
+  "scope": "Specific to this recording, reference/map, nominal MnCAV motion model and search objective. The held-out segment is the later part of the same drive, not an independent drive. Runtime must verify the continuous LMIs under the declared domain; this label is not a full-trajectory ISS certificate or cross-dataset validation."
+}

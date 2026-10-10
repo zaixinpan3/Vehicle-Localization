@@ -53,7 +53,7 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
         end
         function independentPointConfigurationHasCommonPositionBandwidth(testCase)
             cfg=mncavFullObserverConfig();design=fullObserverSupport.designFullObserverGains(cfg);
-            testCase.verifyEqual(cfg.gnss.positionGain,cfg.gains(1),AbsTol=0);
+            testCase.verifyEqual(cfg.gnss.positionGain,fullObserverConfig().gains(1),AbsTol=0);
             testCase.verifyFalse(cfg.gnss.outputPoint.evaluationDriveUsed);
             testCase.verifyGreaterThan(design.continuousCertificate.verification.verifiedDecayRate,cfg.iss.decayRate);
         end

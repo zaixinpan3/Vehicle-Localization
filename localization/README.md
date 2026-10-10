@@ -70,31 +70,29 @@ continuous ODE with decreasing steps, without a second gain-design route.
 
 ### Dataset-specific tuned parameters
 
-The default `mncavFullObserverConfig()` retains nominal gains. An explicit
-parameter profile records the best fresh-recursive-tested candidate on
-`raw_data_2024-06-07-12-09-31_0`, using the receiver-reference-v3 study inputs
-and fixed map, with LiDAR information scale held at 16:
+`mncavFullObserverConfig()` applies one tuned gain set,
+`config/mncavTunedGains.json`: physical gains `[kp,kv,ka,kpsi]=[80,4,12,1]`
+and LiDAR information scale 64, with GNSS position gain 4/s and GNSS
+information scale 16 unchanged. The former nominal default `[4,4,12,4]` with
+scale 16 and the `mississippi-20240607-fixed-scale` profile (`[80,4,12,1.25]`,
+scale 16) were removed on 2026-10-10. The label and provenance are stored in
+`cfg.tuning`. This selects parameters for the same continuous LMI design and
+runtime; every candidate passed the continuous seven-state ISS LMIs before it
+was replayed, and the runtime re-verifies them at every design.
 
-```matlab
-cfg = mncavFullObserverConfig(GainProfile="mississippi-20240607-fixed-scale");
-```
-
-The physical gains `[kp,kv,ka,kpsi]` are `[80,4,12,1.25]`. GNSS position gain
-remains 4/s and its information scale remains 16. The label and provenance
-are stored in `cfg.tuning` and `config/mncavMississippiTunedGains.json`.
-This selects parameters for the same continuous LMI design and runtime.
-It does not install another observer or reuse a saved certificate.
-
-The objective normalizes position and heading RMSE separately by each
-scenario's nominal baseline, then takes the square root of the mean of the
-four squared ratios across LiDAR-only and both-sensor runs. All 1169 frames,
-including initialization, contribute. The prior fresh score is 0.736278
-(nominal baseline: 1). This is the best tested result within the fixed-scale
-search on the evaluation recording; it is not an exhaustive optimum or a
-claim of performance on another recording. A separate scale-64 candidate
-scored 0.733993 but changed the information-domain qualification substantially;
-it is not the fixed-scale profile recorded here. See the
-[gain study](../research/continuous_lmi_route_20261002/report.pdf).
+The set was selected on `raw_data_2024-06-07-12-09-31_0` with the
+receiver-reference-v3 inputs and map, and coarse source horizons regenerated
+with the current perception. The objective is the square root of the mean of
+four squared RMSE ratios to the former nominal gains (position over all
+frames, heading after 2 s; LiDAR only and GNSS + LiDAR), computed on a tuning
+segment (frames 1--700) and a held-out segment (701--1169) and averaged over
+the registration and overlap-gradient channels. Scores: registration 0.73
+(tuning) and 0.87 (held out), overlap 0.75 and 0.87. The surfaces are flat:
+kp 32--160 with kpsi 1 and scale 16--128 lie within 0.3 cm. Position RMSE over
+1169 frames with these gains: registration 5.8 cm (LiDAR only) and 6.1 cm
+(GNSS + LiDAR), overlap 6.3 and 5.7 cm; heading RMSE 0.11 deg and 0.14--0.17
+deg. The held-out segment is the later part of the same drive, not an
+independent recording. See the local study `research/gain_retune_20261010`.
 
 The experimental calibrated profile removes the LiDAR geometric information
 scale and uses measured conditional pose-error second moments:
@@ -171,8 +169,9 @@ heading is uncorrected gyro integration. Synchronized lateral estimates are
 required. The baseline uses gyro-predicted heading for motion rotation and
 receiver-point correction, then LiDAR corrects the predicted pose jointly.
 The corrected heading enters the next baseline step. There are no integration
-substeps or `maximumIntegrationStep` setting. MnCAV nominal gains
-remain `[4,4,12,4]` with GNSS position gain 4/s. The implementation before
+substeps or `maximumIntegrationStep` setting. The MnCAV gains are
+`[80,4,12,1]` with LiDAR information scale 64 and GNSS position gain 4/s
+(see the tuned parameters below). The implementation before
 Route A and its earlier measurements are described in the
 [current calibration, gain and accuracy report](../research/mncav_bestpos_alignment_20260917/README.md)
 and the [discrete equations](../research/mncav_synchronous_bestpos_20260917/README.md).
