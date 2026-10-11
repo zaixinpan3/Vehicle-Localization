@@ -30,9 +30,11 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     metadata=jsondecode(fileread(fullfile(datasetFolder,'metadata.json')));
     assert(isfield(metadata,'schemaVersion') && metadata.schemaVersion==2 && metadata.sensorOnly, ...
         'VehicleLocalization:MeasurementOnlyRequired','Prepare a measurement-only dataset before localization.');
-    envelope="nominal";
-    if isfield(metadata.parameters.config.simulation,'envelope'),envelope=string(metadata.parameters.config.simulation.envelope);end
+    % Captures made before the envelope option record no envelope; they are nominal.
+    envelope="nominal";recordedEnvelope=isfield(metadata.parameters.config.simulation,'envelope');
+    if recordedEnvelope,envelope=string(metadata.parameters.config.simulation.envelope);end
     current=jsondecode(jsonencode(mncavVdbConfig(Envelope=envelope)));
+    if ~recordedEnvelope,current.simulation=rmfield(current.simulation,'envelope');end
     assert(metadata.completed && ~metadata.carlaPhysicsEnabled && ...
         isequaln(metadata.parameters.config,current), ...
         'VehicleLocalization:StaleVdbCapture','Require a complete capture with the current VDB configuration and disabled CARLA physics.');
