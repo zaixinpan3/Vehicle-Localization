@@ -27,16 +27,14 @@ function summary=judgeReceiverContradictions()
 % 2. Position against velocity, per candidate. In the windows centred on the
 %    mapping frames inside the candidate, the receiver position track and the
 %    chosen velocity integral are each aligned to the vehicle track. Every
-%    contradiction is resolved (user decision, 2026-10-11: when the arbiter
-%    cannot separate the two, pick one rather than leave it): the quantity
-%    with the smaller residual in more than half of the windows is trusted;
-%    on an exact tie the sign of the median residual difference decides, and
-%    velocity is trusted when that is zero too or when the candidate has no
-%    window (every clear verdict on this drive trusted the velocity).
-%    Confidence is "clear" when the trusted quantity is also smaller by more
-%    than 2 cm in more than half of the windows (the former verdict rule),
-%    otherwise "weak". A slew that is slow and uniform over a window looks
-%    like a heading change to this arbiter, so its verdicts are weak.
+%    contradiction is resolved (user decisions, 2026-10-11). A verdict is
+%    clear when one quantity's residual is smaller by more than 2 cm in more
+%    than half of the windows; that quantity is trusted. Otherwise the
+%    verdict is weak and the receiver position is trusted: without evidence
+%    the reference is not moved, and the weak candidates of this drive lie
+%    mostly in its RTK-fixed part, where the position is the receiver's best
+%    quantity. A candidate without a window is weak. A slow uniform slew
+%    looks like a heading change to this arbiter, so its verdict is weak.
 % 3. Azimuth against course on straight driving. Per straight run the apparent
 %    sideslip, course minus azimuth, is rejected as vehicle motion when the
 %    road-wheel angle explains less than half of it and the lateral specific
@@ -95,14 +93,14 @@ function summary=judgeReceiverContradictions()
     rows=cell(0,15);
     for s=1:height(candidates)
         k=candidates.candidate(s);ix=find(valid & inside==k);
-        verdict="velocity";confidence="none";velocityBetter=NaN;positionBetter=NaN;velocitySmaller=NaN;medianDifference=NaN;mP=NaN;mV=NaN;
+        velocityBetter=NaN;positionBetter=NaN;velocitySmaller=NaN;medianDifference=NaN;mP=NaN;mV=NaN;
         if ~isempty(ix)
             d=eP(ix)-eV(ix);velocityBetter=mean(d>MARGIN);positionBetter=mean(d<-MARGIN);mP=median(eP(ix));mV=median(eV(ix));
             velocitySmaller=mean(d>0);medianDifference=median(d);
-            if velocitySmaller<0.5 || (velocitySmaller==0.5 && medianDifference<0),verdict="position";end
-            confidence="weak";
-            if (verdict=="velocity" && velocityBetter>0.5) || (verdict=="position" && positionBetter>0.5),confidence="clear";end
         end
+        verdict="position";confidence="weak";
+        if velocityBetter>0.5,verdict="velocity";confidence="clear";
+        elseif positionBetter>0.5,confidence="clear";end
         rows(end+1,:)={k,candidates.beginSeconds(s),candidates.endSeconds(s),candidates.firstFrame(s),candidates.lastFrame(s), ...
             numel(ix),mP,mV,velocitySmaller,medianDifference,velocityBetter,positionBetter,verdict,confidence, ...
             median(interp1(t,u,frameTime(ix)))}; %#ok<AGROW>
@@ -153,7 +151,7 @@ function summary=judgeReceiverContradictions()
         'allWindows',struct('medianPositionResidualM',median(eP(valid)),'medianRawVelocityResidualM',median(eVr(valid)), ...
             'medianModeledVelocityResidualM',median(eVm(valid)),'windows',nnz(valid)), ...
         'positionVelocity',struct('segments',segments,'window',sprintf("%g s centred on each mapping frame, native 50 Hz receiver samples",2*HALF_WINDOW), ...
-            'decision',"every candidate resolved: trusted quantity has the smaller residual in more than half of the candidate's windows (tie: median difference, then velocity); clear when also smaller by more than 2 cm in more than half, otherwise weak"), ...
+            'decision',"every candidate resolved: clear when one quantity's residual is smaller by more than 2 cm in more than half of the candidate's windows, and that quantity is trusted; otherwise weak and the receiver position is trusted"), ...
         'straightDriving',struct('runs',height(runs),'runsWithSideslipRejected',nnz(runs.sideslipRejected), ...
             'decision',"apparent sideslip rejected when |road-wheel angle| < 0.5 |course - azimuth| and |lateral specific force| < 0.5 m/s^2"), ...
         'gyro',struct('scale',p(2),'biasDegPerS',rad2deg(p(3)),'residualRmsDeg',rms(residual),'residualMaximumDeg',max(abs(residual)), ...

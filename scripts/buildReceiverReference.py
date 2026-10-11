@@ -35,7 +35,8 @@ Stage ``detect`` writes the candidates and the per-sample consistency table.
 scripts/judgeReceiverContradictions.m then decides per candidate, from the
 vehicle's dead-reckoned track, whether the receiver position or the receiver
 velocity is trusted (verdict per segment: velocity or position, with a clear or
-weak confidence; every contradiction is resolved), and
+weak confidence; every contradiction is resolved, a weak verdict trusts the
+position), and
 whether the modeled or the raw velocity integral is used. Stage ``build``
 writes the corrected native reference and the corrected frame poses:
   Position. Out-and-back single-epoch glitches are repaired by interpolation.
