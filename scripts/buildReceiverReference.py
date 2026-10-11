@@ -34,27 +34,28 @@ excursion stays below 0.05 m are dropped.
 Stage ``detect`` writes the candidates and the per-sample consistency table.
 scripts/judgeReceiverContradictions.m then decides per candidate, from the
 vehicle's dead-reckoned track, whether the receiver position or the receiver
-velocity is trusted (verdict per segment: velocity, position, undecided), and
+velocity is trusted (verdict per segment: velocity or position, with a clear or
+weak confidence; every contradiction is resolved), and
 whether the modeled or the raw velocity integral is used. Stage ``build``
 writes the corrected native reference and the corrected frame poses:
   Position. Out-and-back single-epoch glitches are repaired by interpolation.
     In a velocity-trusted segment the positions follow the integral of the
     trusted velocity, anchored on the receiver position at both ends of the
     segment; the closure (the position change the integral does not explain)
-    is spread linearly over the segment. Positions outside segments, in
-    position-trusted and in undecided segments are unchanged.
+    is spread linearly over the segment. Positions outside segments and in
+    position-trusted segments are unchanged.
   Heading. On straight driving where the arbiter rejected sideslip, the
     receiver course replaces the azimuth (Gaussian 2 s smoothing of the
     course-minus-azimuth offset over supported samples); the correction is
     interpolated between supported samples and held beyond the first and
-    last. Samples whose velocity is distrusted (position-trusted or undecided
-    segments) do not enter the estimate.
+    last. Samples whose velocity is distrusted (position-trusted segments) do
+    not enter the estimate.
   Tier of each mapping frame: A when the receiver reports INS RTK fixed with
     at least 5 solution satellites and at most 0.10 m horizontal standard
     deviation, the heading has straight support and the position is
-    consistent or was resolved by the arbiter; B as A without the solution
-    quality; C when the heading is bridged or extrapolated or the
-    contradiction is undecided.
+    consistent or was resolved by a clear verdict; B as A without the
+    solution quality or with a weak verdict; C when the heading is bridged or
+    extrapolated.
 Outputs go to output/receiver_reference/. The reference is refined receiver
 data, not surveyed truth.
 """
@@ -287,8 +288,10 @@ def stage_build():
     segments = read_rows(OUT / "position_velocity_segments.csv")
     runs = read_rows(OUT / "straight_runs.csv")
     verdict = {int(s["candidate"]): s["verdict"] for s in segments}
+    confidence = {int(s["candidate"]): s["confidence"] for s in segments}
     assert set(verdict) == {int(c["candidate"]) for c in candidates}, "Judge verdicts do not cover the candidates."
-    assert all(v in ("velocity", "position", "undecided") for v in verdict.values())
+    assert all(v in ("velocity", "position") for v in verdict.values()), "Every contradiction must be resolved."
+    assert all(v in ("clear", "weak", "none") for v in confidence.values())
     use_model = judge["velocityIntegral"]["chosen"] == "modeled"
     velocity = e["model_velocity"] if use_model else r["velocity"]
     inspva, native = r["inspva"], r["native"]
@@ -366,7 +369,8 @@ def stage_build():
     frame_correction = np.interp(frame_time, time, correction)
     frame_supported = np.interp(frame_time, time, supported.astype(float)) >= 1.0
     first_supported, last_supported = time[supported][0], time[supported][-1]
-    spans = [(float(c["beginSeconds"]), float(c["endSeconds"]), verdict[int(c["candidate"])]) for c in candidates]
+    spans = [(float(c["beginSeconds"]), float(c["endSeconds"]), verdict[int(c["candidate"])], confidence[int(c["candidate"])])
+             for c in candidates]
     flags = []
     worst_check = 0.0
     for row, t, degrees, heading_ok in zip(rows, frame_time, frame_correction, frame_supported):
@@ -382,19 +386,20 @@ def stage_build():
         disagreement = float(np.hypot(*(drift[hi] - drift[lo])))
         sigma = float(std[max(0, np.searchsorted(std_time, t, side="right") - 1)])
         j = max(0, np.searchsorted(best_time, t, side="right") - 1)
-        verdicts = [v for b, en, v in spans if b <= t <= en]
+        verdicts = [(v, q) for b, en, v, q in spans if b <= t <= en]
         if verdicts:
-            resolution = {"velocity": "rebuilt_from_velocity", "position": "kept_position", "undecided": "undecided"}[verdicts[0]]
+            resolution = {"velocity": "rebuilt_from_velocity", "position": "kept_position"}[verdicts[0][0]]
+            arbiter = verdicts[0][1]
         else:
-            resolution = "consistent"
-        position_ok = resolution != "undecided"
+            resolution, arbiter = "consistent", "not_needed"
+        position_ok = arbiter != "weak"
         heading_source = "straight_course" if heading_ok else (
             "bridged" if first_supported <= t <= last_supported else "extrapolated")
         fixed = best_type[j] == FIXED_TYPE and best_satellites[j] >= MINIMUM_SOLUTION_SATELLITES and sigma <= MAXIMUM_FIXED_STD
-        usable_frame = heading_ok and position_ok
-        tier = "A" if usable_frame and fixed else ("B" if usable_frame else "C")
+        tier = "A" if heading_ok and position_ok and fixed else ("B" if heading_ok else "C")
         flags.append(dict(frame=int(row["frame_index"]), time=f"{t:.6f}", headingCorrectionDeg=f"{degrees:.6f}",
-                          headingSource=heading_source, positionResolution=resolution, positionShiftM=f"{shift:.4f}",
+                          headingSource=heading_source, positionResolution=resolution, arbiterConfidence=arbiter,
+                          positionShiftM=f"{shift:.4f}",
                           positionType=int(best_type[j]), solutionSatellites=int(best_satellites[j]),
                           reportedHorizontalStdM=f"{sigma:.4f}", disagreement2sM=f"{disagreement:.4f}", tier=tier))
         half = np.deg2rad(degrees) / 2
@@ -442,8 +447,10 @@ def stage_build():
                         maximumYawRateDegPerS=MAXIMUM_YAW_RATE, smoothingSeconds=SMOOTHING_SECONDS, minimumSupport=MINIMUM_SUPPORT,
                         fixedPositionType=FIXED_TYPE, minimumSolutionSatellites=MINIMUM_SOLUTION_SATELLITES, maximumFixedStdM=MAXIMUM_FIXED_STD),
         candidates=[dict(candidate=int(c["candidate"]), beginSeconds=float(c["beginSeconds"]), endSeconds=float(c["endSeconds"]),
-                         peakExcursionM=float(c["peakExcursionM"]), verdict=verdict[int(c["candidate"])]) for c in candidates],
-        verdicts={v: sum(1 for c in candidates if verdict[int(c["candidate"])] == v) for v in ("velocity", "position", "undecided")},
+                         peakExcursionM=float(c["peakExcursionM"]), verdict=verdict[int(c["candidate"])],
+                         confidence=confidence[int(c["candidate"])]) for c in candidates],
+        verdicts={v: sum(1 for c in candidates if verdict[int(c["candidate"])] == v) for v in ("velocity", "position")},
+        confidence={q: sum(1 for c in candidates if confidence[int(c["candidate"])] == q) for q in ("clear", "weak", "none")},
         rebuiltSegments=rebuilt, repairedGlitchEpochsSeconds=[round(float(time[k]), 3) for k in repaired],
         straightRunsWithSideslipRejected=f"{sum(r['sideslipRejected'] in ('1', 'true', 'True') for r in runs)} of {len(runs)}",
         frames=len(flags), tiers=count("tier"), tierTimeSpans={k: tier_spans(k) for k in "ABC"},

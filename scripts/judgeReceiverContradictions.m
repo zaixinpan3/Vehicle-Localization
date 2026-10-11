@@ -26,12 +26,17 @@ function summary=judgeReceiverContradictions()
 %    residual is used everywhere. Decided once, before the segment verdicts.
 % 2. Position against velocity, per candidate. In the windows centred on the
 %    mapping frames inside the candidate, the receiver position track and the
-%    chosen velocity integral are each aligned to the vehicle track. Verdict,
-%    fixed before any result: the quantity whose residual is smaller by more
-%    than 2 cm in more than half of the windows is trusted; otherwise
-%    undecided. A candidate without a window is undecided. A slew that is
-%    slow and uniform over a window looks like a heading change and cannot
-%    be seen by this arbiter; such candidates stay undecided and unchanged.
+%    chosen velocity integral are each aligned to the vehicle track. Every
+%    contradiction is resolved (user decision, 2026-10-11: when the arbiter
+%    cannot separate the two, pick one rather than leave it): the quantity
+%    with the smaller residual in more than half of the windows is trusted;
+%    on an exact tie the sign of the median residual difference decides, and
+%    velocity is trusted when that is zero too or when the candidate has no
+%    window (every clear verdict on this drive trusted the velocity).
+%    Confidence is "clear" when the trusted quantity is also smaller by more
+%    than 2 cm in more than half of the windows (the former verdict rule),
+%    otherwise "weak". A slew that is slow and uniform over a window looks
+%    like a heading change to this arbiter, so its verdicts are weak.
 % 3. Azimuth against course on straight driving. Per straight run the apparent
 %    sideslip, course minus azimuth, is rejected as vehicle motion when the
 %    road-wheel angle explains less than half of it and the lateral specific
@@ -87,20 +92,24 @@ function summary=judgeReceiverContradictions()
         'rawVelocityResidualM','modeledVelocityResidualM','positionMinusChosenVelocityResidualM'});
     writetable(windows,fullfile(out,'position_velocity_windows.csv'));
     % 2. Verdict per candidate.
-    rows=cell(0,12);
+    rows=cell(0,15);
     for s=1:height(candidates)
         k=candidates.candidate(s);ix=find(valid & inside==k);
-        verdict="undecided";velocityBetter=NaN;positionBetter=NaN;mP=NaN;mV=NaN;
+        verdict="velocity";confidence="none";velocityBetter=NaN;positionBetter=NaN;velocitySmaller=NaN;medianDifference=NaN;mP=NaN;mV=NaN;
         if ~isempty(ix)
             d=eP(ix)-eV(ix);velocityBetter=mean(d>MARGIN);positionBetter=mean(d<-MARGIN);mP=median(eP(ix));mV=median(eV(ix));
-            if velocityBetter>0.5,verdict="velocity";elseif positionBetter>0.5,verdict="position";end
+            velocitySmaller=mean(d>0);medianDifference=median(d);
+            if velocitySmaller<0.5 || (velocitySmaller==0.5 && medianDifference<0),verdict="position";end
+            confidence="weak";
+            if (verdict=="velocity" && velocityBetter>0.5) || (verdict=="position" && positionBetter>0.5),confidence="clear";end
         end
         rows(end+1,:)={k,candidates.beginSeconds(s),candidates.endSeconds(s),candidates.firstFrame(s),candidates.lastFrame(s), ...
-            numel(ix),mP,mV,velocityBetter,positionBetter,verdict,median(interp1(t,u,frameTime(ix)))}; %#ok<AGROW>
+            numel(ix),mP,mV,velocitySmaller,medianDifference,velocityBetter,positionBetter,verdict,confidence, ...
+            median(interp1(t,u,frameTime(ix)))}; %#ok<AGROW>
     end
     segments=cell2table(rows,VariableNames={'candidate','beginSeconds','endSeconds','firstFrame','lastFrame','windows', ...
-        'medianPositionResidualM','medianVelocityResidualM','fractionVelocityBetterBy2cm','fractionPositionBetterBy2cm', ...
-        'verdict','medianWheelSpeedMps'});
+        'medianPositionResidualM','medianVelocityResidualM','fractionVelocitySmaller','medianPositionMinusVelocityResidualM', ...
+        'fractionVelocityBetterBy2cm','fractionPositionBetterBy2cm','verdict','confidence','medianWheelSpeedMps'});
     writetable(segments,fullfile(out,'position_velocity_segments.csv'));disp(segments);
     % 3. Straight driving and sideslip.
     ti=samples.time;speed=hypot(inspva.east_velocity_mps,inspva.north_velocity_mps);
@@ -144,7 +153,7 @@ function summary=judgeReceiverContradictions()
         'allWindows',struct('medianPositionResidualM',median(eP(valid)),'medianRawVelocityResidualM',median(eVr(valid)), ...
             'medianModeledVelocityResidualM',median(eVm(valid)),'windows',nnz(valid)), ...
         'positionVelocity',struct('segments',segments,'window',sprintf("%g s centred on each mapping frame, native 50 Hz receiver samples",2*HALF_WINDOW), ...
-            'decision',"trusted quantity: residual smaller by more than 2 cm in more than half of the candidate's windows"), ...
+            'decision',"every candidate resolved: trusted quantity has the smaller residual in more than half of the candidate's windows (tie: median difference, then velocity); clear when also smaller by more than 2 cm in more than half, otherwise weak"), ...
         'straightDriving',struct('runs',height(runs),'runsWithSideslipRejected',nnz(runs.sideslipRejected), ...
             'decision',"apparent sideslip rejected when |road-wheel angle| < 0.5 |course - azimuth| and |lateral specific force| < 0.5 m/s^2"), ...
         'gyro',struct('scale',p(2),'biasDegPerS',rad2deg(p(3)),'residualRmsDeg',rms(residual),'residualMaximumDeg',max(abs(residual)), ...
@@ -152,8 +161,8 @@ function summary=judgeReceiverContradictions()
     fid=fopen(fullfile(out,'judge_summary.json'),'w');fprintf(fid,'%s\n',jsonencode(summary,PrettyPrint=true));fclose(fid);
     fprintf('velocity integral: %s (median residual raw %.4f m, modeled %.4f m over %d turning windows)\n', ...
         chosen,medians(1),medians(2),nnz(choiceWindows));
-    fprintf('verdicts: %d velocity, %d position, %d undecided of %d candidates\n',nnz(segments.verdict=="velocity"), ...
-        nnz(segments.verdict=="position"),nnz(segments.verdict=="undecided"),height(segments));
+    fprintf('verdicts: %d velocity, %d position of %d candidates (%d clear, %d weak)\n',nnz(segments.verdict=="velocity"), ...
+        nnz(segments.verdict=="position"),height(segments),nnz(segments.confidence=="clear"),nnz(segments.confidence~="clear"));
     fprintf('straight runs %d, sideslip rejected on %d; gyro residual RMS %.3f deg\n',height(runs),nnz(runs.sideslipRejected),rms(residual));
 end
 

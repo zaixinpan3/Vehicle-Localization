@@ -556,9 +556,11 @@ Rule: every value comes from the receiver. Where the receiver contradicts
 itself (its position increments against the integral of its own velocity,
 after a fitted rigid relation between the two points), the vehicle sensors
 decide which receiver quantity is trusted and the positions of a
-velocity-trusted stretch follow the velocity integral anchored at both ends;
-where the receiver merely disagrees with the vehicle sensors, the receiver
-stands. Only the current corrected trajectory and its map are kept;
+velocity-trusted stretch follow the velocity integral anchored at both ends.
+Every contradiction is resolved: when the vehicle sensors separate the two
+quantities only weakly, the one with the smaller residual in most windows is
+still chosen and the verdict is labelled weak. Where the receiver merely
+disagrees with the vehicle sensors, the receiver stands. Only the current corrected trajectory and its map are kept;
 superseded versions and the maps and runs built on them are deleted.
 `runMncavFullObserverExperiment` scores against this reference.
 
