@@ -1,6 +1,10 @@
 function mncavVdbDriver(block)
 % mncavVdbDriver Sampled path-following test driver for the external VDB plant.
 % Driver uses plant pose for scenario generation only; localization sees sensors.
+% Route columns 5 and 6 (optional) carry the no-stop cruise profile and the
+% dwell time of timed stops: the driver brakes to the next unserved stop on
+% the with-stop profile, holds the brake for its dwell time once stopped
+% within a waypoint of it, then follows the cruise profile again.
     block.NumDialogPrms=2;block.NumInputPorts=1;block.NumOutputPorts=2;
     block.SetPreCompInpPortInfoToDynamic;block.SetPreCompOutPortInfoToDynamic;
     block.InputPort(1).Dimensions=4;block.InputPort(1).DirectFeedthrough=false;
@@ -12,11 +16,11 @@ function mncavVdbDriver(block)
     block.RegBlockMethod('Outputs',@outputs);block.RegBlockMethod('Update',@update);
 end
 function setupWork(b)
-    b.NumDworks=3;dims=[12 3 1];names={'command','diagnostics','steer'};
-    for k=1:3,b.Dwork(k).Name=names{k};b.Dwork(k).Dimensions=dims(k);b.Dwork(k).DatatypeID=0;b.Dwork(k).Complexity='Real';b.Dwork(k).UsedAsDiscState=true;end
+    b.NumDworks=4;dims=[12 3 1 2];names={'command','diagnostics','steer','dwell'};
+    for k=1:4,b.Dwork(k).Name=names{k};b.Dwork(k).Dimensions=dims(k);b.Dwork(k).DatatypeID=0;b.Dwork(k).Complexity='Real';b.Dwork(k).UsedAsDiscState=true;end
 end
 function initialize(b)
-    b.Dwork(1).Data=zeros(12,1);b.Dwork(2).Data=[1;0;0];b.Dwork(3).Data=0;
+    b.Dwork(1).Data=zeros(12,1);b.Dwork(2).Data=[1;0;0];b.Dwork(3).Data=0;b.Dwork(4).Data=[0;-1];
 end
 function outputs(b)
     b.OutputPort(1).Data=b.Dwork(1).Data;b.OutputPort(2).Data=b.Dwork(2).Data;
@@ -34,7 +38,25 @@ function update(b)
     dt=cfg.simulation.sampleTimeSeconds;old=b.Dwork(3).Data;
     change=(desired-old)*(-expm1(-dt/cfg.driver.steeringTimeConstantSeconds));
     lim=cfg.driver.maximumSteeringRateRadps*dt;delta=old+max(-lim,min(lim,change));
-    vref=min(route(idx:target,4));
+    stops=[];if size(route,2)>=6,stops=find(route(:,6)>0);end
+    served=b.Dwork(4).Data(1);dwellStart=b.Dwork(4).Data(2);
+    nextStop=Inf;if served<numel(stops),nextStop=stops(served+1);end
+    lastServed=0;if served>0,lastServed=stops(served);end
+    % Served stops are behind the vehicle on the cruise profile; the next
+    % unserved stop keeps its zero on the with-stop profile.
+    lo=max(idx,lastServed+1);vref=min(route(lo:target,4));
+    if lo>idx,vref=min(vref,min(route(idx:lo-1,5)));end
+    arrived=isfinite(nextStop) && route(nextStop,3)-route(idx,3)<=cfg.driver.lookaheadBaseM+2 && abs(u(4))<.1;
+    if arrived && b.CurrentTime>=cfg.simulation.settleSeconds
+        if dwellStart<0,dwellStart=b.CurrentTime;end
+        if b.CurrentTime-dwellStart>=route(nextStop,6)
+            served=served+1;dwellStart=-1;lo=max(idx,nextStop+1);
+            vref=min(route(lo:max(lo,target),4));
+        else
+            vref=0;
+        end
+    end
+    b.Dwork(4).Data=[served;dwellStart];
     % Tracking corrections can turn more sharply than the nominal path. Slow
     % for both the requested and lagged steering curvature before accelerating.
     steeringCurvature=max(abs(tan([desired,delta])))/L;

@@ -1,7 +1,16 @@
-function cfg=mncavVdbConfig()
+function cfg=mncavVdbConfig(options)
 % mncavVdbConfig Canonical MnCAV anchors and explicit high-fidelity assumptions.
 % Unknown suspension/tire/vertical parameters are engineering assumptions,
 % not identified MnCAV properties. The generated MathWorks model stays in output.
+% Envelope selects the scenario speed/acceleration envelope of the test
+% driver only ("nominal", or "aggressive": 12 m/s, 2.1 m/s^2 lateral,
+% 3 m/s^2 acceleration, 4 m/s^2 braking); vehicle, sensors and noise are the
+% same. The lateral value is bounded by the plant's roll compliance: at
+% 2.5 m/s^2 the inner rear wheel lifted in tight turns (2026-10-11). The
+% envelope is recorded in cfg.simulation.envelope.
+    arguments
+        options.Envelope (1,1) string {mustBeMember(options.Envelope,["nominal","aggressive"])}="nominal"
+    end
     p=mncavVehicleConfig();cfg=struct('schemaVersion',1,'vehicle',p.vehicle,'stock',p.stock, ...
         'steeringRatio',p.steeringRatio,'source','config/mncavVehicleParameters.json');
     cfg.body=struct('cgHeightM',.62,'rollInertiaKgM2',900,'pitchInertiaKgM2',4200, ...
@@ -17,6 +26,11 @@ function cfg=mncavVdbConfig()
     cfg.simulation=struct('maximumStepSeconds',.002,'sampleTimeSeconds',.01, ...
         'settleSeconds',3,'maximumSpeedMps',8,'lateralAccelerationMps2',2, ...
         'longitudinalAccelerationMps2',1.5,'maximumBrakeMps2',2,'seed',20261002);
+    cfg.simulation.envelope=options.Envelope;
+    if options.Envelope=="aggressive"
+        cfg.simulation.maximumSpeedMps=12;cfg.simulation.lateralAccelerationMps2=2.1;
+        cfg.simulation.longitudinalAccelerationMps2=3;cfg.simulation.maximumBrakeMps2=4;
+    end
     cfg.driver=struct('lookaheadBaseM',3,'lookaheadTimeSeconds',.65, ...
         'steeringTimeConstantSeconds',.12,'maximumRoadWheelAngleRad',.5, ...
         'maximumSteeringRateRadps',.5,'speedGain',1.2);

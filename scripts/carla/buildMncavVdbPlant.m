@@ -1,7 +1,14 @@
-function [mdl,report]=buildMncavVdbPlant(outputFolder,routeFile)
+function [mdl,report]=buildMncavVdbPlant(outputFolder,routeFile,options)
 % buildMncavVdbPlant Instantiate the installed 14DOF template, never vendor it.
 % Generated SLX files and copied MathWorks assets belong only in outputFolder.
-    root=setupVehicleLocalization();cfg=mncavVdbConfig();
+% Envelope selects the test driver's speed/acceleration envelope
+% (mncavVdbConfig); it is recorded in the exported plant parameters.
+    arguments
+        outputFolder (1,1) string
+        routeFile (1,1) string
+        options.Envelope (1,1) string {mustBeMember(options.Envelope,["nominal","aggressive"])}="nominal"
+    end
+    root=setupVehicleLocalization();cfg=mncavVdbConfig(Envelope=options.Envelope);
     outputFolder=char(outputFolder);if ~isfolder(outputFolder),mkdir(outputFolder);end
     outputFolder=char(java.io.File(outputFolder).getCanonicalPath());
     vendor=fullfile(outputFolder,'vendor');if ~isfolder(vendor),mkdir(vendor);end
