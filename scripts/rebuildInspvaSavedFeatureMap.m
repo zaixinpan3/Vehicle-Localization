@@ -1,17 +1,19 @@
 function report = rebuildInspvaSavedFeatureMap(outputFolder,options)
 % rebuildInspvaSavedFeatureMap Rebuild the map from unchanged local features.
-% Cached global features are reprojected with INSPVA poses at LiDAR times.
-% Original perception/map artifacts remain the historical baseline.
+% Cached local features are reprojected with the receiver reference poses at
+% LiDAR times. By default the poses are the corrected receiver reference
+% (output/receiver_reference/corrected_poses.csv, scripts/buildReceiverReference.py)
+% and the map is written next to it; that map is the code default
+% (featureMapBuildConfig). Perception is not rerun.
     arguments
-        outputFolder (1,1) string="output/mississippi_mapping_calibrated"
-        options.ObservationFile (1,1) string="output/mississippi_perception_video_20260912/feature_observations.mat"
-        options.PoseFile (1,1) string=""
+        outputFolder (1,1) string="output/receiver_reference/map"
+        options.ObservationFile (1,1) string="output/mississippi_mapping_synchronized/feature_observations.mat"
+        options.PoseFile (1,1) string="output/receiver_reference/corrected_poses.csv"
         options.FrameCalibration (1,1) struct=struct()
     end
     setupVehicleLocalization();
     if ~isfolder(outputFolder),mkdir(outputFolder);end
     cfg=featureMapBuildConfig();cfg.frameIndices=1:1170;
-    if strlength(options.PoseFile)==0,options.PoseFile=fullfile("data",cfg.poseMatchCsvPath);end
     poses=readFramePoseTable(options.PoseFile,cfg.frameIndices);
     assert(all(poses.pose_source=="INSPVA"),'Expected INSPVA-only mapping poses.');
     root=fileparts(fileparts(mfilename('fullpath')));

@@ -539,6 +539,29 @@ replacement alone does not update a cached map. The existing LiDAR calibration
 is retained; INSPVA remains a quality-labeled navigation reference, not an
 independently validated ground-truth trajectory.
 
+The evaluation and mapping reference of the 12-09-31 drive is the corrected
+receiver reference in `output/receiver_reference/` (`corrected_native_reference.csv`
+at the native 50 Hz epochs, `corrected_poses.csv` at the 1,170 LiDAR frame
+times, `reference_flags.csv` with a reliability tier per frame). It is built
+in three steps from the repository root:
+
+```
+uv run --offline --with numpy --with pyproj python scripts/buildReceiverReference.py detect
+matlab -batch "judgeReceiverContradictions"      % YALMIP and SeDuMi on the path
+uv run --offline --with numpy --with pyproj python scripts/buildReceiverReference.py build
+rebuildInspvaSavedFeatureMap                    % map next to the reference, the code default
+```
+
+Rule: every value comes from the receiver. Where the receiver contradicts
+itself (its position increments against the integral of its own velocity,
+after a fitted rigid relation between the two points), the vehicle sensors
+decide which receiver quantity is trusted and the positions of a
+velocity-trusted stretch follow the velocity integral anchored at both ends;
+where the receiver merely disagrees with the vehicle sensors, the receiver
+stands. Only the current corrected trajectory and its map are kept;
+superseded versions and the maps and runs built on them are deleted.
+`runMncavFullObserverExperiment` scores against this reference.
+
 ### CARLA Town10HD simulation (`scripts/carla/`)
 
 The pipeline also runs on CARLA 0.10.0 (Unreal Engine 5) in Town10HD. The ego

@@ -1,8 +1,10 @@
 function report=runMncavFullObserverExperiment(outputFolder,options)
 % runMncavFullObserverExperiment Exercise simultaneous and missing sources.
 % Recorded BESTPOS XY supplies the receiver position channel, still INS aided.
-% Trajectory scoring uses evaluation-drive INSPVA; initialization provenance
-% is reported separately. A separate drive calibrates the relative receiver
+% Trajectory scoring uses the corrected receiver reference of the evaluation
+% drive (output/receiver_reference, built by scripts/buildReceiverReference.py
+% from INSPVA with vehicle sensors as arbiters only); initialization
+% provenance is reported separately. A separate drive calibrates the relative receiver
 % output point. MatchingFolder consumes a raw
 % coarse-perception replay. Frame alignment interpolates real GNSS samples and reports the
 % required future-endpoint wait, without motion extrapolation.
@@ -50,7 +52,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'information',information,'valid',logical(calls.measurementValid),'delay',0);
     lidar.residualModels=residualModels;
     bestMetadata=jsondecode(fileread('output/receiver_synchronized_inputs/bestpos_metadata.json'));
-    referenceMetadata=jsondecode(fileread('output/receiver_synchronized_inputs/reference_metadata.json'));
+    referenceMetadata=jsondecode(fileread('output/receiver_reference/reference_metadata.json'));
     assert(string(bestMetadata.clock.modelId)==prepared.clockModelId && ...
         string(referenceMetadata.clock.modelId)==prepared.clockModelId && ...
         string(matching.replay.clockModelId)==prepared.clockModelId, ...
@@ -85,7 +87,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     velocity=rotation*[h.longitudinalSpeed(1);lateral.lateralVelocity(1)];
     acceleration=rotation*[h.longitudinalAcceleration(1);h.lateralAcceleration(1)];
     cfg.initialState=[pose(1);velocity(1);acceleration(1);pose(2);velocity(2);acceleration(2);pose(3)];
-    native=readtable('output/receiver_synchronized_inputs/native_reference.csv');
+    native=readtable('output/receiver_reference/corrected_native_reference.csv');
     reference=interp1(native.time,[native.x,native.y,native.psi],t,'linear');
     if options.RematchWithGnss || overlapChannel
         if strlength(options.CoarseSourceFile)>0
@@ -153,7 +155,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     report=struct('metadata',struct('gnssSource',"/novatel/oem7/bestpos XY; reported uncertainty projected to UTM; recorded solution types are INS aided", ...
         'lidarSource',matching.source,'matching',matching, ...
         'inputMetadata',inputMetadata,'synchronization',synchronization, ...
-        'evaluation',"INSPVA on native LiDAR frame timestamps, approximately 10 Hz", ...
+        'evaluation',"corrected receiver reference (output/receiver_reference) on native LiDAR frame timestamps, approximately 10 Hz", ...
         'matchingRerun',matching.rerun,'closedLoopRematching',options.RematchWithGnss && ~overlapChannel, ...
         'lidarChannel',options.LidarChannel,'overlapScaleLadder',overlapConfig.scaleLadder, ...
         'gnssInformationAddedToLidar',false,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
