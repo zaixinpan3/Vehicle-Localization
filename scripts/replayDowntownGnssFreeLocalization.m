@@ -4,13 +4,19 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
 % measured clouds/motion and a frozen map; evaluation reference is a separate
 % scorer. One externally supplied reference pose initializes the first query.
 % No reference trajectory is read here, including when initializing velocity.
+% LidarChannel="overlapGradient" replaces registration with the
+% correspondence-free overlap gradient (overlapGradientConfig) against the same
+% projected map; its source horizons are the matcher's (same deskew,
+% perception, source window and odometry), built causally before the run.
     arguments
         datasetFolder
         mapFile
         outputFolder
         lateralDesign
         options.InitialPosePacket (1,1) struct=struct()
+        options.LidarChannel (1,1) string {mustBeMember(options.LidarChannel,["registration","overlapGradient"])}="registration"
     end
+    overlapChannel=options.LidarChannel=="overlapGradient";
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     protocol=downtownReferenceReplayConfig();metadata=jsondecode(fileread(fullfile(datasetFolder,'metadata.json')));
     assert(metadata.measurementOnly && ~metadata.gnssExported && ~metadata.clock.referencePoseUsed);
@@ -34,7 +40,24 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     data=struct('highRate',h,'lidarMatcher',@matchFrame);history=[];timings=zeros(n,3);accepted=false(n,1);directional=false(n,1);candidates=nan(n,3);
     p=perceptionConfig("Downtown");p.featureNames=protocol.featureNames;
     matching=struct('perception',p,'registration',protocol.registration,'sourceWindow',protocol.sourceWindow);
+    sourcePreparationSeconds=0;
+    if overlapChannel
+        data=rmfield(data,'lidarMatcher');sources=cell(n,1);
+        for k=1:n
+            timerFrame=tic;frame=loadPointCloudFrame(fullfile(datasetFolder,'pointClouds.mat'),ids(k));frame=deskewDowntownMotionFrame(frame,inputs);
+            current=perceiveCoarseProbabilityCloud(frame,matching.perception);
+            [sources{k},history]=updateLocalizationSourceWindow(current,t(k),motion(k,:),history,matching.sourceWindow);
+            timings(k,1)=toc(timerFrame);
+            if mod(k,25)==0 || k==n,fprintf('overlap sources %s %d/%d\n',datasetFolder,k,n);end
+        end
+        sourcePreparationSeconds=sum(timings(:,1));
+        data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
+    end
     timer=tic;estimate=runFullLocalizationObserver(data,lateralDesign,cfg,LateralInputs=lat);runtime=toc(timer);
+    if overlapChannel
+        accepted=estimate.diagnostics.lidarOverlap.available;overlapSeconds=estimate.diagnostics.lidarOverlap.seconds;overlapSeconds(~isfinite(overlapSeconds))=0;
+        timings(:,2)=overlapSeconds;timings(:,3)=timings(:,1)+overlapSeconds;
+    end
     assert(estimate.diagnostics.packetCounts.gnssValid==0 && all(ismember(estimate.diagnostics.mode,[0,2])));
     estimate.diagnostics.referenceUsed=true; % One initialization pose, separately audited.
     estimate.diagnostics.referenceUsedForInitialization=true;
@@ -45,7 +68,8 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
         'VariableNames',{'frame_index','native_time_sec','elapsed_sec','x_m','y_m','yaw_rad','match_x_m','match_y_m','match_yaw_rad','dead_reckoning_x_m','dead_reckoning_y_m','dead_reckoning_yaw_rad','accepted','directional_accepted','perception_ms','registration_ms','total_ms'});
     writetable(trajectory,fullfile(outputFolder,'trajectory.csv'));
     if isfield(estimate,'matchingResults'),estimate=rmfield(estimate,'matchingResults');end
-    report=struct('frames',n,'durationSeconds',t(end)-t(1),'accepted',nnz(accepted),'directionalAccepted',nnz(directional), ...
+    report=struct('frames',n,'lidarChannel',options.LidarChannel,'sourcePreparationSeconds',sourcePreparationSeconds, ...
+        'durationSeconds',t(end)-t(1),'accepted',nnz(accepted),'directionalAccepted',nnz(directional), ...
         'gnssValidPackets',estimate.diagnostics.packetCounts.gnssValid,'gnssInitializationUsed',false, ...
         'referenceUsedForInitialization',true,'referenceInitializationCount',1,'referenceUsedAfterInitialization',false, ...
         'initialPose',prior,'initialPosePacket',options.InitialPosePacket,'initializationMode',protocol.initializationMode, ...
