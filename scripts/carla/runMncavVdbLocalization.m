@@ -8,6 +8,8 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
 % buildMncavVdbMeasurementClouds. The default t=8 s start follows stationary
 % IMU alignment and a three-second measured GNSS course bootstrap. Scenarios
 % named lidar_only/dead_reckoning withdraw GNSS only after that bootstrap.
+% gnss_only keeps GNSS and withdraws LiDAR: the same sensors as a GNSS and
+% vehicle-motion observer, for algorithm-level comparisons.
 % LidarChannel="overlapGradient" replaces registration with the
 % correspondence-free overlap gradient (overlapGradientConfig) against the same
 % projected map. Its source horizons are the matcher's: the same perception,
@@ -72,14 +74,14 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     for scenarioIndex=1:numel(options.Scenarios)
         scenario=options.Scenarios(scenarioIndex);history=[];timings(:)=0;accepted(:)=false;directional(:)=false;
         data=struct('highRate',h);
-        if ismember(scenario,["fused","gnss_outage"])
+        if ismember(scenario,["fused","gnss_outage","gnss_only"])
             valid=logical(s.gnssValid(idx));if scenario=="gnss_outage",valid(t>=35 & t<65)=false;end
             data.gnss=struct('time',t,'position',[s.gnssX(idx),s.gnssY(idx)], ...
                 'information',eye(2).*reshape(1./s.gnssVariance(idx),1,1,n),'valid',valid,'delay',0);
         else
             assert(ismember(scenario,["lidar_only","dead_reckoning"]),'Unknown scenario.');
         end
-        if scenario~="dead_reckoning"
+        if ~ismember(scenario,["dead_reckoning","gnss_only"])
             if overlapChannel
                 data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
             else
@@ -87,7 +89,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
             end
         end
         runTimer=tic;estimate=runFullLocalizationObserver(data,inputs.lateralDesign,base,LateralInputs=lateral);runtime=toc(runTimer);
-        if overlapChannel && scenario~="dead_reckoning"
+        if overlapChannel && ~ismember(scenario,["dead_reckoning","gnss_only"])
             accepted=estimate.diagnostics.lidarOverlap.available;directional(:)=false;
             timings=[sourceTimings,estimate.diagnostics.lidarOverlap.seconds,sourceTimings+estimate.diagnostics.lidarOverlap.seconds];
             timings(~isfinite(timings))=0;
