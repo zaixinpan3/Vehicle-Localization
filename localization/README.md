@@ -68,45 +68,35 @@ uncertified intervals. A continuous certificate is not relabeled as a proof
 for every sampling period. Numerical consistency is checked against the
 continuous ODE with decreasing steps, without a second gain-design route.
 
-### Dataset-specific tuned parameters
+### Gains solved from the ISS LMI
 
-`mncavFullObserverConfig()` applies one tuned gain set,
-`config/mncavTunedGains.json`: physical gains `[kp,kv,ka,kpsi]=[80,4,12,1]`
-and LiDAR information scale 64, with GNSS position gain 4/s and GNSS
-information scale 16 unchanged. The former nominal default `[4,4,12,4]` with
-scale 16 and the `mississippi-20240607-fixed-scale` profile (`[80,4,12,1.25]`,
-scale 16) were removed on 2026-10-10. The label and provenance are stored in
-`cfg.tuning`. This selects parameters for the same continuous LMI design and
-runtime; every candidate passed the continuous seven-state ISS LMIs before it
-was replayed, and the runtime re-verifies them at every design.
-
-The set was selected on `raw_data_2024-06-07-12-09-31_0` with the
-receiver-reference-v3 inputs and map, and coarse source horizons regenerated
-with the current perception. The objective is the square root of the mean of
-four squared RMSE ratios to the former nominal gains (position over all
-frames, heading after 2 s; LiDAR only and GNSS + LiDAR), computed on a tuning
-segment (frames 1--700) and a held-out segment (701--1169) and averaged over
-the registration and overlap-gradient channels. Scores: registration 0.73
-(tuning) and 0.87 (held out), overlap 0.75 and 0.87. The surfaces are flat:
-kp 32--160 with kpsi 1 and scale 16--128 lie within 0.3 cm. Position RMSE over
-1169 frames with these gains: registration 5.8 cm (LiDAR only) and 6.1 cm
-(GNSS + LiDAR), overlap 6.3 and 5.7 cm; heading RMSE 0.11 deg and 0.14--0.17
-deg. The held-out segment is the later part of the same drive, not an
-independent recording. See the local study `research/gain_retune_20261010`.
-
-The experimental calibrated profile removes the LiDAR geometric information
-scale and uses measured conditional pose-error second moments:
-
-```matlab
-cfg = mncavFullObserverConfig(GainProfile="mississippi-20240607-calibrated");
-```
-
-It selects physical gains `[48,4,12,2]` from the first 60 seconds, after
-continuous LMI verification. The later interval, including frame 847, is
-held out from calibration and gain selection. It uses the same continuous
-design and numerical observer. It is a calibration of consistency with the
-current map/reference, with imperfect Gaussian tail coverage, and does not
-replace nominal defaults. See the [calibration equations and scope](../config/LIDAR_ERROR_CALIBRATION.md).
+The MnCAV gains are not set by hand (user decision of 2026-10-11). The
+comparison matrix of the continuous ISS theorem is affine in the products
+`y_i = c_i k_i` of the diagonal Lyapunov weights and the gains (the `Y = P K`
+change of variables), so the gains are unknowns of an SDP.
+`fullObserverSupport.synthesizeFullObserverGains` solves, for a declared
+decay rate `alpha`, the gains `[kp,kv,ka,kpsi]` and the GNSS position gain
+that minimize the ISS radius bound `(2/alpha) sqrt(sum_i c_i dbar_i^2)`,
+where `dbar_i` are the gain-scaled noise bounds of the channels (LiDAR pose,
+GNSS, body velocity, acceleration, gyro, jerk residual) and the weights are
+normalized by declared error scales. The decay must hold with sufficient
+LiDAR information and no GNSS, and with weak LiDAR translation (strength 0.05)
+and GNSS weight at least 0.5; the second scenario fixes the GNSS gain.
+`scripts/synthesizeMncavObserverGains.m` solves the program for the inputs
+declared in `mncavFullObserverConfig` and writes
+`config/mncavSynthesizedGains.json`; `mncavFullObserverConfig()` loads that
+file and refuses it when any declared input has changed. The decay rate is
+the single design parameter, in the role of the source paper's `theta`; it
+was selected on frames 1--700 of the 2024-06-07 recording with the objective
+of the 2026-10-10 search (position and heading, LiDAR only and GNSS + LiDAR,
+both LiDAR channels) and checked on frames 701--1169
+(`research/gain_synthesis_20261011`). Current values: `alpha = 3`,
+`[kp,kv,ka,kpsi] = [19.2, 3.76, 3.32, 14.2]`, GNSS position gain 7.69,
+verified decay rate 3.78. The LiDAR and GNSS information scales (64 and 16)
+are the damping of the Gauss--Newton step, not observer gains. The former
+hand-tuned set `[80,4,12,1]` and the calibrated profile `[48,4,12,2]` were
+removed; the conditional LiDAR error calibration remains available through
+`cfg.lidar.errorCalibration`.
 
 ## Current synchronous runtime
 
@@ -170,8 +160,7 @@ required. The baseline uses gyro-predicted heading for motion rotation and
 receiver-point correction, then LiDAR corrects the predicted pose jointly.
 The corrected heading enters the next baseline step. There are no integration
 substeps or `maximumIntegrationStep` setting. The MnCAV gains are
-`[80,4,12,1]` with LiDAR information scale 64 and GNSS position gain 4/s
-(see the tuned parameters below). The implementation before
+solved from the ISS LMI (see "Gains solved from the ISS LMI" below). The implementation before
 Route A and its earlier measurements are described in the
 [current calibration, gain and accuracy report](../research/mncav_bestpos_alignment_20260917/README.md)
 and the [discrete equations](../research/mncav_synchronous_bestpos_20260917/README.md).

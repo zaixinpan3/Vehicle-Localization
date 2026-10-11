@@ -280,8 +280,9 @@ classdef overlapGradientChannelTest < matlab.unittest.TestCase
             ambiguous=f.data;ambiguous.lidarMatcher=@(~,~,~)struct();
             testCase.verifyError(@()runFullLocalizationObserver(ambiguous,struct(),f.cfg,LateralInputs=f.lateral), ...
                 'VehicleLocalization:AmbiguousLidarInput');
-            calibrated=mncavFullObserverConfig(GainProfile="mississippi-20240607-calibrated");
-            calibrated.initialState=f.cfg.initialState;
+            calibrated=f.cfg;calibrated.lidar=rmfield(calibrated.lidar,'gainInformationScale');
+            calibrated.lidar.errorCalibration=struct('kind',"conditional-pose-second-moment-v1", ...
+                'referenceVariance',[.01;.001],'coefficients',[.01,1;.001,1]);
             testCase.verifyError(@()runFullLocalizationObserver(f.data,struct(),calibrated,LateralInputs=f.lateral), ...
                 'VehicleLocalization:OverlapCalibrationUnavailable');
         end

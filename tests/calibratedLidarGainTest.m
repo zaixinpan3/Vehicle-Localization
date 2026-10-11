@@ -78,13 +78,6 @@ classdef calibratedLidarGainTest < matlab.unittest.TestCase
             testCase.verifyError(@()runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral), ...
                 'VehicleLocalization:MissingLidarErrorCalibration');
         end
-        function namedProfileRecomputesItsContinuousCertificate(testCase)
-            cfg=mncavFullObserverConfig(GainProfile="mississippi-20240607-calibrated");
-            d=fullObserverSupport.designFullObserverGains(cfg);
-            testCase.verifyFalse(isfield(cfg.lidar,'gainInformationScale'));
-            testCase.verifyTrue(d.continuousCertificate.certified);
-            testCase.verifyGreaterThan(d.continuousCertificate.verification.verifiedDecayRate,cfg.iss.decayRate);
-        end
         function empiricalFloorIncludesUnexplainedError(testCase)
             cfg=config();a=lidarInjectionSupport.predictLidarPoseErrorVariance(zeros(2,1),cfg.lidar.errorCalibration);
             testCase.verifyEqual(a,[.01;.001],AbsTol=0);
@@ -116,7 +109,7 @@ function cfg=config()
     cfg.lidar.errorCalibration=struct('kind',"conditional-pose-second-moment-v1", ...
         'referenceVariance',[.01;.001],'coefficients',[.01,1;.001,1]);
     cfg.iss.minimumPositionStrength=.4;cfg.iss.minimumHeadingStrength=.1;
-    cfg.iss.maximumPositionHeadingCoupling=0;cfg.gains([1,4])=[16,2];
+    cfg.iss.maximumPositionHeadingCoupling=0;cfg.gains([1,4])=[16,2];cfg.iss.decayRate=.01;
 end
 
 function m=model()

@@ -57,7 +57,7 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(s.verification.verifiedDecayRate,cfg.iss.decayRate);
         end
         function widelySeparatedGainsStillRequireVerifiedMargins(testCase)
-            cfg=mncavFullObserverConfig();cfg.gains([1,4])=[160,.125];
+            cfg=mncavFullObserverConfig();cfg.gains([1,4])=[160,.125];cfg.iss.decayRate=.01;
             s=fullObserverSupport.solveFullObserverIssLmi(cfg);v=fullObserverSupport.verifyFullObserverIssCertificate(s,cfg);
             testCase.verifyTrue(s.certified);
             testCase.verifyGreaterThan(min(v.normalizedMargins),cfg.iss.tolerance);

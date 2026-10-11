@@ -25,12 +25,77 @@ classdef fullObserverSupport
                 'scalingExponents',[1;2;3;1;2;3;1],'kappa',g(1), ...
                 'baselineFullStateCertified',false, ...
                 'metricSource',"Algebraic LiDAR injection metric; the full continuous proof uses continuousCertificate.verification.P");
-            design=struct('kind',cfg.kind,'gains',g.','gnssPositionGain',cfg.gnss.positionGain, ...
+            source="declared";if isfield(cfg,'gainSource'),source=string(cfg.gainSource);end
+            design=struct('kind',cfg.kind,'gains',g.','gnssPositionGain',cfg.gnss.positionGain,'gainSource',source, ...
                 'unconditionalIssClaimed',false, ...
                 'baselineFullStateCertified',false,'lidarMatched',matched, ...
                 'continuousCertificate',certificate,'fullContinuousStateCertified',true, ...
                 'designRoute',certificate.designRoute, ...
                 'scope',certificate.verification.scope);
+        end
+
+        function design=synthesizeFullObserverGains(cfg)
+        % synthesizeFullObserverGains Solve the observer gains from the continuous ISS LMI.
+        % The comparison matrix M of the ISS theorem (verifyFullObserverIssCertificate)
+        % is affine in the products y_i = c_i k_i of the Lyapunov weights and the
+        % gains (the Y = P K change of variables with the diagonal P). For the
+        % declared decay rate alpha the program minimizes the ISS radius bound
+        %     rho^2 = (2/alpha)^2 sum_i c_i dbar_i^2,  |e_inf| <= rho / sqrt(min c_i),
+        % where dbar_i = k_i n_i (+ model residual) is the gain-scaled bound of the
+        % disturbance of channel i for the declared noise scales n_i, and the
+        % weights are normalized below by the declared error scales
+        % (c_i >= scale_i^2). Each perspective term (c_i dbar_i)^2 / c_i is a 2x2
+        % LMI. The decay must hold in two information scenarios: LiDAR sufficient
+        % without GNSS, and LiDAR translational strength reduced to
+        % weakPositionStrength with GNSS present at weight >= minimumGnssWeight,
+        % which is what fixes the GNSS position gain. No trajectory or error
+        % data enters; alpha is the single design parameter.
+            arguments
+                cfg (1,1) struct
+            end
+            assert(isfield(cfg,'synthesis'),'VehicleLocalization:MissingSynthesisInputs', ...
+                'Declare cfg.synthesis (decayRate, noise, errorScales, weakPositionStrength, minimumGnssWeight) before synthesis.');
+            assert(exist('sdpvar','file')==2,'VehicleLocalization:MissingSolver', ...
+                'Add YALMIP and the SDP solver to the path before gain synthesis.');
+            s=cfg.iss;z=cfg.synthesis;n=z.noise;r=z.errorScales;
+            validateattributes(z.decayRate,{'numeric'},{'real','finite','positive','scalar'});
+            validateattributes([n.lidarPositionM,n.lidarHeadingRad,n.gnssPositionM,n.velocityMps,n.accelerationMps2,n.gyroRadps,n.jerkMps3], ...
+                {'numeric'},{'real','finite','nonnegative','numel',7});
+            validateattributes([r.positionM,r.headingLengthM,r.velocitySeconds,r.accelerationSeconds2],{'numeric'},{'real','finite','positive','numel',4});
+            validateattributes(z.weakPositionStrength,{'numeric'},{'real','finite','nonnegative','<',1,'scalar'});
+            validateattributes(z.minimumGnssWeight,{'numeric'},{'real','finite','nonnegative','<=',1,'scalar'});
+            offset=zeros(2,1);if isfield(cfg.gnss,'outputPoint'),offset=cfg.gnss.outputPoint.bodyOffset(:);end
+            lever=.5*sum(offset.^2);qmax2=cfg.maximumTrackAngleRate^2;
+            alpha=z.decayRate*(1+z.designMargin);
+            c=sdpvar(4,1);y=sdpvar(5,1);t=sdpvar(4,1);
+            lower=[r.positionM^2;r.headingLengthM^2;r.velocitySeconds^2;r.accelerationSeconds2^2];
+            constraints=[c>=lower,y>=0];
+            scenarios=[s.minimumPositionStrength,0;z.weakPositionStrength,z.minimumGnssWeight];
+            for k=1:size(scenarios,1)
+                for q2=[0,qmax2]
+                    a=scenarios(k,1)*y(1)+scenarios(k,2)*y(5);
+                    cross=-(y(1)+y(2))*s.maximumPositionHeadingCoupling;
+                    M=[2*a,cross,-c(1),0; ...
+                       cross,2*y(2)*s.minimumHeadingStrength-lever*y(5),-y(3)*s.maximumSpeed,-y(4)*s.maximumAcceleration; ...
+                       -c(1),-y(3)*s.maximumSpeed,2*y(3),-(c(3)+c(4)*q2); ...
+                       0,-y(4)*s.maximumAcceleration,-(c(3)+c(4)*q2),2*y(4)];
+                    constraints=[constraints,M-alpha*diag(c)>=0]; %#ok<AGROW>
+                end
+            end
+            u=[n.gnssPositionM*y(5)+n.lidarPositionM*y(1); n.gyroRadps*c(2)+n.lidarHeadingRad*y(2); ...
+               n.velocityMps*y(3); n.jerkMps3*c(4)+n.accelerationMps2*y(4)];
+            for i=1:4,constraints=[constraints,[t(i),u(i);u(i),c(i)]>=0];end %#ok<AGROW>
+            result=optimize(constraints,sum(t),sdpsettings('solver',char(z.solver),'verbose',0));
+            cv=value(c);yv=value(y);
+            assert(result.problem==0 && all(isfinite([cv;yv])) && all(cv>0) && all(yv(1:4)>0), ...
+                'VehicleLocalization:InfeasibleGainSynthesis','Gain synthesis failed: %s',result.info);
+            % y=[yp ypsi yv ya yG] and c=[cp cpsi cv mu]; the runtime order is [kp kv ka kpsi].
+            gains=[yv(1)/cv(1),yv(3)/cv(3),yv(4)/cv(4),yv(2)/cv(2)];
+            design=struct('gains',gains,'gnssPositionGain',yv(5)/cv(1),'weights',cv.', ...
+                'radiusBound',2/z.decayRate*sqrt(value(sum(t))),'objective',value(sum(t)), ...
+                'decayRate',z.decayRate,'designMargin',z.designMargin,'solverStatus',result.problem,'solverInfo',string(result.info), ...
+                'inputs',struct('iss',s,'maximumTrackAngleRate',cfg.maximumTrackAngleRate,'gnssBodyOffset',offset.','synthesis',z), ...
+                'route',"Continuous seven-state ISS LMI synthesis: minimal ISS radius bound at the declared decay rate; LiDAR-sufficient and weak-translation-with-GNSS scenarios");
         end
 
         function certificate=solveFullObserverIssLmi(cfg)

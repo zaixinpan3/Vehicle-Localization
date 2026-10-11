@@ -51,9 +51,10 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
             testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint(1,:), ...
                 f.data.gnss.position(1,:)-([cos(.1),-sin(.1);sin(.1),cos(.1)]*[2;.5]).',AbsTol=1e-12);
         end
-        function independentPointConfigurationHasCommonPositionBandwidth(testCase)
+        function independentPointConfigurationUsesTheSolvedGnssGain(testCase)
             cfg=mncavFullObserverConfig();design=fullObserverSupport.designFullObserverGains(cfg);
-            testCase.verifyEqual(cfg.gnss.positionGain,fullObserverConfig().gains(1),AbsTol=0);
+            stored=jsondecode(fileread(fullfile(fileparts(fileparts(mfilename('fullpath'))),'config','mncavSynthesizedGains.json')));
+            testCase.verifyEqual(cfg.gnss.positionGain,stored.gnssPositionGain,AbsTol=0);
             testCase.verifyFalse(cfg.gnss.outputPoint.evaluationDriveUsed);
             testCase.verifyGreaterThan(design.continuousCertificate.verification.verifiedDecayRate,cfg.iss.decayRate);
         end
