@@ -1,4 +1,5 @@
 function report=runMncavFullLocalizationExperiment(outputFolder,options)
+% ARCHIVED registration localization entry (2026-10-12).
 % runMncavFullLocalizationExperiment Evaluate the complete recorded cascade.
 % Re-synthesize MnCAV lateral/global gains, run the actual lateral observer,
 % recursively match raw LiDAR to the frozen map, and evaluate the global DDE.
@@ -11,6 +12,8 @@ function report=runMncavFullLocalizationExperiment(outputFolder,options)
         options.InformationScale (1,1) double {mustBeFinite,mustBePositive}=.001
         options.MaximumOfflineGap (1,1) double {mustBeFinite,mustBePositive}=1
     end
+    error('VehicleLocalization:ArchivedRegistration', ...
+        'This registration entry is archived. Use the overlap-gradient dataset entry.');
     root=setupVehicleLocalization();
     if strlength(options.MapFile)==0,mapCfg=featureMapBuildConfig();options.MapFile=mapCfg.probabilityCloudPath;end
     if ~isfolder(outputFolder),mkdir(outputFolder);end

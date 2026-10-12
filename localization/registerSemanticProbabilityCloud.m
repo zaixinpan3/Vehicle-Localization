@@ -1,4 +1,6 @@
 function result = registerSemanticProbabilityCloud(fixedCloud,movingCloud,initialPose,cfg,positionAid,additionalSeeds)
+% ARCHIVED localization branch (2026-10-12): standalone historical diagnostic.
+% Current production tracking uses overlapGradient; see REGISTRATION_ARCHIVE.md.
 % registerSemanticProbabilityCloud: Semantic Gaussian geometry registration.
 % The default supportD2D model marginalizes partial-center displacement and
 % uses connected distribution support for continuous anisotropic orientation.

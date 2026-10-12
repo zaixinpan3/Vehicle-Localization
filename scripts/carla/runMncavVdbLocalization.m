@@ -10,7 +10,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
 % named lidar_only/dead_reckoning withdraw GNSS only after that bootstrap.
 % gnss_only keeps GNSS and withdraws LiDAR: the same sensors as a GNSS and
 % vehicle-motion observer, for algorithm-level comparisons.
-% LidarChannel="overlapGradient" replaces registration with the
+% The current LiDAR channel is the
 % correspondence-free overlap gradient (overlapGradientConfig) against the same
 % projected map. Its source horizons are the matcher's: the same perception,
 % tilt, frame adapter, source window and odometry, built causally once before
@@ -23,10 +23,9 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
         options.Scenarios (1,:) string=["fused","gnss_outage","lidar_only","dead_reckoning"]
         options.MaximumFrames (1,1) double=Inf
         options.StartTime (1,1) double=8
-        options.LidarChannel (1,1) string {mustBeMember(options.LidarChannel,["registration","overlapGradient"])}="registration"
+        options.LidarChannel (1,1) string="overlapGradient"
     end
-    overlapChannel=options.LidarChannel=="overlapGradient";
-    setupVehicleLocalization();maxNumCompThreads(2);
+    setupVehicleLocalization();options.LidarChannel=activeLocalizationChannel(options.LidarChannel);maxNumCompThreads(2);
     metadata=jsondecode(fileread(fullfile(datasetFolder,'metadata.json')));
     assert(isfield(metadata,'schemaVersion') && metadata.schemaVersion==2 && metadata.sensorOnly, ...
         'VehicleLocalization:MeasurementOnlyRequired','Prepare a measurement-only dataset before localization.');
@@ -66,17 +65,16 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     p=perceptionConfig("Carla");cal=jsondecode(fileread(fullfile(datasetFolder,'calibration.json')));
     physicalCalibration=validateLidarFrameCalibration(cal.calibration);
     p.frameCalibration=validateLidarFrameCalibration(map.frameCalibration);
-    matcher=struct('perception',p,'registration',distributionRegistrationConfig(),'sourceWindow',localizationSourceWindowConfig());
-    matcher.registration.heightMode="xy";
+    sourceConfig=struct('perception',p,'sourceWindow',localizationSourceWindowConfig());
     store=matfile(fullfile(datasetFolder,'pointClouds.mat'));
     base=mncavFullObserverConfig();base.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     initial=initializeMncavVdbFromGnss(inputs.sensorTable,inputs,t(1));base.initialState=initial.state;
-    s=inputs.sensorTable;history=[];timings=zeros(n,3);accepted=false(n,1);directional=accepted;
+    s=inputs.sensorTable;timings=zeros(n,3);accepted=false(n,1);directional=accepted;
     summaries=cell(numel(options.Scenarios),1);
     sources={};sourceTimings=zeros(n,1);
-    if overlapChannel,[sources,sourceTimings]=buildSources();end
+    if any(~ismember(options.Scenarios,["dead_reckoning","gnss_only"])),[sources,sourceTimings]=buildSources();end
     for scenarioIndex=1:numel(options.Scenarios)
-        scenario=options.Scenarios(scenarioIndex);history=[];timings(:)=0;accepted(:)=false;directional(:)=false;
+        scenario=options.Scenarios(scenarioIndex);timings(:)=0;accepted(:)=false;directional(:)=false;
         data=struct('highRate',h);
         if ismember(scenario,["fused","gnss_outage","gnss_only"])
             valid=logical(s.gnssValid(idx));if scenario=="gnss_outage",valid(t>=35 & t<65)=false;end
@@ -86,14 +84,10 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
             assert(ismember(scenario,["lidar_only","dead_reckoning"]),'Unknown scenario.');
         end
         if ~ismember(scenario,["dead_reckoning","gnss_only"])
-            if overlapChannel
-                data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
-            else
-                data.lidarMatcher=@matchFrame;
-            end
+            data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
         end
         runTimer=tic;estimate=runFullLocalizationObserver(data,inputs.lateralDesign,base,LateralInputs=lateral);runtime=toc(runTimer);
-        if overlapChannel && ~ismember(scenario,["dead_reckoning","gnss_only"])
+        if ~ismember(scenario,["dead_reckoning","gnss_only"])
             accepted=estimate.diagnostics.lidarOverlap.available;directional(:)=false;
             timings=[sourceTimings,estimate.diagnostics.lidarOverlap.seconds,sourceTimings+estimate.diagnostics.lidarOverlap.seconds];
             timings(~isfinite(timings))=0;
@@ -104,9 +98,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
             'medianPerceptionMs',median(timings(:,1))*1000,'medianMatchingMs',median(timings(:,2))*1000, ...
             'medianFrameMs',median(timings(:,3))*1000,'runtimeSeconds',runtime, ...
             'summedFrameProcessingSeconds',sum(timings(:,3)),'sampledSystemCertified',false);
-        assert(overlapChannel || runtime>=sum(timings(:,3)),'VehicleLocalization:InvalidRuntimeClock', ...
-            'The full-run clock must include every matching callback.');
-        if overlapChannel,row.sourcePreparationSeconds=sum(sourceTimings);end
+        row.sourcePreparationSeconds=sum(sourceTimings);
         summaries{scenarioIndex}=row;disp(row);
         trajectory=array2table([frames,t,estimate.pose,accepted,directional,timings*1000], ...
             'VariableNames',{'frame','time','x','y','yaw','accepted','directionalAccepted', ...
@@ -125,7 +117,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     function [clouds,seconds]=buildSources()
         clouds=cell(n,1);seconds=zeros(n,1);window=[];
         for k=1:n
-            frameTimer=tic;cfg=matcher;cfg.perception.coarseProbabilityCloud.projectionRotation=inputs.tilt(:,:,idx(k));
+            frameTimer=tic;cfg=sourceConfig;cfg.perception.coarseProbabilityCloud.projectionRotation=inputs.tilt(:,:,idx(k));
             frame=store.pointClouds(1,frames(k));frame=struct('x',frame.x,'y',frame.y,'z',frame.z);
             frame=reframeLidarForCalibration(frame,physicalCalibration,cfg.perception.frameCalibration);
             current=perceiveCoarseProbabilityCloud(frame,cfg.perception);
@@ -133,16 +125,5 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
             seconds(k)=toc(frameTimer);
             if mod(k,100)==0 || k==n,fprintf('overlap sources %d/%d\n',k,n);end
         end
-    end
-    function result=matchFrame(k,seed,aid)
-        frameTimer=tic;cfg=matcher;cfg.perception.coarseProbabilityCloud.projectionRotation=inputs.tilt(:,:,idx(k));
-        local=registrationSupport.selectLocalProbabilityCloud(map,seed,100);frame=store.pointClouds(1,frames(k));
-        frame=struct('x',frame.x,'y',frame.y,'z',frame.z);
-        frame=reframeLidarForCalibration(frame,physicalCalibration,cfg.perception.frameCalibration);
-        [~,result,history]=localizeLidarFrame(frame,local,seed,t(k),cfg,history,motion(k,:),aid);
-        timings(k,:)=[result.perceptionSeconds,result.registrationSeconds,toc(frameTimer)];
-        accepted(k)=result.accepted;directional(k)=result.directionalAccepted;
-        large=intersect(fieldnames(result),{'currentProbabilityCloud','probabilityCloud'});result=rmfield(result,large);
-        if mod(k,100)==0 || k==n,fprintf('%s frame %d/%d accepted=%d\n',scenario,k,n,result.accepted);end
     end
 end

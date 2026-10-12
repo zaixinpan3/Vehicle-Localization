@@ -332,7 +332,14 @@ classdef fullObserverSupport
                 lateralInput (1,1) struct
                 cfg (1,1) struct=fullObserverConfig()
             end
-            h=data.highRate;t=data.lidar.time(:);
+            h=data.highRate;overlapChannel=isfield(data,'lidarOverlap');
+            if overlapChannel
+                assert(~isfield(data,'lidar'),'VehicleLocalization:AmbiguousLidarInput', ...
+                    'Supply one LiDAR channel when synchronizing inputs.');
+                t=data.lidarOverlap.time(:);
+            else
+                t=data.lidar.time(:);
+            end
             assert(all(diff(t)>0) && all(isfinite(t)),'VehicleLocalization:InvalidSyncClock','Invalid LiDAR clock.');
             selected=t>=h.time(1) & t<=h.time(end);t=t(selected);
             assert(numel(t)>=2,'VehicleLocalization:SyncCoverage','Need two covered localization frames.');
@@ -348,18 +355,24 @@ classdef fullObserverSupport
             for name=["lateralVelocity","sideSlipAngleRate"]
                 lateral.(name)=blend(lateralInput.(name),left,right,fraction);
             end
-            aligned.lidar=data.lidar;aligned.lidar.time=t;
-            aligned.lidar.pose=data.lidar.pose(selected,:);
-            aligned.lidar.valid=data.lidar.valid(selected);
-            aligned.lidar.information=data.lidar.information(:,:,selected);
-            for name=["frameReliability","directionReliability"]
-                if isfield(data.lidar,name),aligned.lidar.(name)=data.lidar.(name)(selected,:);end
+            if overlapChannel
+                aligned.lidarOverlap=data.lidarOverlap;aligned.lidarOverlap.time=t;
+                aligned.lidarOverlap.sources=data.lidarOverlap.sources(selected);
+                if isfield(data.lidarOverlap,'valid'),aligned.lidarOverlap.valid=data.lidarOverlap.valid(selected);end
+            else
+                aligned.lidar=data.lidar;aligned.lidar.time=t;
+                aligned.lidar.pose=data.lidar.pose(selected,:);
+                aligned.lidar.valid=data.lidar.valid(selected);
+                aligned.lidar.information=data.lidar.information(:,:,selected);
+                for name=["frameReliability","directionReliability"]
+                    if isfield(data.lidar,name),aligned.lidar.(name)=data.lidar.(name)(selected,:);end
+                end
+                if isfield(data.lidar,'evaluateResidual')
+                    originalIndex=find(selected);provider=data.lidar.evaluateResidual;
+                    aligned.lidar.evaluateResidual=@(k,pose)provider(originalIndex(k),pose);
+                end
+                if isfield(data.lidar,'residualModels'),aligned.lidar.residualModels=data.lidar.residualModels(selected);end
             end
-            if isfield(data.lidar,'evaluateResidual')
-                originalIndex=find(selected);provider=data.lidar.evaluateResidual;
-                aligned.lidar.evaluateResidual=@(k,pose)provider(originalIndex(k),pose);
-            end
-            if isfield(data.lidar,'residualModels'),aligned.lidar.residualModels=data.lidar.residualModels(selected);end
             motionWait=h.time(right)-t;gnssWait=zeros(size(t));gnssBracket=zeros(size(t));
             if isfield(data,'gnss')
                 g=data.gnss;

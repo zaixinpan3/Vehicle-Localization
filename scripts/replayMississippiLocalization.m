@@ -1,5 +1,6 @@
 function report = replayMississippiLocalization(mapFile, sensorFolder, outputFolder, mode, frameIndices,options)
-% replayMississippiLocalization Run every raw scan against one frozen map.
+% replayMississippiLocalization ARCHIVED standalone registration replay.
+% Retained for explicitly requested historical diagnostics, outside current localization.
 % recursive uses four-wheel speed and accepted D2D poses after one
 % GNSS initialization. referenceSeed resets the initial guess on every scan
 % and is a local-registration diagnostic, not an autonomous trajectory.

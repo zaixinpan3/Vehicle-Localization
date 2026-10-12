@@ -1,5 +1,15 @@
 # Vehicle localization observer
 
+The current dataset localization entries use **overlapGradient only**.
+The pose-registration branch was archived on 2026-10-12; see
+[the scope, historical version and recovery instructions](REGISTRATION_ARCHIVE.md).
+The registration sections below document historical experiments and shared
+geometry. They do not select an alternative current localization channel.
+New Mississippi runs use `runMncavFullObserverExperiment` without a matching
+replay prerequisite; Downtown and CARLA use their existing entries with the
+same overlap-only default.
+
+
 ## File layout
 
 The module has 19 MATLAB files. Entry points are files; shared helpers are
@@ -9,9 +19,9 @@ Stages with a single caller are local functions of that entry point.
 
 | File | Contents |
 | --- | --- |
-| `localizeLidarFrame.m` | Online frame entry: coarse perception, source window, registration and pose event |
+| `localizeLidarFrame.m` | Archived standalone frame-registration diagnostic |
 | `updateLocalizationSourceWindow.m` | Causal multi-scan source horizon on recorded odometry |
-| `registerSemanticProbabilityCloud.m` | Coarse-to-fine support-D2D registration, acceptance and residual-model export |
+| `registerSemanticProbabilityCloud.m` | Archived standalone pose-registration solver |
 | `prepareSemanticRegistrationGeometry.m` | Geometric, support and anisotropic D2D models: association, residuals, linearization |
 | `registrationSupport.m` | Registration utilities: projection, preparation, overlap, pose events, map selection and view conditioning, canonical pyramid, position-aided selection, soft association, line directions, relative height, residual primitives |
 | `runFullLocalizationObserver.m` | Production synchronous seven-state observer with GNSS and LiDAR |
@@ -153,17 +163,16 @@ uv run --offline --with rosbags --with numpy --with pandas --with pyproj python 
 
 ```matlab
 setupVehicleLocalization;
-report = runMncavCoarseLocalizationExperiment;
+report = runMncavFullObserverExperiment;
 validation = validateFullLocalizationObserver;
 ```
 
-The complete replay runs raw scans through `localizeLidarFrame` and its
-whole-pillar coarse perception entry only. The existing offline map stays
-fixed. Recursive D2D prediction uses four-wheel speed, gyro and lateral
-velocity plus accepted matches after a single initial pose. No per-frame
-reference pose resets the matcher. `runMncavFullObserverExperiment` can then
-rerun observer scenarios from those coarse matching results; it reads their
-MAT file to preserve timestamp, pose and information-matrix precision.
+The complete replay builds raw-scan whole-pillar coarse horizons using
+measured wheel/gyro/lateral odometry, then injects their overlap gradients at
+the observer prediction. The existing offline map stays fixed. No optimized
+LiDAR pose or registration acceptance enters the current dataset workflow.
+A historical `MatchingFolder` can supply acquisition/motion metadata only;
+new runs construct the horizons directly without that cache.
 
 The default experiment reads `/novatel/oem7/bestpos` in EPSG:32615 instead of
 ODOM XY. The recorded BESTPOS types 54, 55 and 56 are INS-assisted solutions;
@@ -179,7 +188,7 @@ not a surveyed physical installation transform.
 GNSS alignment uses bounded linear brackets of actual samples, not motion
 extrapolation. It records both endpoint timestamps and the required future
 sample wait. No interpolation crosses an invalid endpoint or a bracket longer
-than 0.15 s. LiDAR poses are unchanged at their native frame times. Motion and
+than 0.15 s. Overlap sources retain their native frame times. Motion and
 lateral values use the existing 100 Hz preparation, interpolated at the common
 frame time. Thus this experiment is offline synchronization; zero LiDAR
 processing delay does not mean zero alignment latency.
@@ -740,7 +749,7 @@ including its GNSS-only bias limitation and the numerically zero LPV gain.
 
 ## Registration helpers
 
-The registration entry points are `localizeLidarFrame` and
+The archived standalone registration entry points are `localizeLidarFrame` and
 `registerSemanticProbabilityCloud`; `prepareSemanticRegistrationGeometry`
 builds the geometric, support and anisotropic models. Shared methods are static
 methods of `registrationSupport`: cloud projection and preparation, Gaussian
@@ -796,7 +805,7 @@ peaks and slightly worse heading noise response. Use
 `validateMncavObserverParameters(folder,SteeringScale=220,Profiles=["tracking","mncav"])`
 to reproduce. See the [proof, results and limitations](../research/mncav_lidar_envelope_20260914/validation.md).
 
-## Full recorded MnCAV cascade
+## Archived recorded registration cascade
 
 `runMncavFullLocalizationExperiment` freshly synthesizes MnCAV lateral and
 global gains, runs the actual lateral observer, uses its velocity with
@@ -804,7 +813,7 @@ corrected gyro/speed for recursive raw-scan map matching, and executes the
 global observer. `auditMncavFullLocalizationExperiment` compares both outputs
 at identical scan timestamps and exports actual gains and error traces.
 
-The current full experiment is explicitly offline: accepted pose gaps up to
+This historical experiment was explicitly offline: accepted pose gaps up to
 one second are linearly reconstructed, and information gain-shaping lambda
 is set to .001 with fresh verification. Original matching information is
 preserved. Recorded gaps require future scans for some reconstructed inputs;
@@ -812,9 +821,10 @@ the 150 ms DDE setting is not demonstrated real-time latency. Same-drive map
 results show improved heading and worse position RMSE after global fusion.
 See the [complete experiment and limitations](../research/mncav_full_localization_20260914/validation.md).
 
-## Precomputed LiDAR with zero processing delay
+## Archived precomputed registration poses
 
-For the current offline experiment, run `runMncavZeroDelayExperiment`.
+The archived entry `runMncavZeroDelayExperiment` now refuses execution. Its
+pre-retirement implementation is recoverable at the commit in REGISTRATION_ARCHIVE.md.
 It computes and saves all 1,170 raw-frame matching results before starting
 the global observer. A separate cache records frame IDs, capture times,
 acceptance, original poses and information. Rejected frames have no valid

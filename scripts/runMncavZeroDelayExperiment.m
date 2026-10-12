@@ -1,4 +1,5 @@
 function report=runMncavZeroDelayExperiment(outputFolder,options)
+% ARCHIVED registration localization entry (2026-10-12).
 % runMncavZeroDelayExperiment Precompute all scans and replay at capture time.
 % Phase 1 completes and saves all real LiDAR matching results. Phase 2 loads
 % that cache and runs the existing continuous global observer with d=0.
@@ -10,6 +11,8 @@ function report=runMncavZeroDelayExperiment(outputFolder,options)
         options.InformationScale (1,1) double {mustBeFinite,mustBePositive}=.001
         options.MaximumOfflineGap (1,1) double {mustBeFinite,mustBePositive}=1
     end
+    error('VehicleLocalization:ArchivedRegistration', ...
+        'This registration entry is archived. Use the overlap-gradient dataset entry.');
     root=setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     if strlength(options.MapFile)==0,mapCfg=featureMapBuildConfig();options.MapFile=mapCfg.probabilityCloudPath;end
     sensorFolder=fullfile(root,'output','mississippi_20240607_120931_20260907','sensors');

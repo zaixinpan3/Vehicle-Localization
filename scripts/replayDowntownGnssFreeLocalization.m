@@ -4,7 +4,7 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
 % measured clouds/motion and a frozen map; evaluation reference is a separate
 % scorer. One externally supplied reference pose initializes the first query.
 % No reference trajectory is read here, including when initializing velocity.
-% LidarChannel="overlapGradient" replaces registration with the
+% The current LiDAR channel is the
 % correspondence-free overlap gradient (overlapGradientConfig) against the same
 % projected map; its source horizons are the matcher's (same deskew,
 % perception, source window and odometry), built causally before the run.
@@ -14,10 +14,10 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
         outputFolder
         lateralDesign
         options.InitialPosePacket (1,1) struct=struct()
-        options.LidarChannel (1,1) string {mustBeMember(options.LidarChannel,["registration","overlapGradient"])}="registration"
+        options.LidarChannel (1,1) string="overlapGradient"
     end
-    overlapChannel=options.LidarChannel=="overlapGradient";
-    setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
+    setupVehicleLocalization();options.LidarChannel=activeLocalizationChannel(options.LidarChannel);
+    if ~isfolder(outputFolder),mkdir(outputFolder);end
     protocol=downtownReferenceReplayConfig();metadata=jsondecode(fileread(fullfile(datasetFolder,'metadata.json')));
     assert(metadata.measurementOnly && ~metadata.gnssExported && ~metadata.clock.referencePoseUsed);
     inputs=prepareDowntownMotionInputs(datasetFolder,lateralDesign);save(fullfile(outputFolder,'motion_inputs.mat'),'inputs','-v7.3');
@@ -37,27 +37,23 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     Rmotion=[cos(motion(1,3)),-sin(motion(1,3));sin(motion(1,3)),cos(motion(1,3))];
     relativeXY=(motion(:,1:2)-motion(1,1:2))*Rmotion;
     deadReckoning=[prior(1:2)+relativeXY*R.',atan2(sin(prior(3)+motion(:,3)-motion(1,3)),cos(prior(3)+motion(:,3)-motion(1,3)))];
-    data=struct('highRate',h,'lidarMatcher',@matchFrame);history=[];timings=zeros(n,3);accepted=false(n,1);directional=false(n,1);candidates=nan(n,3);
+    data=struct('highRate',h);history=[];timings=zeros(n,3);accepted=false(n,1);directional=false(n,1);candidates=nan(n,3);
     p=perceptionConfig("Downtown");p.featureNames=protocol.featureNames;
-    matching=struct('perception',p,'registration',protocol.registration,'sourceWindow',protocol.sourceWindow);
+    matching=struct('perception',p,'sourceWindow',protocol.sourceWindow);
     sourcePreparationSeconds=0;
-    if overlapChannel
-        data=rmfield(data,'lidarMatcher');sources=cell(n,1);
-        for k=1:n
-            timerFrame=tic;frame=loadPointCloudFrame(fullfile(datasetFolder,'pointClouds.mat'),ids(k));frame=deskewDowntownMotionFrame(frame,inputs);
-            current=perceiveCoarseProbabilityCloud(frame,matching.perception);
-            [sources{k},history]=updateLocalizationSourceWindow(current,t(k),motion(k,:),history,matching.sourceWindow);
-            timings(k,1)=toc(timerFrame);
-            if mod(k,25)==0 || k==n,fprintf('overlap sources %s %d/%d\n',datasetFolder,k,n);end
-        end
-        sourcePreparationSeconds=sum(timings(:,1));
-        data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
+    sources=cell(n,1);
+    for k=1:n
+        timerFrame=tic;frame=loadPointCloudFrame(fullfile(datasetFolder,'pointClouds.mat'),ids(k));frame=deskewDowntownMotionFrame(frame,inputs);
+        current=perceiveCoarseProbabilityCloud(frame,matching.perception);
+        [sources{k},history]=updateLocalizationSourceWindow(current,t(k),motion(k,:),history,matching.sourceWindow);
+        timings(k,1)=toc(timerFrame);
+        if mod(k,25)==0 || k==n,fprintf('overlap sources %s %d/%d\n',datasetFolder,k,n);end
     end
+    sourcePreparationSeconds=sum(timings(:,1));
+    data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
     timer=tic;estimate=runFullLocalizationObserver(data,lateralDesign,cfg,LateralInputs=lat);runtime=toc(timer);
-    if overlapChannel
-        accepted=estimate.diagnostics.lidarOverlap.available;overlapSeconds=estimate.diagnostics.lidarOverlap.seconds;overlapSeconds(~isfinite(overlapSeconds))=0;
-        timings(:,2)=overlapSeconds;timings(:,3)=timings(:,1)+overlapSeconds;
-    end
+    accepted=estimate.diagnostics.lidarOverlap.available;overlapSeconds=estimate.diagnostics.lidarOverlap.seconds;overlapSeconds(~isfinite(overlapSeconds))=0;
+    timings(:,2)=overlapSeconds;timings(:,3)=timings(:,1)+overlapSeconds;
     assert(estimate.diagnostics.packetCounts.gnssValid==0 && all(ismember(estimate.diagnostics.mode,[0,2])));
     estimate.diagnostics.referenceUsed=true; % One initialization pose, separately audited.
     estimate.diagnostics.referenceUsedForInitialization=true;
@@ -82,13 +78,4 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
         'referencePoint',"front LiDAR origin; unsurveyed point transport",'informationQualifiedFrames',nnz(estimate.diagnostics.continuousInformationQualified));
     save(fullfile(outputFolder,'estimate.mat'),'estimate','cfg','report','-v7.3');
     f=fopen(fullfile(outputFolder,'summary.json'),'w');fprintf(f,'%s\n',jsonencode(report,PrettyPrint=true));fclose(f);disp(report);
-    function result=matchFrame(k,seed,aid)
-        assert(~aid.valid,'VehicleLocalization:UnexpectedGnss','GNSS must remain absent.');
-        timerFrame=tic;frame=loadPointCloudFrame(fullfile(datasetFolder,'pointClouds.mat'),ids(k));frame=deskewDowntownMotionFrame(frame,inputs);
-        local=registrationSupport.selectLocalProbabilityCloud(map,seed,matching.registration.localMapRadius);
-        [~,result,history]=localizeLidarFrame(frame,local,seed,t(k),matching,history,motion(k,:),aid);
-        timings(k,:)=[result.perceptionSeconds,result.registrationSeconds,toc(timerFrame)];accepted(k)=result.accepted;directional(k)=result.directionalAccepted;candidates(k,:)=result.poseXYTheta;
-        result=rmfield(result,intersect(fieldnames(result),{'currentProbabilityCloud','probabilityCloud'}));
-        if mod(k,25)==0 || k==n,fprintf('localization %s %d/%d accepted=%d\n',datasetFolder,k,n,result.accepted);end
-    end
 end

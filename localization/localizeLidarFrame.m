@@ -1,4 +1,6 @@
 function [measurement, result, history] = localizeLidarFrame(frame, localMapCloud, initialPose, timestamp, cfg, history, motionPose, positionAid)
+% ARCHIVED localization branch (2026-10-12): standalone historical diagnostic.
+% Current production tracking uses overlapGradient; see REGISTRATION_ARCHIVE.md.
 % localizeLidarFrame: Online pillar perception -> local D2D -> observer event.
 % localMapCloud is one selected/cached window from temporalMapToProbabilityCloud.
 % initialPose is [mapX mapY yaw] in meters/radians, timestamp is acquisition

@@ -5,8 +5,10 @@ and pole-like features. Perception now has a shared XY-pillar
 front end: online localization consumes coarse Gaussian distributions, while
 offline mapping independently reconstructs detailed structural candidates and
 validates their individual points.
-The runtime contains only current implementations. Regression comparisons read
-frozen output data; they never select another executable implementation.
+Current dataset localization uses only the overlap-gradient LiDAR channel.
+The pose-registration localization branch is archived; see
+[the retirement and recovery record](localization/REGISTRATION_ARCHIVE.md).
+Low-level historical diagnostics and shared geometry remain available.
 
 ## Pipeline
 
@@ -20,7 +22,8 @@ LiDAR XYZ points, optionally organized (vehicle coordinates)
        |
        +-> online (default)
        |    buildCoarseSemanticProbabilityCloud: empirical means/covariances
-       |    localizeLidarFrame: semantic D2D -> accepted observer pose event
+       |    updateLocalizationSourceWindow: measured-motion coarse horizons
+       |    evaluateOverlapGradient -> matched correction of the global observer
        |
        +-> offline
             refinePerceptionCandidates: independent detailed geometry + point decisions
@@ -376,7 +379,7 @@ are explicit:
 For the complete MnCAV localization experiment, first export BESTPOS with
 `scripts/prepareMncavBestpos.py`, calibrate the relative output point with
 `scripts/calibrateMncavBestposOutputPoint.py` on the separate 12-11-24 drive,
-then run `runMncavCoarseLocalizationExperiment` after
+then run `runMncavFullObserverExperiment` after
 setup. BESTPOS and LiDAR both supply approximately 10 Hz measurements. The
 current observer updates once per synchronized LiDAR frame, without inter-frame
 measurement-pose transport. The recorded BESTPOS types are INS assisted, not
@@ -386,17 +389,14 @@ with steering/IMU compensation. No vehicle-speed or Twist alternative is
 available. Export `wheel_speed_report.csv`, `imu.csv` and `steering.csv` using
 `scripts/extractVehicleReplaySensors.py`; the current full experiment reads
 `output/mncav_wheel_only_20260916/sensors` and writes
-`output/mncav_coarse_localization_20260924b`. All 1170 scans use fresh whole-pillar
-coarse perception and recursive D2D on the canonical map pyramid; online
+`output/mncav_overlap_localization/observer`. Fresh whole-pillar coarse
+horizons are built directly from scans and measured motion and injected through
+`overlapGradient`; a registration replay is no longer required. Online
 localization never runs point-level fine refinement. The offline map remains
-fixed. Missing or expired wheel input is an explicit
-preparation error. Use `validateFullLocalizationObserver` for the associated
-checks. The [current production record](research/canonical_pyramid_20260924/README.md)
-gives fused position RMSE 5.96 cm over 1169 outputs (5.42 cm after the
-initialization transient, heading 0.39 deg), GNSS-only 6.33 cm and LiDAR-only
-14.83 cm (14.24 cm after the transient), with closed-loop GNSS-aided hypothesis
-selection and the lateral velocity transported to the INSPVA output point
-([record](research/output_point_transport_20260924/README.md)). The earlier
+fixed. Missing or expired wheel input is an explicit preparation error.
+Use `validateFullLocalizationObserver` for the associated checks.
+Historical accuracy reports describe their original configurations and do not
+select the current localization route. The earlier
 [coarse localization report](research/mncav_coarse_localization_20260918/README.md)
 (10.3445 cm fused, 8.8252 cm GNSS-only) predates GNSS aiding and the output-point
 transport. The [aligned BESTPOS report](research/mncav_bestpos_alignment_20260917/README.md)
@@ -454,7 +454,8 @@ query/export consistency on Mississippi frames 260--289.
 `showMississippiPerception(260,"","coarseProbabilityCloud")` displays the complete
 cloud with candidate pillar members colored; `"offline"` displays accepted fine points.
 
-For D2D, cache the canonical field as a Gaussian cloud:
+For an explicitly requested archived D2D diagnostic (outside current localization),
+cache the canonical field as a Gaussian cloud:
 
 ```matlab
 mapCloud = temporalMapToProbabilityCloud(probabilityCloudMap);

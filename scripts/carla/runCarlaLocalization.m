@@ -1,4 +1,5 @@
 function report=runCarlaLocalization(datasetFolder,mapFile,outputFolder,options)
+% ARCHIVED registration localization entry (2026-10-12).
 % runCarlaLocalization Recursive LiDAR map matching on a prepared CARLA drive.
 % Every sweep runs the online coarse perception of perceptionConfig("Carla"),
 % the causal source window and geometric D2D against the fixed map through
@@ -18,6 +19,8 @@ function report=runCarlaLocalization(datasetFolder,mapFile,outputFolder,options)
         options.MapCropRadius (1,1) double=100
         options.PerceptionConfig (1,1) struct=struct()
     end
+    error('VehicleLocalization:ArchivedRegistration', ...
+        'This registration entry is archived. Use the overlap-gradient dataset entry.');
     setupVehicleLocalization();
     if ~isfolder(outputFolder),mkdir(outputFolder);end
     poseTable=readtable(fullfile(datasetFolder,'poses.csv'),'TextType','string');

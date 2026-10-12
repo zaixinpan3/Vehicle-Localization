@@ -1,63 +1,12 @@
-function report=runMncavCoarseLocalizationExperiment(outputFolder,options)
-% runMncavCoarseLocalizationExperiment Replay raw scans and fuse coarse poses.
-% The existing offline semantic map is fixed. Every online scan is classified
-% only as whole XY pillars, then matched by geometric D2D. Recursive matching
-% uses wheel/gyro/lateral motion and accepted matches after its first seed.
-% The observer consumes validated full or directional pose information;
-% Route A preserves nullspaces, and rejected matches supply no correction.
+function report=runMncavCoarseLocalizationExperiment(outputFolder,options) %#ok<STOUT,INUSD>
+% runMncavCoarseLocalizationExperiment Archived registration experiment.
+% Historical implementation: Git 2d6dcf52e94c391a9538e9c9be59751d85c08cae.
+% Current entry: runMncavFullObserverExperiment (overlapGradient only).
     arguments
         outputFolder (1,1) string="output/mncav_coarse_localization"
         options.MapFile (1,1) string=""
         options.FrameCalibration (1,1) struct=struct()
     end
-    setupVehicleLocalization();
-    if ~isfolder(outputFolder),mkdir(outputFolder);end
-    mapCfg=featureMapBuildConfig();mapFile=mapCfg.probabilityCloudPath;
-    if strlength(options.MapFile)>0,mapFile=options.MapFile;end
-    sensorFolder="output/mncav_wheel_only_20260916/sensors";
-    parameterFile="";
-    [prepared,~,~]=prepareMncavObserverReplay(sensorFolder,parameterFile,table(),0,IncludeOdom=false);
-    saved=struct('design',designLateralObserverGains(lateralObserverConfig()));
-    lateral=runLateralVelocityObserver(prepared.highRate,saved.design,lateralObserverConfig("mncav"));
-    h=prepared.highRate;
-    motion=struct('time',h.time,'longitudinalSpeed',h.longitudinalSpeed, ...
-        'lateralVelocity',lateral.lateralVelocity,'yawRate',h.yawRate, ...
-        'longitudinalVelocitySource',"four_wheel",'clockModelId',prepared.clockModelId);
-    % Profile a separate representative call to verify the actual call path.
-    % Profiling and disk loading are excluded from full-sequence timing.
-    map=load(mapFile,'cloud');mapCfg=featureMapBuildConfig();
-    root=fileparts(fileparts(mfilename('fullpath')));
-    frame=loadPointCloudFrame(fullfile(root,'data',mapCfg.pointCloudMatPath),1);
-    poses=readFramePoseTable(fullfile(root,'data',mapCfg.poseMatchCsvPath),1);
-    pose=poseSupport.poseRowToPlanarPose(poses(1,:));
-    tilt=prepareMississippiLidarTilt(poses.lidar_stamp_sec,sensorFolder);
-    cfg=struct('perception',perceptionConfig("Mississippi"),'registration',distributionRegistrationConfig());
-    if ~isempty(fieldnames(options.FrameCalibration)),cfg.perception.frameCalibration=validateLidarFrameCalibration(options.FrameCalibration);end
-    cfg.perception.coarseProbabilityCloud.projectionRotation=tilt.rotation(:,:,1);
-    profile clear;profile on;
-    profileCleanup=onCleanup(@()profile('off'));
-    localizeLidarFrame(frame,map.cloud,pose,0,cfg);
-    profile off;trace=profile('info');clear profileCleanup;
-    names=string({trace.FunctionTable.FunctionName});
-    assert(any(contains(names,'perceiveCoarseProbabilityCloud')) && any(contains(names,'perceiveFrame')), ...
-        'Expected the coarse perception entry in the executed call trace.');
-    forbidden=["refinePerceptionCandidates","buildFineFeatureMasks","buildSavedFeatureProbabilityCloud"];
-    assert(~any(contains(names,forbidden)),'Fine or saved point-feature processing was executed.');
-    audit=struct('coarseEntryExecuted',true,'fineRefinementCalls',0, ...
-        'scope',"One independent frame-1 localizeLidarFrame call; same entry used on every replay scan", ...
-        'functionNames',names);
-    save(fullfile(outputFolder,'call_path_audit.mat'),'trace','audit');
-    writeJson(fullfile(outputFolder,'call_path_audit.json'),audit);
-    profile clear;clear trace map frame;
-    matchingFolder=fullfile(outputFolder,'matching');
-    matching=replayMississippiLocalization(mapFile,sensorFolder,matchingFolder,"recursive",[],MotionInputs=motion, ...
-        FrameCalibration=cfg.perception.frameCalibration);
-    observer=runMncavFullObserverExperiment(fullfile(outputFolder,'observer'),MatchingFolder=matchingFolder);
-    report=struct('matching',matching.summary,'observer',observer,'callPathAudit',rmfield(audit,'functionNames'));
-    writeJson(fullfile(outputFolder,'summary.json'),report);
-end
-
-function writeJson(path,value)
-    fid=fopen(path,'w');assert(fid>=0);cleanup=onCleanup(@()fclose(fid));
-    fprintf(fid,'%s\n',jsonencode(value,PrettyPrint=true));
+    error('VehicleLocalization:ArchivedRegistration', ...
+        'This registration experiment is archived. Run runMncavFullObserverExperiment with overlapGradient.');
 end
