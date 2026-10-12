@@ -111,14 +111,16 @@ eigenvalues; the runtime repeats it before use.
 `scripts/synthesizeMncavThetaDesign.m` writes `config/mncavThetaDesign.json`;
 `mncavFullObserverConfig()` loads it and refuses it when any declared input
 has changed. `theta` is the single tuning parameter (`Theta` option, default
-3): it was selected from {1, 1.5, 2, 3, 4} on frames 1--700 of the 2024-06-07
-recording with the position and heading objective of 2026-10-10 and checked
-on frames 701--1169. At `theta = 3` the LiDAR position residual drives
-position, velocity and acceleration with 152 1/s, 567 1/s^2 and 672 1/s^3,
-the heading gain is 2.56 1/s and the GNSS chain gains are 48, 181 and 215
+4): it was selected from {1, 1.5, 2, 3, 4, 5, 6} on frames 1--700 of the
+2024-06-07 recording with the position and heading objective of 2026-10-10
+over every production scenario (GNSS + LiDAR, LiDAR only, GNSS only, GNSS,
+LiDAR and both outages, alternating; user decision of 2026-10-11) and checked
+on frames 701--1169. At `theta = 4` the LiDAR position residual drives
+position, velocity and acceleration with 202 1/s, 1009 1/s^2 and 1593 1/s^3,
+the heading gain is 3.41 1/s and the GNSS chain gains are 65, 322 and 509
 (before the GNSS weight Wg). The rotated body-velocity residual drives
-position, velocity and acceleration with 0.23, 0.75 and 1.02 (scaling
-theta^-2, theta^-1, 1); the acceleration residual enters with -0.07, -0.11 and
+position, velocity and acceleration with 0.13, 0.56 and 1.02 (scaling
+theta^-2, theta^-1, 1); the acceleration residual enters with -0.04, -0.08 and
 -0.17. The gyro and the lateral observer also enter as inputs (heading rate
 and course rate). LiDAR
 information is filtered in the normalized pose units (`poseScales =

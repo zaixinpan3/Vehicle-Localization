@@ -11,14 +11,16 @@ function cfg=mncavFullObserverConfig(options)
 % are solved, not set a priori, inside the paper's framework). theta is the
 % single tuning parameter. It was selected on the tuning segment of the
 % 2024-06-07 recording with the position and heading objective of 2026-10-10
-% (research/theta_framework_20261011). The LiDAR and GNSS information scales
+% extended to every production scenario, GNSS only and the sensor outages
+% included (user decision of 2026-10-11; research/theta_framework_20261011).
+% The LiDAR and GNSS information scales
 % are measurement-weighting parameters (damping of the Gauss-Newton step),
 % not observer gains; LiDAR information is filtered in the normalized pose
 % units [m m ell*rad] of the design.
     arguments
         options.LoadDesign (1,1) logical=true
         options.DesignOverride (1,1) struct=struct()
-        options.Theta (1,1) double {mustBeReal,mustBeFinite}=3
+        options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
     cfg=fullObserverConfig();cfg.kind="mncav-theta-framework-v1";
@@ -36,7 +38,7 @@ function cfg=mncavFullObserverConfig(options)
         'headingLengthM',"heading error weighted by a 10 m landmark range (error scale of the 2026-10-11 synthesis)", ...
         'operatingPoints',"mean-square objective at LiDAR without GNSS, LiDAR with GNSS (weight 0.5), LiDAR translation strength 0.05 with GNSS, and dead reckoning without LiDAR and GNSS over a 10 s horizon (the outage length of the synthetic cascade validation)", ...
         'normalization',"lambda = 1 and P >= I, as in the 2026-10-03 reproduction of the paper's design", ...
-        'theta',"runtime theta 3 selected on frames 1-700 of the 12-09-31 drive from {1,1.5,2,3,4} with the position and heading objective of 2026-10-10, checked on frames 701-1169 (research/theta_framework_20261011)");
+        'theta',"runtime theta 4 selected on frames 1-700 of the 12-09-31 drive from {1,1.5,2,3,4,5,6} with the position and heading objective of 2026-10-10 over every production scenario (GNSS + LiDAR, LiDAR only, GNSS only, GNSS, LiDAR and both outages, alternating; user decision 2026-10-11), checked on frames 701-1169 (research/theta_framework_20261011)");
     for name=string(fieldnames(options.DesignOverride)).'
         cfg.thetaFramework.(name)=options.DesignOverride.(name);
     end
