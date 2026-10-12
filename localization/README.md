@@ -68,35 +68,65 @@ uncertified intervals. A continuous certificate is not relabeled as a proof
 for every sampling period. Numerical consistency is checked against the
 continuous ODE with decreasing steps, without a second gain-design route.
 
-### Gains solved from the ISS LMI
+### MnCAV gains in the theta framework of the source paper
 
-The MnCAV gains are not set by hand (user decision of 2026-10-11). The
-comparison matrix of the continuous ISS theorem is affine in the products
-`y_i = c_i k_i` of the diagonal Lyapunov weights and the gains (the `Y = P K`
-change of variables), so the gains are unknowns of an SDP.
-`fullObserverSupport.synthesizeFullObserverGains` solves, for a declared
-decay rate `alpha`, the gains `[kp,kv,ka,kpsi]` and the GNSS position gain
-that minimize the ISS radius bound `(2/alpha) sqrt(sum_i c_i dbar_i^2)`,
-where `dbar_i` are the gain-scaled noise bounds of the channels (LiDAR pose,
-GNSS, body velocity, acceleration, gyro, jerk residual) and the weights are
-normalized by declared error scales. The decay must hold with sufficient
-LiDAR information and no GNSS, and with weak LiDAR translation (strength 0.05)
-and GNSS weight at least 0.5; the second scenario fixes the GNSS gain.
-`scripts/synthesizeMncavObserverGains.m` solves the program for the inputs
-declared in `mncavFullObserverConfig` and writes
-`config/mncavSynthesizedGains.json`; `mncavFullObserverConfig()` loads that
-file and refuses it when any declared input has changed. The decay rate is
-the single design parameter, in the role of the source paper's `theta`; it
-was selected on frames 1--700 of the 2024-06-07 recording with the objective
-of the 2026-10-10 search (position and heading, LiDAR only and GNSS + LiDAR,
-both LiDAR channels) and checked on frames 701--1169
-(`research/gain_synthesis_20261011`). Current values: `alpha = 3`,
-`[kp,kv,ka,kpsi] = [19.2, 3.76, 3.32, 14.2]`, GNSS position gain 7.69,
-verified decay rate 3.78. The LiDAR and GNSS information scales (64 and 16)
-are the damping of the Gauss--Newton step, not observer gains. The former
-hand-tuned set `[80,4,12,1]` and the calibrated profile `[48,4,12,2]` were
-removed; the conditional LiDAR error calibration remains available through
-`cfg.lidar.errorCalibration`.
+The MnCAV observer is the multi-output high-gain observer of Bessafa et al.
+(Automatica 188, 2026, Section 4) with this project's model and outputs (user
+decisions of 2026-10-11: gains are solved, not set a priori, and the paper's
+framework is kept). With the normalized error `e = [px vx ax py vy ay ell*psi]`
+(`ell` = 10 m) and `T(theta) = diag(theta^[1 2 3 1 2 3 1])`:
+
+* main outputs (LiDAR pose `[p; ell*psi]`, GNSS position): `L = T(theta) K`,
+  `K = kappaL P^-1 C'` and `LG = T(theta) kappaG P^-1 Cp'`. The matched form
+  `Y = kappa C` makes the injection dissipative for every LiDAR information
+  weight S and GNSS weight Wg;
+* extra outputs (body velocity and acceleration rotated by the estimated
+  heading): `M = T(theta) N / theta^3`, `N = P^-1 Z'`;
+* `P = blkdiag(Pc,Pc,ppsi)` (rotation invariant), `lambda = 1`, `P >= I`.
+
+`fullObserverSupport.synthesizeThetaFrameworkDesign` solves LMI (55) on the
+paper's vertex set `V^sigma` (`sigma = 1`): the extra-output unit Jacobians at
+{0,1} (the main outputs alone must stabilize the error, Remark 6), their
+heading couplings, the LiDAR information bounds of `cfg.iss`, two GNSS
+scenarios with the lever arm, and the course-rate term `q^2 v + 2 q J a` of
+the jerk model through the vertices of its scaled coefficients. That term is
+linear in the error for the measured course rate, so it enters the LMI exactly
+and the Lipschitz part of condition (56) vanishes (`theta >= sigma`). With the
+paper's Lipschitz treatment (`kf = 0.816`) the chain alone already needs
+`lambda_max(P) >= 5`, hence `theta > 8.2`, and the smallest feasible theta of
+the full vertex set (about 24) gives gains that diverge at the 10 Hz frame rate
+(`research/theta_framework_20261011`). The paper fixes no objective: K and N
+minimize the summed mean-square position and heading error bound
+`trace(G'PG)` at four operating points for the declared noise scales: LiDAR,
+LiDAR with GNSS, weak LiDAR translation with GNSS, and dead reckoning (neither
+LiDAR nor GNSS; the position error is taken over a declared 10 s horizon
+through a leak on the position of that point only). Without the dead-reckoning
+point the solved extra-output gain N is numerically zero (the main outputs
+must stabilize alone, and under white noise LiDAR-differenced velocity beats
+the 0.256 m/s velocity scale), and a 20 s outage of LiDAR and GNSS drifts by
+up to 43 m; with it the rotated body velocity carries the chains through
+outages.
+`fullObserverSupport.verifyThetaFrameworkDesign` rechecks all 768 vertices by
+eigenvalues; the runtime repeats it before use.
+`scripts/synthesizeMncavThetaDesign.m` writes `config/mncavThetaDesign.json`;
+`mncavFullObserverConfig()` loads it and refuses it when any declared input
+has changed. `theta` is the single tuning parameter (`Theta` option, default
+3): it was selected from {1, 1.5, 2, 3, 4} on frames 1--700 of the 2024-06-07
+recording with the position and heading objective of 2026-10-10 and checked
+on frames 701--1169. At `theta = 3` the LiDAR position residual drives
+position, velocity and acceleration with 152 1/s, 567 1/s^2 and 672 1/s^3,
+the heading gain is 2.56 1/s and the GNSS chain gains are 48, 181 and 215
+(before the GNSS weight Wg). The rotated body-velocity residual drives
+position, velocity and acceleration with 0.23, 0.75 and 1.02 (scaling
+theta^-2, theta^-1, 1); the acceleration residual enters with -0.07, -0.11 and
+-0.17. The gyro and the lateral observer also enter as inputs (heading rate
+and course rate). LiDAR
+information is filtered in the normalized pose units (`poseScales =
+[1;1;1/ell]`); the information scales (64 and 16) remain the damping of the
+Gauss--Newton step. The earlier gain synthesis at a declared decay rate
+(`alpha`, 2026-10-11) was replaced. The comparison-matrix certificate remains
+for the generic `fullObserverConfig` and for declared-gain test
+configurations.
 
 ## Current synchronous runtime
 

@@ -1,51 +1,56 @@
 function cfg=mncavFullObserverConfig(options)
-% mncavFullObserverConfig MnCAV full-observer configuration with LMI-solved gains.
-% The observer gains [kp,kv,ka,kpsi] and the GNSS position gain are not set
-% by hand. They are solved from the continuous seven-state ISS LMI
-% (fullObserverSupport.synthesizeFullObserverGains) for the declared ISS
-% domain, noise scales, error scales and decay rate below by
-% scripts/synthesizeMncavObserverGains.m, which writes
-% config/mncavSynthesizedGains.json. This function loads that file and
-% refuses it when any declared input has changed (user decision of
-% 2026-10-11: no a-priori gains). The LiDAR and GNSS information scales are
-% declared measurement-weighting parameters, the damping of the Gauss-Newton
-% step, not observer gains. The decay rate is the single design parameter;
-% it was selected on the tuning segment of the 2024-06-07 recording
-% (research/gain_synthesis_20261011), as theta is selected in the source
-% paper's design.
+% mncavFullObserverConfig MnCAV full observer in the theta framework of the source paper.
+% The observer is the multi-output high-gain observer of Bessafa et al.
+% (Automatica 188, 2026) with this project's model and outputs: the
+% main-output gain is L = T(theta) K, the extra-output gain is
+% M = T(theta) N / theta^3, and K and N are solved from the paper's LMI (55)
+% (fullObserverSupport.synthesizeThetaFrameworkDesign) for the declared inputs
+% below by scripts/synthesizeMncavThetaDesign.m, which writes
+% config/mncavThetaDesign.json. This function loads that file and refuses it
+% when any declared input has changed (user decisions of 2026-10-11: gains
+% are solved, not set a priori, inside the paper's framework). theta is the
+% single tuning parameter. It was selected on the tuning segment of the
+% 2024-06-07 recording with the position and heading objective of 2026-10-10
+% (research/theta_framework_20261011). The LiDAR and GNSS information scales
+% are measurement-weighting parameters (damping of the Gauss-Newton step),
+% not observer gains; LiDAR information is filtered in the normalized pose
+% units [m m ell*rad] of the design.
     arguments
-        options.LoadSynthesizedGains (1,1) logical=true
-        options.SynthesisOverride (1,1) struct=struct()
+        options.LoadDesign (1,1) logical=true
+        options.DesignOverride (1,1) struct=struct()
+        options.Theta (1,1) double {mustBeReal,mustBeFinite}=3
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=fullObserverConfig();cfg.kind="mncav-continuous-iss-v1";
+    cfg=fullObserverConfig();cfg.kind="mncav-theta-framework-v1";
     cfg.gnss.outputPoint=jsondecode(fileread(fullfile(here,'mncavBestposOutputPoint.json')));
-    cfg.lidar.gainInformationScale=64;   % 1/m^2: prior pose uncertainty 0.125 m in the damped Gauss-Newton step
+    cfg.lidar.gainInformationScale=64;   % 1/m^2 in normalized pose units: prior 0.125 m (0.0125 rad)
     cfg.gnss.gainInformationScale=16;    % 1/m^2: prior 0.25 m
-    cfg.synthesis=struct('decayRate',3,'designMargin',.01, ...
+    cfg.thetaFramework=struct('sigma',1,'headingLengthM',10, ...
         'noise',struct('lidarPositionM',.0279,'lidarHeadingRad',.00211,'gnssPositionM',.23, ...
             'velocityMps',.256,'accelerationMps2',.233,'gyroRadps',.0018,'jerkMps3',.05), ...
-        'errorScales',struct('positionM',1,'headingLengthM',10,'velocitySeconds',1,'accelerationSeconds2',1), ...
-        'weakPositionStrength',.05,'minimumGnssWeight',.5,'solver',"sedumi");
-    cfg.synthesis.provenance=struct( ...
-        'noise',"lidar: conditional registration error second moments of the first 60 s (2026-10-02 calibration study, reference variance 7.81e-4 m^2 and 4.47e-6 rad^2); gnss: BESTPOS reported sigma median on the 12-09-31 drive; velocity: lateral-velocity RMSE of the adopted MnCAV identification on the evaluation drive (mncavVehicleParameters.json); acceleration and gyro: validation RMSE of the fixed IMU corrections on the 12-11-24 drive (mncavInputCorrections.json); jerk: declared bound above the 0.014 m/s^3 residual of the accelerating-turn maneuver", ...
-        'errorScales',"position in metres; heading weighted by a 10 m landmark range; velocity and acceleration by one second of integration", ...
-        'scenarios',"LiDAR sufficient without GNSS, and LiDAR translational strength 0.05 with GNSS weight at least 0.5 (fixes the GNSS gain)", ...
-        'decayRate',"single design parameter, selected on frames 1-700 of the 12-09-31 drive and checked on frames 701-1169 (research/gain_synthesis_20261011)");
-    for name=string(fieldnames(options.SynthesisOverride)).'
-        cfg.synthesis.(name)=options.SynthesisOverride.(name);
+        'weakPositionStrength',.05,'minimumGnssWeight',.5,'nominalGnssWeight',.5,'gnssCouplingSplit',.5, ...
+        'operatingPoints',["lidar","lidarGnss","weakLidarGnss","deadReckoning"],'deadReckoningHorizonS',10, ...
+        'lambda',1,'margin',1e-7,'solver',"sedumi");
+    cfg.thetaFramework.provenance=struct( ...
+        'noise',"lidar: conditional registration error second moments of the first 60 s (2026-10-02 calibration study); gnss: BESTPOS reported sigma median on the 12-09-31 drive; velocity: lateral-velocity RMSE of the adopted MnCAV identification (mncavVehicleParameters.json); acceleration and gyro: validation RMSE of the fixed IMU corrections on the 12-11-24 drive (mncavInputCorrections.json); jerk: declared bound above the 0.014 m/s^3 residual of the accelerating-turn maneuver", ...
+        'headingLengthM',"heading error weighted by a 10 m landmark range (error scale of the 2026-10-11 synthesis)", ...
+        'operatingPoints',"mean-square objective at LiDAR without GNSS, LiDAR with GNSS (weight 0.5), LiDAR translation strength 0.05 with GNSS, and dead reckoning without LiDAR and GNSS over a 10 s horizon (the outage length of the synthetic cascade validation)", ...
+        'normalization',"lambda = 1 and P >= I, as in the 2026-10-03 reproduction of the paper's design", ...
+        'theta',"runtime theta 3 selected on frames 1-700 of the 12-09-31 drive from {1,1.5,2,3,4} with the position and heading objective of 2026-10-10, checked on frames 701-1169 (research/theta_framework_20261011)");
+    for name=string(fieldnames(options.DesignOverride)).'
+        cfg.thetaFramework.(name)=options.DesignOverride.(name);
     end
-    cfg.iss.decayRate=cfg.synthesis.decayRate;
+    cfg.lidar.poseScales=[1;1;1/cfg.thetaFramework.headingLengthM];
     cfg.gains=[];cfg.gnss.positionGain=[];cfg.gainSource="unsolved";
-    if options.LoadSynthesizedGains
-        path=fullfile(here,'mncavSynthesizedGains.json');
-        assert(isfile(path),'VehicleLocalization:MissingSynthesizedGains', ...
-            'config/mncavSynthesizedGains.json is missing; run synthesizeMncavObserverGains.');
+    if options.LoadDesign
+        path=fullfile(here,'mncavThetaDesign.json');
+        assert(isfile(path),'VehicleLocalization:MissingThetaDesign', ...
+            'config/mncavThetaDesign.json is missing; run synthesizeMncavThetaDesign.');
         stored=jsondecode(fileread(path));
-        assert(isequaln(jsondecode(jsonencode(cfg.synthesis)),stored.inputs),'VehicleLocalization:StaleSynthesizedGains', ...
-            'config/mncavSynthesizedGains.json was solved for different synthesis inputs; rerun synthesizeMncavObserverGains.');
-        cfg.gains=stored.gains(:).';cfg.gnss.positionGain=stored.gnssPositionGain;
-        cfg.gainSource="config/mncavSynthesizedGains.json";
-        cfg.gnss.positionGainDesign="Solved with the LiDAR gains from the ISS LMI (weak-translation scenario with GNSS)";
+        assert(isequaln(fullObserverSupport.thetaFrameworkInputs(cfg),stored.inputs),'VehicleLocalization:StaleThetaDesign', ...
+            'config/mncavThetaDesign.json was solved for different declared inputs; rerun synthesizeMncavThetaDesign.');
+        cfg.hgo=struct('theta',options.Theta,'sigma',stored.sigma,'ell',cfg.thetaFramework.headingLengthM, ...
+            'P',stored.P,'kappaL',stored.kappaL,'kappaG',stored.kappaG,'Z',stored.Z,'lambda',stored.lambda);
+        cfg.gainSource="config/mncavThetaDesign.json";
     end
 end

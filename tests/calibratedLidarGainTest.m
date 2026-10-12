@@ -105,7 +105,11 @@ function [data,lateral,cfg]=posePackets()
 end
 
 function cfg=config()
-    cfg=mncavFullObserverConfig();cfg.lidar=rmfield(cfg.lidar,'gainInformationScale');
+    % Declared-gain MnCAV parameters (the theta-framework design filters
+    % geometric information in normalized units; the calibrated channel uses
+    % physical metres and radians).
+    cfg=mncavFullObserverConfig(LoadDesign=false);cfg.gains=[4,4,12,4];cfg.gnss.positionGain=4;cfg.lidar.poseScales=[1;1;1];
+    cfg.lidar=rmfield(cfg.lidar,'gainInformationScale');
     cfg.lidar.errorCalibration=struct('kind',"conditional-pose-second-moment-v1", ...
         'referenceVariance',[.01;.001],'coefficients',[.01,1;.001,1]);
     cfg.iss.minimumPositionStrength=.4;cfg.iss.minimumHeadingStrength=.1;

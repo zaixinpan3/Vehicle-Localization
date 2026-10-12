@@ -188,11 +188,11 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         data.lidarOverlap=struct('map',sourceCache.fixed,'sources',{sourceClouds},'config',overlapConfig);
     end
     % Old timestamp-warped trajectories are not paired with corrected epochs.
-    % Isolate geometry/uncertainty at the old gain before testing matched gains.
-    controlRows=cell(0,8);controlNames=["unaligned","uncertainty_only","geometry_only","aligned_gain1","aligned_gain4"];
+    % The GNSS gain belongs to the theta-framework design; the controls vary
+    % only the output-point geometry and its uncertainty.
+    controlRows=cell(0,8);controlNames=["unaligned","uncertainty_only","geometry_only","aligned"];
     for k=1:numel(controlNames)
         controlCfg=cfg;
-        if controlNames(k)~="aligned_gain4",controlCfg.gnss.positionGain=1;end
         if ismember(controlNames(k),["unaligned","uncertainty_only"])
             controlCfg.gnss.outputPoint.bodyOffset=[0;0];
         end

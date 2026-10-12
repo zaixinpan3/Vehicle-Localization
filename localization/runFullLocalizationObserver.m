@@ -72,6 +72,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     continuous=fullObserverSupport.designFullObserverGains(cfg);
     lidarInjection=continuous.lidarMatched;
+    thetaFramework=isfield(continuous,'framework') && continuous.framework=="theta";
     poseJacobian=zeros(3,7);poseJacobian(1,1)=1;poseJacobian(2,4)=1;poseJacobian(3,7)=1;
     design=struct('kind',"continuous-iss-implicit",'continuousDesign',continuous, ...
         'lidarMatched',lidarInjection,'lidarJumpCertificate',"Implicit locally affine fixed-metric contraction", ...
@@ -118,16 +119,23 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             [gnssPosition(k,:),gnssInformation(:,:,k)]=fullObserverSupport.correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),yaw,alignment);
             I=gnssInformation(:,:,k);Wg=I/(I+cfg.gnss.gainInformationScale*eye(2));Wg=(Wg+Wg.')/2;
         end
-        K=cfg.gnss.positionGain*Wg;
-        R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
-        velocity=R*[speed;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
-        A=[(1+dt*cfg.gains(2))*eye(2),-dt*eye(2); ...
-            -dt*q^2*eye(2),(1+dt*cfg.gains(3))*eye(2)-2*dt*q*J];
-        va=A\[x([2,5])+dt*cfg.gains(2)*velocity;x([3,6])+dt*cfg.gains(3)*acceleration];
-        b=zeros(2,1);
-        if G.valid(k),b=b+cfg.gnss.positionGain*Wg*gnssPosition(k,:).';end
-        p=(eye(2)+dt*K)\(x([1,4])+dt*va(1:2)+dt*b);
-        x=[p(1);va(1);va(3);p(2);va(2);va(4);yaw];
+        if thetaFramework
+            [x,gnssRate]=thetaBaselineStep(x,dt,q,yaw,[speed;vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)], ...
+                G.valid(k),gnssPosition(k,:).',Wg,continuous.hgo);
+            p=x([1,4]);
+        else
+            K=cfg.gnss.positionGain*Wg;
+            R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
+            velocity=R*[speed;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
+            A=[(1+dt*cfg.gains(2))*eye(2),-dt*eye(2); ...
+                -dt*q^2*eye(2),(1+dt*cfg.gains(3))*eye(2)-2*dt*q*J];
+            va=A\[x([2,5])+dt*cfg.gains(2)*velocity;x([3,6])+dt*cfg.gains(3)*acceleration];
+            b=zeros(2,1);
+            if G.valid(k),b=b+cfg.gnss.positionGain*Wg*gnssPosition(k,:).';end
+            p=(eye(2)+dt*K)\(x([1,4])+dt*va(1:2)+dt*b);
+            x=[p(1);va(1);va(3);p(2);va(2);va(4);yaw];
+            gnssRate=cfg.gnss.positionGain*Wg*(gnssPosition(k,:).'-p);
+        end
         baselineStates(k,:)=x.';
         if L.valid(k) && overlapChannel
             measurement=lidarInjectionSupport.evaluateOverlapGradient(overlap.map,overlap.sources{k},x([1,4,7]),overlap.config);
@@ -180,7 +188,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             if audit.filter.S(3,3)>0,headingMode(k)=2;end
         end
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Synchronous update became nonfinite.');
-        if G.valid(k),correction(k,1:2)=(cfg.gnss.positionGain*Wg*(gnssPosition(k,:).'-p)).';weights(k,1)=min(eig(Wg));end
+        if G.valid(k),correction(k,1:2)=gnssRate.';weights(k,1)=min(eig(Wg));end
         z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));
     end
     estimate=struct('time',t,'z',z,'onlineZ',z,'pose',[z(:,[1,4]),wrap(z(:,7))], ...
@@ -214,6 +222,27 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         estimate.diagnostics.matchingFeedback=true;
         estimate.diagnostics.matchingSource="Per-frame callback with fused seed and optional current position aid";
     end
+end
+
+function [x,gnssRate]=thetaBaselineStep(x,dt,q,yaw,velocityBody,accelerationBody,gnssValid,gnssPosition,Wg,h)
+% thetaBaselineStep Implicit Euler step of the theta-framework observer without
+% the LiDAR channel: chains with the course-rate jerk model, the extra outputs
+% (body velocity and acceleration rotated by the predicted heading) through
+% M = T(theta) N / theta^3, GNSS through LG = T(theta) KG with its weight Wg.
+% The heading is the integrated gyro; GNSS and extra outputs do not correct it.
+    R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
+    z=[R*velocityBody;R*accelerationBody];
+    A=zeros(6);A(1,2)=1;A(2,3)=1;A(4,5)=1;A(5,6)=1;
+    A([3,6],[2,5])=q^2*eye(2);A([3,6],[3,6])=2*q*J;
+    H=zeros(4,6);H(1,2)=1;H(2,5)=1;H(3,3)=1;H(4,6)=1;
+    Cp=zeros(2,6);Cp(1,1)=1;Cp(2,4)=1;
+    M=h.M(1:6,:);system=eye(6)-dt*A+dt*M*H;rhs=x(1:6)+dt*M*z;
+    if gnssValid
+        Kg=h.LG(1:6,:)*Wg;system=system+dt*Kg*Cp;rhs=rhs+dt*Kg*gnssPosition;
+    end
+    chain=system\rhs;gnssRate=zeros(2,1);
+    if gnssValid,gnssRate=h.LG([1,4],:)*Wg*(gnssPosition-Cp*chain);end
+    x=[chain;yaw];
 end
 
 function s=source(data,name,t,width)

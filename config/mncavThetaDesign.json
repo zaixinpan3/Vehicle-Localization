@@ -1,0 +1,163 @@
+{
+  "label": "MnCAV theta-framework design: K and N from LMI (55) of Bessafa et al. (2026)",
+  "sigma": 1,
+  "P": [
+    [
+      11.461200147656816,
+      -6.3024067268489725,
+      -0.551903991895175,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      -6.3024067268489725,
+      7.0319590800570433,
+      -5.0125165392529452,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      -0.551903991895175,
+      -5.0125165392529452,
+      13.811517136321687,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      11.461200147656816,
+      -6.3024067268489725,
+      -0.551903991895175,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      -6.3024067268489725,
+      7.0319590800570433,
+      -5.0125165392529452,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      -0.551903991895175,
+      -5.0125165392529452,
+      13.811517136321687,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      197.09915732504442
+    ]
+  ],
+  "kappaL": 168.14149409825592,
+  "kappaG": 53.660770821467267,
+  "Z": [
+    [
+      8.8918286501710373,
+      -2.2468327214392603,
+      1.5957837649265247,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      8.8918286501710373,
+      -2.2468327214392603,
+      1.5957837649265247,
+      0
+    ],
+    [
+      -4.7121516901756175,
+      2.2829869402641556,
+      -0.29084666649271318,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      -4.7121516901756175,
+      2.2829869402641556,
+      -0.29084666649271318,
+      0
+    ]
+  ],
+  "lambda": 1,
+  "meanSquareBound": 81.674360419506854,
+  "verification": {
+    "certified": true,
+    "worstVertexEigenvalue": -1.0000010671422925E-7,
+    "vertices": 768,
+    "minimumEigenvalueP": 1.0000000000017892,
+    "maximumEigenvalueP": 197.09915732504442
+  },
+  "inputs": {
+    "thetaFramework": {
+      "sigma": 1,
+      "headingLengthM": 10,
+      "noise": {
+        "lidarPositionM": 0.0279,
+        "lidarHeadingRad": 0.00211,
+        "gnssPositionM": 0.23,
+        "velocityMps": 0.256,
+        "accelerationMps2": 0.233,
+        "gyroRadps": 0.0018,
+        "jerkMps3": 0.05
+      },
+      "weakPositionStrength": 0.05,
+      "minimumGnssWeight": 0.5,
+      "nominalGnssWeight": 0.5,
+      "gnssCouplingSplit": 0.5,
+      "operatingPoints": [
+        "lidar",
+        "lidarGnss",
+        "weakLidarGnss",
+        "deadReckoning"
+      ],
+      "deadReckoningHorizonS": 10,
+      "lambda": 1,
+      "margin": 1E-7,
+      "solver": "sedumi"
+    },
+    "domain": {
+      "maximumSpeed": 15,
+      "maximumAcceleration": 2,
+      "minimumPositionStrength": 0.25,
+      "minimumHeadingStrength": 0.97,
+      "maximumPositionHeadingCoupling": 0.06,
+      "maximumCourseRate": 0.4
+    },
+    "gnssBodyOffset": [
+      1.72485903887133,
+      0.26441147004400672
+    ],
+    "lidarInformationScale": 64
+  },
+  "solverInfo": "Successfully solved (SeDuMi)",
+  "synthesizedOn": "2026-10-11T19:30:43-05:00",
+  "codeCommit": "635947a589ec3cc2f0c411d5936ba0187bdd25cb"
+}

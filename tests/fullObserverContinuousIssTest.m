@@ -8,8 +8,17 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function currentVehicleHasACompleteContinuousCertificate(testCase)
+        function currentVehicleHasAThetaFrameworkCertificate(testCase)
             cfg=mncavFullObserverConfig();d=fullObserverSupport.designFullObserverGains(cfg);
+            testCase.verifyEqual(d.framework,"theta");
+            testCase.verifyTrue(d.fullContinuousStateCertified);
+            v=d.continuousCertificate.verification;
+            testCase.verifyLessThan(v.worstVertexEigenvalue,0);
+            testCase.verifyGreaterThanOrEqual(v.minimumEigenvalueP,1-1e-6);
+            testCase.verifyFalse(d.baselineFullStateCertified);
+        end
+        function declaredGainMncavConfigurationHasAComparisonCertificate(testCase)
+            cfg=declaredGainConfig();d=fullObserverSupport.designFullObserverGains(cfg);
             v=fullObserverSupport.verifyFullObserverIssCertificate(d.continuousCertificate,cfg);
             testCase.verifyTrue(v.certified);
             testCase.verifyGreaterThan(v.verifiedDecayRate,cfg.iss.decayRate);
@@ -57,7 +66,7 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(s.verification.verifiedDecayRate,cfg.iss.decayRate);
         end
         function widelySeparatedGainsStillRequireVerifiedMargins(testCase)
-            cfg=mncavFullObserverConfig();cfg.gains([1,4])=[160,.125];cfg.iss.decayRate=.01;
+            cfg=declaredGainConfig();cfg.gains([1,4])=[160,.125];
             s=fullObserverSupport.solveFullObserverIssLmi(cfg);v=fullObserverSupport.verifyFullObserverIssCertificate(s,cfg);
             testCase.verifyTrue(s.certified);
             testCase.verifyGreaterThan(min(v.normalizedMargins),cfg.iss.tolerance);
@@ -82,6 +91,14 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
     end
 end
 
+function cfg=declaredGainConfig()
+% MnCAV parameters with declared gains (the values before the gain synthesis)
+% exercise the comparison-matrix certificate of the generic observer; the
+% production MnCAV observer uses the theta-framework design.
+    cfg=mncavFullObserverConfig(LoadDesign=false);
+    cfg.gains=[4,4,12,4];cfg.gnss.positionGain=4;cfg.lidar.poseScales=[1;1;1];cfg.iss.decayRate=.01;
+end
+
 function cfg=counterexampleConfig(kp)
     cfg=fullObserverConfig();cfg.gains(1)=kp;cfg.gnss.positionGain=0;
     cfg.maximumTrackAngleRate=0;cfg.iss.maximumSpeed=8;cfg.iss.maximumAcceleration=0;
@@ -91,7 +108,7 @@ end
 
 function violation=derivativeAudit()
     original=rng;cleanup=onCleanup(@()rng(original));rng(20261002,'twister');
-    cfg=mncavFullObserverConfig();s=fullObserverSupport.solveFullObserverIssLmi(cfg);P=s.verification.P;
+    cfg=declaredGainConfig();s=fullObserverSupport.solveFullObserverIssLmi(cfg);P=s.verification.P;
     g=cfg.gains;J=[0,-1;1,0];violation=-Inf;
     for k=1:2000
         e=randn(7,1);v=cfg.iss.maximumSpeed*rand*unit();a=cfg.iss.maximumAcceleration*rand*unit();
