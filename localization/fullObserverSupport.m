@@ -56,7 +56,9 @@ classdef fullObserverSupport
             end
             assert(isequal(lateralInput.time,h.time),'VehicleLocalization:SyncCoverage','Lateral and motion clocks differ.');
             lateral=struct('time',t);
-            for name=["lateralVelocity","sideSlipAngleRate"]
+            assert(all(isfield(lateralInput,{'lateralVelocity','sideSlipAngle','sideSlipAngleRate'})), ...
+                'VehicleLocalization:AlignedLateralRequired','Supply the upstream lateral angle/rate pair before synchronization.');
+            for name=["lateralVelocity","sideSlipAngle","sideSlipAngleRate"]
                 lateral.(name)=blend(lateralInput.(name),left,right,fraction);
             end
             if overlapChannel

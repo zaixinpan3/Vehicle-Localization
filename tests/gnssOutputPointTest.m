@@ -65,7 +65,7 @@ function f=fixture()
     h=struct('time',t,'longitudinalSpeed',v+z,'longitudinalAcceleration',z,'lateralAcceleration',v*r+z,'yawRate',r+z);
     g=struct('time',t,'position',position,'valid',true(n,1),'information',repmat(100*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[position,yaw],'valid',true(n,1),'information',repmat(100*eye(3),1,1,n),'delay',0);
-    lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
+    lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
     cfg=mncavFullObserverConfig;cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;v;0;0;0;v*r;0];
     f=struct('data',struct('highRate',h,'gnss',g,'lidar',l),'cfg',cfg,'lateral',lateral);
 end

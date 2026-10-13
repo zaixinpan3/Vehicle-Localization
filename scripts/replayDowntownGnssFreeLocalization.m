@@ -29,6 +29,7 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
         h.(field)=interp1(inputs.highRate.time,inputs.highRate.(field),t);
     end
     lat=struct('time',t,'lateralVelocity',interp1(inputs.lateral.time,inputs.lateral.lateralVelocity,t), ...
+        'sideSlipAngle',interp1(inputs.lateral.time,inputs.lateral.sideSlipAngle,t), ...
         'sideSlipAngleRate',interp1(inputs.lateral.time,inputs.lateral.sideSlipAngleRate,t));
     motion=interp1(inputs.highRate.time,inputs.motion,t);
     cfg=protocol.observer;prior=validateDowntownInitialPose(options.InitialPosePacket,ids(1),native(1));

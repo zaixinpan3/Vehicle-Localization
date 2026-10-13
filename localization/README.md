@@ -59,6 +59,16 @@ remain available without wheel speed and preserve acceleration direction.
 Gyro and projected-speed innovations have separate LMI-designed scalar gains.
 Gyro corrects the rate state; heading prediction uses the posterior state.
 
+The global runtime consumes `LateralInputs.sideSlipAngle` and
+`LateralInputs.sideSlipAngleRate` together with lateral velocity. Synchronization
+retains both series on the same frame clock; it never reconstructs an angle
+from velocity. Missing angles are rejected instead of selecting a fallback.
+The standard lateral observer exports both from one persistent second-order
+interface. Its angle can lag the velocity direction, so lateral-angle error is
+an auxiliary disturbance, not an exact direction identity. Downtown retains
+its existing output-point motion adapter and now exports that adapter's angle
+and derivative together; KITTI withdraws velocity-direction outputs explicitly.
+
 Run `synthesizeMncavInvariantDesign` with YALMIP and SeDuMi to regenerate
 `config/mncavInvariantDesign.json`. Runtime independently verifies its 256
 main/gyro/aligned-speed vertices and scalar LMIs without a solver; changed design
@@ -83,10 +93,10 @@ estimated yaw-rate state remains defined when velocity is zero, including
 stopped rotation. This removes that model singularity and is covered by the
 stopped-rotation runtime test.
 
-This does not establish smoothness of every interface at zero speed. The raw
-auxiliary angle still uses `atan2(vy,vx)`; a zero velocity vector has no physical
-course direction, and MATLAB's finite `atan2(0,0)` convention does not make the
-angle differentiable there. The lateral runtime uses division-free master,
+The global auxiliary channel also no longer evaluates `atan2(vy,vx)`. It uses
+the upstream angle/rate interface, which remains defined through stops in the
+standard lateral observer. This is an interface state, not a physical motion
+direction at a zero velocity vector. The lateral runtime uses division-free master,
 stationary/crawl and shadow branches outside the LPV domain. Its reciprocal-speed
 LPV model and LMI remain restricted to the positive interval [5,30] m/s. Safe
 zero-speed execution is distinct from a unified zero-speed hybrid stability

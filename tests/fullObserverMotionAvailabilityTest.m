@@ -48,7 +48,7 @@ function [d,l,c]=fixture()
     t=(0:.1:1).';zero=zeros(size(t));
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
-    l=struct('time',t,'lateralVelocity',zero,'sideSlipAngleRate',zero);
+    l=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
     c=mncavFullObserverConfig();
     c.initialState=[0;3;.2;0;0;0;0];
 end

@@ -27,7 +27,8 @@ classdef invariantObserverSupport
             H(8,[3,6])=bodyLeft.';H(8,7)=-bodyForward.'*a;
         end
 
-        function packet=measurements(speed,vy,ax,ay,gyro,betaRate,velocityValid,accelerationValid,gyroValid,cfg)
+        function packet=measurements(speed,vy,ax,ay,gyro,beta,betaRate,velocityValid,accelerationValid,gyroValid,cfg)
+        % Consume the upstream angle/rate pair; never reconstruct a course angle.
             s=cfg.iss.maximumSpeed;ell=cfg.invariantObserver.headingLengthM;
             velocityValid=velocityValid && cfg.invariantObserver.velocityAvailable;
             accelerationValid=accelerationValid && cfg.invariantObserver.accelerationAvailable;
@@ -37,7 +38,7 @@ classdef invariantObserverSupport
             if valid(2),value(2)=(speed*ax+vy*ay)/s;value(3)=(speed*ay-vy*ax)/s;end
             if gyroValid,value(4)=ell*gyro;end
             if accelerationValid,value(7:8)=[ax;ay];end
-            beta=0;if velocityValid,beta=atan2(vy,speed);end
+            if ~velocityValid,beta=0;end
             packet=struct('value',value,'valid',valid,'beta',beta,'betaRate',betaRate);
         end
 
@@ -59,7 +60,8 @@ classdef invariantObserverSupport
             end
             if packet.valid(1)
                 % Scalar, rotation-invariant course-speed output. At zero
-                % speed the direction comes from the heading/sideslip STATES,
+                % speed the direction comes from heading and the upstream
+                % continuous sideslip interface,
                 % so no normalization by estimated speed is needed.
                 direction=[cos(next(7)+packet.beta);sin(next(7)+packet.beta)];
                 measuredSpeed=sqrt(max(0,2*cfg.iss.maximumSpeed*packet.value(1)));

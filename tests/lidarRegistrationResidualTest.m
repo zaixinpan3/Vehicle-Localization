@@ -73,7 +73,7 @@ classdef lidarRegistrationResidualTest < matlab.unittest.TestCase
             [result,~]=matchedCloud("supportD2D");t=[0;.1;.2];z=zeros(3,1);
             high=struct('time',t,'longitudinalSpeed',z,'longitudinalAcceleration',z, ...
                 'lateralAcceleration',z,'yawRate',z);
-            lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
+            lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
             data=struct('highRate',high,'lidarMatcher',@(~,~,~)result);
             cfg=mncavFullObserverConfig();cfg.initialState=[.2;0;0;-.1;0;0;0];
             r=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral);

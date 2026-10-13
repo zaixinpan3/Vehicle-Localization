@@ -283,9 +283,12 @@ quotient: there is no speed division, selected regularizer or concealed positive
 speed assumption. Stopped rotation can be estimated through the gyro output.
 The public `.z` and `.onlineZ` remain seven columns; `.internalState` and
 `.yawRate` expose the extra estimated state.
-The no-division statement concerns the intrinsic predictor. The raw auxiliary
-`atan2(vy,vx)` direction is undefined/direction-discontinuous at the zero vector,
-even though MATLAB returns a finite convention. The lateral reciprocal-speed
+The global auxiliary interface consumes the supplied lateral angle/rate pair;
+it no longer reconstructs `atan2(vy,vx)`. The standard lateral observer exports
+these from one persistent second-order state, tracking its zero convention
+through stops. That convention does not give a stopped vehicle a physical
+motion direction. Output-point adapters must export a pair for their own
+declared motion point. The lateral reciprocal-speed
 LPV certificate covers [5,30] m/s; its division-free low-speed runtime does not
 extend that LMI to a unified stopped/hybrid theorem. These scope distinctions
 are separate from the actual-overlap margin still to be proved.
@@ -319,8 +322,17 @@ that angle. Every scalar in (I3) stays unchanged. The last two are projections
 onto the estimated body directions; the measurement remains body acceleration,
 without transforming it into a measured global vector. They retain acceleration
 direction when wheel speed is absent. The discarded acceleration-norm prototype
-lost that information. Course direction uses the lateral estimate
-`beta_hat=atan2(vy_hat,vx_measured)` when that velocity measurement exists.
+lost that information. Course direction uses the upstream `sideSlipAngle`, with
+its paired `sideSlipAngleRate` used in (I1); the global observer does not derive
+either from body velocity. Synchronization carries both upstream series. Missing
+angle series are rejected, and unavailable velocity withdraws direction feedback.
+The standard filtered angle need not equal the instantaneous velocity direction.
+For angle error `delta_beta=beta_hat-beta`, the true direction-output discrepancy
+is `n(psi+beta_hat)'v=-s*sin(delta_beta)`, bounded by
+`s_max*abs(delta_beta)`. Filter lag and output-point adapter errors therefore
+enter the auxiliary disturbance; this bound vanishes at a stop. The separate
+speed-channel angle error is treated likewise below. No new exact-angle or
+zero-speed lateral stability assumption is inferred from consuming this interface.
 The zero kinematic constraint is a model output, not an independent sensor.
 Its residual includes sideslip-estimation and modeling errors.
 

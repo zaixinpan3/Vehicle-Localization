@@ -197,7 +197,7 @@ function f=turning(step)
     f.truth=[v/r*sin(r*t),v/r*(1-cos(r*t))];
     f.data.highRate=struct('time',t,'longitudinalSpeed',v+z,'longitudinalAcceleration',z, ...
         'lateralAcceleration',v*r+z,'yawRate',r+z);
-    f.lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
+    f.lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
     f.data.gnss=struct('time',t,'position',f.truth,'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
     f.data.lidar=struct('time',t,'pose',[f.truth,r*t],'valid',true(n,1),'information',repmat(1e6*eye(3),1,1,n),'delay',0);
     f.cfg.initialState=[0;v;0;0;0;v*r;0];
@@ -206,7 +206,7 @@ end
 function f=fixture()
     t=(0:.1:2).';z=zeros(size(t));n=numel(t);
     h=struct('time',t,'longitudinalSpeed',8+z,'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z);
-    lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
+    lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
     g=struct('time',t,'position',[8*t,z],'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[8*t,z,z],'valid',true(n,1),'information',repmat(1e6*eye(3),1,1,n),'delay',0);
     cfg=mncavFullObserverConfig;cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8;0;0;0;0;0];
@@ -220,7 +220,7 @@ end
 function f=unaligned()
     f=fixture();t=(0:.01:2).';z=zeros(size(t));
     f.data.highRate=struct('time',t,'longitudinalSpeed',8+z,'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z);
-    f.lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
+    f.lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
     g=(-.01:.02:2.01).';n=numel(g);
     f.data.gnss=struct('time',g,'position',[8*g,zeros(n,1)],'valid',true(n,1), ...
         'information',repmat(1e6*eye(2),1,1,n),'delay',0);

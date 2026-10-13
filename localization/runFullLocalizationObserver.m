@@ -8,6 +8,8 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % Missing/invalid measurements withdraw their own correction for that frame.
 % Optional highRate.bodyVelocityValid and bodyAccelerationValid masks also
 % withdraw unavailable motion-output feedback. Absent masks mean all valid.
+% LateralInputs must provide lateralVelocity, sideSlipAngle and
+% sideSlipAngleRate on the frame clock. The angle/rate pair is supplied upstream.
     arguments
         data (1,1) struct
         lateralDesign (1,1) struct %#ok<INUSA>
@@ -45,6 +47,9 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
     assert(isfield(lateral,'time') && isequal(lateral.time(:),t), ...
         'VehicleLocalization:AlignedLateralRequired','Supply lateral estimates on the frame clock.');
+    assert(all(isfield(lateral,{'lateralVelocity','sideSlipAngle','sideSlipAngleRate'})), ...
+        'VehicleLocalization:AlignedLateralRequired', ...
+        'Supply lateral velocity and the upstream sideslip angle/rate pair; no angle reconstruction is available.');
     reportedLateral=lateral;
     velocityValid=motionValidity(h,'bodyVelocityValid',n);
     accelerationValid=motionValidity(h,'bodyAccelerationValid',n);
@@ -59,8 +64,8 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             'VehicleLocalization:InvalidFullInput','Invalid aligned motion.');
         h.(name)=h.(name)(:);h.(name)(~valid)=0;
     end
-    for name=["lateralVelocity","sideSlipAngleRate"]
-        valid=true(n,1);if name=="lateralVelocity",valid=velocityValid;end
+    for name=["lateralVelocity","sideSlipAngle","sideSlipAngleRate"]
+        valid=true(n,1);if any(name==["lateralVelocity","sideSlipAngle"]),valid=velocityValid;end
         assert(numel(lateral.(name))==n && all(isfinite(lateral.(name)(valid))), ...
             'VehicleLocalization:InvalidFullInput','Invalid aligned lateral output.');
         lateral.(name)=lateral.(name)(:);lateral.(name)(~valid)=0;
@@ -146,7 +151,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             gnssRate=Kg([1,4],:)*(gnssPosition(k,:).'-Cp*x);
         end
         packet=invariantObserverSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
-            h.lateralAcceleration(k),h.yawRate(k),lateral.sideSlipAngleRate(k), ...
+            h.lateralAcceleration(k),h.yawRate(k),lateral.sideSlipAngle(k),lateral.sideSlipAngleRate(k), ...
             velocityValid(k),accelerationValid(k),gyroValid(k),cfg);
         priorRate=x(8);
         [x,invariantAudits{k}]=invariantObserverSupport.correct(x,packet,dt,continuous,cfg);
