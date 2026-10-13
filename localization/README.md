@@ -142,6 +142,15 @@ configurations.
 
 ## Current synchronous runtime
 
+The requested architecture revision of October 13 places IMU measurements
+only in invariant auxiliary outputs and the upstream lateral observer, with
+intrinsic global prediction. Its candidate equations and unresolved
+zero-speed/state-dimension and LMI choices are specified in
+[the existing theory document, Section 0.5](../improved_observer_derivation.md#05-requested-architecture-intrinsic-prediction-and-invariant-imu-outputs).
+The runtime described below still predicts heading from measured gyro and
+uses measured course rate/body-frame output feedback. Its stored gains and
+dataset scores do not validate the requested revision.
+
 For the current overlap route, the completed continuous-time observation-bias
 and local invariant-region arguments are in
 [Section 0 of the existing theory document](../improved_observer_derivation.md#0-current-overlap-completed-local-region-and-bias-closure).

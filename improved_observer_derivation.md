@@ -2,6 +2,13 @@
 
 Current overlap closure: 2026-10-12. Historical mode-specific derivation: 2026-09-13.
 
+Input-architecture decision, 2026-10-13: IMU measurements are admitted only
+through the invariant auxiliary-output channel and the upstream lateral
+observer, not as direct inputs of the global state-prediction model. Section
+0.5 specifies this revision and its unresolved design choices. The existing
+runtime and stored gains still implement the preceding measured-course model;
+neither is relabeled as satisfying the new boundary.
+
 Section 0 completes the local-region and observation-bias arguments for the
 current overlap route, conditional on a uniform inequality for its **actual**
 error-feedback operator. Establishing that operator inequality is the remaining
@@ -241,6 +248,137 @@ document at the user's request. Research cleanup removes superseded studies;
 the current configuration provenance, latest evaluations, directly referenced
 materials and unrelated working changes remain. No new dated study or standalone
 temporary report is required for this closure.
+
+### 0.5 Requested architecture: intrinsic prediction and invariant IMU outputs
+
+The requested information boundary is
+
+$$
+\dot{\hat z}=A\hat z+f_{\rm int}(\hat z,\hat\xi_{\rm lat})
++u_O+u_G+M_{\rm inv}\bigl(y_{\rm inv}-h_{\rm inv}(\hat z)\bigr).
+\tag{I1}
+$$
+
+Here the prediction term uses the observer state and declared *estimated*
+lateral interface only. Raw or calibrated measured gyro/acceleration samples
+may form `y_inv` and feed the lateral observer; they may not drive
+`f_int`, select its course rate, or directly increment global heading. Merely
+renaming a gyro measurement or forwarding it through an identity wrapper does
+not meet this boundary. The auxiliary innovation remains part of the global
+observer, so this is a restriction on measurement placement, not a claim that
+the resulting estimate is independent of IMU information.
+
+In particular, the current assignments
+`predYaw = psi + r_measured*dt` and
+`q = r_measured + estimatedSideslipRate` do not satisfy (I1). The current
+heading-rotated body-velocity/body-acceleration feedback also differs from
+the requested invariant-output representation. This decision does not itself
+change either implementation or the LiDAR frontend's tilt/deskew processing;
+frontend use of inertial information must be identified separately rather
+than hidden inside an allegedly IMU-independent point cloud.
+
+For the existing seven-state variables, let
+
+$$
+v=\begin{bmatrix}V_X\\V_Y\end{bmatrix},\quad
+a=\begin{bmatrix}A_X\\A_Y\end{bmatrix},\quad
+J=\begin{bmatrix}0&-1\\1&0\end{bmatrix},\quad
+\gamma(v,a)=\frac{V_XA_Y-V_YA_X}{V_X^2+V_Y^2}.
+\tag{I2}
+$$
+
+At nonzero speed, `gamma` is the course rate obtained from the velocity and
+acceleration states. A candidate intrinsic model is
+
+$$
+\dot p=v,\qquad \dot v=a,\qquad
+\dot a=\gamma(v,a)^2v+2\gamma(v,a)Ja+d_j,\qquad
+\dot\psi=\gamma(v,a)-\dot{\hat\beta}+d_\psi.
+\tag{I3}
+$$
+
+The observer substitutes its own state in the nominal terms. The upstream
+estimated sideslip derivative is an explicit lateral-observer interface, not
+the measured gyro under a new name. For true nonzero-speed motion,
+`d_j = ddot(speed)*unitCourse + dot(courseRate)*J*v`; an error in the lateral
+interface contributes to `d_psi`. Under constant speed and course rate,
+`a = gamma*J*v`, so the jerk term reduces to `-gamma^2*v`, matching the
+basic Bessafa vehicle model. Acceleration during turning is not silently
+declared absent.
+
+The speed denominator in (I2) is a real unresolved modeling choice. No
+nonzero-speed hypothesis is silently added to the existing LiDAR-feature
+scope. A smooth candidate is
+`gamma_rho = cross(v,a)/(dot(v,v)+rho^2)` with a fixed positive design scale
+`rho`; its deviation from the physical course rate becomes a declared model
+disturbance. For nonzero true speed `s`, that deviation is
+`-courseRate*rho^2/(s^2+rho^2)`. At a stop, heading motion cannot generally be
+inferred from translational velocity/acceleration alone. A heading/rate state
+extension or a separately modeled bounded residual is needed. No value of
+`rho`, state extension, new gain, or stopping theorem is adopted here.
+
+Rotation-invariant outputs can be defined as
+
+$$
+h_{\rm inv}(z)=
+\begin{bmatrix}
+v^\top v\\v^\top a\\V_XA_Y-V_YA_X\\\gamma(v,a)
+\end{bmatrix},\qquad
+y_{\rm inv}=
+\begin{bmatrix}
+v_{x,m}^2+\hat v_y^2\\
+v_{x,m}a_{x,m}+\hat v_ya_{y,m}\\
+v_{x,m}a_{y,m}-\hat v_ya_{x,m}\\
+r_m+\dot{\hat\beta}
+\end{bmatrix}.
+\tag{I4}
+$$
+
+The first three identities express norm, inner product and signed planar
+cross product in either a global frame or a consistently compensated body
+frame. The fourth uses gyro data as an auxiliary measurement, analogous to
+Bessafa equations (72)--(73), rather than inserting it into heading drift.
+With regularized `gamma_rho`, the fourth identity also has a bounded
+regularization residual. Output errors include wheel, acceleration, gyro and
+lateral-interface errors; independence of these errors is not assumed.
+Without wheel speed or another admissible measured longitudinal speed, the
+first three output measurements are withdrawn. The
+gyro course-rate output can remain when the lateral interface is supplied or
+its absence is explicitly modeled, as in the KITTI zero-sideslip-rate trial.
+Filling missing measured velocity with the global estimate does not create
+an independent speed observation. Missing-output zero Jacobians must be
+included in any new certificate domain.
+
+This is an equation-level candidate, not a newly certified observer. In
+normalized error coordinates its intrinsic-model secant Jacobian and
+invariant-output secant Jacobian must enter the actual feedback matrix:
+
+$$
+\mathcal A_{\rm new}
+=\theta\bigl(A_0-KW C\bigr)
++\mathcal J_{\rm int}-\mathcal M_{\rm inv}\bar H_{\rm inv}
++\mathcal A_G.
+\tag{I5}
+$$
+
+The earlier measured-course model cancelled the same externally supplied
+course-rate terms between plant and observer; (I3) does not permit that
+cancellation. Its state-dependent derivatives cannot be assigned the old
+zero nonlinear Lipschitz constant. Neither the old 768-vertex certificate,
+old gains nor the old `theta >= sigma` inclusion establishes (I5). A new
+admissible domain, normalized Jacobian treatment and gain synthesis are
+required. The overlap obligation (O1), already involving the actual
+`W = F*Hbar`, remains necessary. The conditional bias/region proof transfers
+only after (O1) has been established for the *new* full error matrix.
+
+The seven-state candidate above is the working assumption for this theoretical
+revision, preserving the current pose-state interface. In the alternative
+six-state Bessafa structure, heading is reconstructed from estimated
+velocity direction and sideslip instead of retained as a seventh state;
+zero-speed and heading-chart issues still require treatment. The existing
+implementation and KITTI metrics are records of the old direct-gyro/body-output
+route, not results for (I1)--(I5). No production or manuscript equation is
+silently replaced by this candidate design.
 
 ## 1. State, continuous plant, and disturbance interface
 
