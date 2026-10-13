@@ -76,79 +76,38 @@ remaining tasks are in [the existing theory, Section 0.5](../improved_observer_d
 There is no discrete-time or arbitrary-outage guarantee. Feature deficiency
 and actual missing outputs are retained in runtime diagnostics.
 
-## Historical measured-course designs
+## Zero-speed scope
 
-The following design descriptions and numerical gains apply to explicit
-`measuredCourseObserverConfig()` or generic `fullObserverConfig()` comparison
-configurations. Current dataset entries select the new factory above.
+The intrinsic predictor no longer divides by speed or speed squared: its
+estimated yaw-rate state remains defined when velocity is zero, including
+stopped rotation. This removes that model singularity and is covered by the
+stopped-rotation runtime test.
 
-### MnCAV gains in the theta framework of the source paper
+This does not establish smoothness of every interface at zero speed. The raw
+auxiliary angle still uses `atan2(vy,vx)`; a zero velocity vector has no physical
+course direction, and MATLAB's finite `atan2(0,0)` convention does not make the
+angle differentiable there. The lateral runtime uses division-free master,
+stationary/crawl and shadow branches outside the LPV domain. Its reciprocal-speed
+LPV model and LMI remain restricted to the positive interval [5,30] m/s. Safe
+zero-speed execution is distinct from a unified zero-speed hybrid stability
+certificate; neither the current surrogate nor actual-overlap discussion claims
+that stronger result.
 
-The former MnCAV observer used the multi-output high-gain observer of Bessafa et al.
-(Automatica 188, 2026, Section 4) with this project's model and outputs (user
-decisions of 2026-10-11: gains are solved, not set a priori, and the paper's
-framework is kept). With the normalized error `e = [px vx ax py vy ay ell*psi]`
-(`ell` = 10 m) and `T(theta) = diag(theta^[1 2 3 1 2 3 1])`:
+## Removed main-observer implementations
 
-* main outputs (LiDAR pose `[p; ell*psi]`, GNSS position): `L = T(theta) K`,
-  `K = kappaL P^-1 C'` and `LG = T(theta) kappaG P^-1 Cp'`. The matched form
-  `Y = kappa C` makes the injection dissipative for every LiDAR information
-  weight S and GNSS weight Wg;
-* extra outputs (body velocity and acceleration rotated by the estimated
-  heading): `M = T(theta) N / theta^3`, `N = P^-1 Z'`;
-* `P = blkdiag(Pc,Pc,ppsi)` (rotation invariant), `lambda = 1`, `P >= I`.
-
-`fullObserverSupport.synthesizeThetaFrameworkDesign` solves LMI (55) on the
-paper's vertex set `V^sigma` (`sigma = 1`): the extra-output unit Jacobians at
-{0,1} (the main outputs alone must stabilize the error, Remark 6), their
-heading couplings, the LiDAR information bounds of `cfg.iss`, two GNSS
-scenarios with the lever arm, and the course-rate term `q^2 v + 2 q J a` of
-the jerk model through the vertices of its scaled coefficients. That term is
-linear in the error for the measured course rate, so it enters the LMI exactly
-and the Lipschitz part of condition (56) vanishes (`theta >= sigma`). With the
-paper's Lipschitz treatment (`kf = 0.816`) the chain alone already needs
-`lambda_max(P) >= 5`, hence `theta > 8.2`, and the smallest feasible theta of
-the full vertex set (about 24) gives gains that diverge at the 10 Hz frame rate
-(`research/theta_framework_20261011`). The paper fixes no objective: K and N
-minimize the summed mean-square position and heading error bound
-`trace(G'PG)` at four operating points for the declared noise scales: LiDAR,
-LiDAR with GNSS, weak LiDAR translation with GNSS, and dead reckoning (neither
-LiDAR nor GNSS; the position error is taken over a declared 10 s horizon
-through a leak on the position of that point only). Without the dead-reckoning
-point the solved extra-output gain N is numerically zero (the main outputs
-must stabilize alone, and under white noise LiDAR-differenced velocity beats
-the 0.256 m/s velocity scale), and a 20 s outage of LiDAR and GNSS drifts by
-up to 43 m; with it the rotated body velocity carries the chains through
-outages.
-`fullObserverSupport.verifyThetaFrameworkDesign` rechecks all 768 vertices by
-eigenvalues; the runtime repeats it before use.
-`scripts/synthesizeMncavThetaDesign.m` writes `config/mncavThetaDesign.json`;
-`measuredCourseObserverConfig()` loads it and refuses it when any declared input
-has changed. `theta` is the single tuning parameter (`Theta` option, default
-4): it was selected from {1, 1.5, 2, 3, 4, 5, 6} on frames 1--700 of the
-2024-06-07 recording with the position and heading objective of 2026-10-10
-over every production scenario (GNSS + LiDAR, LiDAR only, GNSS only, GNSS,
-LiDAR and both outages, alternating; user decision of 2026-10-11) and checked
-on frames 701--1169. At `theta = 4` the LiDAR position residual drives
-position, velocity and acceleration with 202 1/s, 1009 1/s^2 and 1593 1/s^3,
-the heading gain is 3.41 1/s and the GNSS chain gains are 65, 322 and 509
-(before the GNSS weight Wg). The rotated body-velocity residual drives
-position, velocity and acceleration with 0.13, 0.56 and 1.02 (scaling
-theta^-2, theta^-1, 1); the acceleration residual enters with -0.04, -0.08 and
--0.17. The gyro and the lateral observer also enter as inputs (heading rate
-and course rate). LiDAR
-information is filtered in the normalized pose units (`poseScales =
-[1;1;1/ell]`); the information scales (64 and 16) remain the damping of the
-Gauss--Newton step. The earlier gain synthesis at a declared decay rate
-(`alpha`, 2026-10-11) was replaced. The comparison-matrix certificate remains
-for the generic `fullObserverConfig` and for declared-gain test
-configurations.
+The direct-gyro seven-state implementations, their comparison-matrix and
+measured-course theta synthesis, saved gains and dedicated calibration replay
+were deleted on 2026-10-13. `mncavFullObserverConfig()` is the only main-observer
+factory. Old replay configurations are rejected; rebuild them with the current
+entry points. Historical implementation/results remain recoverable at Git
+commit `5cf9fae8103e87b519a679ea236ed5fda2d6a08e`. Historical dated studies describe
+their executed version, not an alternative live algorithm.
 
 ## Current synchronous runtime
 
-The October 13 architecture is implemented in the default runtime. Historical
-configurations explicitly retain their former seven-state path for comparison;
-they are not selected by the current dataset entries.
+The intrinsic eight-state architecture is the sole main-observer runtime.
+Seven-column initialization/public state arrays remain an interface convenience;
+they do not select a seven-state prediction branch.
 
 The continuous bias and local-region arguments remain conditional on a uniform
 inequality for the actual overlap operator `W=F*Hbar`. The finite invariant
@@ -297,9 +256,8 @@ and the [discrete equations](../research/mncav_synchronous_bestpos_20260917/READ
 
 The current eight-state model retains heading and estimated rate at standstill.
 Its matched metric and fixed scaling come from the intrinsic design described
-above. The following seven-state algebraic metric describes the historical
-`fullObserverConfig` compatibility case: `theta=1`, `T=I7`, translation metric
-`I6` and yaw weight `kp/kpsi`. It is not an estimator covariance.
+above. The injection helper accepts general state dimensions for standalone
+geometry tests; that general algebra is not a second observer implementation.
 
 For `D=diag(cfg.lidar.poseScales)`, `I=D'*information*D` and
 `C=D\(G*T)`, `lidarInjectionSupport.filterLidarPoseInformation` constructs
@@ -307,8 +265,7 @@ For `D=diag(cfg.lidar.poseScales)`, `I=D'*information*D` and
 `S=U*diag(rho.*lambda./(lambda+lambdaStar))*U'`.
 Here `lambdaStar=cfg.lidar.gainInformationScale>0`; it is excluded from the
 reported information spectrum. The matched rate is
-`kappa*T*(P\(C'*xi))`. Current intrinsic gains use `kappa=kappaL/theta`;
-the historical algebraic case uses `kappa=kp`. Eigenvalues, eigenvectors, rank,
+`kappa*T*(P\(C'*xi))`, with current `kappa=kappaL/theta`. Eigenvalues, eigenvectors, rank,
 trace, effective dimension and retained directional strengths are reported.
 Rank-deficient and zero information are valid. A curb's longitudinal nullspace
 is preserved. There is no minimum-eigenvalue information floor, yaw-diagonal

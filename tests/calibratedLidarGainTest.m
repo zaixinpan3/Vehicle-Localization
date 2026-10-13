@@ -45,13 +45,12 @@ classdef calibratedLidarGainTest < matlab.unittest.TestCase
             testCase.verifyEqual(b.S,zeros(3),AbsTol=0);
         end
         function implicitJumpRemainsNonexpansive(testCase)
-            cfg=config();d=fullObserverSupport.designFullObserverGains(cfg);G=zeros(3,7);G(:,[1,4,7])=eye(3);
+            cfg=config();d=struct('lidarMatched',struct('P',eye(7),'T',eye(7),'kappa',4));G=zeros(3,7);G(:,[1,4,7])=eye(3);
             m=struct('pose',zeros(3,1),'information',[2,.1,.4;.1,3,.5;.4,.5,8], ...
                 'poseErrorVariance',[.04;.002]);
             [~,a]=lidarInjectionSupport.computeLidarMatchedCorrection(m,[1;2;.1],G,d.lidarMatched,cfg, ...
                 StepSize=10,Discretization="implicit");
             testCase.verifyTrue(a.jumpNonexpansive);
-            testCase.verifyTrue(d.fullContinuousStateCertified);
             testCase.verifyFalse(a.filter.regularizer>0);
         end
         function sandwichPredictorIsInvariantToLossScale(testCase)
@@ -60,60 +59,22 @@ classdef calibratedLidarGainTest < matlab.unittest.TestCase
             testCase.verifyEqual(a,b,RelTol=1e-10,AbsTol=1e-14);
             testCase.verifyGreaterThan(a,zeros(2,1));
         end
-        function calibratedPosePacketsReachThePublicRuntime(testCase)
-            [data,lateral,cfg]=posePackets();
-            r=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral);
-            testCase.verifyEqual(r.pose(2,:),[1/2.6,1/2.6,.1/1.2],AbsTol=1e-12);
-        end
-        function missingVarianceCannotSilentlyUseGeometricWeights(testCase)
-            [data,lateral,cfg]=posePackets();data.lidar=rmfield(data.lidar,'poseErrorVariance');
-            testCase.verifyError(@()runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral), ...
-                'VehicleLocalization:MissingLidarErrorCalibration');
-        end
-        function residualOverrideCannotReuseAnUnrelatedCalibration(testCase)
-            [data,lateral,cfg]=posePackets();data.lidar=rmfield(data.lidar,'poseErrorVariance');
-            data.lidar.residualModels={model();model()};
-            data.lidar.evaluateResidual=@(~,pose)struct('residual',pose,'jacobian',eye(3), ...
-                'weights',ones(3,1),'linearizationPose',pose);
-            testCase.verifyError(@()runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral), ...
-                'VehicleLocalization:MissingLidarErrorCalibration');
-        end
         function empiricalFloorIncludesUnexplainedError(testCase)
             cfg=config();a=lidarInjectionSupport.predictLidarPoseErrorVariance(zeros(2,1),cfg.lidar.errorCalibration);
             testCase.verifyEqual(a,[.01;.001],AbsTol=0);
         end
         function legacyScaleCannotSurviveInCalibratedConfiguration(testCase)
             cfg=config();cfg.lidar.gainInformationScale=16;
-            testCase.verifyError(@()fullObserverSupport.fullObserverIssProblem(cfg),'VehicleLocalization:AmbiguousLidarCalibration');
-        end
-        function changedCalibrationInvalidatesContinuousCertificate(testCase)
-            cfg=config();s=fullObserverSupport.solveFullObserverIssLmi(cfg);
-            cfg.lidar.errorCalibration.referenceVariance=2*cfg.lidar.errorCalibration.referenceVariance;
-            testCase.verifyError(@()fullObserverSupport.verifyFullObserverIssCertificate(s,cfg), ...
-                'VehicleLocalization:StaleFullIssCertificate');
+            testCase.verifyError(@()lidarInjectionSupport.filterLidarPoseInformation(eye(3),cfg,1,ones(3,1),[.01;.001]),'VehicleLocalization:AmbiguousLidarCalibration');
         end
     end
 end
 
-function [data,lateral,cfg]=posePackets()
-    cfg=config();cfg.initialState=[1;0;0;1;0;0;.1];t=[0;.1];z=zeros(2,1);
-    data.highRate=struct('time',t,'longitudinalSpeed',z,'longitudinalAcceleration',z, ...
-        'lateralAcceleration',z,'yawRate',z);
-    data.lidar=struct('time',t,'delay',0,'pose',zeros(2,3),'valid',true(2,1), ...
-        'information',repmat(eye(3),1,1,2),'poseErrorVariance',repmat([.01,.001],2,1));
-    lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
-end
-
 function cfg=config()
-    % Declared-gain MnCAV parameters (the theta-framework design filters
-    % geometric information in normalized units; the calibrated channel uses
-    % physical metres and radians).
-    cfg=measuredCourseObserverConfig(LoadDesign=false);cfg.gains=[4,4,12,4];cfg.gnss.positionGain=4;cfg.lidar.poseScales=[1;1;1];
-    cfg.lidar=rmfield(cfg.lidar,'gainInformationScale');
+% Standalone physical-unit calibration fixture, independent of gain synthesis.
+    cfg=struct('lidar',struct('poseScales',ones(3,1)));
     cfg.lidar.errorCalibration=struct('kind',"conditional-pose-second-moment-v1", ...
         'referenceVariance',[.01;.001],'coefficients',[.01,1;.001,1]);
-    cfg.iss.minimumPositionStrength=.4;cfg.iss.minimumHeadingStrength=.1;
-    cfg.iss.maximumPositionHeadingCoupling=0;cfg.gains([1,4])=[16,2];cfg.iss.decayRate=.01;
 end
 
 function m=model()

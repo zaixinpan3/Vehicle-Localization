@@ -120,9 +120,10 @@ classdef lidarMatchedInjectionTest < matlab.unittest.TestCase
             testCase.verifyLessThan(c(7),.1);
         end
         function currentDesignDoesNotInventBaselineYawCertificate(testCase)
-            cfg=fullObserverConfig();d=fullObserverSupport.designFullObserverGains(cfg);
-            testCase.verifyEqual(d.lidarMatched.T,eye(7),AbsTol=0);
-            testCase.verifyEqual(d.lidarMatched.P(1:6,1:6),eye(6),AbsTol=0);
+            cfg=mncavFullObserverConfig();d=fullObserverSupport.designFullObserverGains(cfg);
+            testCase.verifySize(d.lidarMatched.T,[8,8]);
+            testCase.verifyTrue(d.surrogateContinuousLmiVerified);
+            testCase.verifyFalse(d.fullContinuousStateCertified);
             testCase.verifyFalse(d.baselineFullStateCertified);
         end
         function arbitraryPsdWeightingCanDestabilizeAFixedGain(testCase)
@@ -153,7 +154,8 @@ classdef lidarMatchedInjectionTest < matlab.unittest.TestCase
 end
 
 function f=fixture()
-    f.cfg=fullObserverConfig();d=fullObserverSupport.designFullObserverGains(f.cfg);f.design=d.lidarMatched;
+    f.cfg=struct('lidar',struct('poseScales',ones(3,1),'gainInformationScale',.001));
+    f.design=struct('P',eye(7),'T',eye(7),'kappa',4);
     f.G=zeros(3,7);f.G(1,1)=1;f.G(2,4)=1;f.G(3,7)=1;
 end
 

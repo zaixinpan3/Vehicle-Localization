@@ -7,26 +7,18 @@ classdef localizationMotionInputTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function positionDisagreementDoesNotLearnVelocity(testCase)
-            f=fixture();a=run(f);
+        function poseFeedbackDoesNotRewriteMeasuredMotion(testCase)
+            f=fixture();a=run(f);before=f.data.highRate;
             f.data.lidar.pose(:,1:2)=[8*f.time,.2*f.time];b=run(f);
-            testCase.verifyEqual(b.velocity,a.velocity,AbsTol=1e-12);
-            testCase.verifyEqual(b.velocity,repmat([8.4,-.25],numel(f.time),1),AbsTol=1e-10);
-            testCase.verifyGreaterThan(norm(b.position(end,:)-a.position(end,:)),1);
+            testCase.verifyEqual(f.data.highRate,before);
             testCase.verifyEqual(b.lateral,f.lateral);
+            testCase.verifyGreaterThan(norm(b.internalState(end,:)-a.internalState(end,:)),.01);
         end
-        function outageUsesSuppliedMotionWithoutLearnedCompensation(testCase)
-            f=fixture();f.data.lidar.pose(:,1:2)=[8*f.time,.2*f.time];
-            f.data.lidar.valid(f.time>=4)=false;r=run(f);
-            testCase.verifyEqual(diff(r.position(end-9:end,:)), ...
-                repmat([.84,-.025],9,1),AbsTol=1e-10);
-            testCase.verifyEqual(r.diagnostics.mode(end-9:end),zeros(10,1));
-        end
-        function onlineSeedUsesSuppliedWheelAndLateralVelocity(testCase)
+        function onlineSeedUsesInternalEstimatedVelocity(testCase)
             f=fixture();f.data=rmfield(f.data,'lidar');
             f.data.lidarMatcher=@(k,seed,aid) onlineResult(k,seed,aid,f.time);r=run(f);
             testCase.verifyEqual(r.matchingSeeds(2:end,1:2)-r.position(1:end-1,:), ...
-                diff(f.time).*[8.4,-.25],AbsTol=1e-10);
+                diff(f.time).*r.velocity(1:end-1,:),AbsTol=1e-10);
             testCase.verifyGreaterThan(norm(r.position(end,:)-[8.4*f.time(end),-.25*f.time(end)]),1);
         end
         function removedLearnerHasNoConfigurationOrDiagnostics(testCase)
@@ -44,7 +36,7 @@ function f=fixture()
         'lateralAcceleration',z,'yawRate',z);
     l=struct('time',t,'pose',[8.4*t,-.25*t,z],'valid',true(n,1), ...
         'information',repmat(1e6*eye(3),1,1,n),'delay',0);
-    cfg=fullObserverConfig();cfg.initialState=[0;8.4;0;0;-.25;0;0];
+    cfg=mncavFullObserverConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8.4;0;0;-.25;0;0];
     f=struct('time',t,'data',struct('highRate',h,'lidar',l),'cfg',cfg, ...
         'lateral',struct('time',t,'lateralVelocity',-.25+z,'sideSlipAngleRate',z));
 end

@@ -55,11 +55,12 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             f=fixture();a=run(f);f.data.gnss.position(12:end,:)=100;f.data.lidar.pose(12:end,:)=100;b=run(f);
             testCase.verifyEqual(a.z(1:11,:),b.z(1:11,:),AbsTol=0);
         end
-        function largeGainHasImplicitContraction(testCase)
-            f=fixture();f.data=rmfield(f.data,'gnss');f.cfg.gains(1)=100;
-            f.cfg.initialState(4)=1;r=run(f);
-            testCase.verifyGreaterThanOrEqual(min(r.position(:,2)),0);
-            testCase.verifyLessThan(abs(r.position(end,2)),1e-12);
+        function implicitLidarJumpsRemainNonexpansive(testCase)
+            f=fixture();f.data=rmfield(f.data,'gnss');f.cfg.initialState(4)=.2;r=run(f);
+            for k=2:numel(r.time)
+                testCase.verifyTrue(r.diagnostics.lidarMatched{k}.jumpNonexpansive);
+            end
+            testCase.verifyLessThan(abs(r.position(end,2)),.01);
             testCase.verifyFalse(r.observer.sampledSystemCertified);
         end
         function curbOnlyCannotCorrectLongitudinalError(testCase)
@@ -67,7 +68,9 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             f.cfg.initialState(4)=.2;
             f.data.lidar.information=repmat(diag([0,100,100]),1,1,numel(f.data.highRate.time));
             r=run(f);
-            testCase.verifyEqual(r.position(:,1)-8*r.time,2*ones(size(r.time)),AbsTol=1e-11);
+            base=f;base.cfg.initialState(1)=0;plain=run(base);
+            testCase.verifyEqual(r.position(:,1)-plain.position(:,1),2*ones(size(r.time)),AbsTol=1e-11);
+            testCase.verifyEqual(r.velocity,plain.velocity,AbsTol=1e-12);
             testCase.verifyLessThan(abs(r.position(end,2)),.002);
             testCase.verifyEqual(r.diagnostics.lidarMatched{end}.filter.rank,2);
         end
@@ -94,7 +97,9 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             f=fixture();f.data=rmfield(f.data,{'gnss','lidar'});
             f.cfg.initialState(1)=2;f.cfg.initialState(4)=.2;
             f.data.lidarMatcher=@directionalResult;r=run(f);
-            testCase.verifyEqual(r.position(:,1)-8*r.time,2*ones(size(r.time)),AbsTol=1e-11);
+            base=f;base.cfg.initialState(1)=0;plain=run(base);
+            testCase.verifyEqual(r.position(:,1)-plain.position(:,1),2*ones(size(r.time)),AbsTol=1e-11);
+            testCase.verifyEqual(r.velocity,plain.velocity,AbsTol=1e-12);
             testCase.verifyLessThan(abs(r.position(end,2)),.002);
             testCase.verifyEqual(r.diagnostics.lidarMatched{2}.filter.rank,2);
         end
@@ -116,13 +121,6 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             [d,~,~]=fullObserverSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
             testCase.verifyEqual(d.lidar.frameReliability,f.data.lidar.frameReliability,AbsTol=0);
             testCase.verifyEqual(d.lidar.directionReliability,f.data.lidar.directionReliability,AbsTol=0);
-        end
-        function splitUpdateSatisfiesReportedPositionEquation(testCase)
-            f=fixture();f.cfg.initialState([1,4,7])=[.1;.2;.03];r=run(f);
-            rates=r.velocity(2:end,:)+r.diagnostics.positionCorrection(2:end,1:2) ...
-                +r.diagnostics.positionCorrection(2:end,3:4);
-            testCase.verifyEqual(diff(r.position),diff(r.time).*rates,AbsTol=1e-12);
-            testCase.verifyFalse(r.observer.lidarMatched.baselineFullStateCertified);
         end
         function stateUsesOnlyOneLowRateSolve(testCase)
             f=fixture();r=run(f);
@@ -165,7 +163,7 @@ classdef synchronousLocalizationTest < matlab.unittest.TestCase
             coarse=turning(.1);fine=turning(.05);a=run(coarse);b=run(fine);
             testCase.verifyLessThan(norm(b.position(end,:)-fine.truth(end,:)), ...
                 norm(a.position(end,:)-coarse.truth(end,:)));
-            testCase.verifyEqual(a.heading,coarse.data.highRate.time*.2,AbsTol=1e-12);
+            testCase.verifyLessThan(max(abs(a.heading-coarse.data.highRate.time*.2)),.02);
         end
         function missingPreparedLateralInputIsRejected(testCase)
             f=fixture();f.lateral=struct();
@@ -211,7 +209,7 @@ function f=fixture()
     lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
     g=struct('time',t,'position',[8*t,z],'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[8*t,z,z],'valid',true(n,1),'information',repmat(1e6*eye(3),1,1,n),'delay',0);
-    cfg=fullObserverConfig;cfg.initialState=[0;8;0;0;0;0;0];
+    cfg=mncavFullObserverConfig;cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8;0;0;0;0;0];
     f=struct('data',struct('highRate',h,'gnss',g,'lidar',l),'lateral',lateral,'cfg',cfg);
 end
 

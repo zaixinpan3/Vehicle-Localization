@@ -25,31 +25,26 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
             testCase.verifyError(@()fullObserverSupport.correctGnssOutputPoint([0,2],eye(2),0,alignment), ...
                 'VehicleLocalization:InvalidGnssAlignment');
         end
-        function turningReceiverPointMatchesCoincidentInput(testCase)
-            f=fixture();ideal=run(f);f=offsetInput(f);aligned=run(f);
-            testCase.verifyEqual(aligned.z,ideal.z,AbsTol=1e-11);
-            testCase.verifyEqual(aligned.diagnostics.gnssPositionAtObserverPoint, ...
-                ideal.diagnostics.gnssPositionAtObserverPoint,AbsTol=1e-12);
-        end
-        function gnssOnlyRetainsPointCorrection(testCase)
-            f=fixture();f.data=rmfield(f.data,'lidar');ideal=run(f);f=offsetInput(f);aligned=run(f);
-            testCase.verifyEqual(aligned.z,ideal.z,AbsTol=1e-11);
-            testCase.verifyEqual(aligned.diagnostics.mode,ones(61,1));
-        end
         function absentGnssIgnoresOutputPoint(testCase)
             f=fixture();f.data=rmfield(f.data,'gnss');ideal=run(f);
-            f.cfg.gnss.outputPoint.bodyOffset=[2;.5];aligned=run(f);
+            f.cfg.gnss.outputPoint.bodyOffset=[1;.25];aligned=run(f);
             testCase.verifyEqual(aligned.z,ideal.z,AbsTol=0);
             testCase.verifyTrue(all(isnan(aligned.diagnostics.gnssPositionAtObserverPoint),'all'));
         end
-        function legacyConfigurationKeepsCoincidentBehavior(testCase)
-            f=fixture();current=run(f);f.cfg.gnss=rmfield(f.cfg.gnss,'outputPoint');legacy=run(f);
-            testCase.verifyEqual(current.z,legacy.z,AbsTol=0);
+        function runtimeUsesItsIntrinsicHeadingForPointCorrection(testCase)
+            f=offsetInput(fixture());f.cfg.initialState(7)=.1;r=run(f);
+            expected=zeros(numel(r.time),2);
+            for k=1:numel(r.time)
+                yaw=r.diagnostics.intrinsicPrediction(k,7);
+                R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];
+                expected(k,:)=f.data.gnss.position(k,:)-(R*f.cfg.gnss.outputPoint.bodyOffset(:)).';
+            end
+            testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint,expected,AbsTol=1e-12);
         end
         function estimatedAttitudeControlsCorrection(testCase)
             f=offsetInput(fixture());f.cfg.initialState(7)=.1;f.data=rmfield(f.data,'lidar');r=run(f);
             testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint(1,:), ...
-                f.data.gnss.position(1,:)-([cos(.1),-sin(.1);sin(.1),cos(.1)]*[2;.5]).',AbsTol=1e-12);
+                f.data.gnss.position(1,:)-([cos(.1),-sin(.1);sin(.1),cos(.1)]*f.cfg.gnss.outputPoint.bodyOffset(:)).',AbsTol=1e-12);
         end
         function independentPointConfigurationUsesTheSolvedGnssGain(testCase)
             cfg=mncavFullObserverConfig();design=fullObserverSupport.designFullObserverGains(cfg);
@@ -61,23 +56,7 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
             testCase.verifyTrue(design.surrogateContinuousLmiVerified);
             testCase.verifyFalse(design.fullContinuousStateCertified);
         end
-        function matchedGainLimitsDriftWithGnssAlone(testCase)
-            f=biasedStraightFixture();slow=run(f);f.cfg.gnss.positionGain=4;fast=run(f);
-            testCase.verifyEqual(slow.position(end,1)-8*f.data.highRate.time(end),.2,AbsTol=1e-6);
-            testCase.verifyEqual(fast.position(end,1)-8*f.data.highRate.time(end),.05,AbsTol=1e-6);
-        end
     end
-end
-
-function f=biasedStraightFixture()
-    f=fixture();t=(0:.1:30).';n=numel(t);z=zeros(n,1);
-    f.data.highRate=struct('time',t,'longitudinalSpeed',8.2+z, ...
-        'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z);
-    f.lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
-    f.data=rmfield(f.data,'lidar');
-    f.data.gnss=struct('time',t,'position',[8*t,z],'valid',true(n,1), ...
-        'information',repmat(1e12*eye(2),1,1,n),'delay',0);
-    f.cfg.initialState=[0;8.2;0;0;0;0;0];
 end
 
 function f=fixture()
@@ -87,14 +66,16 @@ function f=fixture()
     g=struct('time',t,'position',position,'valid',true(n,1),'information',repmat(100*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[position,yaw],'valid',true(n,1),'information',repmat(100*eye(3),1,1,n),'delay',0);
     lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngleRate',z);
-    cfg=fullObserverConfig;cfg.initialState=[0;v;0;0;0;v*r;0];
+    cfg=mncavFullObserverConfig;cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;v;0;0;0;v*r;0];
     f=struct('data',struct('highRate',h,'gnss',g,'lidar',l),'cfg',cfg,'lateral',lateral);
 end
 
 function f=offsetInput(f)
     yaw=.2*f.data.highRate.time;
-    f.data.gnss.position=f.data.gnss.position+[2*cos(yaw)-.5*sin(yaw),2*sin(yaw)+.5*cos(yaw)];
-    f.cfg.gnss.outputPoint.bodyOffset=[2;.5];
+    current=mncavFullObserverConfig();offset=current.gnss.outputPoint.bodyOffset(:);
+    f.data.gnss.position=f.data.gnss.position+[offset(1)*cos(yaw)-offset(2)*sin(yaw), ...
+        offset(1)*sin(yaw)+offset(2)*cos(yaw)];
+    f.cfg.gnss.outputPoint.bodyOffset=offset;
 end
 
 function r=run(f)

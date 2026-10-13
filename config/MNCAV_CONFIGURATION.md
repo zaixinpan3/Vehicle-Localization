@@ -52,7 +52,7 @@ error merely because it compares velocities at different points.
 The current global observer factory is `mncavFullObserverConfig()`. It loads
 `mncavInvariantDesign.json`, synthesized by `synthesizeMncavInvariantDesign`,
 for the intrinsic eight-state predictor and invariant output innovations.
-Changing its declared inputs requires fresh synthesis. The old
-`measuredCourseObserverConfig()` and `mncavThetaDesign.json` are explicit
-historical comparisons; current dataset entries do not load those old gains.
+Changing its declared inputs requires fresh synthesis. The former main-observer
+factories and saved measured-course gains were
+removed on 2026-10-13; retrieve their historical code from Git if needed.
 The lateral vehicle parameters and their synthesis workflow are unchanged.

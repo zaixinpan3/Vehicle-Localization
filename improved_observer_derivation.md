@@ -283,6 +283,12 @@ quotient: there is no speed division, selected regularizer or concealed positive
 speed assumption. Stopped rotation can be estimated through the gyro output.
 The public `.z` and `.onlineZ` remain seven columns; `.internalState` and
 `.yawRate` expose the extra estimated state.
+The no-division statement concerns the intrinsic predictor. The raw auxiliary
+`atan2(vy,vx)` direction is undefined/direction-discontinuous at the zero vector,
+even though MATLAB returns a finite convention. The lateral reciprocal-speed
+LPV certificate covers [5,30] m/s; its division-free low-speed runtime does not
+extend that LMI to a unified stopped/hybrid theorem. These scope distinctions
+are separate from the actual-overlap margin still to be proved.
 
 IMU affects estimates through output innovations, so this placement restriction
 is not a claim of IMU-independent localization. Estimated lateral signals may
@@ -450,8 +456,10 @@ local auxiliary closure from a certified numerical radius, and retain
 `fullContinuousStateCertified=false`. No sampled-system, arbitrary-outage or
 degenerate-scene guarantee is added.
 
-The former `measuredCourseObserverConfig` and `mncavThetaDesign.json` remain
-explicit historical comparison tools. They do not select the default algorithm.
+The former direct-gyro main-observer configurations, runtime paths and gain
+synthesis were deleted on 2026-10-13. They remain recoverable at Git commit
+`5cf9fae8103e87b519a679ea236ed5fda2d6a08e`; historical numerical results identify
+that executed version and do not select a live branch.
 This is a project-specific state extension inspired by Bessafa's intrinsic
 prediction and auxiliary-output framework, not a claim that the paper proves
 this new eight-state system. The initial seven-state quotient candidate in the

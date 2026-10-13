@@ -71,7 +71,8 @@ function [report,estimate,trial]=runKittiOverlapTrial(datasetFolder,outputFolder
     cfg=mncavFullObserverConfig(LoadDesign=false);cfg.kind="kitti-global-overlap-transfer-trial";
     cfg.invariantObserver.velocityAvailable=false;
     cfg.invariantObserver.operatingPoints=["lidar","weakLidar"];
-    generic=fullObserverConfig();cfg.gnss.outputPoint=generic.gnss.outputPoint;
+    cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2), ...
+        'headingStdRad',0,'identifier',"coincident-output-points");
     cfg.invariantObserver.noise=struct('lidarPositionM',.1,'lidarHeadingRad',.01, ...
         'gnssPositionM',1,'velocityMps',1,'accelerationMps2',1,'gyroRadps',.01, ...
         'jerkMps3',cfg.iss.maximumAcceleration/2);

@@ -371,7 +371,7 @@ are explicit:
 | `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` (`.outputPoint` from `mncavMotionOutputPoint.json` for MnCAV) |
 | `wheelSpeedObserverConfig` | `estimateWheelLongitudinalSpeed`, `prepareWheelMotionInputs` |
 | `improvedObserverConfig` | `observerAnalysisSupport.designImprovedObserverGains`, `runImprovedVehicleObserver` |
-| `fullObserverConfig` | `fullObserverSupport.designFullObserverGains`, `runFullLocalizationObserver` |
+| `mncavFullObserverConfig` | `fullObserverSupport.designFullObserverGains`, `runFullLocalizationObserver` |
 | `overlapGradientConfig` | `lidarInjectionSupport.evaluateOverlapGradient`, `runFullLocalizationObserver` (`data.lidarOverlap.config`) |
 
 ## Quick start

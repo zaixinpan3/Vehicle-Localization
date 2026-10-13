@@ -1,8 +1,7 @@
 function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % runFullLocalizationObserver Run the current intrinsic global observer.
 % Default prediction uses an internal rate state; IMU is auxiliary output only.
-% Explicit historical configurations retain their measured-course compatibility
-% equations. Current dataset entries all select mncavFullObserverConfig.
+% All calls use the intrinsic eight-state design.
 % The common-clock runtime uses the continuous surrogate LMI-designed gains.
 % Supply aligned lateral estimates through LateralInputs. The lateralDesign
 % argument remains for caller compatibility; upstream synthesis is separate.
@@ -90,11 +89,8 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     continuous=fullObserverSupport.designFullObserverGains(cfg);
     lidarInjection=continuous.lidarMatched;
-    thetaFramework=isfield(continuous,'framework') && continuous.framework=="theta";
-    intrinsicFramework=isfield(continuous,'framework') && continuous.framework=="invariant";
-    lmiVerified=continuous.fullContinuousStateCertified;
-    if intrinsicFramework,lmiVerified=continuous.surrogateContinuousLmiVerified;end
-    stateCount=7+double(intrinsicFramework);
+    lmiVerified=continuous.surrogateContinuousLmiVerified;
+    stateCount=8;
     poseJacobian=zeros(3,stateCount);poseJacobian(1,1)=1;poseJacobian(2,4)=1;poseJacobian(3,7)=1;
     design=struct('kind',"continuous-iss-implicit",'continuousDesign',continuous, ...
         'lidarMatched',lidarInjection,'lidarJumpCertificate',"Implicit locally affine fixed-metric contraction", ...
@@ -103,7 +99,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     x=cfg.initialState;
     assert(ismember(numel(x),[7,stateCount]) && all(isfinite(x)),'VehicleLocalization:FullInitializationRequired', ...
         'Supply an explicit common initial state.');x=x(:);
-    if intrinsicFramework && numel(x)==7,x(8)=0;end
+    if numel(x)==7,x(8)=0;end
     z=zeros(n,stateCount);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
     yawCorrection=zeros(n,1);gnssPosition=nan(n,2);gnssInformation=nan(2,2,n);
     weights=nan(n,2);maximumRate=0;
@@ -113,21 +109,10 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     for k=1:n
         dt=0;if k>1,dt=t(k)-t(k-1);end
         speed=h.longitudinalSpeed(k);vy=lateral.lateralVelocity(k);
-        if intrinsicFramework
-            rate=x(8);
-        else
-            rate=h.yawRate(k);
-            if k>1,rate=(h.yawRate(k-1)+rate)/2;end
-        end
+        rate=x(8);
         predYaw=x(7)+rate*dt;
         if onlineMatching
-            midYaw=x(7)+rate*dt/2;
-            Rmid=[cos(midYaw),-sin(midYaw);sin(midYaw),cos(midYaw)];
-            if intrinsicFramework
-                seed=[(x([1,4])+dt*x([2,5])).',predYaw];
-            else
-                seed=[(x([1,4])+dt*Rmid*[speed;vy]).',predYaw];
-            end
+            seed=[(x([1,4])+dt*x([2,5])).',predYaw];
             aid=struct('valid',G.valid(k),'timestamp',t(k));
             if aid.valid
                 [aid.position,I]=fullObserverSupport.correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),predYaw,alignment);
@@ -145,7 +130,6 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             end
         end
         q=rate+lateral.sideSlipAngleRate(k);
-        if ~intrinsicFramework,q=h.yawRate(k)+lateral.sideSlipAngleRate(k);end
         maximumRate=max(maximumRate,abs(q));
         yaw=predYaw;
         Wg=zeros(2);
@@ -153,40 +137,22 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             [gnssPosition(k,:),gnssInformation(:,:,k)]=fullObserverSupport.correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),yaw,alignment);
             I=gnssInformation(:,:,k);Wg=I/(I+cfg.gnss.gainInformationScale*eye(2));Wg=(Wg+Wg.')/2;
         end
-        if intrinsicFramework
-            x=invariantObserverSupport.predict(x,dt,lateral.sideSlipAngleRate(k));
-            intrinsicStates(k,:)=x.';
-            gnssRate=zeros(2,1);
-            if G.valid(k)
-                Cp=zeros(2,8);Cp(1,1)=1;Cp(2,4)=1;Kg=continuous.LG*Wg;
-                x=(eye(8)+dt*Kg*Cp)\(x+dt*Kg*gnssPosition(k,:).');
-                gnssRate=Kg([1,4],:)*(gnssPosition(k,:).'-Cp*x);
-            end
-            packet=invariantObserverSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
-                h.lateralAcceleration(k),h.yawRate(k),lateral.sideSlipAngleRate(k), ...
-                velocityValid(k),accelerationValid(k),gyroValid(k),cfg);
-            priorRate=x(8);
-            [x,invariantAudits{k}]=invariantObserverSupport.correct(x,packet,dt,continuous,cfg);
-            % Complete the implicit psi-dot = estimated-rate equation using
-            % the posterior STATE. No gyro sample appears in this prediction.
-            x(7)=x(7)+dt*(x(8)-priorRate);
-        elseif thetaFramework
-            [x,gnssRate]=thetaBaselineStep(x,dt,q,yaw,[speed;vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)], ...
-                G.valid(k),gnssPosition(k,:).',Wg,continuous.hgo,velocityValid(k),accelerationValid(k));
-        else
-            K=cfg.gnss.positionGain*Wg;
-            R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
-            velocity=R*[speed;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
-            gv=cfg.gains(2)*velocityValid(k);ga=cfg.gains(3)*accelerationValid(k);
-            A=[(1+dt*gv)*eye(2),-dt*eye(2); ...
-                -dt*q^2*eye(2),(1+dt*ga)*eye(2)-2*dt*q*J];
-            va=A\[x([2,5])+dt*gv*velocity;x([3,6])+dt*ga*acceleration];
-            b=zeros(2,1);
-            if G.valid(k),b=b+cfg.gnss.positionGain*Wg*gnssPosition(k,:).';end
-            p=(eye(2)+dt*K)\(x([1,4])+dt*va(1:2)+dt*b);
-            x=[p(1);va(1);va(3);p(2);va(2);va(4);yaw];
-            gnssRate=cfg.gnss.positionGain*Wg*(gnssPosition(k,:).'-p);
+        x=invariantObserverSupport.predict(x,dt,lateral.sideSlipAngleRate(k));
+        intrinsicStates(k,:)=x.';
+        gnssRate=zeros(2,1);
+        if G.valid(k)
+            Cp=zeros(2,8);Cp(1,1)=1;Cp(2,4)=1;Kg=continuous.LG*Wg;
+            x=(eye(8)+dt*Kg*Cp)\(x+dt*Kg*gnssPosition(k,:).');
+            gnssRate=Kg([1,4],:)*(gnssPosition(k,:).'-Cp*x);
         end
+        packet=invariantObserverSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
+            h.lateralAcceleration(k),h.yawRate(k),lateral.sideSlipAngleRate(k), ...
+            velocityValid(k),accelerationValid(k),gyroValid(k),cfg);
+        priorRate=x(8);
+        [x,invariantAudits{k}]=invariantObserverSupport.correct(x,packet,dt,continuous,cfg);
+        % Complete the implicit psi-dot = estimated-rate equation using
+        % the posterior STATE. No gyro sample appears in this prediction.
+        x(7)=x(7)+dt*(x(8)-priorRate);
         baselineStates(k,:)=x.';
         if L.valid(k) && overlapChannel
             measurement=lidarInjectionSupport.evaluateOverlapGradient(overlap.map,overlap.sources{k},x([1,4,7]),overlap.config);
@@ -275,40 +241,16 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         estimate.diagnostics.matchingFeedback=true;
         estimate.diagnostics.matchingSource="Per-frame callback with fused seed and optional current position aid";
     end
-    if intrinsicFramework
-        estimate.internalState=z;estimate.yawRate=z(:,8);
-        estimate.diagnostics.intrinsicPrediction=intrinsicStates;
-        estimate.diagnostics.baselineInternalState=baselineStates;
-        estimate.diagnostics.invariantOutputs=invariantAudits;
-        estimate.diagnostics.intrinsicPredictionUsesImu=false;
-        estimate.diagnostics.actualOverlapCertified=false;
-        estimate.diagnostics.finiteInvariantSecantsCertified=false;
-        estimate.diagnostics.conditionalInvariantLocalClosureEstablished=true;
-        estimate.diagnostics.numericalInvariantRadiusCertified=false;
-        estimate.diagnostics.gyroOutputAvailabilitySatisfied=all(gyroValid);
-    end
-end
-
-function [x,gnssRate]=thetaBaselineStep(x,dt,q,yaw,velocityBody,accelerationBody,gnssValid,gnssPosition,Wg,h,velocityValid,accelerationValid)
-% thetaBaselineStep Implicit Euler step of the theta-framework observer without
-% the LiDAR channel: chains with the course-rate jerk model, the extra outputs
-% (body velocity and acceleration rotated by the predicted heading) through
-% M = T(theta) N / theta^3, GNSS through LG = T(theta) KG with its weight Wg.
-% The heading is the integrated gyro; GNSS and extra outputs do not correct it.
-    R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
-    z=[R*velocityBody;R*accelerationBody];
-    A=zeros(6);A(1,2)=1;A(2,3)=1;A(4,5)=1;A(5,6)=1;
-    A([3,6],[2,5])=q^2*eye(2);A([3,6],[3,6])=2*q*J;
-    H=zeros(4,6);H(1,2)=1;H(2,5)=1;H(3,3)=1;H(4,6)=1;
-    Cp=zeros(2,6);Cp(1,1)=1;Cp(2,4)=1;
-    M=h.M(1:6,:);M(:,1:2)=M(:,1:2)*velocityValid;M(:,3:4)=M(:,3:4)*accelerationValid;
-    system=eye(6)-dt*A+dt*M*H;rhs=x(1:6)+dt*M*z;
-    if gnssValid
-        Kg=h.LG(1:6,:)*Wg;system=system+dt*Kg*Cp;rhs=rhs+dt*Kg*gnssPosition;
-    end
-    chain=system\rhs;gnssRate=zeros(2,1);
-    if gnssValid,gnssRate=h.LG([1,4],:)*Wg*(gnssPosition-Cp*chain);end
-    x=[chain;yaw];
+    estimate.internalState=z;estimate.yawRate=z(:,8);
+    estimate.diagnostics.intrinsicPrediction=intrinsicStates;
+    estimate.diagnostics.baselineInternalState=baselineStates;
+    estimate.diagnostics.invariantOutputs=invariantAudits;
+    estimate.diagnostics.intrinsicPredictionUsesImu=false;
+    estimate.diagnostics.actualOverlapCertified=false;
+    estimate.diagnostics.finiteInvariantSecantsCertified=false;
+    estimate.diagnostics.conditionalInvariantLocalClosureEstablished=true;
+    estimate.diagnostics.numericalInvariantRadiusCertified=false;
+    estimate.diagnostics.gyroOutputAvailabilitySatisfied=all(gyroValid);
 end
 
 function valid=motionValidity(h,name,n)

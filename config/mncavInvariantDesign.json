@@ -49,10 +49,7 @@
       "maximumAcceleration": 2,
       "minimumPositionStrength": 0.25,
       "minimumHeadingStrength": 0.97,
-      "maximumPositionHeadingCoupling": 0.06,
-      "decayRate": 0.01,
-      "solver": "sedumi",
-      "tolerance": 1E-8
+      "maximumPositionHeadingCoupling": 0.06
     },
     "courseRateBound": 0.4,
     "gnssBodyOffset": [

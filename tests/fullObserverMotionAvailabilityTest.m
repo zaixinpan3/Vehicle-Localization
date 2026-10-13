@@ -1,8 +1,5 @@
 classdef fullObserverMotionAvailabilityTest < matlab.unittest.TestCase
 % Missing motion outputs withdraw feedback rather than supply zero observations.
-    properties (TestParameter)
-        framework={"invariant","legacy"}
-    end
     methods (TestClassSetup)
         function paths(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
@@ -10,14 +7,14 @@ classdef fullObserverMotionAvailabilityTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function defaultMasksPreserveTheExistingRuntime(testCase,framework)
-            [d,l,c]=fixture(framework);a=execute(d,l,c);
+        function defaultMasksPreserveTheExistingRuntime(testCase)
+            [d,l,c]=fixture();a=execute(d,l,c);
             d.highRate.bodyVelocityValid=true(size(l.time));
             d.highRate.bodyAccelerationValid=true(size(l.time));b=execute(d,l,c);
             testCase.verifyEqual(a,b);
         end
-        function absentOutputsPreserveFreePrediction(testCase,framework)
-            [d,l,c]=fixture(framework);n=numel(l.time);
+        function absentOutputsPreserveFreePrediction(testCase)
+            [d,l,c]=fixture();n=numel(l.time);
             d.highRate.bodyVelocityValid=false(n,1);d.highRate.bodyAccelerationValid=false(n,1);
             d.highRate.longitudinalSpeed(:)=NaN;l.lateralVelocity(:)=NaN;
             d.highRate.longitudinalAcceleration(:)=NaN;d.highRate.lateralAcceleration(:)=NaN;
@@ -28,31 +25,31 @@ classdef fullObserverMotionAvailabilityTest < matlab.unittest.TestCase
             testCase.verifyEqual(a.diagnostics.packetCounts.bodyVelocityValid,0);
             testCase.verifyFalse(a.diagnostics.observedMotionEnvelopeSatisfied);
         end
-        function withdrawnPayloadCannotInfluenceAnyState(testCase,framework)
-            [d,l,c]=fixture(framework);n=numel(l.time);
+        function withdrawnPayloadCannotInfluenceAnyState(testCase)
+            [d,l,c]=fixture();n=numel(l.time);
             d.highRate.bodyVelocityValid=false(n,1);d.highRate.bodyAccelerationValid=false(n,1);
             a=execute(d,l,c);
             d.highRate.longitudinalSpeed(:)=1e8;l.lateralVelocity(:)=NaN;
             d.highRate.longitudinalAcceleration(:)=NaN;d.highRate.lateralAcceleration(:)=-1e8;
             b=execute(d,l,c);testCase.verifyEqual(a.z,b.z);
         end
-        function availableNanStillFailsValidation(testCase,framework)
-            [d,l,c]=fixture(framework);d.highRate.longitudinalSpeed(2)=NaN;
+        function availableNanStillFailsValidation(testCase)
+            [d,l,c]=fixture();d.highRate.longitudinalSpeed(2)=NaN;
             testCase.verifyError(@()execute(d,l,c),'VehicleLocalization:InvalidFullInput');
         end
-        function validityRequiresOneBooleanPerFrame(testCase,framework)
-            [d,l,c]=fixture(framework);d.highRate.bodyVelocityValid=[true;false];
+        function validityRequiresOneBooleanPerFrame(testCase)
+            [d,l,c]=fixture();d.highRate.bodyVelocityValid=[true;false];
             testCase.verifyError(@()execute(d,l,c),'VehicleLocalization:InvalidMotionValidity');
         end
     end
 end
 
-function [d,l,c]=fixture(framework)
+function [d,l,c]=fixture()
     t=(0:.1:1).';zero=zeros(size(t));
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
     l=struct('time',t,'lateralVelocity',zero,'sideSlipAngleRate',zero);
-    if framework=="invariant",c=mncavFullObserverConfig();else,c=fullObserverConfig();end
+    c=mncavFullObserverConfig();
     c.initialState=[0;3;.2;0;0;0;0];
 end
 

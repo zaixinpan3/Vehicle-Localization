@@ -18,7 +18,7 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
         end
         function bothPositionResidualsActOnTheSameState(testCase)
             f=fixture(1,"both");f.data.gnss.position(:,2)=1;f.data.lidar.pose(:,2)=-1;
-            r=run(f);c=r.diagnostics.positionCorrection(1,:);
+            r=run(f);c=r.diagnostics.positionCorrection(2,:);
             testCase.verifyGreaterThan(c(2),0);testCase.verifyLessThan(c(4),0);
             testCase.verifyEqual(r.diagnostics.mode,3*ones(size(r.time)));
         end
@@ -45,11 +45,6 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(r.position,f.truth(:,1:2),AbsTol=1e-9);
             testCase.verifyTrue(all(ismember(r.diagnostics.mode,[1,2])));
         end
-        function movingGnssNeverCorrectsHeading(testCase)
-            f=fixture(15,"gnss");f.cfg.initialState(7)=.2;r=run(f);
-            testCase.verifyEqual(r.heading,.2*ones(size(r.time)),AbsTol=1e-12);
-            testCase.verifyEqual(r.diagnostics.headingMode,zeros(size(r.time)));
-        end
         function stationaryGnssDoesNotInventHeadingObservability(testCase)
             f=fixture(4,"gnss");f.data.highRate.longitudinalSpeed(:)=0;
             f.data.gnss.position(:)=0;f.cfg.initialState(:)=0;f.cfg.initialState(7)=.2;
@@ -61,10 +56,6 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             f=turnFixture(4);r=run(f);
             direct=runFullLocalizationObserver(f.data,struct('unused',true),f.cfg,LateralInputs=f.lateral);
             testCase.verifyEqual(r,direct);
-        end
-        function turningGnssKeepsTheGyroHeading(testCase)
-            f=turnFixture(15);f.data=rmfield(f.data,'lidar');f.cfg.initialState(7)=.2;r=run(f);
-            testCase.verifyEqual(r.headingUnwrapped,f.truth(:,3)+.2,AbsTol=1e-9);
         end
         function invalidGnssDoesNotEraseLidarHeading(testCase)
             f=fixture(4,"lidar");f.cfg.initialState(7)=.1;r=run(f);
@@ -106,17 +97,8 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             testCase.verifyError(@()run(f),'VehicleLocalization:MissingFullIssDomain');
         end
         function uncertifiedGainsCannotReachNumericalIntegration(testCase)
-            f=fixture(1,"lidar");f.cfg.gnss.positionGain=0;f.cfg.maximumTrackAngleRate=0;
-            f.cfg.iss.maximumSpeed=8;f.cfg.iss.maximumAcceleration=0;
-            f.cfg.iss.minimumPositionStrength=.5;f.cfg.iss.minimumHeadingStrength=.5;
-            f.cfg.iss.maximumPositionHeadingCoupling=.25;
-            testCase.verifyError(@()run(f),'VehicleLocalization:InfeasibleFullCertificate');
-        end
-        function lidarCertificateDoesNotRequireGnssCorrection(testCase)
-            cfg=fullObserverConfig;cfg.gnss.positionGain=0;
-            design=fullObserverSupport.designFullObserverGains(cfg);
-            testCase.verifyTrue(design.fullContinuousStateCertified);
-            testCase.verifyGreaterThan(design.continuousCertificate.verification.verifiedDecayRate,cfg.iss.decayRate);
+            f=fixture(1,"lidar");f.cfg.invariantDesign.kappaL=0;
+            testCase.verifyError(@()run(f),'VehicleLocalization:InfeasibleInvariantDesign');
         end
     end
 end
@@ -133,7 +115,8 @@ function f=fixture(duration,mode)
     data=struct('highRate',high);
     if ismember(mode,["gnss","both"]),data.gnss=gnss;end
     if ismember(mode,["lidar","both"]),data.lidar=lidar;end
-    cfg=fullObserverConfig;
+    cfg=mncavFullObserverConfig;
+    cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     cfg.initialState=[0;8;0;0;0;0;0];
     f=struct('data',data,'lateral',lateral,'cfg',cfg,'truth',[8*t,zero,zero]);
 end
