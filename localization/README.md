@@ -151,6 +151,54 @@ The stored certificate for the surrogate `S = F * M` alone does not complete
 the active overlap proof. These theoretical conditions require no per-frame
 enforcement in the sampled implementation.
 
+### Dataset reference boundary
+
+Frozen maps built using reference or simulator-truth poses are an explicit
+design input, not reference leakage. Local map selection and view weighting use
+the observer prediction. The current Mississippi entry loads
+`output/receiver_reference/map/view_conditioned_cloud.mat`; the base
+`probability_cloud.mat` is a distinct map artifact.
+
+The current dataset protocols disclose these additional uses:
+
+* Mississippi initializes once from a reference pose plus `(0.5, -0.4 m, 2 deg)`.
+  Subsequent motion, tilt and source windows use measured wheel/IMU/lateral
+  signals. Only epoch/clock fields and the first initialization pose are consumed
+  from the synchronized pose CSV. Scoring-reference values do not enter the
+  observer data structure.
+* Downtown initializes once from the exact first-query GLIM pseudo-reference
+  pose. Velocity is measured; later reference poses and GNSS do not enter
+  tracking. Reported errors measure agreement with that pseudo-reference.
+* CARLA initializes from the preceding three seconds of noisy GNSS and measured
+  motion. The runtime consumes exported measurements and ray-cast XYZ, with no
+  true pose, true velocity, semantic labels or realized sensor-bias channel.
+  Truth generates the simulated sensors upstream; that is part of the declared
+  sensor model, not an additional observer input. LiDAR-only operation starts
+  after this measured-GNSS bootstrap.
+
+Mississippi BESTPOS is an INS-assisted receiver solution (types 54/55/56), as
+defined in the [NovAtel BESTPOS specification](https://docs.novatel.com/OEM7/Content/Logs/BESTPOS.htm).
+Its coordinates are projected directly from the raw log, but it shares the
+receiver navigation solution with the INSPVA-derived scoring reference. These
+real-data discrepancies therefore do not establish independent absolute accuracy.
+The fixed Mississippi LiDAR-frame translation was fitted/selected on that drive;
+theta was selected on frames 1--700 and checked on 701--1169. This is fixed
+calibration/model selection, with no per-frame truth correction, and whole-drive
+scores include development data.
+
+The October 12 audit paired real-data prefixes across all 14 sequences: seven
+32-frame Mississippi modes, eight 24-frame Downtown runs and three 24-frame
+modes on each of five CARLA routes. Removing/changing reference artifacts while
+keeping initialization, measurements and maps fixed produced exactly identical
+seven-state estimates in all 30 comparisons; Mississippi source components also
+matched. All 21 targeted isolation tests passed, and all five complete CARLA
+sensor exports reproduced their declared seeded generation model. These are
+prefix checks plus code/input-provenance review, not a full-length poisoned-data
+rerun or a formal exhaustive information-flow proof. The small audit summary is
+kept beside the performance tables in
+`output/current_dataset_replay_20261012/truth_audit.json`; no separate temporary
+research report is required.
+
 `runFullLocalizationObserver` always uses a baseline backward-Euler step and
 one implicit LiDAR correction per common localization frame, after the
 continuous ISS-LMI check. The historical transported runtime and its fallback
