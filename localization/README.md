@@ -151,6 +151,28 @@ The stored certificate for the surrogate `S = F * M` alone does not complete
 the active overlap proof. These theoretical conditions require no per-frame
 enforcement in the sampled implementation.
 
+Aligned inputs may declare `highRate.bodyVelocityValid` and
+`highRate.bodyAccelerationValid`, one Boolean per frame. Missing masks retain
+the existing all-valid contract. Invalid payloads, including NaNs, are ignored;
+the corresponding output feedback is withdrawn rather than treating absence as
+a zero measurement. The gyro and declared course-rate input remain required.
+Incomplete motion observations do not verify the measured maneuver envelope.
+
+The KITTI Raw transfer entry is `runKittiOverlapTrial(datasetFolder, outputFolder)`
+under `scripts/kitti/`; add YALMIP and SeDuMi before running it. The dataset
+folder is a synchronized drive with its date-level calibration in the parent.
+Odd zero-based scans build the OXTS-reference map and even scans are queries.
+Queries use body inertial outputs, gyro-integrated tilt after one initial
+tilt, and one initial reference pose with a declared offset. Initial velocity
+is zero and velocity-output feedback is withdrawn. No later OXTS navigation
+pose, orientation or velocity enters the observer. Gains are freshly synthesized
+for declared transfer assumptions, without fitting KITTI reference errors.
+This is a global-branch trial with single-frame sources and no scan deskew;
+it does not validate the vehicle-specific lateral observer or constitute the
+official KITTI odometry benchmark. OXTS body inertial outputs are processed
+device outputs, not a claim of independently recorded raw analog IMU signals.
+Only metrics, a summary, logs and a figure persist; no numerical caches are kept.
+
 ### Dataset reference boundary
 
 Frozen maps built using reference or simulator-truth poses are an explicit

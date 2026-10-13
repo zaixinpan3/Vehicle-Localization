@@ -4,6 +4,8 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % Supply aligned lateral estimates through LateralInputs. The lateralDesign
 % argument remains for caller compatibility; upstream synthesis is separate.
 % Missing/invalid measurements withdraw their own correction for that frame.
+% Optional highRate.bodyVelocityValid and bodyAccelerationValid masks also
+% withdraw unavailable motion-output feedback. Absent masks mean all valid.
     arguments
         data (1,1) struct
         lateralDesign (1,1) struct %#ok<INUSA>
@@ -41,18 +43,29 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
     assert(isfield(lateral,'time') && isequal(lateral.time(:),t), ...
         'VehicleLocalization:AlignedLateralRequired','Supply lateral estimates on the frame clock.');
+    reportedLateral=lateral;
+    velocityValid=motionValidity(h,'bodyVelocityValid',n);
+    accelerationValid=motionValidity(h,'bodyAccelerationValid',n);
     fields=["longitudinalSpeed","longitudinalAcceleration","lateralAcceleration","yawRate"];
     for name=fields
-        assert(numel(h.(name))==n && all(isfinite(h.(name))), ...
+        valid=true(n,1);
+        if name=="longitudinalSpeed",valid=velocityValid;end
+        if any(name==["longitudinalAcceleration","lateralAcceleration"]),valid=accelerationValid;end
+        assert(numel(h.(name))==n && all(isfinite(h.(name)(valid))), ...
             'VehicleLocalization:InvalidFullInput','Invalid aligned motion.');
+        h.(name)=h.(name)(:);h.(name)(~valid)=0;
     end
     for name=["lateralVelocity","sideSlipAngleRate"]
-        assert(numel(lateral.(name))==n && all(isfinite(lateral.(name))), ...
+        valid=true(n,1);if name=="lateralVelocity",valid=velocityValid;end
+        assert(numel(lateral.(name))==n && all(isfinite(lateral.(name)(valid))), ...
             'VehicleLocalization:InvalidFullInput','Invalid aligned lateral output.');
+        lateral.(name)=lateral.(name)(:);lateral.(name)(~valid)=0;
     end
     G=source(data,'gnss',t,2);L=source(data,'lidar',t,3);
     onlineMatching=isfield(data,'lidarMatcher');
     if onlineMatching
+        assert(all(velocityValid),'VehicleLocalization:MatcherMotionRequired', ...
+            'The legacy matcher seed requires valid body velocity; use overlap sources for absent velocity.');
         assert(isa(data.lidarMatcher,'function_handle') && ~isfield(data,'lidar'), ...
             'VehicleLocalization:AmbiguousLidarInput','Supply a matcher or recorded LiDAR measurements, not both.');
     end
@@ -121,15 +134,16 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         end
         if thetaFramework
             [x,gnssRate]=thetaBaselineStep(x,dt,q,yaw,[speed;vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)], ...
-                G.valid(k),gnssPosition(k,:).',Wg,continuous.hgo);
+                G.valid(k),gnssPosition(k,:).',Wg,continuous.hgo,velocityValid(k),accelerationValid(k));
             p=x([1,4]);
         else
             K=cfg.gnss.positionGain*Wg;
             R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
             velocity=R*[speed;vy];acceleration=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
-            A=[(1+dt*cfg.gains(2))*eye(2),-dt*eye(2); ...
-                -dt*q^2*eye(2),(1+dt*cfg.gains(3))*eye(2)-2*dt*q*J];
-            va=A\[x([2,5])+dt*cfg.gains(2)*velocity;x([3,6])+dt*cfg.gains(3)*acceleration];
+            gv=cfg.gains(2)*velocityValid(k);ga=cfg.gains(3)*accelerationValid(k);
+            A=[(1+dt*gv)*eye(2),-dt*eye(2); ...
+                -dt*q^2*eye(2),(1+dt*ga)*eye(2)-2*dt*q*J];
+            va=A\[x([2,5])+dt*gv*velocity;x([3,6])+dt*ga*acceleration];
             b=zeros(2,1);
             if G.valid(k),b=b+cfg.gnss.positionGain*Wg*gnssPosition(k,:).';end
             p=(eye(2)+dt*K)\(x([1,4])+dt*va(1:2)+dt*b);
@@ -193,7 +207,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     end
     estimate=struct('time',t,'z',z,'onlineZ',z,'pose',[z(:,[1,4]),wrap(z(:,7))], ...
         'position',z(:,[1,4]),'velocity',z(:,[2,5]),'acceleration',z(:,[3,6]), ...
-        'heading',wrap(z(:,7)),'headingUnwrapped',z(:,7),'lateral',lateral,'observer',design);
+        'heading',wrap(z(:,7)),'headingUnwrapped',z(:,7),'lateral',reportedLateral,'observer',design);
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition,'gnssInformationAtObserverPoint',gnssInformation, ...
         'yawCorrection',yawCorrection, ...
@@ -203,14 +217,16 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'continuousInformationBounds',informationBounds, ...
         'continuousInformationQualified',informationQualified, ...
         'observedMotionEnvelopeSatisfied', ...
-            all(hypot(h.longitudinalSpeed(:),lateral.lateralVelocity(:))<=cfg.iss.maximumSpeed) ...
+            all(velocityValid) && all(accelerationValid) ...
+            && all(hypot(h.longitudinalSpeed(:),lateral.lateralVelocity(:))<=cfg.iss.maximumSpeed) ...
             && all(hypot(h.longitudinalAcceleration(:),h.lateralAcceleration(:))<=cfg.iss.maximumAcceleration) ...
             && maximumRate<=cfg.maximumTrackAngleRate, ...
         'minimumWeights',weights, ...
         'maximumTrackAngleRate',maximumRate, ...
         'rateEnvelopeSatisfied',maximumRate<=cfg.maximumTrackAngleRate,'stateResets',0, ...
         'packetCounts',struct('gnssValid',nnz(G.valid),'gnssInvalid',nnz(~G.valid), ...
-        'lidarValid',nnz(L.valid),'lidarInvalid',nnz(~L.valid)), ...
+        'lidarValid',nnz(L.valid),'lidarInvalid',nnz(~L.valid), ...
+        'bodyVelocityValid',nnz(velocityValid),'bodyAccelerationValid',nnz(accelerationValid)), ...
         'localizationUpdates',n-1,'virtualPoseUpdates',0,'integrationSubsteps',0, ...
         'nominalOutputRateHz',1/median(diff(t)),'referenceUsed',false, ...
         'lidarChannel',channelName(onlineMatching,overlapChannel,isfield(data,'lidar')), ...
@@ -224,7 +240,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     end
 end
 
-function [x,gnssRate]=thetaBaselineStep(x,dt,q,yaw,velocityBody,accelerationBody,gnssValid,gnssPosition,Wg,h)
+function [x,gnssRate]=thetaBaselineStep(x,dt,q,yaw,velocityBody,accelerationBody,gnssValid,gnssPosition,Wg,h,velocityValid,accelerationValid)
 % thetaBaselineStep Implicit Euler step of the theta-framework observer without
 % the LiDAR channel: chains with the course-rate jerk model, the extra outputs
 % (body velocity and acceleration rotated by the predicted heading) through
@@ -236,13 +252,24 @@ function [x,gnssRate]=thetaBaselineStep(x,dt,q,yaw,velocityBody,accelerationBody
     A([3,6],[2,5])=q^2*eye(2);A([3,6],[3,6])=2*q*J;
     H=zeros(4,6);H(1,2)=1;H(2,5)=1;H(3,3)=1;H(4,6)=1;
     Cp=zeros(2,6);Cp(1,1)=1;Cp(2,4)=1;
-    M=h.M(1:6,:);system=eye(6)-dt*A+dt*M*H;rhs=x(1:6)+dt*M*z;
+    M=h.M(1:6,:);M(:,1:2)=M(:,1:2)*velocityValid;M(:,3:4)=M(:,3:4)*accelerationValid;
+    system=eye(6)-dt*A+dt*M*H;rhs=x(1:6)+dt*M*z;
     if gnssValid
         Kg=h.LG(1:6,:)*Wg;system=system+dt*Kg*Cp;rhs=rhs+dt*Kg*gnssPosition;
     end
     chain=system\rhs;gnssRate=zeros(2,1);
     if gnssValid,gnssRate=h.LG([1,4],:)*Wg*(gnssPosition-Cp*chain);end
     x=[chain;yaw];
+end
+
+function valid=motionValidity(h,name,n)
+% Missing masks preserve the existing measured-motion contract. Withdrawing
+% an output removes both its residual and feedback; invalid payloads are ignored.
+    valid=true(n,1);if ~isfield(h,name),return;end
+    value=h.(name);
+    assert(numel(value)==n && all(ismember(value(:),[0,1])), ...
+        'VehicleLocalization:InvalidMotionValidity','Motion validity must contain one Boolean per frame.');
+    valid=logical(value(:));
 end
 
 function s=source(data,name,t,width)
