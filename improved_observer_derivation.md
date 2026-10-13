@@ -1,6 +1,12 @@
-# Continuous-time ISS of the improved seven-state MO-HGO
+# Continuous observer theory: overlap closure and historical MO-HGO proofs
 
-Revision date: 2026-09-13.
+Current overlap closure: 2026-10-12. Historical mode-specific derivation: 2026-09-13.
+
+Section 0 completes the local-region and observation-bias arguments for the
+current overlap route, conditional on a uniform inequality for its **actual**
+error-feedback operator. Establishing that operator inequality is the remaining
+open problem. Sections 1--6 preserve the historical continuous GNSS and delayed
+LiDAR-pose analyses; their certificates do not transfer automatically to overlap.
 
 Runtime clarification, 2026-09-16: the GNSS-only and LiDAR-only systems below
 are independent analysis cases, not a requirement to exclude one sensor from
@@ -37,6 +43,204 @@ See [the runtime contract](localization/README.md) and
 [implementation validation](research/continuous_observer_runtime_20260913/validation.md).
 Numerical success does not verify all physical, initial-error or disturbance
 hypotheses.
+
+## 0. Current overlap: completed local-region and bias closure
+
+The guarantee considered here is local and continuous in time, with sufficient
+nondegenerate LiDAR throughout the declared alignment region. Fix a constant
+high-gain parameter `theta` (the current configuration uses 4) and heading length
+`ell` (currently 10 m). No certificate for discretization, deficient scenes or
+arbitrary initial errors is claimed or required by this theoretical scope.
+
+### 0.1 Actual overlap error and the deferred certificate
+
+Use the normalized state and pose
+
+$$
+z_\ell=[X,V_X,A_X,Y,V_Y,A_Y,\ell\psi]^\top,\qquad
+q=Cz_\ell=[X,Y,\ell\psi]^\top,
+$$
+
+where `C` selects state components 1, 4 and 7. With
+
+$$
+T=\operatorname{diag}(\theta,\theta^2,\theta^3,
+                       \theta,\theta^2,\theta^3,\theta),\qquad
+\varepsilon=T^{-1}(z_\ell-\hat z_\ell),
+$$
+
+the pose error is exactly $q-\hat q=\theta C\varepsilon$.
+Let $g_t(q)$ be the actual spatial overlap-gradient field in these pose units.
+It must be continuously differentiable on each declared local region, measurable
+in time and locally bounded with its Jacobian uniformly on finite time intervals.
+The continuous plant is forward complete; the observer admits a local solution.
+For a fixed smooth scalar feature-field cost, $g_t=\nabla c_t$ and its Jacobian
+is the true Hessian. Pose-dependent cropping or weighting must be included in
+the definition and Jacobian of the actual field; this section does not assume
+those derivatives vanish or certify a spatial discontinuity.
+
+Define the true-pose gradient bias and exact secant operator by
+
+$$
+\beta_t=g_t(q),\qquad
+\bar H_t=\int_0^1 Dg_t(q+s(\hat q-q))\,ds.
+$$
+
+The fundamental theorem of calculus gives
+
+$$
+g_t(\hat q)=\beta_t+\bar H_t(\hat q-q).
+$$
+
+For the unit directional reliabilities used by the current configuration,
+$M_t\succeq0$ is the Gauss--Newton surrogate,
+$F_t=(M_t+\lambda_*I)^{-1}$ with $\lambda_*=64$, and
+$W_t=F_t\bar H_t$ is the **actual** effective feedback. With the matched gain
+$K_L=\kappa_LP^{-1}C^\top$, the scaled error equation has the form
+
+$$
+\dot\varepsilon=\mathcal A_t(\varepsilon)\varepsilon+d_t,\qquad
+\mathcal A_t=\theta(A_{0,t}-K_LW_tC),\qquad
+d_t=K_LF_t\beta_t+d_{0,t}.
+$$
+
+$A_{0,t}$ contains the motion, body-output and any admitted GNSS error terms;
+$d_{0,t}$ contains their additive measurement and model disturbances, including
+the upstream lateral-observer error. Their declared maneuver and disturbance
+bounds must also hold throughout the region. No LiDAR pose solve is introduced.
+
+The sole deferred stability hypothesis is: there are constant $P\succ0$ and
+$\mu>0$ such that, uniformly in time and for all admitted errors with
+$\|q-\hat q\|<r$,
+
+$$
+\mathcal A_t(\varepsilon)^\top P+P\mathcal A_t(\varepsilon)
+\preceq-\mu I. \tag{O1}
+$$
+
+**(O1) has not been established for the active overlap operator.** The existing
+LMI uses $S_t=F_tM_t$, which is generally different from $W_t$; full rank of
+$M_t$, or positive definiteness of a true Hessian alone, does not prove (O1).
+The results below close the other two gaps once (O1) is established. They do not
+claim that changing the neighborhood or bounding bias can establish (O1).
+
+### 0.2 Observation bias: ideal stationarity and bounded error
+
+Two theoretical contracts are now explicit:
+
+* **Ideal observations:** $\beta_t=0$. This requires a stationary overlap field
+  at the true pose, not merely a full-rank surrogate.
+* **Perturbed observations:** $\|\beta_t\|\le\bar\beta$ uniformly, and
+  $\|d_{0,t}\|\le\bar d_0$. These are theoretical bounds; no runtime estimator
+  or per-frame enforcement of them is required.
+
+Ideal stationarity has a concrete geometric realization. Suppose, for each
+semantic class and smoothing scale, the map and scan are identical nonzero smooth
+square-integrable density fields after the true rigid transform, with fixed
+class weights, complete integration and no pose-dependent admission. Their
+overlap as a function of relative pose $\xi$ is
+$E(\xi)=\langle\rho,U_\xi\rho\rangle$. Rigid transformation preserves the
+$L^2$ norm, so Cauchy--Schwarz gives $E(\xi)\le E(0)=\|\rho\|^2$.
+Consequently every smooth $-\log E$ is stationary at the correct alignment,
+as is their weighted sum. This argument proves stationarity, not strict
+curvature or uniqueness; those belong to the deferred operator analysis.
+Partial views, unequal fields and changing evidence weights do not inherit this
+ideal argument automatically and are represented by the bounded-bias contract.
+
+Since $M_t\succeq0$ and $\lambda_*>0$,
+
+$$
+\|F_t\|_2\le\lambda_*^{-1},\qquad
+\|d_t\|\le\bar d:=
+\frac{\kappa_L\|P^{-1}C^\top\|_2}{\lambda_*}\bar\beta+\bar d_0.
+\tag{O2}
+$$
+
+The bound is in normalized pose and scaled-state units. A persistent nonzero
+bias permits convergence to an error neighborhood; it does not justify
+convergence to exactly zero. Setting only $\beta_t=0$ does not remove the
+other disturbances in $d_{0,t}$.
+
+### 0.3 Local region, forward invariance and regional ISS
+
+Choose a radius $r>0$ on which the spatial and coefficient hypotheses hold
+uniformly, and require $r<\pi\ell$ so that the admitted yaw error stays on a
+single angular branch. Write $p_- =\lambda_{\min}(P)$ and
+$p_+=\lambda_{\max}(P)$, and define
+
+$$
+V=\varepsilon^\top P\varepsilon,\qquad
+\chi=\lambda_{\max}(CP^{-1}C^\top),\qquad
+c_* =\frac{r^2}{\theta^2\chi},\qquad
+a=\frac{\mu}{2p_+},\qquad b=\frac{2p_+^2}{\mu}. \tag{O3}
+$$
+
+**Conditional local-region proposition.** Assume (O1), the field and maneuver
+conditions above, and an essentially bounded disturbance satisfying (O2).
+If
+
+$$
+V(0)<c_*,\qquad b\bar d^2<ac_*, \tag{O4}
+$$
+
+then the solution remains in $V<c_*$, hence in $\|q-\hat q\|<r$ and the
+stated angular branch, for all $t\ge0$. Moreover,
+
+$$
+V(t)\le e^{-at}V(0)+\frac ba\bar d^2(1-e^{-at}), \tag{O5}
+$$
+
+and
+
+$$
+\|\varepsilon(t)\|\le
+\sqrt{\frac{p_+}{p_-}}e^{-at/2}\|\varepsilon(0)\|
++\sqrt{\frac{b}{ap_-}}\bar d. \tag{O6}
+$$
+
+The same estimate holds with the disturbance supremum on $[0,t]$ in its
+second term. The invariant-region admission condition uses a uniform bound on
+the entire time interval. In physical normalized-state units,
+$\|z_\ell-\hat z_\ell\|\le\|T\|_2\|\varepsilon\|$; in particular,
+$\|q-\hat q\|\le\theta\|C\varepsilon\|$. This is a regional ISS statement
+for inputs satisfying (O4), not global ISS for arbitrary disturbances.
+
+**Proof.** Matrix Cauchy--Schwarz gives
+$\|q-\hat q\|^2\le\theta^2\chi V$, so $V<c_*$ lies in the validity
+region. While in that region, (O1) and Young's inequality imply, almost
+everywhere,
+
+$$
+\dot V\le-\mu\|\varepsilon\|^2+2p_+\|\varepsilon\|\|d_t\|
+\le-\frac\mu2\|\varepsilon\|^2+\frac{2p_+^2}{\mu}\|d_t\|^2
+\le-aV+b\bar d^2.
+$$
+
+The comparison bound (O5), applied up to any proposed first exit, stays below
+$c_*$ because both $V(0)$ and $(b/a)\bar d^2$ are strictly below $c_*$.
+Thus no first exit occurs. Local solvability, the finite-time bounded plant
+and the bounded error permit continuation; the bound holds for all time.
+Finally $p_-\|\varepsilon\|^2\le V$ and
+$\sqrt{x+y}\le\sqrt x+\sqrt y$ give (O6). No time derivative of $W_t$ is
+used because $P$ is constant and (O1) is pointwise. With $d_t\equiv0$ the
+error converges exponentially to zero. With persistent bounded disturbance,
+$\limsup\|\varepsilon\|\le\sqrt{b/(ap_-)}\bar d$.
+
+### 0.4 Remaining work and document scope
+
+The bias model and invariant-region proof are complete **conditional on (O1)**.
+The remaining task is to derive a meaningful uniform overlap operator domain
+and establish its continuous common-Lyapunov inequality or LMI. This section
+neither re-synthesizes gains nor states a numerical radius or final error bound
+without the missing operator margin. The manuscript still contains the earlier
+affine LiDAR-pose model and needs a later route-specific revision after that
+connection is resolved.
+
+Temporary audit and feasibility studies were consolidated into this existing
+document at the user's request. Research cleanup removes superseded studies;
+the current configuration provenance, latest evaluations, directly referenced
+materials and unrelated working changes remain. No new dated study or standalone
+temporary report is required for this closure.
 
 ## 1. State, continuous plant, and disturbance interface
 

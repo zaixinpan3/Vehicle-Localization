@@ -142,6 +142,15 @@ configurations.
 
 ## Current synchronous runtime
 
+For the current overlap route, the completed continuous-time observation-bias
+and local invariant-region arguments are in
+[Section 0 of the existing theory document](../improved_observer_derivation.md#0-current-overlap-completed-local-region-and-bias-closure).
+They are conditional on a uniform Lyapunov inequality for the actual feedback
+`W = F * Hbar`; establishing that overlap-to-LMI connection remains open.
+The stored certificate for the surrogate `S = F * M` alone does not complete
+the active overlap proof. These theoretical conditions require no per-frame
+enforcement in the sampled implementation.
+
 `runFullLocalizationObserver` always uses a baseline backward-Euler step and
 one implicit LiDAR correction per common localization frame, after the
 continuous ISS-LMI check. The historical transported runtime and its fallback
