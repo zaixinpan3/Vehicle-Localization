@@ -53,12 +53,13 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
         end
         function independentPointConfigurationUsesTheSolvedGnssGain(testCase)
             cfg=mncavFullObserverConfig();design=fullObserverSupport.designFullObserverGains(cfg);
-            stored=jsondecode(fileread(fullfile(fileparts(fileparts(mfilename('fullpath'))),'config','mncavThetaDesign.json')));
-            Cp=zeros(2,7);Cp(1,1)=1;Cp(2,4)=1;T=diag(cfg.hgo.theta.^[1 2 3 1 2 3 1]);
-            testCase.verifyEqual(design.hgo.LG,diag([ones(1,6),1/cfg.hgo.ell])*T*stored.kappaG*(stored.P\Cp.'),RelTol=1e-12);
+            stored=jsondecode(fileread(fullfile(fileparts(fileparts(mfilename('fullpath'))),'config','mncavInvariantDesign.json')));
+            Cp=zeros(2,8);Cp(1,1)=1;Cp(2,4)=1;
+            testCase.verifyEqual(design.LG,design.toPhysical*stored.design.kappaG*(stored.design.P\Cp.'),RelTol=1e-12);
             testCase.verifyEqual(stored.inputs.gnssBodyOffset(:),cfg.gnss.outputPoint.bodyOffset(:),AbsTol=0);
             testCase.verifyFalse(cfg.gnss.outputPoint.evaluationDriveUsed);
-            testCase.verifyTrue(design.fullContinuousStateCertified);
+            testCase.verifyTrue(design.surrogateContinuousLmiVerified);
+            testCase.verifyFalse(design.fullContinuousStateCertified);
         end
         function matchedGainLimitsDriftWithGnssAlone(testCase)
             f=biasedStraightFixture();slow=run(f);f.cfg.gnss.positionGain=4;fast=run(f);

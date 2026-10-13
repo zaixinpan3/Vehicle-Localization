@@ -1,4 +1,4 @@
-function report=runKittiOverlapTrial(datasetFolder,outputFolder)
+function [report,estimate,trial]=runKittiOverlapTrial(datasetFolder,outputFolder)
 % runKittiOverlapTrial Known-map transfer trial on a KITTI Raw sync drive.
 % Odd zero-based scans build a fixed map using OXTS reference poses; even
 % scans are queries. Runtime accepts LiDAR, OXTS body inertial outputs and one
@@ -6,6 +6,8 @@ function report=runKittiOverlapTrial(datasetFolder,outputFolder)
 % steering or wheel-speed measurement enters the observer. This tests the
 % global branch, not the vehicle-specific lateral observer or KITTI odometry.
 % Numerical outputs stay in memory; only small summaries and figures persist.
+% Optional estimate/trial outputs support paired in-memory validation; the
+% trial reference is scoring data and never crosses the estimator boundary.
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     packetFiles=dir(fullfile(datasetFolder,'oxts','data','*.txt'));
     assert(numel(packetFiles)>=4,'VehicleLocalization:MissingKittiData','Require KITTI Raw OXTS and LiDAR files.');
@@ -64,21 +66,24 @@ function report=runKittiOverlapTrial(datasetFolder,outputFolder)
     end
     perceptionSeconds=toc(timer);
     % Re-synthesize the kinematic global observer for explicitly declared
-    % transfer-trial noise assumptions; no KITTI reference errors tune gains.
+    % transfer-trial assumptions. Design revisions used this development drive;
+    % no navigation reference series enters prediction or innovations.
     cfg=mncavFullObserverConfig(LoadDesign=false);cfg.kind="kitti-global-overlap-transfer-trial";
+    cfg.invariantObserver.velocityAvailable=false;
+    cfg.invariantObserver.operatingPoints=["lidar","weakLidar"];
     generic=fullObserverConfig();cfg.gnss.outputPoint=generic.gnss.outputPoint;
-    cfg.thetaFramework.noise=struct('lidarPositionM',.1,'lidarHeadingRad',.01, ...
-        'gnssPositionM',1,'velocityMps',1,'accelerationMps2',1,'gyroRadps',.01,'jerkMps3',.1);
-    cfg.thetaFramework.provenance.noise="Declared transfer assumptions, not fitted to KITTI reference errors; missing velocity output withdrawn";
-    cfg.thetaFramework.provenance.theta="Fixed theta 4 inherited from the current route; no KITTI sweep";
-    design=fullObserverSupport.synthesizeThetaFrameworkDesign(cfg);
-    cfg.hgo=struct('theta',4,'sigma',design.sigma,'ell',cfg.thetaFramework.headingLengthM, ...
-        'P',design.P,'kappaL',design.kappaL,'kappaG',design.kappaG,'Z',design.Z,'lambda',design.lambda);
+    cfg.invariantObserver.noise=struct('lidarPositionM',.1,'lidarHeadingRad',.01, ...
+        'gnssPositionM',1,'velocityMps',1,'accelerationMps2',1,'gyroRadps',.01, ...
+        'jerkMps3',cfg.iss.maximumAcceleration/2);
+    cfg.invariantObserver.provenance.noise="Declared transfer scales; jerk maximumAcceleration / 2 s, no velocity output, weak LiDAR without GNSS. Revised during this development trial; no independent holdout claim";
+    cfg.invariantObserver.provenance.theta="Fixed theta 4 inherited from the current route; no KITTI sweep";
+    design=invariantObserverSupport.synthesize(cfg);cfg.invariantDesign=design;
     cfg.gainSource="Fresh LMI synthesis for declared KITTI transfer trial";
     cfg.initialState=[initial.pose(1);0;0;initial.pose(2);0;0;initial.pose(3)];
     data=struct('highRate',h,'lidarOverlap',struct('map',map,'sources',{sources}, ...
         'valid',true(numel(query),1),'config',overlapGradientConfig()));
     timer=tic;estimate=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=l);observerSeconds=toc(timer);
+    trial=struct('data',data,'lateral',l,'config',cfg,'reference',reference(query,1:3));
     poisoned=data;poisoned.highRate.longitudinalSpeed(:)=1e8;poisonedLateral=l;poisonedLateral.lateralVelocity(:)=-1e8;
     isolated=runFullLocalizationObserver(poisoned,struct(),cfg,LateralInputs=poisonedLateral);
     velocityIsolationDifference=max(abs(isolated.z-estimate.z),[],'all');
@@ -107,9 +112,10 @@ function report=runKittiOverlapTrial(datasetFolder,outputFolder)
         'clock',"Synchronized packet/frame indices on the native OXTS timestamps; queries at approximately 5 Hz", ...
         'packetMinusLidarTimestampRangeS',[min(packetOffset),max(packetOffset)], ...
         'perceptionProfile',"Unmodified Downtown geometry thresholds with curb, pole and facade; no intensity or KITTI labels", ...
-        'lateralObserverUsed',false,'courseRateApproximation',"Gyro yaw rate; sideslip-angle derivative assumed zero", ...
-        'initialization',initial,'gainInputs',fullObserverSupport.thetaFrameworkInputs(cfg), ...
-        'gainDesign',cfg.hgo,'gainVerification',design.verification,'metrics',table2struct(metrics), ...
+        'lateralObserverUsed',false,'courseRateApproximation',"Internal estimated rate with gyro-output innovation; sideslip-angle derivative assumed zero", ...
+        'intrinsicPredictionUsesImu',false,'developmentTrial',true, ...
+        'initialization',initial,'gainInputs',invariantObserverSupport.inputs(cfg), ...
+        'gainDesign',cfg.invariantDesign,'gainVerification',design.verification,'metrics',table2struct(metrics), ...
         'actualOverlapOperatorLmiVerified',false,'sampledSystemCertified',false,'officialOdometryBenchmark',false);
     f=fopen(fullfile(outputFolder,'summary.json'),'w');fprintf(f,'%s\n',jsonencode(report,PrettyPrint=true));fclose(f);
     fig=figure('Visible','off','Color','white','Position',[100,100,900,700]);tiledlayout(2,1,TileSpacing="compact");nexttile;

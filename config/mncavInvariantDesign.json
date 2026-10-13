@@ -1,0 +1,199 @@
+{
+  "inputs": {
+    "architecture": "intrinsic-eight-state-invariants-v1",
+    "outputDegrees": [
+      2,
+      3,
+      3,
+      2,
+      3,
+      2,
+      3,
+      3
+    ],
+    "observer": {
+      "sigma": 4,
+      "headingLengthM": 10,
+      "noise": {
+        "lidarPositionM": 0.0279,
+        "lidarHeadingRad": 0.00211,
+        "gnssPositionM": 0.23,
+        "velocityMps": 0.256,
+        "accelerationMps2": 0.233,
+        "gyroRadps": 0.0018,
+        "jerkMps3": 0.05
+      },
+      "weakPositionStrength": 0.05,
+      "minimumGnssWeight": 0.5,
+      "nominalGnssWeight": 0.5,
+      "gnssCouplingSplit": 0.5,
+      "operatingPoints": [
+        "lidar",
+        "lidarGnss",
+        "weakLidarGnss",
+        "gnssOnly"
+      ],
+      "lambda": 1,
+      "margin": 1E-7,
+      "solver": "sedumi",
+      "yawAccelerationRadps2": 0.2,
+      "sideslipRateNoiseRadps": 0.01,
+      "balancedPoseMetric": true,
+      "angularMetricDiagonal": true,
+      "noiseObjective": "normalizedFullState",
+      "velocityAvailable": true,
+      "accelerationAvailable": true
+    },
+    "iss": {
+      "maximumSpeed": 15,
+      "maximumAcceleration": 2,
+      "minimumPositionStrength": 0.25,
+      "minimumHeadingStrength": 0.97,
+      "maximumPositionHeadingCoupling": 0.06,
+      "decayRate": 0.01,
+      "solver": "sedumi",
+      "tolerance": 1E-8
+    },
+    "courseRateBound": 0.4,
+    "gnssBodyOffset": [
+      1.72485903887133,
+      0.26441147004400672
+    ],
+    "poseScales": [
+      1,
+      1,
+      0.1
+    ],
+    "informationScale": 64
+  },
+  "design": {
+    "architecture": "intrinsic-eight-state-invariants-v1",
+    "sigma": 4,
+    "P": [
+      [
+        30.635211853728318,
+        -28.405092522949804,
+        -41.283083735550356,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        -28.405092522949804,
+        79.990782503255346,
+        -27.769771745352816,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        -41.283083735550356,
+        -27.769771745352816,
+        615.15804418740152,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        30.635211853728318,
+        -28.405092522949804,
+        -41.283083735550356,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        -28.405092522949804,
+        79.990782503255346,
+        -27.769771745352816,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        -41.283083735550356,
+        -27.769771745352816,
+        615.15804418740152,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        11.71640638698163,
+        3.5608032515582379E-14
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3.5608032515582379E-14,
+        24.044532999219502
+      ]
+    ],
+    "kappaL": 89.472588549295438,
+    "kappaG": 60.275762361631045,
+    "auxiliaryWeights": [
+      0,
+      176.67757511547117,
+      0,
+      92.174035614238065,
+      82.252726812500683
+    ],
+    "gyroGainNormalized": 27.777578635450332,
+    "gyroDesign": {
+      "physicalGain": 111.11031454180133,
+      "normalizedVarianceProxy": 111.11111111364339,
+      "minimumLmiEigenvalue": -2.1540506878192645E-10,
+      "analyticOptimum": 111.11111111111111,
+      "solverStatus": 0
+    },
+    "speedGainNormalized": 3.9062239575646722,
+    "speedDesign": {
+      "physicalGain": 15.624895830258689,
+      "normalizedVarianceProxy": 15.625000000302439,
+      "minimumLmiEigenvalue": -2.9873288738546666E-11,
+      "analyticOptimum": 15.625,
+      "solverStatus": 0
+    },
+    "lambda": 1,
+    "meanSquareBound": 47.248467359990684,
+    "solverStatus": 0,
+    "solverInfo": "Successfully solved (SeDuMi)",
+    "verification": {
+      "certified": true,
+      "worstVertexEigenvalue": -1.0005924642372727E-7,
+      "vertices": 256,
+      "minimumEigenvalueP": 11.71640638698163,
+      "maximumEigenvalueP": 619.28856156040956,
+      "intrinsicRateState": true,
+      "zeroSpeedDivision": false,
+      "actualOverlapCertified": false,
+      "finiteInvariantSecantsCertified": false,
+      "conditionalInvariantLocalClosureEstablished": true,
+      "numericalInvariantRadiusCertified": false,
+      "gyroAvailabilityRequired": true,
+      "scope": "Continuous intrinsic drift, valid gyro output and aligned-speed surrogate sector LMI; finite auxiliary remainders have conditional local closure, with no certified numerical radius; actual overlap margin remains open; no sampled guarantee"
+    }
+  }
+}

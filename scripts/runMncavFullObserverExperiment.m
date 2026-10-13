@@ -60,8 +60,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     sourceClouds=sourceCache.sources(sourceIndex);
     pose=sourceCache.initialPose;rotation=[cos(pose(3)),-sin(pose(3));sin(pose(3)),cos(pose(3))];
     velocity=rotation*[h.longitudinalSpeed(1);lateral.lateralVelocity(1)];
-    acceleration=rotation*[h.longitudinalAcceleration(1);h.lateralAcceleration(1)];
-    cfg.initialState=[pose(1);velocity(1);acceleration(1);pose(2);velocity(2);acceleration(2);pose(3)];
+    cfg.initialState=[pose(1);velocity(1);0;pose(2);velocity(2);0;pose(3)];
     data.lidarOverlap=struct('map',sourceCache.fixed,'sources',{sourceClouds},'valid',true(n,1),'config',overlapConfig);
     native=readtable('output/receiver_reference/corrected_native_reference.csv');
     reference=interp1(native.time,[native.x,native.y,native.psi],t,'linear');
@@ -98,12 +97,12 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'registrationExecuted',false,'sourceMap',sourceCache.sourceMap,'sourcePreparationSeconds',sum(sourceCache.seconds), ...
         'gnssInformationAddedToLidar',false,'referencePositionInput',false,'zeroLidarProcessingDelay',true, ...
         'offlineSynchronization',true,'gnssOutputPointCalibration',cfg.gnss.outputPoint, ...
-        'initialization',"One reference pose plus declared offset, measured velocity and acceleration; not a cold start", ...
+        'initialization',"One reference pose plus declared offset, wheel/lateral velocity; acceleration and internal yaw rate start at zero", ...
         'limitations',"Same-drive map and reference; INS-aided BESTPOS correlated with reference; offline motion reconstruction"), ...
         'design',runs{1}.estimate.observer,'metrics',metrics);
     accepted=runs{1}.estimate.diagnostics.lidarOverlap.available;
     % Old timestamp-warped trajectories are not paired with corrected epochs.
-    % The GNSS gain belongs to the theta-framework design; the controls vary
+    % The GNSS gain belongs to the current intrinsic design; the controls vary
     % only the output-point geometry and its uncertainty.
     controlRows=cell(0,8);controlNames=["unaligned","uncertainty_only","geometry_only","aligned"];
     for k=1:numel(controlNames)

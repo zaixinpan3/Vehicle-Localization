@@ -8,10 +8,11 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function currentVehicleHasAThetaFrameworkCertificate(testCase)
+        function currentVehicleHasAnIntrinsicSurrogateCertificate(testCase)
             cfg=mncavFullObserverConfig();d=fullObserverSupport.designFullObserverGains(cfg);
-            testCase.verifyEqual(d.framework,"theta");
-            testCase.verifyTrue(d.fullContinuousStateCertified);
+            testCase.verifyEqual(d.framework,"invariant");
+            testCase.verifyTrue(d.surrogateContinuousLmiVerified);
+            testCase.verifyFalse(d.fullContinuousStateCertified);
             v=d.continuousCertificate.verification;
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);
             testCase.verifyGreaterThanOrEqual(v.minimumEigenvalueP,1-1e-6);
@@ -95,7 +96,7 @@ function cfg=declaredGainConfig()
 % MnCAV parameters with declared gains (the values before the gain synthesis)
 % exercise the comparison-matrix certificate of the generic observer; the
 % production MnCAV observer uses the theta-framework design.
-    cfg=mncavFullObserverConfig(LoadDesign=false);
+    cfg=measuredCourseObserverConfig(LoadDesign=false);
     cfg.gains=[4,4,12,4];cfg.gnss.positionGain=4;cfg.lidar.poseScales=[1;1;1];cfg.iss.decayRate=.01;
 end
 

@@ -2,12 +2,11 @@
 
 Current overlap closure: 2026-10-12. Historical mode-specific derivation: 2026-09-13.
 
-Input-architecture decision, 2026-10-13: IMU measurements are admitted only
-through the invariant auxiliary-output channel and the upstream lateral
-observer, not as direct inputs of the global state-prediction model. Section
-0.5 specifies this revision and its unresolved design choices. The existing
-runtime and stored gains still implement the preceding measured-course model;
-neither is relabeled as satisfying the new boundary.
+Implementation revision, 2026-10-13: the default global observer now uses an
+intrinsic eight-state predictor. IMU measurements enter invariant auxiliary
+innovations and the upstream lateral observer. Section 0.5 specifies the
+implemented state extension, fresh gain synthesis and remaining conditional
+proof obligations. The former measured-course model and its gains are historical.
 
 Section 0 completes the local-region and observation-bias arguments for the
 current overlap route, conditional on a uniform inequality for its **actual**
@@ -64,7 +63,7 @@ arbitrary initial errors is claimed or required by this theoretical scope.
 Use the normalized state and pose
 
 $$
-z_\ell=[X,V_X,A_X,Y,V_Y,A_Y,\ell\psi]^\top,\qquad
+z_\ell=[X,V_X,A_X,Y,V_Y,A_Y,\ell\psi,\ell r]^\top,\qquad
 q=Cz_\ell=[X,Y,\ell\psi]^\top,
 $$
 
@@ -72,7 +71,7 @@ where `C` selects state components 1, 4 and 7. With
 
 $$
 T=\operatorname{diag}(\theta,\theta^2,\theta^3,
-                       \theta,\theta^2,\theta^3,\theta),\qquad
+                       \theta,\theta^2,\theta^3,\theta,\theta^2),\qquad
 \varepsilon=T^{-1}(z_\ell-\hat z_\ell),
 $$
 
@@ -111,12 +110,13 @@ $$
 d_t=K_LF_t\beta_t+d_{0,t}.
 $$
 
-$A_{0,t}$ contains the motion, body-output and any admitted GNSS error terms;
+$A_{0,t}$ contains the intrinsic drift, invariant-output, scalar gyro/speed
+and any admitted GNSS error terms;
 $d_{0,t}$ contains their additive measurement and model disturbances, including
 the upstream lateral-observer error. Their declared maneuver and disturbance
 bounds must also hold throughout the region. No LiDAR pose solve is introduced.
 
-The sole deferred stability hypothesis is: there are constant $P\succ0$ and
+The combined deferred stability hypothesis is: there are constant $P\succ0$ and
 $\mu>0$ such that, uniformly in time and for all admitted errors with
 $\|q-\hat q\|<r$,
 
@@ -237,7 +237,8 @@ $\limsup\|\varepsilon\|\le\sqrt{b/(ap_-)}\bar d$.
 
 The bias model and invariant-region proof are complete **conditional on (O1)**.
 The remaining task is to derive a meaningful uniform overlap operator domain
-and establish its continuous common-Lyapunov inequality or LMI. This section
+and establish its continuous common-Lyapunov inequality or LMI, jointly with
+the finite invariant-output secants of Section 0.5. This section
 neither re-synthesizes gains nor states a numerical radius or final error bound
 without the missing operator margin. The manuscript still contains the earlier
 affine LiDAR-pose model and needs a later route-specific revision after that
@@ -249,136 +250,212 @@ the current configuration provenance, latest evaluations, directly referenced
 materials and unrelated working changes remain. No new dated study or standalone
 temporary report is required for this closure.
 
-### 0.5 Requested architecture: intrinsic prediction and invariant IMU outputs
+### 0.5 Implemented architecture: intrinsic prediction and invariant IMU outputs
 
-The requested information boundary is
+The default is now `mncavFullObserverConfig`, with gains from
+`config/mncavInvariantDesign.json`. `invariantObserverSupport.predict` accepts
+only the internal state, time step and estimated lateral sideslip derivative.
+No measured gyro or acceleration enters that function. Its eight physical
+states are
 
 $$
-\dot{\hat z}=A\hat z+f_{\rm int}(\hat z,\hat\xi_{\rm lat})
-+u_O+u_G+M_{\rm inv}\bigl(y_{\rm inv}-h_{\rm inv}(\hat z)\bigr).
+z=[X,V_X,A_X,Y,V_Y,A_Y,\psi,r]^\top,\qquad
+\hat q=\hat r+\dot{\hat\beta},\qquad
+J=\begin{bmatrix}0&-1\\1&0\end{bmatrix}.
 \tag{I1}
 $$
 
-Here the prediction term uses the observer state and declared *estimated*
-lateral interface only. Raw or calibrated measured gyro/acceleration samples
-may form `y_inv` and feed the lateral observer; they may not drive
-`f_int`, select its course rate, or directly increment global heading. Merely
-renaming a gyro measurement or forwarding it through an identity wrapper does
-not meet this boundary. The auxiliary innovation remains part of the global
-observer, so this is a restriction on measurement placement, not a claim that
-the resulting estimate is independent of IMU information.
-
-In particular, the current assignments
-`predYaw = psi + r_measured*dt` and
-`q = r_measured + estimatedSideslipRate` do not satisfy (I1). The current
-heading-rotated body-velocity/body-acceleration feedback also differs from
-the requested invariant-output representation. This decision does not itself
-change either implementation or the LiDAR frontend's tilt/deskew processing;
-frontend use of inertial information must be identified separately rather
-than hidden inside an allegedly IMU-independent point cloud.
-
-For the existing seven-state variables, let
+The nominal continuous predictor is
 
 $$
-v=\begin{bmatrix}V_X\\V_Y\end{bmatrix},\quad
-a=\begin{bmatrix}A_X\\A_Y\end{bmatrix},\quad
-J=\begin{bmatrix}0&-1\\1&0\end{bmatrix},\quad
-\gamma(v,a)=\frac{V_XA_Y-V_YA_X}{V_X^2+V_Y^2}.
+\dot{\hat p}=\hat v,\quad \dot{\hat v}=\hat a,\quad
+\dot{\hat a}=\hat q^2\hat v+2\hat qJ\hat a,\quad
+\dot{\hat\psi}=\hat r,\quad \dot{\hat r}=0.
 \tag{I2}
 $$
 
-At nonzero speed, `gamma` is the course rate obtained from the velocity and
-acceleration states. A candidate intrinsic model is
+For the plant, the acceleration-chain residual contains
+`ddot(speed)*unitCourse + dot(courseRate)*J*v`; yaw acceleration is the residual
+in `rdot`. Errors of the upstream estimated sideslip derivative are additional
+model disturbances. Maneuver bounds concern both true states and the local
+observer region. The eighth state removes the earlier `cross(v,a)/||v||^2`
+quotient: there is no speed division, selected regularizer or concealed positive
+speed assumption. Stopped rotation can be estimated through the gyro output.
+The public `.z` and `.onlineZ` remain seven columns; `.internalState` and
+`.yawRate` expose the extra estimated state.
+
+IMU affects estimates through output innovations, so this placement restriction
+is not a claim of IMU-independent localization. Estimated lateral signals may
+also depend on IMU. Frontend tilt and source-window deskew retain their explicit
+measured-motion interfaces; they are separate from the global predictor.
+
+Let `s_*` be the configured maximum speed, `ell` the heading length,
+`d(theta)=[cos(theta),sin(theta)]'`, and `n(theta)=J*d(theta)`. The implemented
+scalar auxiliary outputs are
 
 $$
-\dot p=v,\qquad \dot v=a,\qquad
-\dot a=\gamma(v,a)^2v+2\gamma(v,a)Ja+d_j,\qquad
-\dot\psi=\gamma(v,a)-\dot{\hat\beta}+d_\psi.
+h(z)=\begin{bmatrix}
+ v^\top v/(2s_*)\\v^\top a/s_*\\\operatorname{cross}(v,a)/s_*\\
+ \ell r\\[\operatorname{cross}(v,a)-\|v\|^2(r+\dot{\hat\beta})]/s_*\\
+ n(\psi+\hat\beta)^\top v\\d(\psi)^\top a\\n(\psi)^\top a
+\end{bmatrix},\qquad
+y=\begin{bmatrix}
+ (v_{x,m}^2+\hat v_y^2)/(2s_*)\\
+ (v_{x,m}a_{x,m}+\hat v_ya_{y,m})/s_*\\
+ (v_{x,m}a_{y,m}-\hat v_ya_{x,m})/s_*\\
+ \ell r_m\\0\\0\\a_{x,m}\\a_{y,m}
+\end{bmatrix}.
 \tag{I3}
 $$
 
-The observer substitutes its own state in the nominal terms. The upstream
-estimated sideslip derivative is an explicit lateral-observer interface, not
-the measured gyro under a new name. For true nonzero-speed motion,
-`d_j = ddot(speed)*unitCourse + dot(courseRate)*J*v`; an error in the lateral
-interface contributes to `d_psi`. Under constant speed and course rate,
-`a = gamma*J*v`, so the jerk term reduces to `-gamma^2*v`, matching the
-basic Bessafa vehicle model. Acceleration during turning is not silently
-declared absent.
+Under a simultaneous global rotation, `v` and `a` rotate and `psi` shifts by
+that angle. Every scalar in (I3) stays unchanged. The last two are projections
+onto the estimated body directions; the measurement remains body acceleration,
+without transforming it into a measured global vector. They retain acceleration
+direction when wheel speed is absent. The discarded acceleration-norm prototype
+lost that information. Course direction uses the lateral estimate
+`beta_hat=atan2(vy_hat,vx_measured)` when that velocity measurement exists.
+The zero kinematic constraint is a model output, not an independent sensor.
+Its residual includes sideslip-estimation and modeling errors.
 
-The speed denominator in (I2) is a real unresolved modeling choice. No
-nonzero-speed hypothesis is silently added to the existing LiDAR-feature
-scope. A smooth candidate is
-`gamma_rho = cross(v,a)/(dot(v,v)+rho^2)` with a fixed positive design scale
-`rho`; its deviation from the physical course rate becomes a declared model
-disturbance. For nonzero true speed `s`, that deviation is
-`-courseRate*rho^2/(s^2+rho^2)`. At a stop, heading motion cannot generally be
-inferred from translational velocity/acceleration alone. A heading/rate state
-extension or a separately modeled bounded residual is needed. No value of
-`rho`, state extension, new gain, or stopping theorem is adopted here.
+Missing velocity withdraws outputs 1--3 and 6 and the separate speed innovation;
+missing acceleration withdraws 2--3 and 7--8. No global predicted velocity fills
+a missing measured speed. An invalid gyro withdraws output 4. Output 5 does not
+require wheel data. Invalid payloads are ignored under their masks. KITTI uses
+zero sideslip derivative as an explicit approximation and does not run the
+vehicle-specific lateral observer.
 
-Rotation-invariant outputs can be defined as
+The nonlinear innovations use the analytic Jacobian at the estimated state
+and a matched metric solve. Output 4 has a separate scalar rate correction,
+`rdot += g_r*(r_measured-r_hat)`, which changes the estimated rate only. The main
+heading equation remains `psidot=r_hat`. Likewise a separate scalar, rotation
+invariant course-speed output is
+`d(psi_hat+beta_hat)'*v_hat`, measured as `hypot(vx_measured,vy_hat)`. Its correction
+acts along that estimated direction. It uses no normalization by estimated
+speed. These scalar gains are solved, rather than copied from the former gyro
+input route: for process/noise scale ratio `b`, minimize `Q` subject to
 
 $$
-h_{\rm inv}(z)=
-\begin{bmatrix}
-v^\top v\\v^\top a\\V_XA_Y-V_YA_X\\\gamma(v,a)
-\end{bmatrix},\qquad
-y_{\rm inv}=
-\begin{bmatrix}
-v_{x,m}^2+\hat v_y^2\\
-v_{x,m}a_{x,m}+\hat v_ya_{y,m}\\
-v_{x,m}a_{y,m}-\hat v_ya_{x,m}\\
-r_m+\dot{\hat\beta}
-\end{bmatrix}.
+ g>0,\qquad
+ \begin{bmatrix}Q&b&g\\b&2g&0\\g&0&2g\end{bmatrix}\succeq0.
 \tag{I4}
 $$
 
-The first three identities express norm, inner product and signed planar
-cross product in either a global frame or a consistently compensated body
-frame. The fourth uses gyro data as an auxiliary measurement, analogous to
-Bessafa equations (72)--(73), rather than inserting it into heading drift.
-With regularized `gamma_rho`, the fourth identity also has a bounded
-regularization residual. Output errors include wheel, acceleration, gyro and
-lateral-interface errors; independence of these errors is not assumed.
-Without wheel speed or another admissible measured longitudinal speed, the
-first three output measurements are withdrawn. The
-gyro course-rate output can remain when the lateral interface is supplied or
-its absence is explicitly modeled, as in the KITTI zero-sideslip-rate trial.
-Filling missing measured velocity with the global estimate does not create
-an independent speed observation. Missing-output zero Jacobians must be
-included in any new certificate domain.
+The analytic optimum `g=b` is an independent numerical check. The angular
+process scale is the configured course-rate bound divided by a declared two
+second maneuver scale; the speed process scale is twice maximum acceleration.
+Neither ratio uses navigation reference poses at runtime.
 
-This is an equation-level candidate, not a newly certified observer. In
-normalized error coordinates its intrinsic-model secant Jacobian and
-invariant-output secant Jacobian must enter the actual feedback matrix:
+**Fresh design and its exact scope.** Set `sigma=theta=4`,
+`E=diag(1,1,1,1,1,1,ell,ell)` and
+`T=diag(theta^[1,2,3,1,2,3,1,2])`. Gains use physical conversion `E^-1*T`
+and `P=blkdiag(Pc,Pc,Ph)`. `Ph` is diagonal, so the LiDAR heading innovation
+does not directly change the rate state. The metric-balance constraint
+`Ph <= Pc(1:2,1:2)` prevents the very weak angular authority of an earlier
+prototype. The intrinsic secant enclosure includes the new rate-state coupling
+bounded by `2*q_max*v_max+2*a_max`; it cannot reuse the old measured-course
+cancellation or its 768 vertices.
+
+The main/gyro/aligned-speed surrogate inequalities are solved at 256 vertices
+(128 without a velocity output):
 
 $$
-\mathcal A_{\rm new}
-=\theta\bigl(A_0-KW C\bigr)
-+\mathcal J_{\rm int}-\mathcal M_{\rm inv}\bar H_{\rm inv}
-+\mathcal A_G.
+ P A_v+A_v^\top P
+ -2\kappa_L C^\top S_v C
+ -2\kappa_G w_v C_p^\top C_p
+ +\kappa_G\rho_v^2 e_7e_7^\top+\lambda I\prec0,
 \tag{I5}
 $$
 
-The earlier measured-course model cancelled the same externally supplied
-course-rate terms between plant and observer; (I3) does not permit that
-cancellation. Its state-dependent derivatives cannot be assigned the old
-zero nonlinear Lipschitz constant. Neither the old 768-vertex certificate,
-old gains nor the old `theta >= sigma` inclusion establishes (I5). A new
-admissible domain, normalized Jacobian treatment and gain synthesis are
-required. The overlap obligation (O1), already involving the actual
-`W = F*Hbar`, remains necessary. The conditional bias/region proof transfers
-only after (O1) has been established for the *new* full error matrix.
+where `A_v` includes the intrinsic Jacobian enclosure and the scalar gyro
+feedback; the speed-present vertices also include the aligned projected-speed
+feedback. Gyro availability is a hypothesis of this certificate. The angular
+output-point coupling is conservatively included. Verification recomputes every
+vertex eigenvalue and the scalar LMIs from stored numbers without an SDP solver.
+Changing any declared synthesis input rejects the saved gains.
 
-The seven-state candidate above is the working assumption for this theoretical
-revision, preserving the current pose-state interface. In the alternative
-six-state Bessafa structure, heading is reconstructed from estimated
-velocity direction and sideslip instead of retained as a seventh state;
-zero-speed and heading-chart issues still require treatment. The existing
-implementation and KITTI metrics are records of the old direct-gyro/body-output
-route, not results for (I1)--(I5). No production or manuscript equation is
-silently replaced by this candidate design.
+A nominal noise objective also uses all eight normalized error coordinates.
+Its four MnCAV operating points have a pose anchor: LiDAR, LiDAR plus GNSS,
+weak LiDAR plus GNSS, and GNSS only. The former artificial dead-reckoning
+steady-state objective was removed: invariants alone cannot determine global
+translation/rotation. This noise proxy is a design objective, not a measured
+covariance guarantee; reused sensors create correlated output errors. KITTI
+must include weak LiDAR **without** GNSS in its objective, and must remove
+velocity outputs from that objective. Those omissions caused poor prototypes.
+
+**Finite auxiliary innovations can be closed locally without a new global
+sector assumption.** In normalized coordinates write
+`F=E^-1*T`, `H_hat=Gamma*Dh(z_hat)*F`, where `Gamma` contains the output
+scalings, and let `H_bar` be the exact secant on the true/estimated segment.
+On a compact maneuver region the polynomial/trigonometric outputs in (I3)
+have finite bounds `||H_hat||<=M_H` and normalized Jacobian Lipschitz constant
+`L_H`. There is no velocity quotient. Thus
+
+$$
+ \|H_{\rm bar}-H_{\rm hat}\|\le\tfrac12 L_H\|\varepsilon\|.
+\tag{I6}
+$$
+
+For any admitted diagonal nonnegative auxiliary weight `K_I`, the matched
+innovation contributes to `Vdot`, apart from measurement/model disturbances,
+
+$$
+ -2\theta\varepsilon^\top H_{\rm hat}^\top K_I H_{\rm hat}\varepsilon
+ -2\theta\varepsilon^\top H_{\rm hat}^\top K_I
+        (H_{\rm bar}-H_{\rm hat})\varepsilon
+ \le\theta M_H\|K_I\|L_H\|\varepsilon\|^3.
+\tag{I7}
+$$
+
+The first term is nonpositive; the unmatched finite secant is cubic in the
+Lyapunov derivative. Withdrawn outputs have zero weights and satisfy the same
+bound. This is stronger than simply assuming that the point Jacobian represents
+the whole finite innovation.
+
+For the separate speed channel let true `v=s*d(psi+beta)`, with `s>=0`.
+With an exact lateral angle and heading difference `delta_psi`, its error
+consists of the aligned rank-one damping already enclosed in (I5), plus
+`-g_s*d_hat*s*(1-cos(delta_psi))`. This remainder is quadratic because
+`1-cos(delta_psi)<=delta_psi^2/2`. In normalized velocity coordinates its norm
+is at most `g_s*s_max*||epsilon||^2/(2*ell^2)`.
+Lateral-angle and speed-measurement errors add bounded disturbances;
+`|cos(a+b)-cos(a)|<=|b|` suffices. At a stop the `s` remainder vanishes. No
+course-angle division or positive-speed premise is introduced.
+
+Consequently, **if the intrinsic/main-output/gyro/aligned-speed error operator
+has a uniform strict margin `mu_0` for the actual overlap**, then
+
+$$
+ \dot V\le-\mu_0\|\varepsilon\|^2+c_I\|\varepsilon\|^3
+            +2\|P\|\|\varepsilon\|\|d\|,\qquad
+ c_I=\theta M_H\|K_I\|L_H+
+       \|P\|g_s s_{\max}/\ell^2.
+\tag{I8}
+$$
+
+For `||epsilon||<=R<mu_0/(2*c_I)` (or any admitted radius when `c_I=0`), the
+nominal quadratic margin is at least `mu_0/2`. Combine this additional normalized
+radius with the motion/chart domain and the invariant-sublevel argument of
+Section 0.3. The same continuous regional ISS argument then applies, with
+bounded auxiliary measurement/model errors included in `d`. This closes the
+finite auxiliary-remainder argument **conditionally on the strict base margin**.
+It does not state a numerical radius or enforce one in the discrete runtime.
+
+(I5) supplies that base margin for its **surrogate** domain. It does not supply
+it for the actual overlap: `W=F*Hbar` still differs from `S=F*M`. Establishing
+that actual base-operator inequality is the remaining difficult step for the
+new intrinsic model. No completed nonlinear stability certificate is claimed
+for the real overlap implementation. Diagnostics distinguish the conditional
+local auxiliary closure from a certified numerical radius, and retain
+`fullContinuousStateCertified=false`. No sampled-system, arbitrary-outage or
+degenerate-scene guarantee is added.
+
+The former `measuredCourseObserverConfig` and `mncavThetaDesign.json` remain
+explicit historical comparison tools. They do not select the default algorithm.
+This is a project-specific state extension inspired by Bessafa's intrinsic
+prediction and auxiliary-output framework, not a claim that the paper proves
+this new eight-state system. The initial seven-state quotient candidate in the
+October 13 design record has been superseded by the implemented state extension.
 
 ## 1. State, continuous plant, and disturbance interface
 

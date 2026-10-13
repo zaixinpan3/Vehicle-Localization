@@ -48,3 +48,11 @@ Synthetic truth must be expressed at the configured output point:
 and sideslip transformation. Plant states and IMU inputs remain at their
 physical model origin. Otherwise nominal simulation can report a false lateral
 error merely because it compares velocities at different points.
+
+The current global observer factory is `mncavFullObserverConfig()`. It loads
+`mncavInvariantDesign.json`, synthesized by `synthesizeMncavInvariantDesign`,
+for the intrinsic eight-state predictor and invariant output innovations.
+Changing its declared inputs requires fresh synthesis. The old
+`measuredCourseObserverConfig()` and `mncavThetaDesign.json` are explicit
+historical comparisons; current dataset entries do not load those old gains.
+The lateral vehicle parameters and their synthesis workflow are unchanged.

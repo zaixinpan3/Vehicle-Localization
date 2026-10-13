@@ -1,6 +1,7 @@
 classdef fullObserverSupport
 % fullObserverSupport Continuous gain certificate and inputs of the full observer.
-% Static methods design and verify the continuous seven-state ISS gains, align
+% Static methods dispatch current intrinsic eight-state and historical
+% seven-state gain designs, align
 % measurement sources on the LiDAR frame clock and move GNSS positions to the
 % observer output point. runFullLocalizationObserver is the runtime entry.
 % Example: design = fullObserverSupport.designFullObserverGains(cfg).
@@ -12,6 +13,10 @@ classdef fullObserverSupport
         % motion-output feedback. Numerical integration uses these gains unchanged.
             arguments
                 cfg (1,1) struct=fullObserverConfig()
+            end
+            if isfield(cfg,'invariantObserver')
+                design=invariantObserverSupport.runtime(cfg);
+                return;
             end
             if isfield(cfg,'hgo')
                 design=fullObserverSupport.thetaFrameworkRuntime(cfg);
@@ -348,7 +353,11 @@ classdef fullObserverSupport
             aligned=struct('highRate',struct('time',t));
             for name=string(fieldnames(h)).'
                 if name=="time",continue;end
-                aligned.highRate.(name)=blend(h.(name),left,right,fraction);
+                if any(name==["bodyVelocityValid","bodyAccelerationValid","yawRateValid"])
+                    aligned.highRate.(name)=logical(h.(name)(left)) & logical(h.(name)(right));
+                else
+                    aligned.highRate.(name)=blend(h.(name),left,right,fraction);
+                end
             end
             assert(isequal(lateralInput.time,h.time),'VehicleLocalization:SyncCoverage','Lateral and motion clocks differ.');
             lateral=struct('time',t);

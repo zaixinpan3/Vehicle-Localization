@@ -16,8 +16,7 @@ function initial=initializeMncavVdbFromGnss(s,inputs,startTime)
     heading=atan2(velocity(2),velocity(1))-beta;
     position=xy(end,:);R=[cos(heading),-sin(heading);sin(heading),cos(heading)];
     v=R*[h.longitudinalSpeed(k);inputs.lateral.lateralVelocity(k)];
-    a=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
-    initial=struct('pose',[position,heading],'state',[position(1);v(1);a(1);position(2);v(2);a(2);heading], ...
+    initial=struct('pose',[position,heading],'state',[position(1);v(1);0;position(2);v(2);0;heading], ...
         'source',"Past native GNSS positions plus measured-motion sideslip; no truth", ...
         'firstGnssTime',t(1),'lastGnssTime',t(end),'gnssSamples',numel(t),'displacementM',baseline);
 end

@@ -1,7 +1,7 @@
 classdef fullObserverMotionAvailabilityTest < matlab.unittest.TestCase
 % Missing motion outputs withdraw feedback rather than supply zero observations.
     properties (TestParameter)
-        framework={"theta","legacy"}
+        framework={"invariant","legacy"}
     end
     methods (TestClassSetup)
         function paths(testCase)
@@ -52,7 +52,7 @@ function [d,l,c]=fixture(framework)
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
     l=struct('time',t,'lateralVelocity',zero,'sideSlipAngleRate',zero);
-    if framework=="theta",c=mncavFullObserverConfig();else,c=fullObserverConfig();end
+    if framework=="invariant",c=mncavFullObserverConfig();else,c=fullObserverConfig();end
     c.initialState=[0;3;.2;0;0;0;0];
 end
 

@@ -7,7 +7,7 @@ function design=synthesizeMncavThetaDesign()
     root=fileparts(fileparts(mfilename('fullpath')));addpath(root);setupVehicleLocalization();
     external=fullfile(fileparts(root),'RobustVehicleLocalization','external');
     addpath(genpath(fullfile(external,'YALMIP')));addpath(genpath(fullfile(external,'sedumi')));
-    cfg=mncavFullObserverConfig(LoadDesign=false);
+    cfg=measuredCourseObserverConfig(LoadDesign=false);
     design=fullObserverSupport.synthesizeThetaFrameworkDesign(cfg);
     [status,commit]=system(sprintf('git -C "%s" rev-parse HEAD',root));if status~=0,commit="unknown";end
     v=design.verification;
@@ -20,7 +20,7 @@ function design=synthesizeMncavThetaDesign()
         'synthesizedOn',string(datetime('now','TimeZone','local','Format','yyyy-MM-dd''T''HH:mm:ssXXX')), ...
         'codeCommit',strtrim(string(commit)));
     f=fopen(fullfile(root,'config','mncavThetaDesign.json'),'w');fprintf(f,'%s\n',jsonencode(stored,PrettyPrint=true));fclose(f);
-    check=mncavFullObserverConfig();runtime=fullObserverSupport.designFullObserverGains(check);
+    check=measuredCourseObserverConfig();runtime=fullObserverSupport.designFullObserverGains(check);
     assert(runtime.fullContinuousStateCertified,'VehicleLocalization:InfeasibleThetaDesign','The stored design failed its runtime check.');
     fprintf('THETA DESIGN sigma %g kappaL %.6g kappaG %.6g worst vertex %.3g; theta %g: L [%s] heading %.4g, LG [%s], Mv [%s], Ma [%s]\n', ...
         design.sigma,design.kappaL,design.kappaG,v.worstVertexEigenvalue,runtime.theta, ...

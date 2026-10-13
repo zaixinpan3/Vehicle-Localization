@@ -12,7 +12,7 @@ same overlap-only default.
 
 ## File layout
 
-The module has 19 MATLAB files. Entry points are files; shared helpers are
+The module contains the following entry points and support classes. Entry points are files; shared helpers are
 static methods of the `*Support` classes and are called with the class prefix,
 for example `registrationSupport.selectLocalProbabilityCloud(map,seed,radius)`.
 Stages with a single caller are local functions of that entry point.
@@ -24,7 +24,8 @@ Stages with a single caller are local functions of that entry point.
 | `registerSemanticProbabilityCloud.m` | Archived standalone pose-registration solver |
 | `prepareSemanticRegistrationGeometry.m` | Geometric, support and anisotropic D2D models: association, residuals, linearization |
 | `registrationSupport.m` | Registration utilities: projection, preparation, overlap, pose events, map selection and view conditioning, canonical pyramid, position-aided selection, soft association, line directions, relative height, residual primitives |
-| `runFullLocalizationObserver.m` | Production synchronous seven-state observer with GNSS and LiDAR |
+| `runFullLocalizationObserver.m` | Current intrinsic eight-state observer; seven-column public state interface |
+| `invariantObserverSupport.m` | Intrinsic prediction, invariant innovations, fresh synthesis and solver-free verification |
 | `fullObserverSupport.m` | Continuous ISS gain design and certificate, input synchronization, GNSS output point |
 | `lidarInjectionSupport.m` | LiDAR information filter, matched correction, residual reevaluation, correspondence-free overlap gradient, calibrated error moments, line measurements |
 | `lidarCalibrationSupport.m` | Causal LiDAR IMU tilt and its provenance check, offline pitch and translation calibration |
@@ -40,47 +41,50 @@ Stages with a single caller are local functions of that entry point.
 | `lateralObserver/lateralObserverSupport.m` | Bicycle model, scheduling coordinates and polytope, gain blending, vehicle check |
 
 
-## Continuous gain design, then discretization
+## Current continuous design and IMU placement
 
-There is one design route for the current global observer:
-`fullObserverSupport.designFullObserverGains` uses the continuous seven-state
-ISS LMIs. Measurement timing does not
-select another gain-design problem. Add YALMIP and the SDP solver configured
-in `cfg.iss.solver` to the MATLAB path, as required by the lateral synthesis.
-`fullObserverSupport.solveFullObserverIssLmi` fixes one candidate gain tuple and finds the common
-Lyapunov weights; `fullObserverSupport.verifyFullObserverIssCertificate` independently recomputes
-both inequalities without relying on the solver status. Infeasible candidates
-are rejected before numerical integration. Joint gain/weight optimization is
-generally bilinear, so tuning uses an outer candidate search and an inner LMI
-feasibility test. A failed sufficient condition is not proof of instability.
+`mncavFullObserverConfig()` selects the intrinsic eight-state route. Its
+predictor uses `[X,VX,AX,Y,VY,AY,psi,r]`, with internal course rate
+`r_hat + estimatedBetaDot`, `psidot=r_hat`, and nominal `rdot=0`. Raw IMU
+samples enter auxiliary innovations and the lateral observer. The intrinsic
+predictor has no IMU argument and no speed denominator. Public `.z` and
+`.onlineZ` keep their seven-column interface; `.internalState` and `.yawRate`
+expose the additional estimated rate.
 
-The current declared design domain in `fullObserverConfig().iss` is true speed
-at most 15 m/s, acceleration at most 2 m/s^2, and course rate at most the
-configured 0.4 rad/s. The filtered LiDAR matrix must have position strength
-at least 0.25, heading strength at least 0.97, and position/heading coupling
-norm at most 0.06. These are proof assumptions, not modifications of the input
-information. The requested Lyapunov decay rate is 0.01/s. The LMIs include
-estimated-heading compensation of the configured GNSS output-point offset.
-They permit zero GNSS weight; sufficient LiDAR information is still needed.
-Changing the gains, information regularizers, offset or design domain
-invalidates the prior certificate and requires reverification.
-The calibrated profile below declares its own measured-confidence domain;
-changing its error calibration also invalidates a saved certificate.
+The scalar outputs include speed norm, velocity/acceleration dot and cross
+products, estimated rate, kinematic/course-direction constraints and acceleration
+projections onto estimated body directions. Each is invariant to a simultaneous
+rotation of the global states and heading. The two acceleration projections
+remain available without wheel speed and preserve acceleration direction.
+Gyro and projected-speed innovations have separate LMI-designed scalar gains.
+Gyro corrects the rate state; heading prediction uses the posterior state.
 
-The continuous proof metric is `continuousCertificate.verification.P`.
-It is distinct from the algebraic metric used to implement the LiDAR term.
-Neither the LMI weights nor the input bounds change the observer equations.
-The synchronous runtime discretizes those equations with the same gains.
-Its diagnostics report which observed LiDAR matrices meet the declared
-information conditions; the measured motion envelope is only a proxy for
-bounds on the true motion. Missing or insufficient measurements remain
-uncertified intervals. A continuous certificate is not relabeled as a proof
-for every sampling period. Numerical consistency is checked against the
-continuous ODE with decreasing steps, without a second gain-design route.
+Run `synthesizeMncavInvariantDesign` with YALMIP and SeDuMi to regenerate
+`config/mncavInvariantDesign.json`. Runtime independently verifies its 256
+main/gyro/aligned-speed vertices and scalar LMIs without a solver; changed design
+inputs reject stale gains. The nominal objective includes all eight normalized
+errors. The four default noise cases have a pose anchor; dead reckoning has no
+absolute-pose steady-state objective. The diagonal angular metric prevents
+LiDAR heading noise from directly updating the internal rate.
+
+The verified inequalities concern a continuous affine/sector enclosure.
+Finite invariant innovations admit a local cubic-remainder bound, conditional
+on a strict base margin. Establishing that margin for the actual overlap
+operator remains open; `S=F*M` alone does not certify it. No numerical local
+radius is claimed. The precise equations, assumptions and
+remaining tasks are in [the existing theory, Section 0.5](../improved_observer_derivation.md#05-implemented-architecture-intrinsic-prediction-and-invariant-imu-outputs).
+There is no discrete-time or arbitrary-outage guarantee. Feature deficiency
+and actual missing outputs are retained in runtime diagnostics.
+
+## Historical measured-course designs
+
+The following design descriptions and numerical gains apply to explicit
+`measuredCourseObserverConfig()` or generic `fullObserverConfig()` comparison
+configurations. Current dataset entries select the new factory above.
 
 ### MnCAV gains in the theta framework of the source paper
 
-The MnCAV observer is the multi-output high-gain observer of Bessafa et al.
+The former MnCAV observer used the multi-output high-gain observer of Bessafa et al.
 (Automatica 188, 2026, Section 4) with this project's model and outputs (user
 decisions of 2026-10-11: gains are solved, not set a priori, and the paper's
 framework is kept). With the normalized error `e = [px vx ax py vy ay ell*psi]`
@@ -119,7 +123,7 @@ outages.
 `fullObserverSupport.verifyThetaFrameworkDesign` rechecks all 768 vertices by
 eigenvalues; the runtime repeats it before use.
 `scripts/synthesizeMncavThetaDesign.m` writes `config/mncavThetaDesign.json`;
-`mncavFullObserverConfig()` loads it and refuses it when any declared input
+`measuredCourseObserverConfig()` loads it and refuses it when any declared input
 has changed. `theta` is the single tuning parameter (`Theta` option, default
 4): it was selected from {1, 1.5, 2, 3, 4, 5, 6} on frames 1--700 of the
 2024-06-07 recording with the position and heading objective of 2026-10-10
@@ -142,30 +146,23 @@ configurations.
 
 ## Current synchronous runtime
 
-The requested architecture revision of October 13 places IMU measurements
-only in invariant auxiliary outputs and the upstream lateral observer, with
-intrinsic global prediction. Its candidate equations and unresolved
-zero-speed/state-dimension and LMI choices are specified in
-[the existing theory document, Section 0.5](../improved_observer_derivation.md#05-requested-architecture-intrinsic-prediction-and-invariant-imu-outputs).
-The runtime described below still predicts heading from measured gyro and
-uses measured course rate/body-frame output feedback. Its stored gains and
-dataset scores do not validate the requested revision.
+The October 13 architecture is implemented in the default runtime. Historical
+configurations explicitly retain their former seven-state path for comparison;
+they are not selected by the current dataset entries.
 
-For the current overlap route, the completed continuous-time observation-bias
-and local invariant-region arguments are in
-[Section 0 of the existing theory document](../improved_observer_derivation.md#0-current-overlap-completed-local-region-and-bias-closure).
-They are conditional on a uniform Lyapunov inequality for the actual feedback
-`W = F * Hbar`; establishing that overlap-to-LMI connection remains open.
-The stored certificate for the surrogate `S = F * M` alone does not complete
-the active overlap proof. These theoretical conditions require no per-frame
-enforcement in the sampled implementation.
+The continuous bias and local-region arguments remain conditional on a uniform
+inequality for the actual overlap operator `W=F*Hbar`. The finite invariant
+secants are handled by the conditional local remainder argument. These theoretical assumptions need no per-frame enforcement in the
+sampled implementation.
 
-Aligned inputs may declare `highRate.bodyVelocityValid` and
-`highRate.bodyAccelerationValid`, one Boolean per frame. Missing masks retain
-the existing all-valid contract. Invalid payloads, including NaNs, are ignored;
-the corresponding output feedback is withdrawn rather than treating absence as
-a zero measurement. The gyro and declared course-rate input remain required.
-Incomplete motion observations do not verify the measured maneuver envelope.
+Aligned inputs may declare `highRate.bodyVelocityValid`,
+`highRate.bodyAccelerationValid` and `highRate.yawRateValid`, one Boolean per
+frame. Missing masks retain the all-valid contract. Invalid payloads, including
+NaNs, are ignored and their innovations withdrawn. Missing speed is never
+replaced by a predicted velocity. Gyro availability is required by the stored
+continuous surrogate certificate; runtime can still withdraw it without claiming
+that certificate covers the interval. Frontend tilt/deskew use of measured motion
+is separate from intrinsic global prediction.
 
 The KITTI Raw transfer entry is `runKittiOverlapTrial(datasetFolder, outputFolder)`
 under `scripts/kitti/`; add YALMIP and SeDuMi before running it. The dataset
@@ -175,7 +172,9 @@ Queries use body inertial outputs, gyro-integrated tilt after one initial
 tilt, and one initial reference pose with a declared offset. Initial velocity
 is zero and velocity-output feedback is withdrawn. No later OXTS navigation
 pose, orientation or velocity enters the observer. Gains are freshly synthesized
-for declared transfer assumptions, without fitting KITTI reference errors.
+for declared transfer assumptions. The weak-LiDAR objective and rate model
+were revised during this development trial; its scores are development results,
+not an untouched validation set.
 This is a global-branch trial with single-frame sources and no scan deskew;
 it does not validate the vehicle-specific lateral observer or constitute the
 official KITTI odometry benchmark. OXTS body inertial outputs are processed
@@ -296,12 +295,11 @@ and the [discrete equations](../research/mncav_synchronous_bestpos_20260917/READ
 
 ### Information-aware LiDAR injection
 
-The current seven-state model retains explicit heading at standstill. Its
-physical coordinates have fixed `theta=1`, `T=I7`; the two-chain exponents
-remain `[1,2,3,1,2,3,1]`. The injection uses an algebraic translation metric
-`I6`, extended with fixed yaw weight `kp/kpsi`. This is not the full continuous
-ISS proof metric or an estimator covariance. It recovers the nominal
-position/yaw gain ratio for uncoupled geometry without dropping cross terms.
+The current eight-state model retains heading and estimated rate at standstill.
+Its matched metric and fixed scaling come from the intrinsic design described
+above. The following seven-state algebraic metric describes the historical
+`fullObserverConfig` compatibility case: `theta=1`, `T=I7`, translation metric
+`I6` and yaw weight `kp/kpsi`. It is not an estimator covariance.
 
 For `D=diag(cfg.lidar.poseScales)`, `I=D'*information*D` and
 `C=D\(G*T)`, `lidarInjectionSupport.filterLidarPoseInformation` constructs
@@ -309,7 +307,8 @@ For `D=diag(cfg.lidar.poseScales)`, `I=D'*information*D` and
 `S=U*diag(rho.*lambda./(lambda+lambdaStar))*U'`.
 Here `lambdaStar=cfg.lidar.gainInformationScale>0`; it is excluded from the
 reported information spectrum. The matched rate is
-`kappa*T*(P\(C'*xi))`, with fixed `kappa=kp`. Eigenvalues, eigenvectors, rank,
+`kappa*T*(P\(C'*xi))`. Current intrinsic gains use `kappa=kappaL/theta`;
+the historical algebraic case uses `kappa=kp`. Eigenvalues, eigenvectors, rank,
 trace, effective dimension and retained directional strengths are reported.
 Rank-deficient and zero information are valid. A curb's longitudinal nullspace
 is preserved. There is no minimum-eigenvalue information floor, yaw-diagonal
@@ -363,13 +362,13 @@ model. The reusable correction helper also offers explicit updates capped at
 `h*max(lambdaZ)<=1.8<2`. Neither result certifies nonlinear association changes,
 map errors or the entire baseline-plus-jump system. The diagnostics retain
 `sampledSystemCertified=false` and `baselineFullStateCertified=false`.
-The complete continuous system has its own LMI certificate, computed before
-this discretization and conditional on its declared information domain.
-In particular, GNSS-only operation has no baseline yaw ISS certificate, and an
-arbitrary longitudinal outage with curb-only geometry cannot guarantee full
-position convergence. The former GNSS-only translation-margin fields have
-been removed; the gain-design certificate is the continuous seven-state LMI
-certificate, with its declared assumptions and recorded-domain diagnostics.
+The current continuous surrogate has a separately verified LMI enclosure;
+its actual overlap operator margin remains unproved. The finite invariant
+secants have a conditional local remainder bound, without a numerical radius. Thus
+`fullContinuousStateCertified=false`, while `surrogateContinuousLmiVerified`
+reports the numerical inequalities. An arbitrary longitudinal outage with
+curb-only geometry cannot guarantee full position convergence. Historical
+seven-state ISS certificates retain their own declared assumptions.
 
 This extension follows the fixed quadratic metric and two-chain coordinates
 in Bessafa et al., *Generalized multi-output high-gain observer with application
@@ -828,12 +827,14 @@ bounded noise. See [the runtime validation](../research/continuous_observer_runt
 The recorded-data entry offers separate `gnss` and `lidar` reconstructions
 and retains contract failures as failures.
 
-`validateSyntheticLocalizationCascade` exercises the current synchronous
+`validateSyntheticLocalizationCascade` can exercise the current synchronous
 production chain end to end with synthetic signals and exact truth: lateral
 observer, frame alignment, MnCAV synchronous observer, source outages, the
 online matcher callback and lateral-model mismatch. See the
 [synthetic cascade record](../research/synthetic_localization_cascade_20260929/README.md),
-including its GNSS-only bias limitation and the numerically zero LPV gain.
+including its historical GNSS-only bias limitation and the numerically zero
+LPV gain. That September record predates the intrinsic eight-state revision
+and does not validate its new equations.
 
 ## Registration helpers
 
