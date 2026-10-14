@@ -13,6 +13,7 @@ function rootDir = setupVehicleLocalization()
     rootDir = fileparts(mfilename("fullpath"));
     addpath(fullfile(rootDir, "scripts"));
     addpath(fullfile(rootDir, "scripts", "kitti"));
+    addpath(fullfile(rootDir, "scripts", "nuscenes"));
     addpath(fullfile(rootDir, "config"));
     addpath(fullfile(rootDir, "perception"));
     addpath(fullfile(rootDir, "perception", "groundSegmentation"));
