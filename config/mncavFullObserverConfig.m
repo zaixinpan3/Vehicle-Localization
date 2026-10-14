@@ -1,14 +1,14 @@
 function cfg=mncavFullObserverConfig(options)
 % Current MnCAV intrinsic predictor; IMU is confined to invariant innovations.
 % The eighth, internal yaw-rate state removes speed-denominator singularities.
-% Gains are solved from the new drift LMI and the invariant-noise objective.
+% Gains satisfy the common sensor LMIs and the invariant-noise objective.
     arguments
         options.LoadDesign (1,1) logical=true
         options.DesignOverride (1,1) struct=struct()
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-intrinsic-invariant-v1",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-intrinsic-redundancy-v2",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('gainInformationScale',16,'outputPoint', ...
@@ -28,16 +28,24 @@ function cfg=mncavFullObserverConfig(options)
         'headingLengthM',"Heading error weighted by a 10 m landmark range", ...
         'normalization',"lambda = 1 and P >= I");
     z.theta=options.Theta;z.yawAccelerationRadps2=cfg.maximumTrackAngleRate/2;z.sideslipRateNoiseRadps=.01;
-    z.balancedPoseMetric=true;
+    z.balancedPoseMetric=false;
     z.angularMetricDiagonal=true;
     z.noiseObjective="normalizedFullState";
     z.velocityAvailable=true;z.accelerationAvailable=true;
+    z.redundancy=struct('minimumGnssSpeed',10,'informativeLidarMismatch',.001, ...
+        'degradedLidarMismatch',.001,'speedPartitions',10, ...
+        'accelerationSplit',.5,'gnssSplit',.5,'lambda',1,'kinematicGnssEnclosure',true, ...
+        'exactGnssLeverEnclosure',true);
+    z.headingGainLimits=[8,8]; % kappaL/P77 and directionGain/P77.
+    z.matchedGainLimits=[8,8,2]; % Position L/G and velocity-direction self-feedback.
     z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]; predict uses internal r and estimated lateral sideslip rate; IMU only in invariant innovations";
     z.provenance.angularModel="Yaw-rate process scale maximumTrackAngleRate / 2 s and lateral sideslip-rate error 0.01 rad/s; revised after the slow-rate prototype, with no navigation input to runtime";
     z.provenance.operatingPoints="Noise objective at informative LiDAR, LiDAR plus GNSS, weak LiDAR plus GNSS and moving GNSS only; no absolute-pose steady-state objective without a pose anchor";
-    z.provenance.metric="Angular two-state Lyapunov block bounded by translational position/velocity principal block in normalized units; introduced after diagnosing weak heading authority of the initial prototype";
+    z.provenance.metric="Rotation-invariant translational blocks and a diagonal angular block; angular/translation balance is not a theorem condition and is withdrawn to permit fixed feedback-authority limits";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
     z.provenance.noiseObjective="All eight normalized errors at pose-anchored nominal points; diagonal noise proxy is a synthesis objective, not an empirical covariance guarantee";
+    z.provenance.redundancy="Common fixed metric/gains for LiDAR-sufficient/GNSS-absent and moving-GNSS-sufficient/rank-zero-LiDAR sets; actual overlap mismatch <=0.001 is a geometric contract, not a measured map certificate; G is withdrawn when velocity/acceleration channels are unavailable";
+    z.provenance.feedback="Normalized matched self-feedback limits L-position 8, G-position 8, velocity-direction 2 and heading L/direction 8; constrained inside the solve, without runtime clipping; exact G kinematics and lever coupling reduce sufficient-condition conservatism";
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];
     cfg.invariantObserver=z;cfg.gainSource="unsolved-invariant";

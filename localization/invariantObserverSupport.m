@@ -75,8 +75,8 @@ classdef invariantObserverSupport
         end
 
         function inputs=inputs(cfg)
-            z=cfg.invariantObserver;z=rmfield(z,'theta');if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-eight-state-invariants-v1", ...
+            z=cfg.invariantObserver;if isfield(z,'provenance'),z=rmfield(z,'provenance');end
+            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-eight-state-redundancy-v2", ...
                 'outputDegrees',[2,3,3,2,3,2,3,3], ...
                 'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
                 'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).','poseScales',cfg.lidar.poseScales(:).', ...
@@ -94,9 +94,27 @@ classdef invariantObserverSupport
             if z.balancedPoseMetric
                 constraints=[constraints,Ph<=Pc(1:2,1:2)];
             end
+            if isfield(z,'headingGainLimits')
+                constraints=[constraints,kL<=z.headingGainLimits(1)*Ph(1,1), ...
+                    kI(5)<=z.headingGainLimits(2)*Ph(1,1)];
+            end
+            if isfield(z,'matchedGainLimits')
+                % For P>0, k*e'*inv(P)*e<=g is equivalent to
+                % P-(k/g)*e*e'>=0. These caps constrain feedback gains
+                % within the solve, without clipping runtime innovations.
+                limits=z.matchedGainLimits;
+                constraints=[constraints,P-kL/limits(1)*(m.e1*m.e1.')>=0, ...
+                    P-kG/limits(2)*(m.e1*m.e1.')>=0, ...
+                    P-kI(5)/limits(3)*(m.e5*m.e5.')>=0];
+            end
             for j=1:numel(m.vertices)
                 block=baseBlock(P,kL,kG,m.vertices(j),m);
                 constraints=[constraints,block+z.lambda*eye(8)<=-z.margin*eye(8)]; %#ok<AGROW>
+            end
+            witness=sensorRedundancySupport.witness(cfg,P,kL,kG,kI,m.gyroGainNormalized,m.speedGainNormalized);
+            [jointL,jointG]=sensorRedundancySupport.blocks(witness,m.gnssAdequacyEnabled,z.velocityAvailable);
+            for block=[jointL,jointG]
+                constraints=[constraints,block{1}<=-z.margin*eye(8)]; %#ok<AGROW>
             end
             cost=0;weights=[kI(1);kI(2);kI(2);kI(3);kI(4);kI(5);kI(2);kI(2)];
             for j=1:numel(m.points)
@@ -118,11 +136,14 @@ classdef invariantObserverSupport
             assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleInvariantDesign','Invariant synthesis failed: %s',result.info);
             Pv=value(P);Pv=(Pv+Pv.')/2;
             weights=value(kI);weights([1,3])=0;
-            design=struct('architecture',"intrinsic-eight-state-invariants-v1",'sigma',z.sigma,'P',Pv, ...
-                'kappaL',value(kL),'kappaG',value(kG),'auxiliaryWeights',weights, ...
+            % Homogeneous normalization preserves all matched feedback ratios
+            % while creating a clear margin in the lambda-normalized LMIs.
+            Pv=1.01*Pv;weights=1.01*weights;
+            design=struct('architecture',"intrinsic-eight-state-redundancy-v2",'sigma',z.sigma,'P',Pv, ...
+                'kappaL',1.01*value(kL),'kappaG',1.01*value(kG),'auxiliaryWeights',weights, ...
                 'gyroGainNormalized',m.gyroGainNormalized,'gyroDesign',m.gyroDesign, ...
                 'speedGainNormalized',m.speedGainNormalized,'speedDesign',m.speedDesign, ...
-                'lambda',z.lambda,'meanSquareBound',value(cost),'solverStatus',result.problem,'solverInfo',string(result.info));
+                'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem,'solverInfo',string(result.info));
             design.verification=invariantObserverSupport.verify(design,cfg);
             assert(design.verification.certified,'VehicleLocalization:InfeasibleInvariantDesign','Solved intrinsic design failed verification.');
         end
@@ -138,7 +159,12 @@ classdef invariantObserverSupport
             balanced=~cfg.invariantObserver.balancedPoseMetric || ...
                 max(eig(P(7:8,7:8)-P(1:2,1:2)))<=1e-8*max(1,norm(P,'fro'));
             diagonal=~cfg.invariantObserver.angularMetricDiagonal || abs(P(7,8))<=1e-8*max(1,norm(P,'fro'));
+            authority=feedbackAuthority(design,cfg);
+            witness=sensorRedundancySupport.witness(cfg,P,design.kappaL,design.kappaG, ...
+                design.auxiliaryWeights,design.gyroGainNormalized,design.speedGainNormalized);
+            joint=sensorRedundancySupport.verify(witness,m.gnssAdequacyEnabled,cfg.invariantObserver.velocityAvailable);
             v=struct('certified',worst<0 && min(eig(P))>=1-1e-6 && design.kappaL>=0 && design.kappaG>=0 ...
+                && joint.certified && authority.verified ...
                 && design.sigma==cfg.invariantObserver.sigma && design.lambda>0 ...
                 && design.lambda==cfg.invariantObserver.lambda ...
                 && norm(design.P-design.P.','fro')<=1e-10*max(1,norm(P,'fro')) ...
@@ -150,13 +176,16 @@ classdef invariantObserverSupport
                 'maximumEigenvalueP',max(eig(P)),'intrinsicRateState',true,'zeroSpeedDivision',false, ...
                 'actualOverlapCertified',false,'finiteInvariantSecantsCertified',false, ...
                 'conditionalInvariantLocalClosureEstablished',true,'numericalInvariantRadiusCertified',false, ...
+                'jointSensorLmiVerified',joint.certified,'jointSensor',joint, ...
+                'conditionalNonlinearGainConditionsVerified',joint.certified, ...
+                'feedbackAuthority',authority, ...
                 'gyroAvailabilityRequired',true, ...
-                'scope',"Continuous intrinsic drift, valid gyro output and aligned-speed surrogate sector LMI; finite auxiliary remainders have conditional local closure, with no certified numerical radius; actual overlap margin remains open; no sampled guarantee");
+                'scope',"Common fixed-gain L/G inequalities plus retained intrinsic surrogate LMIs; full nonlinear regional ISS follows under the declared geometry, motion, gyro, auxiliary-error and local-region contracts; actual map bounds and numerical attraction radius are unverified; no sampled guarantee");
         end
 
         function runtime=runtime(cfg)
             h=cfg.invariantDesign;theta=cfg.invariantObserver.theta;ell=cfg.invariantObserver.headingLengthM;
-            assert(theta>=h.sigma,'VehicleLocalization:InvalidInvariantDesign','theta must exceed design sigma.');
+            assert(theta==h.sigma,'VehicleLocalization:InvalidInvariantDesign','The common certificate requires its fixed theta=sigma.');
             persistent cache
             if isempty(cache),cache=containers.Map('KeyType','char','ValueType','any');end
             key=jsonencode(struct('design',h,'inputs',invariantObserverSupport.inputs(cfg)));
@@ -172,7 +201,8 @@ classdef invariantObserverSupport
                 'LG',toPhysical*h.kappaG*(h.P\Cp.'), ...
                 'lidarMatched',matched,'continuousCertificate',struct('design',h,'verification',v), ...
                 'fullContinuousStateCertified',false,'surrogateContinuousLmiVerified',v.certified, ...
-                'designRoute',"Intrinsic drift LMI with matched invariant-output innovations", ...
+                'jointSensorLmiVerified',v.jointSensorLmiVerified, ...
+                'designRoute',"Common sensor-redundancy LMIs with matched invariant-output innovations", ...
                 'baselineFullStateCertified',false,'actualOverlapCertified',false,'sampledSystemCertified',false,'scope',v.scope);
         end
     end
@@ -180,6 +210,21 @@ end
 
 function m=model(cfg,storedGyro,storedSpeed)
     z=cfg.invariantObserver;s=cfg.iss;ell=z.headingLengthM;sigma=z.sigma;n=z.noise;
+    r=z.redundancy;
+    validateattributes(z.minimumGnssWeight,{'double'},{'real','finite','positive','scalar','<=',1});
+    validateattributes(r.minimumGnssSpeed,{'double'},{'real','finite','positive','scalar','<=',s.maximumSpeed});
+    validateattributes(r.speedPartitions,{'double'},{'finite','integer','positive','scalar'});
+    validateattributes([r.informativeLidarMismatch,r.degradedLidarMismatch],{'double'},{'finite','nonnegative'});
+    assert(r.accelerationSplit>0 && r.accelerationSplit<1 && r.gnssSplit>0 && r.gnssSplit<1 ...
+        && r.lambda==z.lambda,'VehicleLocalization:InvalidRedundancyDomain','Require valid common theory bounds and Young splits.');
+    m.gnssAdequacyEnabled=z.velocityAvailable && z.accelerationAvailable;
+    if isfield(z,'headingGainLimits')
+        validateattributes(z.headingGainLimits,{'double'},{'real','finite','positive','numel',2});
+        assert(z.angularMetricDiagonal,'VehicleLocalization:FeedbackAuthorityMetric','Heading caps require the declared diagonal angular metric.');
+    end
+    if isfield(z,'matchedGainLimits')
+        validateattributes(z.matchedGainLimits,{'double'},{'real','finite','positive','numel',3});
+    end
     assert(z.noiseObjective=="normalizedFullState" && isequal(cfg.lidar.poseScales(:),[1;1;1/ell]), ...
         'VehicleLocalization:InvalidInvariantDesign','Require the declared full-state objective and consistent pose scaling.');
     if nargin<2,storedGyro=gyroDesign(z);end
@@ -198,7 +243,7 @@ function m=model(cfg,storedGyro,storedSpeed)
     m.A=zeros(8);m.A(1,2)=1;m.A(2,3)=1;m.A(4,5)=1;m.A(5,6)=1;m.A(7,8)=1;
     m.C=zeros(3,8);m.C(1,1)=1;m.C(2,4)=1;m.C(3,7)=1;m.Cp=m.C(1:2,:);
     m.B=zeros(8,3);m.B(3,1)=1;m.B(6,2)=1;m.B(8,3)=1;m.e7=zeros(8,1);m.e7(7)=1;m.e8=zeros(8,1);m.e8(8)=1;
-    m.e2=zeros(8,1);m.e2(2)=1;
+    m.e1=zeros(8,1);m.e1(1)=1;m.e2=zeros(8,1);m.e2(2)=1;m.e5=zeros(8,1);m.e5(5)=1;
     m.DL=diag([n.lidarPositionM,n.lidarPositionM,ell*n.lidarHeadingRad]);m.DG=n.gnssPositionM*eye(2);
     m.DI=diag([n.velocityMps,n.accelerationMps2+s.maximumAcceleration/s.maximumSpeed*n.velocityMps, ...
         n.accelerationMps2+s.maximumAcceleration/s.maximumSpeed*n.velocityMps,ell*n.gyroRadps, ...
@@ -267,4 +312,19 @@ function d=gyroDesign(z)
         'VehicleLocalization:InfeasibleInvariantDesign','Gyro output LMI failed numerical verification.');
     d=struct('physicalGain',gv,'normalizedVarianceProxy',qv,'minimumLmiEigenvalue',min(eig(check)), ...
         'analyticOptimum',ratio,'solverStatus',result.problem);cache(key)=d;
+end
+
+function v=feedbackAuthority(d,cfg)
+    inverse=d.P\eye(8);z=cfg.invariantObserver;
+    v=struct('verified',true,'positionL',d.kappaL*inverse(1,1), ...
+        'positionG',d.kappaG*inverse(1,1), ...
+        'velocityDirection',d.auxiliaryWeights(5)*inverse(5,5), ...
+        'headingL',d.kappaL*inverse(7,7),'headingDirection',d.auxiliaryWeights(5)*inverse(7,7));
+    tolerance=1e-6;
+    if isfield(z,'matchedGainLimits')
+        v.verified=v.verified && all([v.positionL,v.positionG,v.velocityDirection]<=z.matchedGainLimits*(1+tolerance));
+    end
+    if isfield(z,'headingGainLimits')
+        v.verified=v.verified && all([v.headingL,v.headingDirection]<=z.headingGainLimits*(1+tolerance));
+    end
 end

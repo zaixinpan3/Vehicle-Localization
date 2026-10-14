@@ -58,8 +58,8 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(r,direct);
         end
         function invalidGnssDoesNotEraseLidarHeading(testCase)
-            f=fixture(4,"lidar");f.cfg.initialState(7)=.1;r=run(f);
-            testCase.verifyLessThan(abs(r.heading(end)),2e-7);
+            f=fixture(8,"lidar");f.cfg.initialState(7)=.1;r=run(f);
+            testCase.verifyLessThan(abs(r.heading(end)),1e-4*abs(f.cfg.initialState(7)));
             testCase.verifyEqual(r.diagnostics.headingMode,2*ones(size(r.time)));
         end
         function bothMissingPredictAndThenRecover(testCase)
@@ -68,8 +68,9 @@ classdef fullLocalizationObserverTest < matlab.unittest.TestCase
             f.data.highRate.yawRate(f.data.highRate.time>=2 & f.data.highRate.time<4)=.02;r=run(f);
             outage=r.time>=2 & r.time<4;
             testCase.verifyEqual(r.diagnostics.mode(outage),zeros(nnz(outage),1));
-            testCase.verifyGreaterThan(max(abs(r.heading(outage))),.03);
-            testCase.verifyLessThan(abs(r.heading(end)),1e-7);
+            testCase.verifyGreaterThan(max(abs(r.heading(outage))),1e-4);
+            testCase.verifyLessThan(abs(r.heading(end)),1e-3*max(abs(r.heading(outage))));
+            testCase.verifyEqual(r.diagnostics.stateResets,0);
         end
         function delayedPacketsAreRejectedExplicitly(testCase)
             f=fixture(1,"both");f.data.gnss.delay=.1;

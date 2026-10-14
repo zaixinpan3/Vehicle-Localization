@@ -1,6 +1,6 @@
 {
   "inputs": {
-    "architecture": "intrinsic-eight-state-invariants-v1",
+    "architecture": "intrinsic-eight-state-redundancy-v2",
     "outputDegrees": [
       2,
       3,
@@ -36,13 +36,34 @@
       "lambda": 1,
       "margin": 1E-7,
       "solver": "sedumi",
+      "theta": 4,
       "yawAccelerationRadps2": 0.2,
       "sideslipRateNoiseRadps": 0.01,
-      "balancedPoseMetric": true,
+      "balancedPoseMetric": false,
       "angularMetricDiagonal": true,
       "noiseObjective": "normalizedFullState",
       "velocityAvailable": true,
-      "accelerationAvailable": true
+      "accelerationAvailable": true,
+      "redundancy": {
+        "minimumGnssSpeed": 10,
+        "informativeLidarMismatch": 0.001,
+        "degradedLidarMismatch": 0.001,
+        "speedPartitions": 10,
+        "accelerationSplit": 0.5,
+        "gnssSplit": 0.5,
+        "lambda": 1,
+        "kinematicGnssEnclosure": true,
+        "exactGnssLeverEnclosure": true
+      },
+      "headingGainLimits": [
+        8,
+        8
+      ],
+      "matchedGainLimits": [
+        8,
+        8,
+        2
+      ]
     },
     "iss": {
       "maximumSpeed": 15,
@@ -64,13 +85,13 @@
     "informationScale": 64
   },
   "design": {
-    "architecture": "intrinsic-eight-state-invariants-v1",
+    "architecture": "intrinsic-eight-state-redundancy-v2",
     "sigma": 4,
     "P": [
       [
-        30.635211853728318,
-        -28.405092522949804,
-        -41.283083735550356,
+        117.16458766798115,
+        -180.06972926332512,
+        -679.10279819862421,
         0,
         0,
         0,
@@ -78,9 +99,9 @@
         0
       ],
       [
-        -28.405092522949804,
-        79.990782503255346,
-        -27.769771745352816,
+        -180.06972926332512,
+        942.22382809961346,
+        -405.04975589372424,
         0,
         0,
         0,
@@ -88,9 +109,9 @@
         0
       ],
       [
-        -41.283083735550356,
-        -27.769771745352816,
-        615.15804418740152,
+        -679.10279819862421,
+        -405.04975589372424,
+        14919.761328717364,
         0,
         0,
         0,
@@ -101,9 +122,9 @@
         0,
         0,
         0,
-        30.635211853728318,
-        -28.405092522949804,
-        -41.283083735550356,
+        117.16458766798115,
+        -180.06972926332512,
+        -679.10279819862421,
         0,
         0
       ],
@@ -111,9 +132,9 @@
         0,
         0,
         0,
-        -28.405092522949804,
-        79.990782503255346,
-        -27.769771745352816,
+        -180.06972926332512,
+        942.22382809961346,
+        -405.04975589372424,
         0,
         0
       ],
@@ -121,9 +142,9 @@
         0,
         0,
         0,
-        -41.283083735550356,
-        -27.769771745352816,
-        615.15804418740152,
+        -679.10279819862421,
+        -405.04975589372424,
+        14919.761328717364,
         0,
         0
       ],
@@ -134,8 +155,8 @@
         0,
         0,
         0,
-        11.71640638698163,
-        3.5608032515582379E-14
+        118.59518586133767,
+        8.59932965001836E-11
       ],
       [
         0,
@@ -144,18 +165,18 @@
         0,
         0,
         0,
-        3.5608032515582379E-14,
-        24.044532999219502
+        8.59932965001836E-11,
+        3022.9097405435086
       ]
     ],
-    "kappaL": 89.472588549295438,
-    "kappaG": 60.275762361631045,
+    "kappaL": 351.51178464556193,
+    "kappaG": 279.92970428108453,
     "auxiliaryWeights": [
       0,
-      176.67757511547117,
+      1682.0335404244847,
       0,
-      92.174035614238065,
-      82.252726812500683
+      2.0234989546746971,
+      948.76148067591453
     ],
     "gyroGainNormalized": 27.777578635450332,
     "gyroDesign": {
@@ -174,23 +195,43 @@
       "solverStatus": 0
     },
     "lambda": 1,
-    "meanSquareBound": 47.248467359990684,
-    "solverStatus": 0,
-    "solverInfo": "Successfully solved (SeDuMi)",
+    "meanSquareBound": 815.15308894013356,
+    "solverStatus": 4,
+    "solverInfo": "Numerical problems (<a href=\"yalmip.github.io/inside/debuggingnumerics\">learn to debug</a>) (SeDuMi)",
     "verification": {
       "certified": true,
-      "worstVertexEigenvalue": -1.0005924642372727E-7,
+      "worstVertexEigenvalue": -0.010000392159215015,
       "vertices": 256,
-      "minimumEigenvalueP": 11.71640638698163,
-      "maximumEigenvalueP": 619.28856156040956,
+      "minimumEigenvalueP": 41.836875172628865,
+      "maximumEigenvalueP": 14962.060911832115,
       "intrinsicRateState": true,
       "zeroSpeedDivision": false,
       "actualOverlapCertified": false,
       "finiteInvariantSecantsCertified": false,
       "conditionalInvariantLocalClosureEstablished": true,
       "numericalInvariantRadiusCertified": false,
+      "jointSensorLmiVerified": true,
+      "jointSensor": {
+        "certified": true,
+        "worstLidarEigenvalue": -0.010000577065208691,
+        "worstGnssEigenvalue": -0.010000108511079554,
+        "lidarVertices": 128,
+        "gnssBernsteinVertices": 5760,
+        "vertices": 5888,
+        "gnssAdequacyEnabled": true,
+        "minimumGnssCourseSpeed": 10
+      },
+      "conditionalNonlinearGainConditionsVerified": true,
+      "feedbackAuthority": {
+        "verified": true,
+        "positionL": 7.9999999580096608,
+        "positionG": 6.3708749473432693,
+        "velocityDirection": 1.9999999938562671,
+        "headingL": 2.9639633522439266,
+        "headingDirection": 7.9999999475966348
+      },
       "gyroAvailabilityRequired": true,
-      "scope": "Continuous intrinsic drift, valid gyro output and aligned-speed surrogate sector LMI; finite auxiliary remainders have conditional local closure, with no certified numerical radius; actual overlap margin remains open; no sampled guarantee"
+      "scope": "Common fixed-gain L/G inequalities plus retained intrinsic surrogate LMIs; full nonlinear regional ISS follows under the declared geometry, motion, gyro, auxiliary-error and local-region contracts; actual map bounds and numerical attraction radius are unverified; no sampled guarantee"
     }
   }
 }

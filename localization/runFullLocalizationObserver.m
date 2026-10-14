@@ -2,7 +2,7 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % runFullLocalizationObserver Run the current intrinsic global observer.
 % Default prediction uses an internal rate state; IMU is auxiliary output only.
 % All calls use the intrinsic eight-state design.
-% The common-clock runtime uses the continuous surrogate LMI-designed gains.
+% The common-clock runtime uses the continuous common-LMI-designed gains.
 % Supply aligned lateral estimates through LateralInputs. The lateralDesign
 % argument remains for caller compatibility; upstream synthesis is separate.
 % Missing/invalid measurements withdraw their own correction for that frame.

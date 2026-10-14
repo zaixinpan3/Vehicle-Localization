@@ -25,7 +25,8 @@ Stages with a single caller are local functions of that entry point.
 | `prepareSemanticRegistrationGeometry.m` | Geometric, support and anisotropic D2D models: association, residuals, linearization |
 | `registrationSupport.m` | Registration utilities: projection, preparation, overlap, pose events, map selection and view conditioning, canonical pyramid, position-aided selection, soft association, line directions, relative height, residual primitives |
 | `runFullLocalizationObserver.m` | Current intrinsic eight-state observer; seven-column public state interface |
-| `invariantObserverSupport.m` | Intrinsic prediction, invariant innovations, fresh synthesis and solver-free verification |
+| `invariantObserverSupport.m` | Intrinsic prediction, invariant innovations, common gain synthesis and solver-free verification |
+| `sensorRedundancySupport.m` | Shared common L/G matrix construction, exact GNSS lever enclosure and certificate verification |
 | `fullObserverSupport.m` | Continuous ISS gain design and certificate, input synchronization, GNSS output point |
 | `lidarInjectionSupport.m` | LiDAR information filter, matched correction, residual reevaluation, correspondence-free overlap gradient, calibrated error moments, line measurements |
 | `lidarCalibrationSupport.m` | Causal LiDAR IMU tilt and its provenance check, offline pitch and translation calibration |
@@ -70,21 +71,28 @@ its existing output-point motion adapter and now exports that adapter's angle
 and derivative together; KITTI withdraws velocity-direction outputs explicitly.
 
 Run `synthesizeMncavInvariantDesign` with YALMIP and SeDuMi to regenerate
-`config/mncavInvariantDesign.json`. Runtime independently verifies its 256
-main/gyro/aligned-speed vertices and scalar LMIs without a solver; changed design
-inputs reject stale gains. The nominal objective includes all eight normalized
-errors. The four default noise cases have a pose anchor; dead reckoning has no
-absolute-pose steady-state objective. The diagonal angular metric prevents
-LiDAR heading noise from directly updating the internal rate.
+`config/mncavInvariantDesign.json`. Runtime independently verifies the 256
+retained intrinsic surrogate vertices, 128 L vertices, 5760 refined G controls,
+scalar LMIs and feedback-authority bounds without a solver. A changed fixed
+high-gain scale, common domain or sensor/vehicle input rejects stale gains.
+The nominal objective includes all eight normalized errors at four pose-anchored
+cases; it is a noise proxy, not measured covariance.
 
-The verified inequalities concern a continuous affine/sector enclosure.
-Finite invariant innovations admit a local cubic-remainder bound, conditional
-on a strict base margin. Establishing that margin for the actual overlap
-operator remains open; `S=F*M` alone does not certify it. No numerical local
-radius is claimed. The precise equations, assumptions and
-remaining tasks are in [the existing theory, Section 0.5](../improved_observer_derivation.md#05-implemented-architecture-intrinsic-prediction-and-invariant-imu-outputs).
-There is no discrete-time or arbitrary-outage guarantee. Feature deficiency
-and actual missing outputs are retained in runtime diagnostics.
+The active synthesis uses the exact moving-course Jacobian restriction and
+retains the GNSS lever coupling in a finite outer polytope. Feedback limits are
+included as LMIs; innovations are not clipped at runtime. The fixed normalized
+L/G position self-feedback limits are 8, velocity-direction is 2, and the
+L/direction heading limits are 8. The optional angular/translation metric-balance
+constraint is withdrawn; rotation invariance and the diagonal angular metric
+remain. These choices reduce the excessive authority of the first conservative
+common design.
+
+`jointSensorLmiVerified` and `conditionalNonlinearGainConditionsVerified` mean
+that these common numerical gain conditions passed. The complete nonlinear
+regional ISS theorem still requires the declared actual-overlap geometry/bias,
+motion, auxiliary-error and local-region contracts. Actual map bounds and a
+numerical attraction radius are unverified, so physical full-state and sampled
+certificate flags remain false. See [Sections 0.6--0.8 of the existing theory](../improved_observer_derivation.md#08-active-gain-synthesis-with-tighter-gnss-enclosures).
 
 ## Unified sensor-redundancy theory
 
@@ -112,8 +120,9 @@ Bernstein controls on the declared 10--15 m/s GNSS motion domain. This is a
 conservative sufficient domain, not a necessary physical speed threshold.
 The witness does not replace or certify `mncavInvariantDesign.json`, nor verify
 the geometry contracts for a recorded map. `Synthesize=true` re-solves only
-the theory; it never installs gains. Default runtime certificate flags remain
-unchanged.
+the theory; it never installs gains. The active gain file now has its own refined
+common certificate, verified by `invariantObserverSupport.verify`; this separate
+witness does not substitute for it.
 
 ## Zero-speed scope
 

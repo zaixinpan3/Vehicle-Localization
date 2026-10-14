@@ -11,6 +11,7 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
             d=fullObserverSupport.designFullObserverGains(mncavFullObserverConfig());
             testCase.verifyEqual(d.framework,"invariant");
             testCase.verifyTrue(d.surrogateContinuousLmiVerified);
+            testCase.verifyTrue(d.jointSensorLmiVerified);
             testCase.verifyFalse(d.fullContinuousStateCertified);
             testCase.verifyLessThan(d.continuousCertificate.verification.worstVertexEigenvalue,0);
             testCase.verifyFalse(d.baselineFullStateCertified);

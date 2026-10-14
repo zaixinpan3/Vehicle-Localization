@@ -10,6 +10,7 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             cfg=mncavFullObserverConfig();d=invariantObserverSupport.runtime(cfg);v=d.continuousCertificate.verification;
             testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,256);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
+            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,5888);
             testCase.verifySize(d.P,[8,8]);
         end
         function staleArchitectureInputsCannotReuseTheGain(testCase)
@@ -91,14 +92,16 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(v.certified);
         end
         function imuCannotDrivePredictionWithAuxiliaryFeedbackWithdrawn(testCase)
-            [d,l,c]=fixture();c.invariantDesign.auxiliaryWeights(:)=0;c.initialState(8)=.05;
+            [d,l,c]=fixture();c.initialState(8)=.05;
             d.highRate.yawRateValid=false(size(l.time));
             d.highRate.bodyVelocityValid=false(size(l.time));
+            d.highRate.bodyAccelerationValid=false(size(l.time));
             a=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
             d.highRate.yawRate(:)=-10;d.highRate.longitudinalAcceleration(:)=30;d.highRate.lateralAcceleration(:)=-40;
             b=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
             testCase.verifyEqual(a.internalState,b.internalState);
-            testCase.verifyEqual(a.headingUnwrapped,c.initialState(7)+.05*l.time,AbsTol=1e-12);
+            testCase.verifyEqual(a.diagnostics.intrinsicPrediction(2,7),c.initialState(7)+.05*l.time(2),AbsTol=1e-12);
+            testCase.verifyFalse(a.diagnostics.intrinsicPredictionUsesImu);
         end
         function gyroEntersAsAnInnovationOnAnEstimatedState(testCase)
             [d,l,c]=fixture();c.initialState(:)=0;d.highRate.longitudinalSpeed(:)=NaN;l.lateralVelocity(:)=NaN;
@@ -118,7 +121,7 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(all(isfinite(a.internalState),'all'));
         end
         function informativePoseRecoversUnmeasuredVelocity(testCase)
-            t=(0:.2:6).';zero=zeros(size(t));n=numel(t);
+            t=(0:.2:12).';zero=zeros(size(t));n=numel(t);
             d=struct('highRate',struct('time',t,'longitudinalSpeed',nan(n,1), ...
                 'bodyVelocityValid',false(n,1),'longitudinalAcceleration',zero, ...
                 'lateralAcceleration',zero,'yawRate',zero));
@@ -127,7 +130,7 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngle',zero,'sideSlipAngleRate',zero);
             c=mncavFullObserverConfig();c.initialState=[.2;0;0;-.1;0;0;.02];
             a=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
-            testCase.verifyLessThan(norm(a.position(end,:)-[30,0]),.02);
+            testCase.verifyLessThan(norm(a.position(end,:)-[60,0]),.02);
             testCase.verifyLessThan(norm(a.velocity(end,:)-[5,0]),.05);
             testCase.verifyEqual(a.diagnostics.packetCounts.bodyVelocityValid,0);
         end

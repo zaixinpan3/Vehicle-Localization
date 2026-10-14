@@ -473,9 +473,10 @@ local auxiliary closure from a certified numerical radius, and retain
 `fullContinuousStateCertified=false`. No sampled-system, arbitrary-outage or
 degenerate-scene guarantee is added.
 
-Those flags refer to the default stored gain file. Section 0.6 gives a separate
-joint theoretical design with explicit actual-overlap mismatch and sensor
-adequacy bounds; it does not relabel the default certificate as complete.
+Those flags describe the scope of the October 13 default gain file. Section 0.6
+gives the separate joint theoretical design. Section 0.8 now adds the refined
+conditions used to re-synthesize active gains; actual map and numerical-radius
+flags still remain false, with conditional common-gain checks verified.
 
 The former direct-gyro main-observer configurations, runtime paths and gain
 synthesis were deleted on 2026-10-13. They remain recoverable at Git commit
@@ -955,6 +956,131 @@ finite intervals of simultaneously weak signals while sufficient information
 recurs; it excludes indefinite parking with position-only GNSS and no heading
 observation. An independent heading output would instead remove the obstruction
 in (R1), requiring the corresponding extra heading term in the joint LMI.
+
+
+### 0.8 Active-gain synthesis with tighter GNSS enclosures
+
+Revision, 2026-10-14: the old active gains passed the L inequalities but failed
+the new G inequalities (worst eigenvalues approximately -2.81681 and +3.50637).
+This is a failure of those sufficient conditions, not a proof of instability.
+The active synthesis must therefore include the new common conditions, rather
+than merely cite the separate witness above. The original 256 surrogate checks
+are retained as additional constraints; the following valid refinements reduce
+conservatism in G without changing the observer or switching its gains.
+
+#### Exact kinematic restriction in the moving G set
+
+Use the ideal true angle/rate pair in the nominal analysis. Differences between
+that pair and the supplied filtered pair enter the bounded input on the compact
+region. For positive speed, the identity `v=s*u(course)` and `vdot=a` give, in
+the true course frame,
+
+$$
+ v=(s,0)^\top,\qquad a=(\dot s,sq_c)^\top,\qquad
+ 2q_cv+2Ja=(0,2\dot s)^\top.
+\tag{R13}
+$$
+
+Thus the true-point rate column in (R5) can be restricted in G to
+`A[{3,6},8]=[0; +/-2*a_max/(theta^2*ell)]`. Also
+`|q_c|<=min(q_max,a_max/s_0)`, so the u/rate vertices in G use that smaller
+bound. L retains the original broad box, including zero speed. This identity
+is used only in the proof and synthesis; no velocity quotient is evaluated in
+the predictor. For example the predictor discrepancy due to upstream rate
+error is bounded on the local region by
+`(2*q_hat,max*||v_hat||+2*||a_hat||)*|delta_betaDot| +
+||v_hat||*delta_betaDot^2`, where `q_hat,max` bounds the ideal-input estimate
+coefficient on the declared local chart. This does not assert that the estimate
+always satisfies the true-point bound. The uniform input/remainder argument applies.
+
+#### Retain the GNSS lever coupling instead of a Young penalty
+
+In the course frame, the true-point normalized GNSS row is
+`C_G=Cp+l*e7'`, with `||l||<=rho=||d_G||/ell`. Its exact leading correction is
+`-theta*kappa_G*P^-1*Cp'*W_G*C_G*epsilon`.
+Enclose l by the four component corners `(+/-rho,+/-rho)`.
+To cover every symmetric weight `w_0 I<=W_G<=I`, put
+`m=(1+w_0)/2`, `c=(1-w_0)/2` and use the six vertices
+
+$$
+ W_j\in\left\{w_0I,I,
+ mI+c\begin{bmatrix}\pm1&\pm1\\\pm1&\mp1\end{bmatrix}\right\},
+\tag{R14}
+$$
+
+where the diagonal sign and off-diagonal sign vary independently. To verify
+coverage, write any symmetric W as `zI+[[x,y],[y,-x]]`. Its eigenvalues are
+`z +/- sqrt(x^2+y^2)`. Hence its cross-section at z has radius at most
+`min(z-w_0,1-z)`. Below m, interpolate between `w_0I` and the middle square
+`|x|,|y|<=c`; above m interpolate between that square and I. The disk is
+contained in the square, proving the convex enclosure. Some vertices slightly
+exceed the original spectral interval, which is conservative. They do not
+assert extra sensor information. The product of a weight and lever row is
+multi-affine, so checking all weight/lever corners covers their convex product.
+
+For every refined G drift vertex, Bernstein control and weight/lever corner,
+an alternative sufficient G inequality is
+
+$$
+\begin{aligned}
+ &\operatorname{He}\left(PA_v^1-
+ \kappa_G C_p^\top W_j(C_p+l_j e_7^\top)\right)
+ -2k_dD_i-2k_a(1-\eta)D_a\\
+ &\quad+\frac{2k_a(\eta^{-1}-1)a_{\max}^2}{\theta^4\ell^2}e_7e_7^\top
+ +2\kappa_L\delta_G C^\top C+\lambda I\prec0.
+\end{aligned}
+\tag{R15}
+$$
+
+It replaces the two GNSS Young terms of (R6-G) with the retained exact leading
+coupling. There is still no positive LiDAR floor. The L inequalities (R6-L)
+are unchanged and use the same P and gains. With ten speed cells, the refined
+G box has eight drift vertices and therefore 5760 G controls; L has 128.
+
+The exact finite GNSS output is not silently replaced by its point Jacobian.
+The lever remainder has norm at most
+`||d_G||*theta^2*epsilon_7^2/(2*ell^2)` before multiplication by
+`kappa_G*P^-1*Cp'*W_G`. It is uniformly quadratic on the chart and is added to
+`L_N` in (R9). All other nonlinear and disturbance bounds are retained.
+Consequently the complete regional theorem, common-metric switching proof and
+finite-stop extension apply with (R15) instead of (R6-G). This is a refinement
+of the sufficient certificate for the same constant-gain observer.
+
+#### Feedback authority is constrained inside the optimization
+
+A small raw scalar gain is not necessarily a small applied correction because
+P is also optimized. For `P>0`, `k>=0`, and a declared positive bound g,
+
+$$
+ k\,e^\top P^{-1}e\le g
+ \quad\Longleftrightarrow\quad
+ P-\frac{k}{g}ee^\top\succeq0.
+\tag{R16}
+$$
+
+Congruence by `P^-1/2` reduces this equivalence to a rank-one eigenvalue test.
+The active synthesis limits matched position and velocity-direction self-feedback
+by these affine LMIs; the equivalence also applies to other coordinates. With
+diagonal Ph, heading limits are `kappa_L<=g_L*P77` and `k_d<=g_d*P77`.
+These are fixed design constraints, not runtime clipping
+or a fallback observer. The optional balance constraint `Ph<=Pc(1:2,1:2)` is
+not a hypothesis of the theorem and may be withdrawn when it obstructs these
+feedback bounds. Rotation invariance and positive definiteness are retained.
+
+
+The active `config/mncavInvariantDesign.json` now uses the refined certificate
+and feedback bounds. Its matched scalars are kappa_L=351.511784646,
+kappa_G=279.929704281, k_a=1682.03354042,
+k_c=2.02349895467, k_d=948.761480676;
+P and all inputs are retained in that configuration. The 128 L and 5760 G
+controls have worst eigenvalues -0.0100005770652 and
+-0.0100001085111, in addition to 256 retained surrogate checks.
+Runtime recomputes these values and the feedback caps independently of stored
+claims. The old gains also failed the refined G family (+2.37977567581);
+even its zero-lambda raw matrix margin was positive (+1.37977567581), so
+homogeneous rescaling of that old metric/gain set alone cannot establish it.
+Changed fixed theta or common-domain inputs reject stale saved metadata.
+The upstream lateral design and physical vehicle/sensor parameters are unchanged.
 
 
 ## 1. State, continuous plant, and disturbance interface

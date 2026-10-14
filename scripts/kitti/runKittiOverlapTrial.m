@@ -71,6 +71,11 @@ function [report,estimate,trial]=runKittiOverlapTrial(datasetFolder,outputFolder
     cfg=mncavFullObserverConfig(LoadDesign=false);cfg.kind="kitti-global-overlap-transfer-trial";
     cfg.invariantObserver.velocityAvailable=false;
     cfg.invariantObserver.operatingPoints=["lidar","weakLidar"];
+    % This transfer design has no GNSS/direction adequacy set. Keep its
+    % prior angular balance and re-solve the L-only mismatch constraints;
+    % MnCAV's moving-GNSS feedback-authority limits are not transfer defaults.
+    cfg.invariantObserver.balancedPoseMetric=true;
+    cfg.invariantObserver=rmfield(cfg.invariantObserver,{'headingGainLimits','matchedGainLimits'});
     cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2), ...
         'headingStdRad',0,'identifier',"coincident-output-points");
     cfg.invariantObserver.noise=struct('lidarPositionM',.1,'lidarHeadingRad',.01, ...

@@ -57,5 +57,39 @@ classdef sensorRedundancyTheoryTest < matlab.unittest.TestCase
             runtime=invariantObserverSupport.runtime(after);
             testCase.verifyFalse(runtime.fullContinuousStateCertified);
         end
+        function storedGainsSatisfyTheNewCommonConditions(testCase)
+            c=mncavFullObserverConfig();v=invariantObserverSupport.verify(c.invariantDesign,c);
+            testCase.verifyTrue(v.jointSensorLmiVerified);
+            testCase.verifyEqual(v.jointSensor.vertices,5888);
+            testCase.verifyLessThan(v.jointSensor.worstLidarEigenvalue,0);
+            testCase.verifyLessThan(v.jointSensor.worstGnssEigenvalue,-.009);
+        end
+        function inadequateDirectionGainCannotReuseASavedClaim(testCase)
+            c=mncavFullObserverConfig();c.invariantDesign.auxiliaryWeights(5)=1e-10;
+            c.invariantDesign.verification.jointSensorLmiVerified=true;
+            v=invariantObserverSupport.verify(c.invariantDesign,c);
+            testCase.verifyFalse(v.certified);
+            testCase.verifyFalse(v.jointSensorLmiVerified);
+            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+                'VehicleLocalization:InfeasibleInvariantDesign');
+        end
+        function changedCommonDomainCannotLoadStoredGains(testCase)
+            c=mncavFullObserverConfig();domain=c.invariantObserver.redundancy;
+            domain.minimumGnssSpeed=5;
+            testCase.verifyError(@()mncavFullObserverConfig(DesignOverride=struct('redundancy',domain)), ...
+                'VehicleLocalization:StaleInvariantDesign');
+        end
+        function aDifferentHighGainScaleRequiresANewCertificate(testCase)
+            testCase.verifyError(@()mncavFullObserverConfig(Theta=5), ...
+                'VehicleLocalization:StaleInvariantDesign');
+        end
+        function absentVelocityWithdrawsTheGnssAdequacyClaim(testCase)
+            c=mncavFullObserverConfig();c.invariantObserver.velocityAvailable=false;
+            v=invariantObserverSupport.verify(c.invariantDesign,c);
+            testCase.verifyTrue(v.jointSensorLmiVerified);
+            testCase.verifyFalse(v.jointSensor.gnssAdequacyEnabled);
+            testCase.verifyEqual(v.jointSensor.lidarVertices,64);
+            testCase.verifyEqual(v.jointSensor.gnssBernsteinVertices,0);
+        end
     end
 end
