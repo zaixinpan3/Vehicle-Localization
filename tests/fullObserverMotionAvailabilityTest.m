@@ -1,4 +1,4 @@
-classdef fullObserverMotionAvailabilityTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvailabilityTest < matlab.unittest.TestCase
 % Missing motion outputs withdraw feedback rather than supply zero observations.
     methods (TestClassSetup)
         function paths(testCase)
@@ -49,7 +49,7 @@ function [d,l,c]=fixture()
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
     l=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
-    c=mncavFullObserverConfig();
+    c=freshObserverTestConfig();
     c.initialState=[0;3;.2;0;0;0;0];
 end
 

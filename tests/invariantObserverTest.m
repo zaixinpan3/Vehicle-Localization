@@ -1,4 +1,4 @@
-classdef invariantObserverTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest < matlab.unittest.TestCase
     methods (TestClassSetup)
         function paths(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
@@ -6,16 +6,31 @@ classdef invariantObserverTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function storedIntrinsicCertificateIsRecomputed(testCase)
-            cfg=mncavFullObserverConfig();d=invariantObserverSupport.runtime(cfg);v=d.continuousCertificate.verification;
+        function temporaryIntrinsicCertificateIsRecomputed(testCase)
+            cfg=freshObserverTestConfig();d=invariantObserverSupport.runtime(cfg);v=d.continuousCertificate.verification;
             testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,256);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
             testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,5888);
             testCase.verifySize(d.P,[8,8]);
         end
         function staleArchitectureInputsCannotReuseTheGain(testCase)
-            testCase.verifyError(@()mncavFullObserverConfig(DesignOverride=struct('headingLengthM',20)), ...
+            c=freshObserverTestConfig();c.invariantObserver.headingLengthM=20;
+            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
+        end
+        function parameterFactoryHasNoSolvedGains(testCase)
+            c=mncavFullObserverConfig();
+            testCase.verifyFalse(isfield(c,'invariantDesign'));
+            testCase.verifyEqual(c.gainSource,"unsolved-invariant");
+        end
+        function publicScriptResolvesEvenWhenAnOldDesignIsSupplied(testCase)
+            c=freshObserverTestConfig();c.invariantDesign.kappaL=0;
+            [d,ready]=synthesizeMncavInvariantDesign(c);
+            testCase.verifyGreaterThan(d.kappaL,0);
+            testCase.verifyTrue(d.verification.jointSensorLmiVerified);
+            testCase.verifyEqual(ready.invariantDesign,d);
+            testCase.verifyEqual(ready.gainSource,"fresh-lmi");
+            testCase.verifyEqual(d.inputs,invariantObserverSupport.inputs(ready));
         end
         function synchronizationWithdrawsAnInvalidBracketEndpoint(testCase)
             [d,l,c]=fixture();t=(.05:.1:.95).';n=numel(t);
@@ -66,7 +81,7 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(poisoned.internalState,baseline.internalState,AbsTol=1e-12);
         end
         function stoppedPacketKeepsTheContinuousUpstreamAngle(testCase)
-            c=mncavFullObserverConfig();
+            c=freshObserverTestConfig();
             packet=invariantObserverSupport.measurements(0,0,0,0,.2,.3,-.1,true,true,true,c);
             testCase.verifyEqual(packet.beta,.3,AbsTol=1e-12);
             testCase.verifyEqual(packet.betaRate,-.1,AbsTol=1e-12);
@@ -75,7 +90,7 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(all(isfinite(corrected)));
         end
         function projectedSpeedCorrectionUsesTheSuppliedAngle(testCase)
-            c=mncavFullObserverConfig();design=invariantObserverSupport.runtime(c);
+            c=freshObserverTestConfig();design=invariantObserverSupport.runtime(c);
             design.auxiliaryWeights(:)=0;
             packet=invariantObserverSupport.measurements(8,0,0,0,0,.3,0,true,true,false,c);
             x=[0;5;0;0;0;0;0;0];dt=.1;
@@ -84,11 +99,12 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             expected=x([2,5])+dt*gain/(1+dt*gain)*direction*(8-direction.'*x([2,5]));
             testCase.verifyEqual(corrected([2,5]),expected,AbsTol=1e-12);
         end
-        function storedDesignVerificationRequiresNoSdpSolver(testCase)
+        function temporaryDesignVerificationRequiresNoSdpSolver(testCase)
+            c=freshObserverTestConfig();
             originalPath=path;cleanup=onCleanup(@()path(originalPath));
             root=fileparts(fileparts(mfilename('fullpath')));restoredefaultpath;addpath(root);setupVehicleLocalization;
             testCase.verifyEqual(exist('sdpvar','file'),0);
-            c=mncavFullObserverConfig();v=invariantObserverSupport.verify(c.invariantDesign,c);
+            v=invariantObserverSupport.verify(c.invariantDesign,c);
             testCase.verifyTrue(v.certified);
         end
         function imuCannotDrivePredictionWithAuxiliaryFeedbackWithdrawn(testCase)
@@ -128,14 +144,14 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             d.lidar=struct('time',t,'pose',[5*t,zero,zero],'valid',true(n,1), ...
                 'information',repmat(1e6*eye(3),1,1,n),'delay',0);
             l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngle',zero,'sideSlipAngleRate',zero);
-            c=mncavFullObserverConfig();c.initialState=[.2;0;0;-.1;0;0;.02];
+            c=freshObserverTestConfig();c.initialState=[.2;0;0;-.1;0;0;.02];
             a=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
             testCase.verifyLessThan(norm(a.position(end,:)-[60,0]),.02);
             testCase.verifyLessThan(norm(a.velocity(end,:)-[5,0]),.05);
             testCase.verifyEqual(a.diagnostics.packetCounts.bodyVelocityValid,0);
         end
         function simultaneousFrameRotationPreservesEveryInvariant(testCase)
-            c=mncavFullObserverConfig();x=[2;8;.2;-1;.4;1.3;.5;.12];angle=.7;
+            c=freshObserverTestConfig();x=[2;8;.2;-1;.4;1.3;.5;.12];angle=.7;
             R=[cos(angle),-sin(angle);sin(angle),cos(angle)];rotated=x;
             for ids={[1,4],[2,5],[3,6]},i=ids{1};rotated(i)=R*x(i);end
             rotated(7)=x(7)+angle;
@@ -143,7 +159,7 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(a,b,AbsTol=1e-12);
         end
         function invariantJacobianAgreesWithIndependentFiniteDifferences(testCase)
-            c=mncavFullObserverConfig();x=[2;8;.2;-1;.4;1.3;.5;.12];[~,H]=invariantObserverSupport.outputs(x,.03,.02,c);
+            c=freshObserverTestConfig();x=[2;8;.2;-1;.4;1.3;.5;.12];[~,H]=invariantObserverSupport.outputs(x,.03,.02,c);
             numerical=zeros(8,8);step=1e-5;
             for j=1:8
                 a=x;b=x;a(j)=a(j)+step;b(j)=b(j)-step;
@@ -152,7 +168,7 @@ classdef invariantObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(H,numerical,AbsTol=1e-8);
         end
         function bodyMeasurementsMatchInvariantsWithoutKnowingGlobalYaw(testCase)
-            c=mncavFullObserverConfig();v=[8;.4];a=[.2;1.3];psi=.7;betaRate=.015;
+            c=freshObserverTestConfig();v=[8;.4];a=[.2;1.3];psi=.7;betaRate=.015;
             R=[cos(psi),-sin(psi);sin(psi),cos(psi)];vg=R*v;ag=R*a;
             r=(v(1)*a(2)-v(2)*a(1))/(v.'*v)-betaRate;x=[0;vg(1);ag(1);0;vg(2);ag(2);psi;r];
             packet=invariantObserverSupport.measurements(v(1),v(2),a(1),a(2),r,atan2(v(2),v(1)),betaRate,true,true,true,c);
@@ -167,5 +183,5 @@ function [d,l,c]=fixture()
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
     l=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
-    c=mncavFullObserverConfig();c.initialState=[0;8;0;0;0;0;.1];
+    c=freshObserverTestConfig();c.initialState=[0;8;0;0;0;0;.1];
 end

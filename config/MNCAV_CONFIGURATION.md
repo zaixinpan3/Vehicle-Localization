@@ -49,10 +49,14 @@ and sideslip transformation. Plant states and IMU inputs remain at their
 physical model origin. Otherwise nominal simulation can report a false lateral
 error merely because it compares velocities at different points.
 
-The current global observer factory is `mncavFullObserverConfig()`. It loads
-`mncavInvariantDesign.json`, synthesized by `synthesizeMncavInvariantDesign`,
-for the intrinsic eight-state predictor and invariant output innovations.
-Changing its declared inputs requires fresh synthesis. The former main-observer
+The current global observer factory is `mncavFullObserverConfig()`. It returns
+parameters without numerical gains. After configuring all experiment inputs,
+call `[design,cfg]=synthesizeMncavInvariantDesign(cfg)` and use that temporary
+configuration for the intrinsic eight-state observer. Every new test/experiment
+solves again; the script neither loads nor saves gains, and the former active
+gain JSON has been removed. Runtime can verify an in-memory design without a
+solver, but rejects changes to its synthesis inputs until gains are re-solved.
+Tests share fresh designs only within their fixture lifetime. The former main-observer
 factories and saved measured-course gains were
 removed on 2026-10-13; retrieve their historical code from Git if needed.
 The lateral vehicle parameters and their synthesis workflow are unchanged.

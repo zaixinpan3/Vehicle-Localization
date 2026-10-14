@@ -2,16 +2,25 @@ function report=verifySensorRedundancyTheory(options)
 % verifySensorRedundancyTheory Verify the unified continuous-theory witness.
 % This checks the two sensor-adequacy sets of derivation Section 0.6 with one
 % constant metric and gain set. It never installs gains in the runtime.
-% The default witness is retained as a small table in the existing derivation.
-% Synthesize=true solves the same theoretical LMIs for an explicit domain.
+% With no Witness, solve temporary theoretical gains for the requested domain.
+% A supplied in-memory Witness is verified without solving the main observer.
     arguments
         options.Witness (1,1) struct=struct()
-        options.Synthesize (1,1) logical=false
+        options.Config (1,1) struct=mncavFullObserverConfig()
         options.MinimumGnssSpeed (1,1) double {mustBeReal,mustBeFinite,mustBePositive}=10
         options.OperatorMismatch (1,1) double {mustBeReal,mustBeFinite,mustBeNonnegative}=.001
     end
-    root=setupVehicleLocalization();cfg=mncavFullObserverConfig();inputs=theoryInputs(cfg);
-    if options.Synthesize
+    root=setupVehicleLocalization();cfg=options.Config;
+    if ~isfield(cfg,'invariantDesign')
+        external=fullfile(fileparts(root),'RobustVehicleLocalization','external');
+        addpath(genpath(fullfile(external,'YALMIP')));addpath(genpath(fullfile(external,'sedumi')));
+        [gyro,speed]=invariantObserverSupport.scalarDesigns(cfg);
+        inputs=sensorRedundancySupport.inputs(cfg,gyro.physicalGain/cfg.invariantObserver.sigma, ...
+            speed.physicalGain/cfg.invariantObserver.sigma);
+    else
+        inputs=theoryInputs(cfg);
+    end
+    if isempty(fieldnames(options.Witness))
         domain=struct('minimumGnssSpeed',options.MinimumGnssSpeed, ...
             'informativeLidarMismatch',options.OperatorMismatch, ...
             'degradedLidarMismatch',options.OperatorMismatch, ...
@@ -36,13 +45,8 @@ function report=verifySensorRedundancyTheory(options)
             witness.(name)=1.01*value(witness.(name));
         end
         witness.solverStatus=result.problem;
-    elseif ~isempty(fieldnames(options.Witness))
-        witness=options.Witness;
     else
-        text=fileread(fullfile(root,'improved_observer_derivation.md'));
-        token=regexp(text,'(?s)<!-- SENSOR_REDUNDANCY_WITNESS_BEGIN -->\s*```json\s*(.*?)\s*```\s*<!-- SENSOR_REDUNDANCY_WITNESS_END -->','tokens','once');
-        assert(~isempty(token),'VehicleLocalization:MissingRedundancyWitness','The documented theory witness is missing.');
-        witness=jsondecode(token{1});
+        witness=options.Witness;
     end
     assert(isequaln(witness.inputs,inputs),'VehicleLocalization:StaleRedundancyWitness', ...
         'The theoretical witness uses different declared physical/scalar-gain inputs.');
@@ -67,7 +71,7 @@ function report=verifySensorRedundancyTheory(options)
         'coversGnssAbsent',true,'coversZeroLidarInformation',true, ...
         'minimumGnssCourseSpeed',witness.domain.minimumGnssSpeed, ...
         'appliesToDefaultRuntimeGains',false,'runtimeModified',false, ...
-        'scope',"One continuous observer with a common metric/gains; nonlinear local ISS follows under the explicit geometry, motion, bias and auxiliary-input conditions of Section 0.6; the default runtime gain file is not certified by this separate witness");
+        'scope',"One continuous observer with a common metric/gains; nonlinear local ISS follows under the explicit geometry, motion, bias and auxiliary-input conditions of Section 0.6; temporary runtime gains are verified separately");
     if nargout==0,disp(rmfield(report,'witness'));end
 end
 

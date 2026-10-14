@@ -1,9 +1,9 @@
 function cfg=mncavFullObserverConfig(options)
 % Current MnCAV intrinsic predictor; IMU is confined to invariant innovations.
 % The eighth, internal yaw-rate state removes speed-denominator singularities.
-% Gains satisfy the common sensor LMIs and the invariant-noise objective.
+% This factory returns parameters only. Solve gains immediately before use
+% with [design,cfg]=synthesizeMncavInvariantDesign(cfg).
     arguments
-        options.LoadDesign (1,1) logical=true
         options.DesignOverride (1,1) struct=struct()
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
@@ -49,12 +49,4 @@ function cfg=mncavFullObserverConfig(options)
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];
     cfg.invariantObserver=z;cfg.gainSource="unsolved-invariant";
-    if options.LoadDesign
-        path=fullfile(fileparts(mfilename('fullpath')),'mncavInvariantDesign.json');
-        assert(isfile(path),'VehicleLocalization:MissingInvariantDesign','Run synthesizeMncavInvariantDesign first.');
-        stored=jsondecode(fileread(path));
-        assert(isequaln(invariantObserverSupport.inputs(cfg),stored.inputs), ...
-            'VehicleLocalization:StaleInvariantDesign','Stored invariant gains use different declared inputs; re-synthesize.');
-        cfg.invariantDesign=stored.design;cfg.gainSource="config/mncavInvariantDesign.json";
-    end
 end

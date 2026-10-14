@@ -52,6 +52,7 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     end
     sourcePreparationSeconds=sum(timings(:,1));
     data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
+    [~,cfg]=synthesizeMncavInvariantDesign(cfg);
     timer=tic;estimate=runFullLocalizationObserver(data,lateralDesign,cfg,LateralInputs=lat);runtime=toc(timer);
     accepted=estimate.diagnostics.lidarOverlap.available;overlapSeconds=estimate.diagnostics.lidarOverlap.seconds;overlapSeconds(~isfinite(overlapSeconds))=0;
     timings(:,2)=overlapSeconds;timings(:,3)=timings(:,1)+overlapSeconds;

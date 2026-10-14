@@ -1,4 +1,4 @@
-classdef localizationMotionInputTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) localizationMotionInputTest < matlab.unittest.TestCase
 % localizationMotionInputTest LiDAR translation cannot rewrite motion inputs.
     methods (TestClassSetup)
         function paths(testCase)
@@ -36,7 +36,8 @@ function f=fixture()
         'lateralAcceleration',z,'yawRate',z);
     l=struct('time',t,'pose',[8.4*t,-.25*t,z],'valid',true(n,1), ...
         'information',repmat(1e6*eye(3),1,1,n),'delay',0);
-    cfg=mncavFullObserverConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8.4;0;0;-.25;0;0];
+    cfg=freshObserverTestConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8.4;0;0;-.25;0;0];
+    cfg=freshObserverTestConfig(cfg);
     f=struct('time',t,'data',struct('highRate',h,'lidar',l),'cfg',cfg, ...
         'lateral',struct('time',t,'lateralVelocity',-.25+z,'sideSlipAngle',atan2(-.25,8.4)+z,'sideSlipAngleRate',z));
 end

@@ -1,4 +1,4 @@
-classdef synchronousLocalizationTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizationTest < matlab.unittest.TestCase
 % synchronousLocalizationTest Low-rate input and observer behavior.
     methods (TestClassSetup)
         function paths(testCase)
@@ -209,7 +209,8 @@ function f=fixture()
     lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
     g=struct('time',t,'position',[8*t,z],'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[8*t,z,z],'valid',true(n,1),'information',repmat(1e6*eye(3),1,1,n),'delay',0);
-    cfg=mncavFullObserverConfig;cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8;0;0;0;0;0];
+    cfg=freshObserverTestConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8;0;0;0;0;0];
+    cfg=freshObserverTestConfig(cfg);
     f=struct('data',struct('highRate',h,'gnss',g,'lidar',l),'lateral',lateral,'cfg',cfg);
 end
 

@@ -19,7 +19,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     lateralCfg=lateralObserverConfig("mncav");design=designLateralObserverGains(lateralObserverConfig());
-    cfg=mncavFullObserverConfig();settings=scenarioSettings(lateralCfg,cfg);
+    [~,cfg]=synthesizeMncavInvariantDesign(mncavFullObserverConfig());settings=scenarioSettings(lateralCfg,cfg);
     for name=string(fieldnames(options.NoiseOverrides)).'
         assert(isfield(settings.noise,name),'VehicleLocalization:UnknownNoiseSetting','Unknown noise setting %s.',name);
         settings.noise.(name)=options.NoiseOverrides.(name);

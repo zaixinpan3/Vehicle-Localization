@@ -1,4 +1,4 @@
-classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuousIssTest < matlab.unittest.TestCase
 % Continuous intrinsic gain checks; numerical and actual-overlap scope differ.
     methods (TestClassSetup)
         function paths(testCase)
@@ -8,7 +8,7 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
     end
     methods (Test)
         function currentVehicleHasAnIntrinsicSurrogateCertificate(testCase)
-            d=fullObserverSupport.designFullObserverGains(mncavFullObserverConfig());
+            d=fullObserverSupport.designFullObserverGains(freshObserverTestConfig());
             testCase.verifyEqual(d.framework,"invariant");
             testCase.verifyTrue(d.surrogateContinuousLmiVerified);
             testCase.verifyTrue(d.jointSensorLmiVerified);
@@ -17,7 +17,7 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
             testCase.verifyFalse(d.baselineFullStateCertified);
         end
         function timingDoesNotSelectAnotherGainDesign(testCase)
-            c=mncavFullObserverConfig();a=fullObserverSupport.designFullObserverGains(c);
+            c=freshObserverTestConfig();a=fullObserverSupport.designFullObserverGains(c);
             b=fullObserverSupport.designFullObserverGains(rmfield(c,'timing'));
             testCase.verifyEqual(a,b);
             c.timing="historical_transport";
@@ -26,26 +26,26 @@ classdef fullObserverContinuousIssTest < matlab.unittest.TestCase
         function retiredConfigurationsCannotSelectAnAlternative(testCase)
             c=struct('kind',"old-seven-state",'gains',[4,4,12,4]);
             testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
-            c=mncavFullObserverConfig();c.hgo=struct();
+            c=freshObserverTestConfig();c.hgo=struct();
             testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
         end
-        function changedNoiseCannotLoadSavedGains(testCase)
-            c=mncavFullObserverConfig();noise=c.invariantObserver.noise;noise.gyroRadps=2*noise.gyroRadps;
-            testCase.verifyError(@()mncavFullObserverConfig(DesignOverride=struct('noise',noise)), ...
+        function changedNoiseCannotReuseTemporaryGains(testCase)
+            c=freshObserverTestConfig();c.invariantObserver.noise.gyroRadps=2*c.invariantObserver.noise.gyroRadps;
+            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
         function solverClaimCannotReplaceNumericVerification(testCase)
-            c=mncavFullObserverConfig();h=c.invariantDesign;h.kappaL=0;h.verification.certified=true;
+            c=freshObserverTestConfig();h=c.invariantDesign;h.kappaL=0;h.verification.certified=true;
             v=invariantObserverSupport.verify(h,c);testCase.verifyFalse(v.certified);
             c.invariantDesign=h;
             testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:InfeasibleInvariantDesign');
         end
         function missingDomainCannotBypassVerification(testCase)
-            c=rmfield(mncavFullObserverConfig(),'iss');
+            c=rmfield(freshObserverTestConfig(),'iss');
             testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:MissingFullIssDomain');
         end
         function insufficientGeometryRemainsZeroInformation(testCase)
-            c=mncavFullObserverConfig();c.initialState=[.2;8;0;-.1;0;0;.02];t=[0;.1];z=zeros(2,1);
+            c=freshObserverTestConfig();c.initialState=[.2;8;0;-.1;0;0;.02];t=[0;.1];z=zeros(2,1);
             data=struct('highRate',struct('time',t,'longitudinalSpeed',8+z, ...
                 'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z));
             data.lidar=struct('time',t,'pose',zeros(2,3),'valid',true(2,1), ...

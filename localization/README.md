@@ -70,11 +70,27 @@ an auxiliary disturbance, not an exact direction identity. Downtown retains
 its existing output-point motion adapter and now exports that adapter's angle
 and derivative together; KITTI withdraws velocity-direction outputs explicitly.
 
-Run `synthesizeMncavInvariantDesign` with YALMIP and SeDuMi to regenerate
-`config/mncavInvariantDesign.json`. Runtime independently verifies the 256
+`mncavFullObserverConfig` returns parameters only. Immediately before a test or
+experiment, solve temporary gains with YALMIP and SeDuMi:
+
+```matlab
+cfg=mncavFullObserverConfig();
+% Apply this experiment's sensor, output-point and domain overrides here.
+[design,cfg]=synthesizeMncavInvariantDesign(cfg);
+estimate=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral);
+```
+
+The solver returns an in-memory design and ready-to-run configuration. It
+always re-solves, even when the supplied configuration already has gains; it
+reads/writes no gain file and has no persistent gain cache. The entry point
+solves missing gains before the first update. Gains may be shared within the
+current experiment, while a later experiment solves again. Solver failure is an
+error, with no old-gain fallback. Runtime independently verifies the 256
 retained intrinsic surrogate vertices, 128 L vertices, 5760 refined G controls,
-scalar LMIs and feedback-authority bounds without a solver. A changed fixed
-high-gain scale, common domain or sensor/vehicle input rejects stale gains.
+scalar LMIs and feedback-authority bounds without a solver. A zero GNSS lever
+needs only 240 G controls: the minimum GNSS weight dominates all larger weights
+and coincident lever vertices are omitted. A changed fixed
+high-gain scale, common domain or sensor/vehicle input rejects stale temporary gains.
 The nominal objective includes all eight normalized errors at four pose-anchored
 cases; it is a noise proxy, not measured covariance.
 
@@ -114,15 +130,21 @@ stated mismatch/bias bounds. Joint LMIs retain the direction channel for the
 GNSS guarantee; Bernstein controls certify its whole speed interval. Uniform
 higher-order bounds then close all nonlinear predictor and invariant innovations.
 
-Run `verifySensorRedundancyTheory` to check the separate documented theoretical
-witness without an SDP solver. It verifies 128 LiDAR vertices and 480 GNSS
+Run `verifySensorRedundancyTheory` to solve and verify a separate temporary
+theoretical witness. It verifies 128 LiDAR vertices and 480 GNSS
 Bernstein controls on the declared 10--15 m/s GNSS motion domain. This is a
 conservative sufficient domain, not a necessary physical speed threshold.
-The witness does not replace or certify `mncavInvariantDesign.json`, nor verify
-the geometry contracts for a recorded map. `Synthesize=true` re-solves only
-the theory; it never installs gains. The active gain file now has its own refined
-common certificate, verified by `invariantObserverSupport.verify`; this separate
-witness does not substitute for it.
+This witness does not replace the runtime design or verify recorded-map
+geometry. A supplied `Witness` and freshly solved `Config` can be reverified
+without an SDP solve. Documented numerical examples are historical records and
+are never parsed as live gains. The runtime design has its own refined common
+certificate, checked by `invariantObserverSupport.verify`.
+
+Observer test classes share `freshObserverGainsFixture`: within its lifetime,
+each distinct configuration is solved once and reused, then discarded at
+teardown. A second `runtests` call in the same MATLAB process creates a fresh
+fixture and solves again. The lateral observer already synthesizes its current design at
+test/experiment setup; no saved lateral gains are loaded.
 
 ## Zero-speed scope
 

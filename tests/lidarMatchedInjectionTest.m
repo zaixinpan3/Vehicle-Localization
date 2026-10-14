@@ -1,4 +1,4 @@
-classdef lidarMatchedInjectionTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionTest < matlab.unittest.TestCase
 % lidarMatchedInjectionTest Geometry, fixed-metric energy and sampled steps.
     properties (TestParameter)
         angle={0,.2,1.3,2.8}
@@ -120,7 +120,7 @@ classdef lidarMatchedInjectionTest < matlab.unittest.TestCase
             testCase.verifyLessThan(c(7),.1);
         end
         function currentDesignDoesNotInventBaselineYawCertificate(testCase)
-            cfg=mncavFullObserverConfig();d=fullObserverSupport.designFullObserverGains(cfg);
+            cfg=freshObserverTestConfig();d=fullObserverSupport.designFullObserverGains(cfg);
             testCase.verifySize(d.lidarMatched.T,[8,8]);
             testCase.verifyTrue(d.surrogateContinuousLmiVerified);
             testCase.verifyFalse(d.fullContinuousStateCertified);

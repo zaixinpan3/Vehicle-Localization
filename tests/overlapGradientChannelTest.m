@@ -1,4 +1,4 @@
-classdef overlapGradientChannelTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannelTest < matlab.unittest.TestCase
 % overlapGradientChannelTest Correspondence-free semanticGaussianOverlap LiDAR channel.
     methods (TestClassSetup)
         function paths(testCase)
@@ -350,7 +350,7 @@ function f=movingFixture(duration,offset)
         'lateralAcceleration',zero,'yawRate',zero);
     lateral=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
     data=struct('highRate',high,'lidarOverlap',struct('map',map,'sources',{sources}));
-    cfg=mncavFullObserverConfig();
+    cfg=freshObserverTestConfig();
     initial=truth(1,:)+offset;
     cfg.initialState=[initial(1);speed*cos(start(3));0;initial(2);speed*sin(start(3));0;initial(3)];
     f=struct('data',data,'lateral',lateral,'cfg',cfg,'truth',truth);

@@ -14,9 +14,13 @@ function validation=validateFullLocalizationObserver(outputFolder)
     results=runtests(cellstr(files));writetable(table(results),fullfile(outputFolder,'tests.csv'));
     assert(all([results.Passed]),'VehicleLocalization:RegressionFailure','Observer regression failed.');
     stored=load(fullfile(outputFolder,'experiment.mat'));
-    fullObserverSupport.designFullObserverGains(stored.cfg); % Reject retired replay configurations.
+    % Recorded settings are inputs only; never use their numerical gain snapshot.
+    [~,cfg]=synthesizeMncavInvariantDesign(stored.cfg);
+    fullObserverSupport.designFullObserverGains(cfg); % Reject retired replay configurations.
     assertMncavReplayCurrent(stored.report.metadata.inputMetadata.parameters);
-    data=stored.data;cfg=stored.cfg;lateral=stored.lateral;r=stored.runs{1}.estimate;
+    data=stored.data;lateral=stored.lateral;
+    r=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral);
+    previousDifference=max(abs(r.z-stored.runs{1}.estimate.z),[],'all');
     repeat=runFullLocalizationObserver(data,stored.lateralDesign,cfg,LateralInputs=lateral);
     repeatDifference=max(abs(repeat.z-r.z),[],'all');assert(repeatDifference==0);
     direct=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral);
@@ -30,7 +34,7 @@ function validation=validateFullLocalizationObserver(outputFolder)
     assert(residual<1e-7,'Reported LiDAR position increment must agree with the post-baseline state change.');
     data.gnss.position(data.gnss.time>60,:)=100;
     data.lidarOverlap.valid(r.time>60)=false;
-    changed=runFullLocalizationObserver(data,stored.lateralDesign,stored.cfg,LateralInputs=lateral);
+    changed=runFullLocalizationObserver(data,stored.lateralDesign,cfg,LateralInputs=lateral);
     prefixDifference=max(abs(changed.z(r.time<=60,:)-r.z(r.time<=60,:)),[],'all');assert(prefixDifference==0);
     rows=cell(0,4);sourceFiles=["localization/invariantObserverSupport.m","localization/fullObserverSupport.m", ...
         "localization/runFullLocalizationObserver.m","localization/lidarInjectionSupport.m", ...
@@ -51,6 +55,7 @@ function validation=validateFullLocalizationObserver(outputFolder)
     d=repeat.diagnostics;modeCounts=arrayfun(@(v) nnz(d.mode==v),0:3);
     validation=struct('tests',numel(results),'allTestsPassed',all([results.Passed]), ...
         'repeatMaximumStateDifference',repeatDifference, ...
+        'previousRunMaximumStateDifference',previousDifference, ...
         'publicEntryMaximumStateDifference',entryDifference, ...
         'integrationCheckScope',"One synchronous discretization of continuous surrogate LMI-designed gains", ...
         'lidarPositionIncrementMaximumResidual',residual, ...

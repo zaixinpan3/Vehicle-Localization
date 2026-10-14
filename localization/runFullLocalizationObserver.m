@@ -3,6 +3,8 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % Default prediction uses an internal rate state; IMU is auxiliary output only.
 % All calls use the intrinsic eight-state design.
 % The common-clock runtime uses the continuous common-LMI-designed gains.
+% Pass this run's solved configuration to share gains within one experiment;
+% if absent, the entry solves them before the first observer update.
 % Supply aligned lateral estimates through LateralInputs. The lateralDesign
 % argument remains for caller compatibility; upstream synthesis is separate.
 % Missing/invalid measurements withdraw their own correction for that frame.
@@ -92,7 +94,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     if onlineMatching,matchingResults=cell(n,1);matchingSeeds=zeros(n,3);end
     alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
-    continuous=fullObserverSupport.designFullObserverGains(cfg);
+    [continuous,cfg]=fullObserverSupport.designFullObserverGains(cfg);
     lidarInjection=continuous.lidarMatched;
     lmiVerified=continuous.surrogateContinuousLmiVerified;
     stateCount=8;

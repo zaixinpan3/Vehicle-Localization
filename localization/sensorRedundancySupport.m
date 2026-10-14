@@ -51,13 +51,18 @@ classdef sensorRedundancySupport
             L={};G={};speedModes=0;if velocityAvailable,speedModes=[0,1];end
             exactLever=isfield(d,'exactGnssLeverEnclosure') && d.exactGnssLeverEnclosure;
             Wg={eye(2)};lever=zeros(2,1);
-            if exactLever
+            if exactLever && rho>0
                 w0=p.minimumGnssWeight;mid=(1+w0)/2;radius=(1-w0)/2;
                 Wg={w0*eye(2),eye(2)};
                 for k=1:4
                     Wg{end+1}=mid*eye(2)+radius*[corners(k,1),corners(k,2);corners(k,2),-corners(k,1)]; %#ok<AGROW>
                 end
                 lever=rho*corners.';
+            elseif exactLever
+                % With no lever arm, the G term is -kG*Cp'*W*Cp.
+                % Every W>=w0*I only adds dissipation, so its lower corner
+                % suffices. Do not send duplicated zero-lever vertices to SDP.
+                Wg={p.minimumGnssWeight*eye(2)};
             end
             for u=[0,q^2]
                 for rate=[-q,q]

@@ -52,7 +52,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'information',information,'valid',logical(bestpos.valid),'delay',0);
     data=struct('highRate',h,'gnss',gnss,'lidarOverlap',struct('time',calls.timeSeconds, ...
         'map',sourceCache.fixed,'sources',{sourceCache.sources},'valid',true(n,1),'config',overlapConfig));
-    cfg=mncavFullObserverConfig();
+    [~,cfg]=synthesizeMncavInvariantDesign(mncavFullObserverConfig());
     [data,lateral,synchronization]=fullObserverSupport.synchronizeLocalizationInputs(data,lateral,cfg);
     h=data.highRate;t=h.time;n=numel(t);gnss=data.gnss;time=gnss.time;valid=gnss.valid;
     [covered,sourceIndex]=ismember(t,calls.timeSeconds);
@@ -102,13 +102,15 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'design',runs{1}.estimate.observer,'metrics',metrics);
     accepted=runs{1}.estimate.diagnostics.lidarOverlap.available;
     % Old timestamp-warped trajectories are not paired with corrected epochs.
-    % The GNSS gain belongs to the current intrinsic design; the controls vary
-    % only the output-point geometry and its uncertainty.
+    % Each changed lever arm needs gains solved for its own geometry; runtime
+    % uncertainty changes alone do not alter synthesis inputs.
+    zeroPointCfg=cfg;zeroPointCfg.gnss.outputPoint.bodyOffset=[0;0];
+    [~,zeroPointCfg]=synthesizeMncavInvariantDesign(zeroPointCfg);
     controlRows=cell(0,8);controlNames=["unaligned","uncertainty_only","geometry_only","aligned"];
     for k=1:numel(controlNames)
         controlCfg=cfg;
         if ismember(controlNames(k),["unaligned","uncertainty_only"])
-            controlCfg.gnss.outputPoint.bodyOffset=[0;0];
+            controlCfg=zeroPointCfg;
         end
         if ismember(controlNames(k),["unaligned","geometry_only"])
             controlCfg.gnss.outputPoint.bodyCovariance=zeros(2);controlCfg.gnss.outputPoint.headingStdRad=0;
@@ -119,6 +121,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     end
     report.alignmentControls=cell2table(controlRows,VariableNames={'method','positionRmseM', ...
         'positionMedianM','positionP95M','positionMaximumM','fractionAtMost10cm','headingRmseDeg','acceptedPositionRmseM'});
+    report.alignmentControlGainPolicy="Fresh gains for each lever arm; shared within equal synthesis inputs";
     writetable(report.alignmentControls,fullfile(outputFolder,'alignment_controls.csv'));
     wheel=prepared.wheelVelocity;
     save(fullfile(outputFolder,'experiment.mat'),'data','lateral','lateralDesign','cfg','runs','reference','wheel','report','bestpos','-v7.3');

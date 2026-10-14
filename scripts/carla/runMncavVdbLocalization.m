@@ -69,6 +69,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     sourceConfig=struct('perception',p,'sourceWindow',localizationSourceWindowConfig());
     store=matfile(fullfile(datasetFolder,'pointClouds.mat'));
     base=mncavFullObserverConfig();base.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
+    [~,base]=synthesizeMncavInvariantDesign(base);
     initial=initializeMncavVdbFromGnss(inputs.sensorTable,inputs,t(1));base.initialState=initial.state;
     s=inputs.sensorTable;timings=zeros(n,3);accepted=false(n,1);directional=accepted;
     summaries=cell(numel(options.Scenarios),1);

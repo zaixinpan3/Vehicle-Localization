@@ -257,8 +257,10 @@ temporary report is required for this closure.
 
 ### 0.5 Implemented architecture: intrinsic prediction and invariant IMU outputs
 
-The default is now `mncavFullObserverConfig`, with gains from
-`config/mncavInvariantDesign.json`. `invariantObserverSupport.predict` accepts
+The default is now `mncavFullObserverConfig`, which returns parameters only.
+`synthesizeMncavInvariantDesign(cfg)` solves temporary gains immediately before
+each test/experiment, without reading or writing a gain file.
+`invariantObserverSupport.predict` accepts
 only the internal state, time step and estimated lateral sideslip derivative.
 No measured gyro or acceleration enters that function. Its eight physical
 states are
@@ -794,12 +796,14 @@ Young enclosures were infeasible and do not establish impossibility of that
 motion domain. The general theorem retains a symbolic positive `s_0`.
 
 The witness metric and matched gains are **separate theoretical parameters**.
-They were not installed in `config/mncavInvariantDesign.json`, do not replace
-any current observer, and do not certify the default gain numbers. They also do
+They were not installed as runtime defaults, do not replace
+any current observer, and do not certify a later temporary design. They also do
 not verify (R4) or the L-sector bounds for an actual map. The verified assertion
 is feasibility of one common constant design under those explicit geometric
-and signal contracts. Run `verifySensorRedundancyTheory` for solver-free
-reverification; `Synthesize=true` re-solves the theoretical design only.
+and signal contracts. The numerical block below is a historical record only;
+no runtime or test parses it for gains. `verifySensorRedundancyTheory` now solves
+a temporary theoretical witness by default. Supplying an in-memory `Witness`
+and freshly solved `Config` permits solver-free reverification.
 
 <!-- SENSOR_REDUNDANCY_WITNESS_BEGIN -->
 ```json
@@ -1035,7 +1039,7 @@ $$
 It replaces the two GNSS Young terms of (R6-G) with the retained exact leading
 coupling. There is still no positive LiDAR floor. The L inequalities (R6-L)
 are unchanged and use the same P and gains. With ten speed cells, the refined
-G box has eight drift vertices and therefore 5760 G controls; L has 128.
+G box has eight drift vertices and therefore 5760 G controls; L has 128. When the declared GNSS lever is exactly zero, the G correction is `-kappa_G*Cp' *W_G*Cp`. Since `W_G>=w_0*I`, all larger weights add dissipation. Only `w_0*I` is needed and the four lever corners coincide, reducing G to 240 controls while covering every admissible GNSS weight. This exact zero-lever specialization also avoids the unnecessary conservatism of the larger weight polytope. Removing those duplicates avoids the numerical false-infeasibility observed during fresh zero-lever synthesis.
 
 The exact finite GNSS output is not silently replaced by its point Jacobian.
 The lever remainder has norm at most
@@ -1068,18 +1072,23 @@ not a hypothesis of the theorem and may be withdrawn when it obstructs these
 feedback bounds. Rotation invariance and positive definiteness are retained.
 
 
-The active `config/mncavInvariantDesign.json` now uses the refined certificate
-and feedback bounds. Its matched scalars are kappa_L=351.511784646,
+The re-synthesis at commit `698df54986619aa2fdc318f8fd7692be91fa1a08` used the
+refined certificate and feedback bounds. Its recorded scalars were kappa_L=351.511784646,
 kappa_G=279.929704281, k_a=1682.03354042,
 k_c=2.02349895467, k_d=948.761480676;
-P and all inputs are retained in that configuration. The 128 L and 5760 G
+P and all inputs remain recoverable from that commit. Its 128 L and 5760 G
 controls have worst eigenvalues -0.0100005770652 and
 -0.0100001085111, in addition to 256 retained surrogate checks.
-Runtime recomputes these values and the feedback caps independently of stored
-claims. The old gains also failed the refined G family (+2.37977567581);
+Runtime recomputes all inequalities and feedback caps independently of claims.
+The old gains also failed the refined G family (+2.37977567581);
 even its zero-lambda raw matrix margin was positive (+1.37977567581), so
 homogeneous rescaling of that old metric/gain set alone cannot establish it.
-Changed fixed theta or common-domain inputs reject stale saved metadata.
+These numbers are historical examples, not current defaults. The gain JSON
+was subsequently removed: each test/experiment calls the public solver and
+uses its in-memory result. Tests share a solve only within one fixture lifetime
+and discard it before the next run. Both scalar channel gains are also solved
+again; no persistent gain cache supplies a new run. Changed fixed theta or
+common-domain inputs reject stale in-memory metadata.
 The upstream lateral design and physical vehicle/sensor parameters are unchanged.
 
 

@@ -68,7 +68,7 @@ function [report,estimate,trial]=runKittiOverlapTrial(datasetFolder,outputFolder
     % Re-synthesize the kinematic global observer for explicitly declared
     % transfer-trial assumptions. Design revisions used this development drive;
     % no navigation reference series enters prediction or innovations.
-    cfg=mncavFullObserverConfig(LoadDesign=false);cfg.kind="kitti-global-overlap-transfer-trial";
+    cfg=mncavFullObserverConfig();cfg.kind="kitti-global-overlap-transfer-trial";
     cfg.invariantObserver.velocityAvailable=false;
     cfg.invariantObserver.operatingPoints=["lidar","weakLidar"];
     % This transfer design has no GNSS/direction adequacy set. Keep its
@@ -83,8 +83,7 @@ function [report,estimate,trial]=runKittiOverlapTrial(datasetFolder,outputFolder
         'jerkMps3',cfg.iss.maximumAcceleration/2);
     cfg.invariantObserver.provenance.noise="Declared transfer scales; jerk maximumAcceleration / 2 s, no velocity output, weak LiDAR without GNSS. Revised during this development trial; no independent holdout claim";
     cfg.invariantObserver.provenance.theta="Fixed theta 4 inherited from the current route; no KITTI sweep";
-    design=invariantObserverSupport.synthesize(cfg);cfg.invariantDesign=design;
-    cfg.gainSource="Fresh LMI synthesis for declared KITTI transfer trial";
+    [design,cfg]=synthesizeMncavInvariantDesign(cfg);
     cfg.initialState=[initial.pose(1);0;0;initial.pose(2);0;0;initial.pose(3)];
     data=struct('highRate',h,'lidarOverlap',struct('map',map,'sources',{sources}, ...
         'valid',true(numel(query),1),'config',overlapGradientConfig()));

@@ -675,7 +675,9 @@ Recorded fidelity uses the old detector as a behavioral baseline, not labeled
 truth. Current metrics and experiment identifiers are in the
 [redesign report](research/pillar_perception_and_d2d.md) and its CSV artifacts.
 Dataset-dependent tests require `VEHICLE_LOCALIZATION_DATA_ROOT`. Observer tests
-use the stored gains; optional synthesis tests require their solver dependencies.
+solve temporary gains at setup and require YALMIP and SeDuMi. The shared fixture
+reuses a solution within one test run and discards it at teardown; every later
+run solves again. No gain file supplies live defaults.
 
 ```matlab
 setenv("VEHICLE_LOCALIZATION_DATA_ROOT", "/path/to/data");
@@ -701,8 +703,8 @@ inverse-lookup alternative remains. Detailed candidate settings come from
 
 Lateral-observer runtime configurations must include the current `hybrid` fields.
 Use `lateralObserverConfig` and `estimate.diagnostics.sideSlipCommandValid` for
-the current side-slip interface. Tests reuse stored gain matrices with explicit
-current runtime settings; stored references are not rewritten.
+the current side-slip interface. Tests synthesize gains from current settings;
+stored regression inputs are not rewritten.
 
 ## Requirements
 

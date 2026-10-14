@@ -1,4 +1,4 @@
-classdef gnssOutputPointTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) gnssOutputPointTest < matlab.unittest.TestCase
 % gnssOutputPointTest Reference-point geometry and uncertainty behavior.
     methods (TestClassSetup)
         function paths(testCase)
@@ -25,9 +25,10 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
             testCase.verifyError(@()fullObserverSupport.correctGnssOutputPoint([0,2],eye(2),0,alignment), ...
                 'VehicleLocalization:InvalidGnssAlignment');
         end
-        function absentGnssIgnoresOutputPoint(testCase)
+        function absentGnssIgnoresPointUncertainty(testCase)
             f=fixture();f.data=rmfield(f.data,'gnss');ideal=run(f);
-            f.cfg.gnss.outputPoint.bodyOffset=[1;.25];aligned=run(f);
+            f.cfg.gnss.outputPoint.bodyCovariance=eye(2);
+            f.cfg.gnss.outputPoint.headingStdRad=1;aligned=run(f);
             testCase.verifyEqual(aligned.z,ideal.z,AbsTol=0);
             testCase.verifyTrue(all(isnan(aligned.diagnostics.gnssPositionAtObserverPoint),'all'));
         end
@@ -47,11 +48,11 @@ classdef gnssOutputPointTest < matlab.unittest.TestCase
                 f.data.gnss.position(1,:)-([cos(.1),-sin(.1);sin(.1),cos(.1)]*f.cfg.gnss.outputPoint.bodyOffset(:)).',AbsTol=1e-12);
         end
         function independentPointConfigurationUsesTheSolvedGnssGain(testCase)
-            cfg=mncavFullObserverConfig();design=fullObserverSupport.designFullObserverGains(cfg);
-            stored=jsondecode(fileread(fullfile(fileparts(fileparts(mfilename('fullpath'))),'config','mncavInvariantDesign.json')));
+            cfg=freshObserverTestConfig();design=fullObserverSupport.designFullObserverGains(cfg);
+            temporary=cfg.invariantDesign;
             Cp=zeros(2,8);Cp(1,1)=1;Cp(2,4)=1;
-            testCase.verifyEqual(design.LG,design.toPhysical*stored.design.kappaG*(stored.design.P\Cp.'),RelTol=1e-12);
-            testCase.verifyEqual(stored.inputs.gnssBodyOffset(:),cfg.gnss.outputPoint.bodyOffset(:),AbsTol=0);
+            testCase.verifyEqual(design.LG,design.toPhysical*temporary.kappaG*(temporary.P\Cp.'),RelTol=1e-12);
+            testCase.verifyEqual(temporary.inputs.gnssBodyOffset(:),cfg.gnss.outputPoint.bodyOffset(:),AbsTol=0);
             testCase.verifyFalse(cfg.gnss.outputPoint.evaluationDriveUsed);
             testCase.verifyTrue(design.surrogateContinuousLmiVerified);
             testCase.verifyFalse(design.fullContinuousStateCertified);
@@ -66,16 +67,18 @@ function f=fixture()
     g=struct('time',t,'position',position,'valid',true(n,1),'information',repmat(100*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[position,yaw],'valid',true(n,1),'information',repmat(100*eye(3),1,1,n),'delay',0);
     lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
-    cfg=mncavFullObserverConfig;cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;v;0;0;0;v*r;0];
+    cfg=freshObserverTestConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;v;0;0;0;v*r;0];
+    cfg=freshObserverTestConfig(cfg);
     f=struct('data',struct('highRate',h,'gnss',g,'lidar',l),'cfg',cfg,'lateral',lateral);
 end
 
 function f=offsetInput(f)
     yaw=.2*f.data.highRate.time;
-    current=mncavFullObserverConfig();offset=current.gnss.outputPoint.bodyOffset(:);
+    current=freshObserverTestConfig();offset=current.gnss.outputPoint.bodyOffset(:);
     f.data.gnss.position=f.data.gnss.position+[offset(1)*cos(yaw)-offset(2)*sin(yaw), ...
         offset(1)*sin(yaw)+offset(2)*cos(yaw)];
     f.cfg.gnss.outputPoint.bodyOffset=offset;
+    f.cfg=freshObserverTestConfig(f.cfg);
 end
 
 function r=run(f)

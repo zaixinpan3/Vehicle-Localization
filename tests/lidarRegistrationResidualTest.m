@@ -1,4 +1,4 @@
-classdef lidarRegistrationResidualTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarRegistrationResidualTest < matlab.unittest.TestCase
 % lidarRegistrationResidualTest Matcher-to-observer residual/metric consistency.
     properties (TestParameter)
         method={"supportD2D","geometricD2D","anisotropicD2D"}
@@ -20,7 +20,7 @@ classdef lidarRegistrationResidualTest < matlab.unittest.TestCase
         function predictionResidualDoesNotReuseOptimizerGradient(testCase,method)
             [result,~]=matchedCloud(method);prediction=result.poseXYTheta.'+[.2;-.1;.01];
             m=lidarInjectionSupport.evaluateLidarRegistrationResidual(result.lidarResidualModel,prediction);
-            cfg=mncavFullObserverConfig();d=fullObserverSupport.designFullObserverGains(cfg);
+            cfg=freshObserverTestConfig();d=fullObserverSupport.designFullObserverGains(cfg);
             G=zeros(3,8);G(1,1)=1;G(2,4)=1;G(3,7)=1;
             correction=lidarInjectionSupport.computeLidarMatchedCorrection(m,prediction,G,d.lidarMatched,cfg);
             testCase.verifyGreaterThan(norm(m.jacobian.'*m.residual),1e-3);
@@ -75,7 +75,7 @@ classdef lidarRegistrationResidualTest < matlab.unittest.TestCase
                 'lateralAcceleration',z,'yawRate',z);
             lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
             data=struct('highRate',high,'lidarMatcher',@(~,~,~)result);
-            cfg=mncavFullObserverConfig();cfg.initialState=[.2;0;0;-.1;0;0;0];
+            cfg=freshObserverTestConfig();cfg.initialState=[.2;0;0;-.1;0;0;0];
             r=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral);
             testCase.verifyEqual(r.diagnostics.lidarMatched{2}.representation,"predictedPoseResidual");
             testCase.verifyLessThan(norm(r.position(end,:)),norm(r.position(1,:)));

@@ -1,4 +1,4 @@
-classdef fullLocalizationObserverTest < matlab.unittest.TestCase
+classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserverTest < matlab.unittest.TestCase
 % fullLocalizationObserverTest Public dual-source and missing-data contracts.
     properties (TestParameter)
         sourceMode={"both","gnss","lidar","none"}
@@ -116,9 +116,10 @@ function f=fixture(duration,mode)
     data=struct('highRate',high);
     if ismember(mode,["gnss","both"]),data.gnss=gnss;end
     if ismember(mode,["lidar","both"]),data.lidar=lidar;end
-    cfg=mncavFullObserverConfig;
+    cfg=freshObserverTestConfig();
     cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     cfg.initialState=[0;8;0;0;0;0;0];
+    cfg=freshObserverTestConfig(cfg);
     f=struct('data',data,'lateral',lateral,'cfg',cfg,'truth',[8*t,zero,zero]);
 end
 

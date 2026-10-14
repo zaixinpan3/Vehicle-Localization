@@ -6,12 +6,12 @@ classdef fullObserverSupport
 % Example: design = fullObserverSupport.designFullObserverGains(cfg).
 
     methods (Static)
-        function design=designFullObserverGains(cfg)
-        % Verify the intrinsic eight-state gains before discretization.
+        function [design,cfg]=designFullObserverGains(cfg)
+        % Solve missing temporary gains, then verify before discretization.
             arguments
                 cfg (1,1) struct=mncavFullObserverConfig()
             end
-            assert(isfield(cfg,'invariantObserver') && isfield(cfg,'invariantDesign') ...
+            assert(isfield(cfg,'invariantObserver') ...
                 && ~isfield(cfg,'hgo') && ~isfield(cfg,'thetaFramework'), ...
                 'VehicleLocalization:RemovedFullObserverConfig', ...
                 'Only the intrinsic eight-state observer is supported; regenerate old replay configurations.');
@@ -19,6 +19,9 @@ classdef fullObserverSupport
                 'VehicleLocalization:ObsoleteFullConfig','Only the common frame clock is supported.');
             assert(isfield(cfg,'iss'),'VehicleLocalization:MissingFullIssDomain','Declare the current continuous design domain.');
             validateattributes(cfg.gnss.gainInformationScale,{'numeric'},{'real','finite','positive','scalar'});
+            if ~isfield(cfg,'invariantDesign')
+                [~,cfg]=synthesizeMncavInvariantDesign(cfg);
+            end
             design=invariantObserverSupport.runtime(cfg);
         end
 

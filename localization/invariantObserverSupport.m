@@ -144,8 +144,16 @@ classdef invariantObserverSupport
                 'gyroGainNormalized',m.gyroGainNormalized,'gyroDesign',m.gyroDesign, ...
                 'speedGainNormalized',m.speedGainNormalized,'speedDesign',m.speedDesign, ...
                 'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem,'solverInfo',string(result.info));
+            design.inputs=invariantObserverSupport.inputs(cfg);
             design.verification=invariantObserverSupport.verify(design,cfg);
             assert(design.verification.certified,'VehicleLocalization:InfeasibleInvariantDesign','Solved intrinsic design failed verification.');
+        end
+
+        function [gyro,speed]=scalarDesigns(cfg)
+        % Re-solve the two scalar auxiliary-channel LMIs for this run.
+            z=cfg.invariantObserver;gyro=gyroDesign(z);
+            z.yawAccelerationRadps2=2*cfg.iss.maximumAcceleration;
+            z.noise.gyroRadps=z.noise.velocityMps;speed=gyroDesign(z);
         end
 
         function v=verify(design,cfg)
@@ -185,12 +193,12 @@ classdef invariantObserverSupport
 
         function runtime=runtime(cfg)
             h=cfg.invariantDesign;theta=cfg.invariantObserver.theta;ell=cfg.invariantObserver.headingLengthM;
+            assert(isfield(h,'inputs') && isequaln(h.inputs,invariantObserverSupport.inputs(cfg)), ...
+                'VehicleLocalization:StaleInvariantDesign', ...
+                'Temporary gains use different inputs; solve after configuring this run.');
             assert(theta==h.sigma,'VehicleLocalization:InvalidInvariantDesign','The common certificate requires its fixed theta=sigma.');
-            persistent cache
-            if isempty(cache),cache=containers.Map('KeyType','char','ValueType','any');end
-            key=jsonencode(struct('design',h,'inputs',invariantObserverSupport.inputs(cfg)));
-            if ~isKey(cache,key),cache(key)=invariantObserverSupport.verify(h,cfg);end
-            v=cache(key);assert(v.certified,'VehicleLocalization:InfeasibleInvariantDesign','Stored invariant design fails the current LMI.');
+            v=invariantObserverSupport.verify(h,cfg);
+            assert(v.certified,'VehicleLocalization:InfeasibleInvariantDesign','Temporary invariant design fails the current LMI.');
             T=diag(theta.^[1,2,3,1,2,3,1,2]);E=diag([ones(1,6),ell,ell]);toPhysical=E\T;
             C=zeros(3,8);C(1,1)=1;C(2,4)=1;C(3,7)=1;Cp=C(1:2,:);
             matched=struct('P',h.P,'T',toPhysical,'theta',theta,'scalingExponents',[1;2;3;1;2;3;1;2], ...
@@ -298,11 +306,6 @@ end
 
 function d=gyroDesign(z)
 % Scalar output-feedback LMI: minimize the declared rate-error variance proxy.
-% Cache the solver-independent analytic check with the actual noise inputs.
-    persistent cache
-    if isempty(cache),cache=containers.Map('KeyType','char','ValueType','any');end
-    key=jsonencode([z.yawAccelerationRadps2,z.noise.gyroRadps]);
-    if isKey(cache,key),d=cache(key);return;end
     ratio=z.yawAccelerationRadps2/z.noise.gyroRadps;
     assert(exist('sdpvar','file')==2,'VehicleLocalization:MissingSolver','Add YALMIP and SeDuMi for scalar gyro synthesis.');
     g=sdpvar(1);q=sdpvar(1);B=[q,ratio,g;ratio,2*g,0;g,0,2*g];
@@ -311,7 +314,7 @@ function d=gyroDesign(z)
     assert(gv>0 && min(eig(check))>=-1e-6*max(1,norm(check,2)), ...
         'VehicleLocalization:InfeasibleInvariantDesign','Gyro output LMI failed numerical verification.');
     d=struct('physicalGain',gv,'normalizedVarianceProxy',qv,'minimumLmiEigenvalue',min(eig(check)), ...
-        'analyticOptimum',ratio,'solverStatus',result.problem);cache(key)=d;
+        'analyticOptimum',ratio,'solverStatus',result.problem);
 end
 
 function v=feedbackAuthority(d,cfg)
