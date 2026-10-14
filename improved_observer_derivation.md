@@ -1,6 +1,7 @@
 # Continuous observer theory: overlap closure and historical MO-HGO proofs
 
-Current overlap closure: 2026-10-12. Historical mode-specific derivation: 2026-09-13.
+Current sensor-redundancy theorem: 2026-10-14. Overlap closure: 2026-10-12.
+Historical mode-specific derivation: 2026-09-13.
 
 Implementation revision, 2026-10-13: the default global observer now uses an
 intrinsic eight-state predictor. IMU measurements enter invariant auxiliary
@@ -8,11 +9,13 @@ innovations and the upstream lateral observer. Section 0.5 specifies the
 implemented state extension, fresh gain synthesis and remaining conditional
 proof obligations. The former measured-course model and its gains are historical.
 
-Section 0 completes the local-region and observation-bias arguments for the
-current overlap route, conditional on a uniform inequality for its **actual**
-error-feedback operator. Establishing that operator inequality is the remaining
-open problem. Sections 1--6 preserve the historical continuous GNSS and delayed
-LiDAR-pose analyses; their certificates do not transfer automatically to overlap.
+Section 0 gives the current continuous observer and its local nonlinear proof.
+Section 0.6 adds one common certificate for GNSS-sufficient/LiDAR-degraded and
+LiDAR-sufficient/GNSS-absent operation. It replaces an unspecified actual-operator
+margin with explicit geometric mismatch bounds and finite joint LMIs. A separate
+feasible theoretical witness is provided; it does not certify the default stored
+gains or the geometry of a particular recording. Sections 1--6 preserve historical
+mode-specific analyses; those certificates do not transfer to the current observer.
 
 Runtime clarification, 2026-09-16: the GNSS-only and LiDAR-only systems below
 are independent analysis cases, not a requirement to exclude one sensor from
@@ -22,17 +25,17 @@ zero-delay motion-aided runtime has a
 This document and its original certificates do not certify that different
 implementation merely because its sensors have the same names.
 
-This is the theoretical specification for the continuous MO-HGO analysis
-runner. It treats two separate,
+**Historical scope of Sections 1--6.** Those sections specify the continuous
+MO-HGO analysis runner and treat two separate,
 continuously measured systems: GNSS position, and uniformly informative LiDAR
 pose with a known constant delay. The seven-state vehicle model and observer
 are continuous-time differential equations. The LiDAR observer is a retarded
 functional differential equation because its correction uses a past estimate.
 Numerical integration does not change this modeling choice.
 
-The matrices used below are constant within each continuous measurement mode.
-The modes have separate gains and certificates; no claim about switching
-between them is made.
+Those historical matrices are constant within each continuous measurement mode.
+Their gains and certificates are separate, and make no switching claim. They
+are distinct from the one-observer, common-metric result in Section 0.6.
 
 The GNSS interface in this repository measures position only. Consequently,
 its seven-state result requires motion and a local heading chart. An optional
@@ -41,7 +44,7 @@ separately below. LiDAR measures all three planar pose coordinates and its
 fixed delay is retained explicitly. Neither measurement continuity nor
 full-rank information alone is a stability certificate.
 
-The current `runImprovedVehicleObserver.m` integrates the GNSS equations (8)
+The historical analysis runner `runImprovedVehicleObserver.m` integrates the GNSS equations (8)
 and the delayed LiDAR equation (23). Its numerical steps approximate these
 continuous equations. The implementation uses separate, reverified constant
 certificates, an explicit LiDAR initial history, and immutable state outputs.
@@ -52,11 +55,12 @@ hypotheses.
 
 ## 0. Current overlap: completed local-region and bias closure
 
-The guarantee considered here is local and continuous in time, with sufficient
-nondegenerate LiDAR throughout the declared alignment region. Fix a constant
+The guarantee considered here is local and continuous in time. Sections 0.1--0.5
+first state the overlap-closure problem; Section 0.6 permits either sensor to
+supply the absolute reference under one unified observer and certificate. Fix a constant
 high-gain parameter `theta` (the current configuration uses 4) and heading length
-`ell` (currently 10 m). No certificate for discretization, deficient scenes or
-arbitrary initial errors is claimed or required by this theoretical scope.
+`ell` (currently 10 m). No certificate for discretization, two indefinitely
+inadequate sensors or arbitrary initial errors is claimed by this scope.
 
 ### 0.1 Actual overlap error and the deferred certificate
 
@@ -236,11 +240,12 @@ $\limsup\|\varepsilon\|\le\sqrt{b/(ap_-)}\bar d$.
 ### 0.4 Remaining work and document scope
 
 The bias model and invariant-region proof are complete **conditional on (O1)**.
-The remaining task is to derive a meaningful uniform overlap operator domain
-and establish its continuous common-Lyapunov inequality or LMI, jointly with
-the finite invariant-output secants of Section 0.5. This section
-neither re-synthesizes gains nor states a numerical radius or final error bound
-without the missing operator margin. The manuscript still contains the earlier
+Section 0.6 now supplies an explicit sufficient operator domain and common
+LMI construction, including the finite nonlinear remainder. Applying its
+certificate to a specific gain set requires solving/verifying the joint LMIs;
+applying it to a specific map requires the geometric bounds stated there.
+Neither follows from full rank alone, and this section does not assert them
+for the default gain file or recorded maps. The manuscript still contains the earlier
 affine LiDAR-pose model and needs a later route-specific revision after that
 connection is resolved.
 
@@ -468,6 +473,10 @@ local auxiliary closure from a certified numerical radius, and retain
 `fullContinuousStateCertified=false`. No sampled-system, arbitrary-outage or
 degenerate-scene guarantee is added.
 
+Those flags refer to the default stored gain file. Section 0.6 gives a separate
+joint theoretical design with explicit actual-overlap mismatch and sensor
+adequacy bounds; it does not relabel the default certificate as complete.
+
 The former direct-gyro main-observer configurations, runtime paths and gain
 synthesis were deleted on 2026-10-13. They remain recoverable at Git commit
 `5cf9fae8103e87b519a679ea236ed5fda2d6a08e`; historical numerical results identify
@@ -476,6 +485,477 @@ This is a project-specific state extension inspired by Bessafa's intrinsic
 prediction and auxiliary-output framework, not a claim that the paper proves
 this new eight-state system. The initial seven-state quotient candidate in the
 October 13 design record has been superseded by the implemented state extension.
+
+
+### 0.6 One complete observer with complementary GNSS/LiDAR guarantees
+
+Revision, 2026-10-14: G and L below name **sets of adequate measurements**, not
+separate observers. One eight-state predictor, one state estimate, one constant
+high-gain scale, one constant gain set and one Lyapunov metric run throughout.
+No pose registration, state restart or alternate GNSS-only algorithm is added.
+The only time variation is in measurements, geometry and declared channel
+availability. The statement concerns continuous equations; it does not require
+online enforcement or transfer its conclusion to a discretization.
+
+#### Necessary motion condition for position-only GNSS
+
+Let the receiver position be `y_G=p+R(psi)d_G`, with known body lever `d_G`.
+At rest, for every constant heading `phi`, the state
+
+$$
+ p_\phi=y_G-R(\phi)d_G,\qquad v=a=0,\quad\psi=\phi,\quad r=0
+\tag{R1}
+$$
+
+has identical GNSS, speed, acceleration and gyro outputs. If LiDAR contributes
+no heading information, these states are indistinguishable for all time. This
+remains true for a nonzero receiver lever. Thus sufficient **position precision**
+alone cannot imply full-state asymptotic convergence or full-state ISS under
+persistent gyro error. This is an observability obstruction, not a numerical
+integration issue. A genuine independent heading measurement would remove it;
+a gyro rate sample is not such a measurement.
+
+For the G guarantee below, the velocity-direction and body-acceleration auxiliary
+channels are available, gyro output is available, and the true course speed
+satisfies `s_0 <= ||v|| <= s_max`, with declared `s_0>0`. Bounded upstream lateral
+angle/rate errors are disturbances. This pointwise motion floor is a sufficient
+condition; Section 0.7 also permits finite stops through an information-time
+condition. LiDAR-sufficient operation does not impose this motion floor.
+
+#### Unified equations and quantitative sensor adequacy
+
+Retain the predictor (I2), invariant outputs (I3) and all their nonlinear
+innovations. Put `B=E^-1 T`, `H_hat=Gamma*Dh(z_hat)*B`, with the implemented fixed
+output normalization `Gamma=diag(theta^-[2,3,3,2,3,2,3,3])`, and use
+
+$$
+ K_I=\operatorname{diag}(0,k_a,k_a,0,k_c,k_d,k_a,k_a),\qquad k_a,k_c,k_d\ge0.
+\tag{R2}
+$$
+
+Unavailable auxiliary outputs have zero weights. The auxiliary correction is
+`theta*B*P^-1*H_hat'*K_I*Gamma*(y_I-h(z_hat))`. The scalar gyro and projected-speed
+corrections remain those of Section 0.5, with physical gains
+`g_r=theta*gbar_r` and `g_s=theta*gbar_s`. Raw IMU does not enter the predictor.
+GNSS adds
+`B*kappa_G*P^-1*Cp'*W_G*(y_G-p_hat-R(psi_hat)d_G)`;
+LiDAR adds `-B*kappa_L*P^-1*C'*F_t*g_t(q_hat)`.
+These terms are simultaneously present in the same observer.
+
+Here `0 <= W_G <= I`, and `W_G=0` when GNSS is absent. For LiDAR, let `M_t`
+be the admitted PSD information in normalized pose units, and let `Pi_t` project
+onto its admitted range. For the theoretical exact support, `Pi_t*M_t=M_t`.
+Numerically discarded small modes belong to the admission/model error rather
+than silently redefining this equality. With unit directional reliabilities,
+
+$$
+ F_t=(M_t+\lambda_*I)^{-1}\Pi_t,\quad S_t=F_tM_t\succeq0,\quad
+ W_t=F_t\overline H_t=S_t+\Delta_t,\quad
+ \Delta_t=F_t(\overline H_t-M_t).
+\tag{R3}
+$$
+
+`Pi_t=I` recovers Section 0.1 for fully informative LiDAR. Rank zero gives
+`Pi_t=F_t=S_t=0`; no fictitious heading information is retained. This support
+projection is the one used by the current gradient injection. The norm bound
+`||F_t||<=1/lambda_*` remains valid. Reliability factors in [0,1] can be included
+provided the same admitted S and norm/mismatch bounds hold.
+
+Each time belongs to at least one of these two sets:
+
+* **L: LiDAR sufficient.** The position block of S is at least `s_L I2`,
+  its heading entry is at least `h_L>0`, and the norm of its position/heading
+  coupling vector is at most `c_L`. This norm bound is preserved by the course
+  rotation and implies the component box used in the LMIs. Also
+  `||Delta_t||<=delta_L`. GNSS may be absent
+  or have any weight `0<=W_G<=I`. Velocity/acceleration auxiliary channels may
+  be withdrawn. Gyro remains available.
+* **G: GNSS sufficient.** `W_G>=w_0 I2`, `w_0>0`, and the motion/auxiliary
+  conditions stated above hold. LiDAR information may have any rank, including
+  zero: only `S_t>=0` and `||Delta_t||<=delta_G` are required. Thus degraded
+  LiDAR is permitted to have a bounded negative incremental contribution;
+  it is not assumed harmless or replaced by a positive heading floor.
+
+Biases of GNSS, overlap, motion outputs, the upstream lateral estimate and the
+nominal jerk/rate model are uniformly bounded disturbances. The true trajectory
+is forward complete and stays in the declared bounded motion domain. A fixed
+neighborhood of it lies in the smooth motion/yaw chart on which the coefficient
+and derivative bounds hold. Consider the estimate up to its first exit from
+that neighborhood; the sublevel argument below prevents exit for admitted
+initial errors and disturbances. Sensor fields and auxiliary flows have the local
+regularity needed for an absolutely continuous solution. Support/availability
+can change measurably in time; no derivative of the information weights is used.
+Spatially discontinuous admission is not certified merely by these assumptions.
+
+The mismatch bounds concern geometry, not stability of the observer. They can
+be obtained without identifying the true secant with Gauss--Newton information.
+If, uniformly in the admitted patch, `Dg` and M have Lipschitz constants `L_H`
+and `L_M`, the true-pose discrepancy is bounded by `d_i`, and
+`||q_hat-q||<=r`, then
+
+$$
+ \|\Delta_t\|\le
+ \frac{d_i+(L_H/2+L_M)r}{\lambda_*}\le\delta_i,
+ \qquad i\in\{L,G\}.
+\tag{R4}
+$$
+
+Indeed the segment average differs from `Dg(q)` by at most `L_H r/2`, and
+`M(q_hat)` differs from `M(q)` by at most `L_M r`; multiplication by F gives
+(R4). A positive gap `lambda_* delta_i-d_i` therefore supplies a local radius.
+A rank statement alone supplies neither this gap nor the L-sector bounds.
+At rank zero the effective mismatch is exactly zero, irrespective of an unused
+unprojected gradient. The bias bound and ideal-stationarity contract of Section
+0.2 remain separate. The theorem does not assume full-state stability as a
+sensor-adequacy condition.
+
+#### Common finite LMIs
+
+Use one `P=blkdiag(Pc,Pc,Ph)>0`, with identical translational blocks. Let `e_j`
+select scaled state j, `C` select states 1,4,7, `Cp` select 1,4, and write
+`E_a=[e_3,e_6]`, `D_a=E_a E_a'`, and `He(X)=X+X'`.
+Rotate position, velocity and acceleration errors
+jointly so the ideal course direction is X. P is unchanged by that rotation;
+its generator is P-skew, hence contributes zero to the Lyapunov derivative.
+
+The intrinsic true-point Jacobian, divided by theta, is enclosed by vertices
+`A_v` with chain entries `(1,2),(2,3),(4,5),(5,6),(7,8)=1` and
+
+$$
+ A_v[\{3,6\},\{2,5\}]=uI_2/\theta^2,\quad
+ A_v[\{3,6\},\{3,6\}]=2\omega J/\theta,\quad
+ A_v[\{3,6\},8]=\frac{b}{\theta^2\ell}(\pm1,\pm1)^\top,
+\tag{R5}
+$$
+
+where `u in {0,q_max^2}`, `omega in {-q_max,q_max}` and
+`b=2*q_max*s_max+2*a_max`. Independent boxes are conservative but contain the
+true Jacobian. Finite intrinsic secants are handled by the nonlinear remainder
+below, not by asserting that the Jacobian is constant.
+
+Let `rho=||d_G||/ell`, choose Young parameters `tau,eta in (0,1)` and desired
+`lambda>0`, and define
+
+$$
+ A_v^\zeta=A_v-\bar g_r e_8e_8^\top-\zeta\bar g_s e_2e_2^\top.
+$$
+
+For every A vertex, every corner
+`S_v=[[s_L I2,c],[c',h_L]]`, `c_j in {-c_L,c_L}`, and `zeta in {0,1}`, require
+
+$$
+ \operatorname{He}(PA_v^\zeta)
+ -2\kappa_L C^\top S_vC
+ +\kappa_G\rho^2 e_7e_7^\top
+ +2\kappa_L\delta_L C^\top C+\lambda I\prec0.
+\tag{R6-L}
+$$
+
+This includes no GNSS lower-information assumption. Its positive lever term
+bounds any optional GNSS channel, including weight zero.
+
+For G, the course-direction row at the true state is
+`h_d(s)=e_5' - s/(theta*ell)e_7'`. Its matched negative term must be retained:
+it carries the missing heading information through measured motion. Checking
+only the endpoints of `-h_d(s)'h_d(s)` is insufficient. On each subinterval
+`[s_i,s_{i+1}]` define three Bernstein controls
+
+$$
+ D_0=h_d(s_i)^\top h_d(s_i),\quad
+ D_1=\tfrac12[h_d(s_i)^\top h_d(s_{i+1})+h_d(s_{i+1})^\top h_d(s_i)],\quad
+ D_2=h_d(s_{i+1})^\top h_d(s_{i+1}).
+\tag{R7}
+$$
+
+Their convex combination with weights `(1-t)^2,2t(1-t),t^2` is exactly
+`h_d((1-t)s_i+t s_{i+1})'h_d((1-t)s_i+t s_{i+1})`. Consequently, for every A
+vertex and all three controls of all subintervals, require
+
+$$
+\begin{aligned}
+ &\operatorname{He}(PA_v^1)
+ -2\kappa_G(1-\tau)w_0 C_p^\top C_p-2k_dD_j
+ -2k_a(1-\eta)D_a\\
+ &\quad+
+ \left[\frac{\kappa_G\rho^2}{\tau}
+ +\frac{2k_a(\eta^{-1}-1)a_{\max}^2}{\theta^4\ell^2}\right]e_7e_7^\top
+ +2\kappa_L\delta_G C^\top C+\lambda I\prec0.
+\end{aligned}
+\tag{R6-G}
+$$
+
+The G constraint contains **no positive LiDAR information or heading strength**.
+All inequalities use the same P and the same `kappa_L,kappa_G,k_a,k_d`.
+For fixed domain/scalar gains these are affine LMIs in those unknowns. There is
+no requirement to alternate between gain designs. Additional nonnegative
+invariant gains, including `k_c`, are permitted; their leading matched terms
+are nonpositive and their finite nonlinear remainders are retained below.
+
+The bounds underlying (R6) are explicit. With `x=Cp*epsilon`, the GNSS lever
+secant has norm at most rho. Its derivative contribution is at most
+`theta*kappa_G*rho^2*epsilon_7^2` in L, and at most
+`theta*kappa_G[-2(1-tau)w_0||x||^2+rho^2/tau*epsilon_7^2]` in G. For the two
+body-acceleration projections, the normalized true-point rows together are
+`H_a=E_a'-(J a)/(theta^2*ell)e_7'`, up to an orthogonal row rotation. Thus
+
+$$
+ \|H_a\varepsilon\|^2\ge
+ (1-\eta)\|E_a^\top\varepsilon\|^2
+ -(\eta^{-1}-1)\frac{a_{\max}^2}{\theta^4\ell^2}\varepsilon_7^2.
+\tag{R8}
+$$
+
+For exact overlap feedback, its difference from S contributes at most
+`2*theta*kappa_L*delta_i*||C epsilon||^2`. These three bounds yield (R6);
+none replaces an exact nonlinear output difference by a point Jacobian without
+accounting for the difference.
+
+#### Complete local nonlinear theorem and arbitrary sensor switching
+
+**Unified continuous redundancy theorem.** Assume the uniform geometry,
+regularity, motion and disturbance contracts above. Suppose the finite joint
+LMIs (R6-L,G) have one constant positive definite P and one constant gain set.
+At every time, at least one of L or G holds. Then the complete nonlinear
+continuous observer has a local regional ISS error bound under arbitrary
+measurable transitions between these adequacy sets. In particular:
+
+* L gives the full eight-state guarantee with GNSS absent, including at a stop.
+* G gives the full eight-state guarantee with LiDAR rank deficient or entirely
+  absent, subject to its position-only motion/auxiliary conditions.
+* Both channels may be present. The proof label does not select a different
+  algorithm, reset the state or change any gain. No dwell time is needed while
+  the union-adequacy condition holds.
+
+**Proof.** (R6), their convex vertex enclosures, and (R7) give the ideal base
+bound `Vdot <= -theta*lambda*||epsilon||^2`, with `V=epsilon'P epsilon`.
+The actual overlap perturbation is already included through (R3)--(R4).
+On the compact motion/yaw chart, the intrinsic predictor and the complete
+invariant-output correction have uniformly bounded second derivatives in the
+state. Expanding about the true state gives a vector-field remainder bounded
+by `L_N||epsilon||^2`, including both the change in the estimated Jacobian gain
+and the nonlinear output secant. The scalar-speed heading remainder and all
+retained invariant channels are included in this bound. Upstream angle/rate,
+sensor and model errors add a uniformly bounded scaled disturbance `d(t)`;
+the filtered angle is not assumed equal to the instantaneous direction.
+Therefore, with `p_+=lambda_max(P)` and `c_N=2*p_+*L_N`,
+
+$$
+ \dot V\le-\theta\lambda\|\varepsilon\|^2
+ +c_N\|\varepsilon\|^3+2p_+\|\varepsilon\|\|d(t)\|.
+\tag{R9}
+$$
+
+Choose a scaled-state radius `R` that lies in the motion domain and satisfies
+`theta*R <= min(r_L,r_G)`, `theta*R < pi*ell`, and
+`c_N R <= theta*lambda/2`. The first two conditions follow from
+`q-q_hat=theta*C*epsilon` and keep the whole pose segment in the geometric patch
+and one yaw chart. Put `p_-=lambda_min(P)` and
+
+$$
+ a=\frac{\theta\lambda}{4p_+},\qquad
+ b_d=\frac{4p_+^2}{\theta\lambda},\qquad c_R=p_-R^2.
+$$
+
+Young's inequality gives `Vdot <= -a V+b_d||d||^2`. If
+`V(0)<c_R` and `(b_d/a)*||d||_infinity^2<c_R`, the first-exit argument yields
+
+$$
+ V(t)\le e^{-at}V(0)+\frac{b_d}{a}\|d\|_\infty^2(1-e^{-at}),\qquad
+ \|\varepsilon(t)\|\le
+ \sqrt{\frac{p_+}{p_-}}e^{-at/2}\|\varepsilon(0)\|
+ +\sqrt{\frac{b_d}{a p_-}}\|d\|_\infty.
+\tag{R10}
+$$
+
+V has no jump when adequacy changes because P and the estimate are the same.
+The derivative inequality holds almost everywhere, so (R10) survives arbitrary
+measurable switching. Zero total disturbance gives local exponential
+convergence; persistent bounded disturbance gives a local error neighborhood.
+This proves the full nonlinear statement under the stated sufficient conditions.
+It does not assert global convergence, stability under two indefinitely
+inadequate sensors, or a numerical attraction radius. **QED.**
+
+This is the complete eight-state global-observer error result, with bounded
+upstream lateral-estimation error included in d. An augmented cascade result
+also requires an upstream error bound on the same vehicle/input domain; it
+does not follow solely from the global LMIs. No new low-speed hybrid lateral
+certificate is inferred here.
+
+#### Feasible joint witness and boundary of its applicability
+
+The following witness demonstrates that the simultaneous sufficient LMIs are
+not merely a formal condition. It uses the adopted MnCAV bounds and scalar
+rate/speed gains, ten speed subintervals, and a GNSS motion floor of 10 m/s.
+That floor is a conservative feasibility-domain choice, not a physical law or
+an automatic requirement of every GNSS observer. Smaller floors require a new
+successful certificate; exploratory 5--15 m/s solves with the stated box and
+Young enclosures were infeasible and do not establish impossibility of that
+motion domain. The general theorem retains a symbolic positive `s_0`.
+
+The witness metric and matched gains are **separate theoretical parameters**.
+They were not installed in `config/mncavInvariantDesign.json`, do not replace
+any current observer, and do not certify the default gain numbers. They also do
+not verify (R4) or the L-sector bounds for an actual map. The verified assertion
+is feasibility of one common constant design under those explicit geometric
+and signal contracts. Run `verifySensorRedundancyTheory` for solver-free
+reverification; `Synthesize=true` re-solves the theoretical design only.
+
+<!-- SENSOR_REDUNDANCY_WITNESS_BEGIN -->
+```json
+{
+  "inputs": {
+    "theta": 4,
+    "headingLengthM": 10,
+    "maximumSpeed": 15,
+    "maximumAcceleration": 2,
+    "maximumCourseRate": 0.4,
+    "minimumLidarPositionStrength": 0.25,
+    "minimumLidarHeadingStrength": 0.97,
+    "maximumLidarCoupling": 0.06,
+    "minimumGnssWeight": 0.5,
+    "gnssBodyOffset": [
+      1.72485903887133,
+      0.2644114700440067
+    ],
+    "gyroGainNormalized": 27.777578635450332,
+    "speedGainNormalized": 3.9062239575646722
+  },
+  "domain": {
+    "minimumGnssSpeed": 10,
+    "informativeLidarMismatch": 0.001,
+    "degradedLidarMismatch": 0.001,
+    "speedPartitions": 10,
+    "accelerationSplit": 0.5,
+    "gnssSplit": 0.5,
+    "lambda": 1
+  },
+  "P": [
+    [
+      30.875590672687,
+      -70.18091224259713,
+      -287.99466662991614,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      -70.18091224259713,
+      388.8036113999334,
+      -192.66799320550328,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      -287.99466662991614,
+      -192.66799320550328,
+      6169.715507157887,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      30.875590672687,
+      -70.18091224259713,
+      -287.99466662991614,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      -70.18091224259713,
+      388.8036113999334,
+      -192.66799320550328,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      -287.99466662991614,
+      -192.66799320550328,
+      6169.715507157887,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.01,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      223.88604800784861
+    ]
+  ],
+  "kappaL": 183.57316735373308,
+  "kappaG": 70.37006277381806,
+  "accelerationGain": 1298.5773627406172,
+  "directionGain": 741.1675319450827
+}
+```
+<!-- SENSOR_REDUNDANCY_WITNESS_END -->
+
+The retained text table above is the certificate summary, not a replay/cache
+array. The verifier checks 128 L vertices and 480 G Bernstein controls. The
+matrix/gains were homogeneously rescaled by 1.01 after synthesis to give a clear
+floating-point verification margin without changing matched gain ratios.
+
+### 0.7 Finite stops and intervals outside instantaneous adequacy
+
+A motion floor is not required at every time if information recurs often enough.
+Suppose the same V satisfies `Vdot<=-a V+B||d||^2` on adequate intervals and
+`Vdot<=gamma V+B||d||^2` on the remaining intervals within the same local region.
+The second bound follows from uniform local vector-field bounds; it is not a
+claim of convergence in an unobservable parked interval. Let `chi(t)` mark the
+adequate intervals. If for every `s<=t`,
+
+$$
+ \int_s^t[a\chi(\tau)-\gamma(1-\chi(\tau))]d\tau
+ \ge\bar a(t-s)-K,\qquad\bar a>0,
+\tag{R11}
+$$
+
+then integrating factors give
+
+$$
+ V(t)\le e^K e^{-\bar a t}V(0)
+ +\frac{B e^K}{\bar a}\|d\|_\infty^2.
+\tag{R12}
+$$
+
+A sufficient first-exit admission is
+`e^K*(V(0)+B||d||_infinity^2/bar_a)<c_R`. For example, if the total inadequate
+time on every interval is at most `rho_bad*(t-s)+T_0`, then (R11) holds with
+`bar_a=a-(a+gamma)rho_bad>0` and `K=(a+gamma)T_0`. This permits finite stops or
+finite intervals of simultaneously weak signals while sufficient information
+recurs; it excludes indefinite parking with position-only GNSS and no heading
+observation. An independent heading output would instead remove the obstruction
+in (R1), requiring the corresponding extra heading term in the joint LMI.
+
 
 ## 1. State, continuous plant, and disturbance interface
 

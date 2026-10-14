@@ -86,6 +86,35 @@ remaining tasks are in [the existing theory, Section 0.5](../improved_observer_d
 There is no discrete-time or arbitrary-outage guarantee. Feature deficiency
 and actual missing outputs are retained in runtime diagnostics.
 
+## Unified sensor-redundancy theory
+
+[Section 0.6](../improved_observer_derivation.md#06-one-complete-observer-with-complementary-gnsslidar-guarantees)
+now proves local nonlinear ISS for one complete continuous observer when either
+GNSS or LiDAR supplies sufficient information. The two adequacy sets share one
+constant Lyapunov matrix and one constant gain set; they do not select different
+observers. Informative LiDAR permits GNSS weight zero. Sufficient position-only
+GNSS permits LiDAR information of any rank, including zero, provided motion and
+the velocity-direction/body-acceleration auxiliary channels supply heading
+information. A parked vehicle with no LiDAR heading remains unobservable from
+position and gyro rate alone. Section 0.7 permits finite stops under an explicit
+recurring-information condition.
+
+The proof bounds the actual overlap operator as `F*Hbar = S + Delta`, including
+its support projection, rather than substituting Gauss--Newton information for
+the true gradient derivative. Both adequate and degraded geometry require the
+stated mismatch/bias bounds. Joint LMIs retain the direction channel for the
+GNSS guarantee; Bernstein controls certify its whole speed interval. Uniform
+higher-order bounds then close all nonlinear predictor and invariant innovations.
+
+Run `verifySensorRedundancyTheory` to check the separate documented theoretical
+witness without an SDP solver. It verifies 128 LiDAR vertices and 480 GNSS
+Bernstein controls on the declared 10--15 m/s GNSS motion domain. This is a
+conservative sufficient domain, not a necessary physical speed threshold.
+The witness does not replace or certify `mncavInvariantDesign.json`, nor verify
+the geometry contracts for a recorded map. `Synthesize=true` re-solves only
+the theory; it never installs gains. Default runtime certificate flags remain
+unchanged.
+
 ## Zero-speed scope
 
 The intrinsic predictor no longer divides by speed or speed squared: its
