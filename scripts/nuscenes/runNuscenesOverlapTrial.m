@@ -1,4 +1,4 @@
-function reports=runNuscenesOverlapTrial(datasetFolder,outputFolder,options)
+function [reports,estimates]=runNuscenesOverlapTrial(datasetFolder,outputFolder,options)
 % runNuscenesOverlapTrial Known-map LiDAR/CAN development trial on nuScenes.
 % Map every tenth sweep with reference poses; query alternating disjoint
 % sweeps at about 10 Hz. Reference is allowed for mapping, one initial pose/
@@ -6,6 +6,8 @@ function reports=runNuscenesOverlapTrial(datasetFolder,outputFolder,options)
 % IMU force/gyro and IMU tilt. No pose.json or navigation velocity is loaded.
 % Fresh global and vehicle-specific lateral LMIs are solved for each call.
 % Keep only small summaries/figures; all feature/state arrays stay in memory.
+% Optional estimates output permits paired reference-isolation checks without
+% persisting state arrays or exposing scoring references to the estimator.
     arguments
         datasetFolder (1,1) string
         outputFolder (1,1) string
@@ -28,9 +30,9 @@ function reports=runNuscenesOverlapTrial(datasetFolder,outputFolder,options)
         'lateralVertexGains',lateralDesign.vertexGains,'lateralCertificateVerified',lateralDesign.certified, ...
         'lateralWorstCertificateMargin',lateralDesign.maxCertificateMargin, ...
         'lateralVehicleIdentified',false,'gainSource',"fresh-lmi; no persisted gains loaded"));
-    tables=loadTables(datasetFolder);reports=cell(numel(options.Scenes),1);
+    tables=loadTables(datasetFolder);reports=cell(numel(options.Scenes),1);estimates=cell(numel(options.Scenes),1);
     for j=1:numel(options.Scenes)
-        reports{j}=runScene(datasetFolder,outputFolder,options.Scenes(j),tables,trial,lateralDesign);
+        [reports{j},estimates{j}]=runScene(datasetFolder,outputFolder,options.Scenes(j),tables,trial,lateralDesign);
     end
     [status,commit]=system(sprintf('git -C "%s" rev-parse HEAD',root));
     assert(status==0,'VehicleLocalization:MissingTrialVersion','Cannot identify executed source version.');
@@ -40,7 +42,7 @@ function reports=runNuscenesOverlapTrial(datasetFolder,outputFolder,options)
         'vehicleIdentified',false,'independentGnssUsed',false,'sampledSystemCertified',false));
 end
 
-function report=runScene(folder,out,sceneName,tables,trial,lateralDesign)
+function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDesign)
     scene=tables.scenes(strcmp({tables.scenes.name},sceneName));
     assert(isscalar(scene),'VehicleLocalization:MissingNuscenesScene','Scene not found: %s.',sceneName);
     sampleTokens=string({tables.samples(strcmp({tables.samples.scene_token},scene.token)).token});

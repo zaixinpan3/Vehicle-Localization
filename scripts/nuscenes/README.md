@@ -77,3 +77,21 @@ No GNSS correction is actually supplied in this trial.
 The entry retains summary JSON, metrics CSV and trajectory figures only. It
 does not persist point clouds, features, state arrays or gain caches. Raw
 downloaded dataset inputs remain inputs and are kept outside Git.
+
+To test the reference boundary with an active perturbation, run:
+
+```bash
+python scripts/nuscenes/auditNuscenesReferenceIsolation.py \
+    data/raw/nuscenes output/nuscenes_reference_audit
+```
+
+This runs two fresh trials, preserving every mapping pose and each first query
+pose. All later query reference positions are displaced by `[1000,-700,100]` m
+and their orientations are replaced. The eight-state histories, lateral outputs,
+intrinsic predictions and overlap gradients must remain exactly equal while
+scoring changes substantially. The optional second MATLAB output exposes the
+estimates in memory for this check. Source inputs are read-only; temporary
+metadata, state arrays and trial figures are removed after the audit. Only the
+mutation recipe, small comparison report and run log are retained. This checks
+software dependence on the reference fields; it does not establish statistical
+independence between the vendor's sensor and reference products.
