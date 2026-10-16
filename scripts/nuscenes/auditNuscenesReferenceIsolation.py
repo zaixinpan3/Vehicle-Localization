@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Poison later query reference poses while preserving map/initialization poses.
 
-Run two fresh MATLAB trials and compare their in-memory eight-state histories.
+Compare two MATLAB replays using one freshly solved in-memory gain design.
 The source dataset is read-only. Temporary metadata and output arrays are not
 retained; the mutation recipe, small comparison report and run log are kept.
 """
@@ -40,7 +40,7 @@ def select_poses(dataset, scene_names):
         steer = read_json(can / f"{name}_steeranglefeedback.json")
         lo, hi = max(wheel[0]["utime"], steer[0]["utime"]), min(wheel[-1]["utime"], steer[-1]["utime"])
         native = [row["utime"] for row in imu if lo <= row["utime"] <= hi]
-        mapping = lidar[::10]
+        mapping = lidar[::2]
         query = [row for i, row in enumerate(lidar) if i % 2 == 1
                  and native[0] <= row["timestamp"] <= native[-1]]
         assert query, f"No queries in {name}"
@@ -62,6 +62,8 @@ def main():
     parser.add_argument("dataset", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--matlab", default="matlab")
+    parser.add_argument("--baseline-output", type=Path,
+                        help="Retain normal trial summaries/figures here; otherwise remove them with scratch outputs")
     args = parser.parse_args()
     dataset, output = args.dataset.resolve(), args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -83,7 +85,7 @@ def main():
     recipe = {"scenes": selections, "protectedPoseRecords": len(protected), "poisonedPoseRecords": changed,
               "translationShiftM": shift, "replacementQuaternionWxyz": quaternion,
               "sourceEgoPoseSha256": hashlib.sha256(original).hexdigest(),
-              "selection": "Every tenth sweep maps; odd sweeps with CAN coverage query; protect all map poses and each first query pose",
+              "selection": "One-based odd frames map; even frames with CAN coverage query; protect all map poses and each first query pose",
               "runtimeBoundary": "Later query x/y/z, yaw, roll and pitch are poisoned; raw LiDAR/CAN/calibration/timestamps remain identical"}
     (output / "mutation_recipe.json").write_text(json.dumps(recipe, indent=2) + "\n")
     with tempfile.TemporaryDirectory(prefix="pdvl_nuscenes_reference_audit_") as scratch:
@@ -99,10 +101,12 @@ def main():
             if item.name != "ego_pose.json":
                 (metadata / item.name).symlink_to(item, target_is_directory=item.is_dir())
         (metadata / "ego_pose.json").write_text(json.dumps(poses))
+        baseline_output = args.baseline_output.resolve() if args.baseline_output else scratch / "baseline"
         script = scratch / "run_audit.m"
         script.write_text(f"""cd({matlab_quote(root)});setupVehicleLocalization;
-[baseReports,baseline]=runNuscenesOverlapTrial({matlab_quote(dataset)},{matlab_quote(scratch / 'baseline')});
-[badReports,poisoned]=runNuscenesOverlapTrial({matlab_quote(poisoned)},{matlab_quote(scratch / 'poisoned')});
+[baseReports,baseline,paired]=runNuscenesOverlapTrial({matlab_quote(dataset)},{matlab_quote(baseline_output)}, ...
+ ReferenceAuditDatasetFolder={matlab_quote(poisoned)},ReferenceAuditOutputFolder={matlab_quote(scratch / 'poisoned')});
+badReports=paired.reports;poisoned=paired.estimates;
 comparisons=cell(numel(baseline),1);
 for k=1:numel(baseline)
  a=baseline{{k}};b=poisoned{{k}};
@@ -115,7 +119,8 @@ for k=1:numel(baseline)
   'overlapSimilarityExactlyEqual',isequaln(a.diagnostics.lidarOverlap.similarity,b.diagnostics.lidarOverlap.similarity), ...
   'baselineMetrics',baseReports{{k}}.metrics,'poisonedScoringMetrics',badReports{{k}}.metrics);
 end
-result=struct('comparisons',{{comparisons}},'randomSeed',20261014,'freshGainSolvesPerTrial',true, ...
+result=struct('comparisons',{{comparisons}},'randomSeed',20261014,'freshGainSolvePerPairedExperiment',true, ...
+ 'gainControl',"Share this invocation's freshly solved gains in memory; no persisted gains; reset scene RNG for paired replay", ...
  'scope',"Tests estimator dependence on later query reference fields with map and initialization held fixed; not statistical independence of vendor sensor/reference products");
 f=fopen({matlab_quote(output / 'audit.json')},'w');fprintf(f,'%s\\n',jsonencode(result,PrettyPrint=true));fclose(f);
 for k=1:numel(comparisons)

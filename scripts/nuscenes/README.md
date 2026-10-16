@@ -45,15 +45,24 @@ aligned to one initial reference tilt. Main prediction uses its internal rate
 state and upstream sideslip derivative; IMU enters the auxiliary outputs and
 the lateral observer.
 
-Every tenth LiDAR sweep builds a fixed map with reference poses; alternating,
-disjoint sweeps query it at approximately 10 Hz. One initial reference pose is
+Using chronological, one-based frame numbers, every odd LiDAR frame
+(1, 3, 5, ...) builds a fixed map with reference poses; disjoint even frames
+(2, 4, 6, ...) query it at approximately 10 Hz. All mapping frames retain their
+own frame/block identities, so repeated detections are stacked by the existing
+temporal-stability model. No global thinning to one frame in ten is applied.
+The mapper's representative resolution and inference parameters are unchanged;
+repeatability is inferred from spatial consistency across observations, rather
+than multiplied by the number of detections. `mapStability` reports the actual
+ingested frames, observed blocks and repeatability summaries. The production
+mapper's full-frame policy is unchanged by this transfer experiment.
+One initial reference pose is
 perturbed by `[0.5 m, -0.4 m, 2 degrees]`. Later reference poses are used only
 for scoring. `pose.json`, its velocity, and the route are never loaded. No
 independent raw GNSS channel is supplied. Point clouds are not deskewed and
 use existing Downtown perception thresholds, with the ground-height prior
 translated to the rear-axle coordinate origin. Intensity and labels are unused.
 
-This is a same-pass, interleaved known-map development experiment, not an
+This is a same-pass, odd/even known-map development experiment, not an
 independent mapping traversal or an official nuScenes localization benchmark.
 nuScenes `ego_pose` itself is a fused localization product. Its difference from
 our trajectory is not an independent survey accuracy measurement. See the
@@ -85,8 +94,15 @@ python scripts/nuscenes/auditNuscenesReferenceIsolation.py \
     data/raw/nuscenes output/nuscenes_reference_audit
 ```
 
-This runs two fresh trials, preserving every mapping pose and each first query
-pose. All later query reference positions are displaced by `[1000,-700,100]` m
+Pass `--baseline-output output/nuscenes_odd_even` to keep the ordinary trial's
+metrics, summaries and figures while also running the reference-isolation check.
+
+This solves gains afresh once for the paired experiment and shares that design
+in memory between the ordinary and perturbed replays. It also resets the scene
+random-number state between replays. Independent gain solves can differ slightly
+numerically; holding gains fixed isolates reference dependence. No saved gain
+file is read or written. Every mapping pose and each first query pose is
+preserved. All later query reference positions are displaced by `[1000,-700,100]` m
 and their orientations are replaced. The eight-state histories, lateral outputs,
 intrinsic predictions and overlap gradients must remain exactly equal while
 scoring changes substantially. The optional second MATLAB output exposes the
