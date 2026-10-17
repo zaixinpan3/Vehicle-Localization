@@ -27,7 +27,7 @@ function trial=nuscenesTrialConfig(steeringRatio)
     lateral.simulation.lateralAccelerationNoiseStd=.2;
     lateral.simulation.yawRateNoiseStd=.01;
     lateral.synthesis.measurementErrorScale=[.3;.02];
-    lateral.synthesis.axleForceMismatchScale=.3*lateral.hybrid.dynamic.fullLateralAcceleration* ...
+    lateral.synthesis.axleForceMismatchScale=.3*lateral.synthesis.linearLateralAccelerationScale* ...
         [vehicle.lr;vehicle.lf]/wheelbase;
     globalCfg=mncavFullObserverConfig();globalCfg.kind="nuscenes-overlap-development-trial";
     globalCfg.invariantObserver.operatingPoints=["lidar","weakLidar"];

@@ -64,6 +64,12 @@ classdef fullObserverSupport
             for name=["lateralVelocity","sideSlipAngle","sideSlipAngleRate"]
                 lateral.(name)=blend(lateralInput.(name),left,right,fraction);
             end
+            if isfield(lateralInput,'velocityValid')
+                valid=lateralInput.velocityValid(:);
+                assert(numel(valid)==numel(h.time) && all(ismember(valid,[0,1])), ...
+                    'VehicleLocalization:InvalidMotionValidity','Invalid lateral velocity validity mask.');
+                lateral.velocityValid=logical(valid(left)) & logical(valid(right));
+            end
             if overlapChannel
                 aligned.lidarOverlap=data.lidarOverlap;aligned.lidarOverlap.time=t;
                 aligned.lidarOverlap.sources=data.lidarOverlap.sources(selected);

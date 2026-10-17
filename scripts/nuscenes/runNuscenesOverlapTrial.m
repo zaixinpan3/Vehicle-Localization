@@ -121,7 +121,8 @@ function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDes
         'longitudinalAcceleration',acceleration(:,1),'lateralAcceleration',acceleration(:,2), ...
         'yawRate',motion.yawRate(nativeIndex));
     l=struct('time',t,'lateralVelocity',lateral.lateralVelocity(nativeIndex), ...
-        'sideSlipAngle',lateral.sideSlipAngle(nativeIndex),'sideSlipAngleRate',lateral.sideSlipAngleRate(nativeIndex));
+        'sideSlipAngle',lateral.sideSlipAngle(nativeIndex),'sideSlipAngleRate',lateral.sideSlipAngleRate(nativeIndex), ...
+        'velocityValid',lateral.velocityValid(nativeIndex));
     queryTilt=aux.tilt(nativeIndex,:);queryTilt=queryTilt-queryTilt(1,:)+initial.tilt;
     p=profile("coarseProbabilityCloud",names);sources=cell(numel(query),1);timer=tic;
     for j=1:numel(query)

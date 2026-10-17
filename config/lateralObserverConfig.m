@@ -6,8 +6,8 @@ function cfg = lateralObserverConfig(profile)
 % Lipschitz bound, the certified decay rate, the scales of the axle-force
 % mismatch and measurement-error channels, the Finsler multiplier scales,
 % and the LMI solver settings; the
-% observer group configures the online integration; the hybrid group defines
-% the division-free master estimator and its bumpless LPV correction;
+% observer group configures direct LPV integration; the sideSlip group defines
+% the angle/rate interface, which does not change the LPV velocity;
 % the simulation group defines the synthetic scenario used to exercise the
 % observer.
 %
@@ -80,55 +80,13 @@ function cfg = lateralObserverConfig(profile)
     cfg.observer.integrationMethod = "rk4";
     cfg.observer.nonlinearity = @(x) zeros(2, 1);
     cfg.observer.initialState = [0.0; 0.0];
-    % Hybrid runtime. The common master state is [lateral velocity;
-    % lateral-accelerometer bias]. The LPV state above remains a hidden,
-    % continuously evolving information source and is evaluated only inside
-    % its certified speed interval. Mode logic changes correction targets,
-    % never the common state or an exported value.
-    cfg.hybrid = struct();
-    cfg.hybrid.initialMasterState = [];
-    cfg.hybrid.initialCorrectionState = zeros(2, 1);
-    cfg.hybrid.accelerometerBiasTimeConstant = 60.0;
-
-    % Only the LPV estimate corrects the master. Outside its domain the target
-    % is zero and this stored injection decays; inertial drift is not bounded
-    % by any stationary or low-speed kinematic constraint. A positive biasGain
-    % has a negative sign so a positive vy residual reduces estimated bias.
-    cfg.hybrid.correction = struct();
-    cfg.hybrid.correction.dynamic = struct( ...
-        "timeConstant", 0.08, "velocityGain", 12.0, "biasGain", 0.50);
-
-    % The dynamic correction reaches full participation above the lower
-    % transition band and fades back to zero before either speed-certificate
-    % boundary. Residual scores use quintic smooth steps, so their first two
-    % derivatives vanish at the edges of every ordinary transition band.
-    cfg.hybrid.dynamic = struct();
-    cfg.hybrid.dynamic.fullParticipationSpeed = 6.0;
-    cfg.hybrid.dynamic.upperFullParticipationSpeed = 29.0;
-    cfg.hybrid.dynamic.fullLateralAcceleration = 4.0;
-    cfg.hybrid.dynamic.zeroLateralAcceleration = 7.0;
-    cfg.hybrid.dynamic.fullLateralInnovation = 2.0;
-    cfg.hybrid.dynamic.zeroLateralInnovation = 8.0;
-    cfg.hybrid.dynamic.fullYawInnovation = 0.05;
-    cfg.hybrid.dynamic.zeroYawInnovation = 0.40;
-
-    % Outside the LPV certificate the hidden state follows the common master
-    % and measured yaw rate through a nonsingular shadow model. No reciprocal
-    % speed is formed in this branch.
-    cfg.hybrid.shadow = struct();
-    cfg.hybrid.shadow.lateralVelocityTrackingGain = 8.0;
-    cfg.hybrid.shadow.yawRateTrackingGain = 15.0;
-
-    % A persistent second-order interface state exports beta and betaDot.
-    % It tracks zero while the velocity direction is undefined and tracks the
-    % wrapped atan2 command when it is valid; the state is never reset.
-    cfg.hybrid.sideSlip = struct();
-    cfg.hybrid.sideSlip.validSpeed = 1.0;
-    cfg.hybrid.sideSlip.fullParticipationSpeed = ...
-        cfg.hybrid.dynamic.fullParticipationSpeed;
-    cfg.hybrid.sideSlip.naturalFrequency = 12.0;
-    cfg.hybrid.sideSlip.dampingRatio = 1.0;
-    cfg.hybrid.sideSlip.initialState = [];
+    % Only the LPV [vy; r] state estimates velocity. Out-of-domain samples
+    % hold that state and withdraw its exported velocity aiding.
+    % The angle filter is independent of velocity estimation.
+    cfg.sideSlip = struct();
+    cfg.sideSlip.naturalFrequency = 12.0;
+    cfg.sideSlip.dampingRatio = 1.0;
+    cfg.sideSlip.initialState = [];
 
     % Synthetic scenario: sinusoidal longitudinal acceleration so the
     % scheduling parameter and its rate are both exercised, with a
@@ -157,14 +115,14 @@ function cfg = lateralObserverConfig(profile)
 
     % Disturbance scales of the ISS synthesis. The axle-force mismatch is
     % the declared cornering-stiffness uncertainty acting on the static
-    % share of each axle at the lateral acceleration up to which the linear
-    % model participates fully; it is a specific force in m/s^2 for
-    % [front; rear]. The measurement error is the declared sensor bias
+    % share of each axle at the declared linear-model acceleration scale,
+    % expressed as a specific force in m/s^2 for [front; rear]. The measurement error is the declared sensor bias
     % stress plus one noise standard deviation for [ay; r].
     stiffnessUncertainty = max(abs(double(parameters.sensitivityFactors(:)) - 1.0));
     axleShare = [cfg.vehicle.lr; cfg.vehicle.lf] ./ (cfg.vehicle.lf + cfg.vehicle.lr);
+    cfg.synthesis.linearLateralAccelerationScale = 4.0;
     cfg.synthesis.axleForceMismatchScale = stiffnessUncertainty .* ...
-        cfg.hybrid.dynamic.fullLateralAcceleration .* axleShare;
+        cfg.synthesis.linearLateralAccelerationScale .* axleShare;
     cfg.synthesis.measurementErrorScale = [ ...
         max(abs(double(sensors.lateralSimulation.lateralAccelerationBiasStressMps2(:)))) + ...
         cfg.simulation.lateralAccelerationNoiseStd; ...

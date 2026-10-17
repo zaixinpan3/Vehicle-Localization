@@ -12,6 +12,8 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % withdraw unavailable motion-output feedback. Absent masks mean all valid.
 % LateralInputs must provide lateralVelocity, sideSlipAngle and
 % sideSlipAngleRate on the frame clock. The angle/rate pair is supplied upstream.
+% Optional LateralInputs.velocityValid withdraws all three upstream signals,
+% their velocity-dependent innovations and the predictor's sideslip-rate term.
     arguments
         data (1,1) struct
         lateralDesign (1,1) struct %#ok<INUSA>
@@ -53,7 +55,8 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'VehicleLocalization:AlignedLateralRequired', ...
         'Supply lateral velocity and the upstream sideslip angle/rate pair; no angle reconstruction is available.');
     reportedLateral=lateral;
-    velocityValid=motionValidity(h,'bodyVelocityValid',n);
+    velocityValid=motionValidity(h,'bodyVelocityValid',n) ...
+        & motionValidity(lateral,'velocityValid',n) & cfg.invariantObserver.velocityAvailable;
     accelerationValid=motionValidity(h,'bodyAccelerationValid',n);
     gyroValid=motionValidity(h,'yawRateValid',n);
     fields=["longitudinalSpeed","longitudinalAcceleration","lateralAcceleration","yawRate"];
@@ -67,7 +70,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         h.(name)=h.(name)(:);h.(name)(~valid)=0;
     end
     for name=["lateralVelocity","sideSlipAngle","sideSlipAngleRate"]
-        valid=true(n,1);if any(name==["lateralVelocity","sideSlipAngle"]),valid=velocityValid;end
+        valid=velocityValid;
         assert(numel(lateral.(name))==n && all(isfinite(lateral.(name)(valid))), ...
             'VehicleLocalization:InvalidFullInput','Invalid aligned lateral output.');
         lateral.(name)=lateral.(name)(:);lateral.(name)(~valid)=0;

@@ -37,6 +37,22 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             [d,l,c]=fixture();d.highRate.longitudinalSpeed(2)=NaN;
             testCase.verifyError(@()execute(d,l,c),'VehicleLocalization:InvalidFullInput');
         end
+        function invalidLpvOutputCannotReachPredictionOrInnovations(testCase)
+            [d,l,c]=fixture();l.velocityValid=false(size(l.time));
+            a=execute(d,l,c);
+            l.lateralVelocity(:)=NaN;l.sideSlipAngle(:)=NaN;l.sideSlipAngleRate(:)=NaN;
+            b=execute(d,l,c);
+            testCase.verifyEqual(a.internalState,b.internalState);
+            testCase.verifyEqual(b.diagnostics.packetCounts.bodyVelocityValid,0);
+            for k=1:numel(l.time)
+                testCase.verifyEqual(b.diagnostics.invariantOutputs{k}.valid, ...
+                    logical([0;0;0;1;0;0;1;1]));
+            end
+        end
+        function invalidLateralMaskIsRejected(testCase)
+            [d,l,c]=fixture();l.velocityValid=NaN(size(l.time));
+            testCase.verifyError(@()execute(d,l,c),'VehicleLocalization:InvalidMotionValidity');
+        end
         function validityRequiresOneBooleanPerFrame(testCase)
             [d,l,c]=fixture();d.highRate.bodyVelocityValid=[true;false];
             testCase.verifyError(@()execute(d,l,c),'VehicleLocalization:InvalidMotionValidity');

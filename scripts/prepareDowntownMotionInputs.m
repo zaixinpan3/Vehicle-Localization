@@ -29,7 +29,8 @@ function inputs=prepareDowntownMotionInputs(datasetFolder,lateralDesign)
     h.lateralAcceleration=h.lateralAcceleration+rdot*displacement(1)-r.^2*displacement(2);
     beta=unwrap(atan2(vy,max(.1,h.longitudinalSpeed)));
     % Export the angle/rate pair at the same transported output point as vy.
-    lateralFrame=struct('time',t,'lateralVelocity',vy,'sideSlipAngle',beta,'sideSlipAngleRate',gradient(beta,t));
+    lateralFrame=struct('time',t,'lateralVelocity',vy,'sideSlipAngle',beta, ...
+        'sideSlipAngleRate',gradient(beta,t),'velocityValid',lateral.velocityValid);
     motion=integrateRecordedPlanarMotion(t,[h.longitudinalSpeed,vy,r],t);
     inputs=struct('highRate',h,'lateral',lateralFrame,'nativeOriginSeconds',begin,'motion',motion, ...
         'wheel',wheel,'parameters',parameters,'pointAlignment',alignment,'lateralOriginal',lateral, ...

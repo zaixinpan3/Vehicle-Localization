@@ -1,41 +1,28 @@
 function estimate = runLateralVelocityObserver(measurements, design, cfg)
-% runLateralVelocityObserver Estimate lateral motion with bumpless fusion.
-% A division-free master state [vy; lateral-accelerometer bias] runs at every
-% speed. The certified LPV bicycle observer remains a persistent information
-% source, but its reciprocal-speed model is evaluated only inside the design
-% speed interval. Its lateral-velocity estimate is the only correction source
-% for the master, acting through one persistent injection state:
+% runLateralVelocityObserver Export the LPV lateral-velocity estimate directly.
+% The only velocity state is the certified bicycle observer [vy; yawRate].
+% Inside its positive-speed domain it uses the scheduled LPV innovation.
+% Outside that domain, or when dynamicValid is false, its state is held and
+% velocityValid is false. Holding is not a low-speed estimation guarantee.
+% There is no inertial master, bias estimate, correction filter or shadow model.
 %
-%   xhatKDot = fK(xhatK,u) + etaDynamic
-%   tau etaDynamicDot = -etaDynamic + nuDynamicTarget.
-%
-% Outside the domain, or when dynamicValid is false, the correction target is
-% zero and the stored injection decays. Inertial continuation has no low-speed
-% drift guarantee; no stationary or kinematic velocity constraint is applied.
-%
-% A mode change alters only nuDynamicTarget. It never resets the master state, an
-% injection state, or an exported quantity, so xhatK and xhatKDot have no
-% mode-induced jump for continuous physical inputs. A persistent second-order
-% side-slip interface state similarly exports continuous beta and betaDot.
+% The output-point transport is algebraic. A separate two-state angle filter
+% still exports beta and betaDot from this LPV velocity; it does not modify vy.
+% Consumers must honor velocityValid for velocity, angle and angle-rate aiding.
 %
 % Input:
-%   measurements: struct with aligned column series time, steeringAngle,
-%       longitudinalSpeed, longitudinalAcceleration, lateralAcceleration,
-%       and yawRate. An optional logical dynamicValid series can immediately
-%       withdraw the LPV information channel without resetting any state.
-%   design: struct from designLateralObserverGains
-%   cfg: optional current struct from lateralObserverConfig. Designs
-%       must include the current hybrid runtime configuration.
-%
+%   measurements: aligned time, steeringAngle, longitudinalSpeed,
+%       longitudinalAcceleration, lateralAcceleration, yawRate, and optional
+%       dynamicValid series; design: current designLateralObserverGains result;
+%       cfg: current lateralObserverConfig (optional).
 % Output:
-%   estimate: struct containing the master and hidden dynamic states, smooth
-%       side-slip interface, persistent LPV correction, operating-mode
-%       diagnostics, and the normalized input measurements
+%   estimate: LPV state, output-point velocity, angle interface and validity.
     if nargin < 3 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
-    assert(isfield(cfg,"hybrid"),"VehicleLocalization:MissingHybridConfiguration", ...
-        "Use the current lateralObserverConfig.");
+    assert(isfield(cfg,"sideSlip") && ~isfield(cfg,"hybrid"), ...
+        "VehicleLocalization:ObsoleteLateralConfiguration", ...
+        "Use the current direct-LPV lateralObserverConfig.");
     assert(isfield(cfg,"outputPoint") && isfield(cfg.outputPoint,"forwardOffsetM") && ...
         isscalar(cfg.outputPoint.forwardOffsetM) && isfinite(double(cfg.outputPoint.forwardOffsetM)), ...
         "VehicleLocalization:MissingOutputPointConfiguration", ...
@@ -44,172 +31,103 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     lateralObserverSupport.assertLateralVehicleMatches(design,cfg);
     measurements = normalizeMeasurements(measurements);
     settings = validateRuntimeConfiguration(cfg, design);
-    layout = stateLayout();
     sampleCount = numel(measurements.time);
-
-    augmentedState = initialAugmentedState(measurements, cfg, settings, layout);
-    masterHistory = zeros(sampleCount, 2);
-    dynamicHistory = zeros(sampleCount, 2);
-    sideSlipHistory = zeros(sampleCount, 2);
-    correctionHistory = zeros(sampleCount, 2);
-    correctionTargetHistory = zeros(sampleCount, 2);
+    state = double(cfg.observer.initialState(:));
+    firstSample = sampleAt(measurements, 1, 0.0);
+    angleState = double(cfg.sideSlip.initialState(:));
+    if isempty(angleState)
+        angleState = [sideSlipCommandAt(state, firstSample, cfg, settings); 0.0];
+    end
+    state = [state; angleState];
+    history = zeros(sampleCount, 4);
     innovationHistory = zeros(sampleCount, 2);
     gainNorm = zeros(sampleCount, 1);
     lateralVelocityRate = zeros(sampleCount, 1);
-    longitudinalSpeedRate = zeros(sampleCount, 1);
     sideSlipCommand = zeros(sampleCount, 1);
-    dynamicParticipation = zeros(sampleCount, 1);
-    dynamicModelEvaluated = false(sampleCount, 1);
-    sideSlipCommandValid = false(sampleCount, 1);
-    operatingMode = strings(sampleCount, 1);
-    modeChanged = false(sampleCount, 1);
-
+    velocityValid = false(sampleCount, 1);
     integrationMethod = lower(strtrim(string(cfg.observer.integrationMethod)));
-
     for sampleIdx = 1:sampleCount
         sample = sampleAt(measurements, sampleIdx, 0.0);
-        [derivative, diagnostics] = hybridDerivative( ...
-            augmentedState, sample, design, cfg, settings, layout);
-        masterHistory(sampleIdx, :) = augmentedState(layout.master).';
-        dynamicHistory(sampleIdx, :) = augmentedState(layout.dynamic).';
-        sideSlipHistory(sampleIdx, :) = augmentedState(layout.sideSlip).';
-        correctionHistory(sampleIdx, :) = augmentedState(layout.corrections).';
-        correctionTargetHistory(sampleIdx, :) = diagnostics.correctionTarget(:).';
-        innovationHistory(sampleIdx, :) = diagnostics.dynamicInnovation.';
-        gainNorm(sampleIdx) = diagnostics.gainNorm;
-        lateralVelocityRate(sampleIdx) = derivative(layout.master(1));
-        longitudinalSpeedRate(sampleIdx) = diagnostics.longitudinalSpeedRate;
-        sideSlipCommand(sampleIdx) = diagnostics.sideSlipCommand;
-        dynamicParticipation(sampleIdx) = diagnostics.dynamicParticipation;
-        dynamicModelEvaluated(sampleIdx) = diagnostics.dynamicModelEvaluated;
-        sideSlipCommandValid(sampleIdx) = diagnostics.sideSlipCommandValid;
-        if diagnostics.dynamicModelEvaluated
-            operatingMode(sampleIdx) = "dynamic";
-        else
-            operatingMode(sampleIdx) = "inertial";
-        end
-        if sampleIdx > 1
-            modeChanged(sampleIdx) = operatingMode(sampleIdx) ~= operatingMode(sampleIdx - 1);
-        end
-
+        [derivative, innovation, gain, command, valid] = ...
+            observerDerivative(state, sample, design, cfg, settings);
+        history(sampleIdx, :) = state.';
+        innovationHistory(sampleIdx, :) = innovation.';
+        gainNorm(sampleIdx) = norm(gain);
+        lateralVelocityRate(sampleIdx) = derivative(1);
+        sideSlipCommand(sampleIdx) = command;
+        velocityValid(sampleIdx) = valid;
         if sampleIdx == sampleCount
             break;
         end
-        stepTime = measurements.time(sampleIdx + 1) - measurements.time(sampleIdx);
+        dt = measurements.time(sampleIdx + 1) - measurements.time(sampleIdx);
         if integrationMethod == "euler"
-            augmentedState = augmentedState + (stepTime .* derivative);
+            state = state + dt .* derivative;
         else
             midSample = sampleAt(measurements, sampleIdx, 0.5);
             nextSample = sampleAt(measurements, sampleIdx, 1.0);
             k1 = derivative;
-            k2 = hybridDerivative(augmentedState + (0.5 .* stepTime .* k1), ...
-                midSample, design, cfg, settings, layout);
-            k3 = hybridDerivative(augmentedState + (0.5 .* stepTime .* k2), ...
-                midSample, design, cfg, settings, layout);
-            k4 = hybridDerivative(augmentedState + (stepTime .* k3), ...
-                nextSample, design, cfg, settings, layout);
-            augmentedState = augmentedState + ((stepTime ./ 6.0) .* ...
-                (k1 + (2.0 .* k2) + (2.0 .* k3) + k4));
+            k2 = observerDerivative(state + 0.5 .* dt .* k1, midSample, design, cfg, settings);
+            k3 = observerDerivative(state + 0.5 .* dt .* k2, midSample, design, cfg, settings);
+            k4 = observerDerivative(state + dt .* k3, nextSample, design, cfg, settings);
+            state = state + (dt ./ 6.0) .* (k1 + 2.0 .* k2 + 2.0 .* k3 + k4);
         end
-        assert(all(isfinite(augmentedState)), ...
-            "The hybrid lateral observer diverged in interval %d.", sampleIdx);
+        assert(all(isfinite(state)), "The lateral observer diverged in interval %d.", sampleIdx);
     end
-
+    mode = repmat("unavailable", sampleCount, 1);
+    mode(velocityValid) = "dynamic";
+    modeChanged = [false; diff(velocityValid) ~= 0];
     estimate = struct();
     estimate.time = measurements.time;
-    estimate.state = masterHistory;
-    estimate.stateNames = ["lateralVelocity", "lateralAccelerationBias"];
-    estimate.dynamicState = dynamicHistory;
-    estimate.dynamicStateNames = ["lateralVelocity", "yawRate"];
-    % The master state is the lateral velocity at the observer (IMU) point.
-    % Rigid-body transport exports it at the declared output point.
-    estimate.observerPointLateralVelocity = masterHistory(:, 1);
-    estimate.lateralVelocity = masterHistory(:, 1) - forwardOffset .* measurements.yawRate;
+    estimate.state = history(:, 1:2);
+    estimate.stateNames = ["lateralVelocity", "yawRate"];
+    estimate.observerPointLateralVelocity = history(:, 1);
+    estimate.lateralVelocity = history(:, 1) - forwardOffset .* measurements.yawRate;
     estimate.outputPoint = cfg.outputPoint;
-    estimate.lateralAccelerationBias = masterHistory(:, 2);
-    estimate.yawRate = dynamicHistory(:, 2);
+    estimate.yawRate = history(:, 2);
     estimate.lateralVelocityRate = lateralVelocityRate;
-    estimate.longitudinalSpeedRate = longitudinalSpeedRate;
-    estimate.sideSlipAngle = sideSlipHistory(:, 1);
-    estimate.sideSlipAngleRate = sideSlipHistory(:, 2);
+    estimate.longitudinalSpeedRate = measurements.longitudinalAcceleration + ...
+        history(:, 1) .* measurements.yawRate;
+    estimate.sideSlipAngle = history(:, 3);
+    estimate.sideSlipAngleRate = history(:, 4);
     estimate.sideSlipCommand = sideSlipCommand;
+    estimate.velocityValid = velocityValid;
     estimate.innovation = innovationHistory;
     estimate.gainNorm = gainNorm;
     estimate.scheduledSpeed = measurements.longitudinalSpeed;
-    estimate.mode = operatingMode;
+    estimate.mode = mode;
     estimate.modeChanged = modeChanged;
-    estimate.correctionInjection = struct("dynamic", correctionHistory, ...
-        "total", correctionHistory);
-    estimate.correctionTarget = struct("dynamic", correctionTargetHistory);
-    estimate.diagnostics = struct("dynamicModelEvaluated", dynamicModelEvaluated, ...
-        "dynamicParticipation", dynamicParticipation, ...
-        "sideSlipCommandValid", sideSlipCommandValid, ...
-        "modeChanged", modeChanged);
+    estimate.diagnostics = struct("dynamicModelEvaluated", velocityValid, ...
+        "sideSlipCommandValid", velocityValid, "modeChanged", modeChanged);
     estimate.measurements = measurements;
 end
 
-function [derivative, diagnostics] = hybridDerivative(augmentedState, sample, ...
-        design, cfg, settings, layout)
-% hybridDerivative Evaluate inertial propagation and the LPV correction target.
-    masterState = augmentedState(layout.master);
-    dynamicState = augmentedState(layout.dynamic);
-    correctionState = augmentedState(layout.corrections);
-
-    masterPrediction = [sample.lateralAcceleration - masterState(2) - ...
-        (sample.yawRate .* sample.longitudinalSpeed); ...
-        -masterState(2) ./ double(cfg.hybrid.accelerometerBiasTimeConstant)];
-    longitudinalSpeedRate = sample.longitudinalAcceleration + ...
-        (masterState(1) .* sample.yawRate);
-
-    dynamicModelSafe = sample.dynamicValid && ...
-        sample.longitudinalSpeed >= settings.speedRange(1) && ...
-        sample.longitudinalSpeed <= settings.speedRange(2);
-    if dynamicModelSafe
-        [dynamicDerivative, dynamicInnovation, dynamicGain] = ...
-            dynamicObserverDerivative(dynamicState, sample, design, cfg.observer.nonlinearity);
+function [derivative, innovation, gain, command, valid] = observerDerivative( ...
+        state, sample, design, cfg, settings)
+% observerDerivative Integrate the LPV state and its separate angle interface.
+    [command, valid] = sideSlipCommandAt(state(1:2), sample, cfg, settings);
+    if valid
+        [lpvDerivative, innovation, gain] = ...
+            dynamicObserverDerivative(state(1:2), sample, design, cfg.observer.nonlinearity);
     else
-        dynamicDerivative = [double(cfg.hybrid.shadow.lateralVelocityTrackingGain) .* ...
-            (masterState(1) - dynamicState(1)); ...
-            double(cfg.hybrid.shadow.yawRateTrackingGain) .* ...
-            (sample.yawRate - dynamicState(2))];
-        dynamicInnovation = zeros(2, 1);
-        dynamicGain = zeros(2, 2);
+        lpvDerivative = zeros(2, 1);
+        innovation = zeros(2, 1);
+        gain = zeros(2, 2);
     end
+    frequency = double(cfg.sideSlip.naturalFrequency);
+    damping = double(cfg.sideSlip.dampingRatio);
+    angleError = wrapAngleDifference(command - state(3));
+    derivative = [lpvDerivative; state(4); ...
+        frequency.^2 .* angleError - 2.0 .* damping .* frequency .* state(4)];
+end
 
-    lowerSpeedParticipation = quinticStep(sample.longitudinalSpeed, ...
-        settings.speedRange(1), double(cfg.hybrid.dynamic.fullParticipationSpeed));
-    upperSpeedParticipation = 1.0 - quinticStep(sample.longitudinalSpeed, ...
-        double(cfg.hybrid.dynamic.upperFullParticipationSpeed), settings.speedRange(2));
-    lateralAccelerationParticipation = upperParticipation(abs(sample.lateralAcceleration), ...
-        cfg.hybrid.dynamic.fullLateralAcceleration, cfg.hybrid.dynamic.zeroLateralAcceleration);
-    lateralInnovationParticipation = upperParticipation(abs(dynamicInnovation(1)), ...
-        cfg.hybrid.dynamic.fullLateralInnovation, cfg.hybrid.dynamic.zeroLateralInnovation);
-    yawInnovationParticipation = upperParticipation(abs(dynamicInnovation(2)), ...
-        cfg.hybrid.dynamic.fullYawInnovation, cfg.hybrid.dynamic.zeroYawInnovation);
-    dynamicParticipation = double(dynamicModelSafe) .* lowerSpeedParticipation .* ...
-        upperSpeedParticipation .* lateralAccelerationParticipation .* ...
-        lateralInnovationParticipation .* yawInnovationParticipation;
-    dynamicTarget = correctionTarget(dynamicState(1) - masterState(1), ...
-        cfg.hybrid.correction.dynamic, dynamicParticipation);
-    correctionDerivative = (dynamicTarget - correctionState) ./ ...
-        double(cfg.hybrid.correction.dynamic.timeConstant);
-
-    masterDerivative = masterPrediction + correctionState;
-    betaDerivative = sideSlipDerivative(masterState, ...
-        augmentedState(layout.sideSlip), sample, cfg.hybrid.sideSlip, cfg.outputPoint);
-    derivative = [masterDerivative; dynamicDerivative; correctionDerivative(:); betaDerivative];
-
-    if nargout > 1
-        [betaCommand, betaCommandValid] = sideSlipCommandAt(masterState, sample, cfg.hybrid.sideSlip, cfg.outputPoint);
-        diagnostics = struct();
-        diagnostics.dynamicInnovation = dynamicInnovation;
-        diagnostics.gainNorm = norm(dynamicGain);
-        diagnostics.longitudinalSpeedRate = longitudinalSpeedRate;
-        diagnostics.dynamicModelEvaluated = dynamicModelSafe;
-        diagnostics.dynamicParticipation = dynamicParticipation;
-        diagnostics.correctionTarget = dynamicTarget;
-        diagnostics.sideSlipCommand = betaCommand;
-        diagnostics.sideSlipCommandValid = betaCommandValid;
+function [command, valid] = sideSlipCommandAt(state, sample, cfg, settings)
+% sideSlipCommandAt Admit the LPV domain before forming a velocity direction.
+    valid = sample.dynamicValid && sample.longitudinalSpeed >= settings.speedRange(1) && ...
+        sample.longitudinalSpeed <= settings.speedRange(2);
+    command = 0.0;
+    if valid
+        vy = state(1) - double(cfg.outputPoint.forwardOffsetM) .* sample.yawRate;
+        command = atan2(vy, sample.longitudinalSpeed);
     end
 end
 
@@ -228,83 +146,6 @@ function [derivative, innovation, gain] = dynamicObserverDerivative( ...
         "cfg.observer.nonlinearity must return a finite [2 x 1] vector.");
     derivative = (A * state) + (design.model.B .* sample.steeringAngle) + ...
         nonlinearTerm + (gain * innovation);
-end
-
-function derivative = sideSlipDerivative(masterState, sideSlipState, sample, sideSlipCfg, outputPoint)
-% sideSlipDerivative Evaluate the persistent second-order interface filter.
-    [command, ~] = sideSlipCommandAt(masterState, sample, sideSlipCfg, outputPoint);
-    naturalFrequency = double(sideSlipCfg.naturalFrequency);
-    dampingRatio = double(sideSlipCfg.dampingRatio);
-    angleError = wrapAngleDifference(command - sideSlipState(1));
-    derivative = [sideSlipState(2); ...
-        (naturalFrequency.^2 .* angleError) - ...
-        (2.0 .* dampingRatio .* naturalFrequency .* sideSlipState(2))];
-end
-
-function [command, valid] = sideSlipCommandAt(masterState, sample, sideSlipCfg, outputPoint)
-% sideSlipCommandAt Form atan2 of the output-point velocity where its direction is valid.
-    valid = sample.longitudinalSpeed >= double(sideSlipCfg.validSpeed);
-    if valid
-        participation = quinticStep(sample.longitudinalSpeed, ...
-            double(sideSlipCfg.validSpeed), ...
-            double(sideSlipCfg.fullParticipationSpeed));
-        outputPointLateralVelocity = masterState(1) - ...
-            double(outputPoint.forwardOffsetM) .* sample.yawRate;
-        command = participation .* atan2(outputPointLateralVelocity, sample.longitudinalSpeed);
-    else
-        command = 0.0;
-    end
-end
-
-function target = correctionTarget(residual, correctionCfg, participation)
-% correctionTarget Convert a vy residual into a two-state correction target.
-    target = participation .* [double(correctionCfg.velocityGain) .* residual; ...
-        -double(correctionCfg.biasGain) .* residual];
-end
-
-function value = upperParticipation(magnitude, fullMagnitude, zeroMagnitude)
-% upperParticipation Return one below fullMagnitude and zero above zeroMagnitude.
-    value = 1.0 - quinticStep(magnitude, double(fullMagnitude), double(zeroMagnitude));
-end
-
-function value = quinticStep(argument, lowerBound, upperBound)
-% quinticStep C2 transition with zero first and second endpoint derivatives.
-    fraction = min(max((double(argument) - double(lowerBound)) ./ ...
-        (double(upperBound) - double(lowerBound)), 0.0), 1.0);
-    value = (6.0 .* fraction.^5) - (15.0 .* fraction.^4) + (10.0 .* fraction.^3);
-end
-
-function augmentedState = initialAugmentedState(measurements, cfg, settings, layout)
-% initialAugmentedState Build all persistent states without a mode reset.
-    dynamicState = double(cfg.observer.initialState(:));
-    masterState = double(cfg.hybrid.initialMasterState(:));
-    if isempty(masterState)
-        masterState = [dynamicState(1); 0.0];
-    end
-    correctionState = double(cfg.hybrid.initialCorrectionState);
-    firstSample = sampleAt(measurements, 1, 0.0);
-    sideSlipState = double(cfg.hybrid.sideSlip.initialState(:));
-    if isempty(sideSlipState)
-        [initialCommand, ~] = sideSlipCommandAt(masterState, firstSample, cfg.hybrid.sideSlip, cfg.outputPoint);
-        sideSlipState = [initialCommand; 0.0];
-    end
-    augmentedState = zeros(layout.stateCount, 1);
-    augmentedState(layout.master) = masterState;
-    augmentedState(layout.dynamic) = dynamicState;
-    augmentedState(layout.corrections) = correctionState(:);
-    augmentedState(layout.sideSlip) = sideSlipState;
-    assert(all(isfinite(augmentedState)), "Every hybrid observer initial state must be finite.");
-    assert(settings.speedRange(1) > 0.0, "The dynamic speed certificate must exclude zero speed.");
-end
-
-function layout = stateLayout()
-% stateLayout Define the private augmented-state slices.
-    layout = struct();
-    layout.master = 1:2;
-    layout.dynamic = 3:4;
-    layout.corrections = 5:6;
-    layout.sideSlip = 7:8;
-    layout.stateCount = 8;
 end
 
 function sample = sampleAt(measurements, sampleIdx, stepFraction)
@@ -360,7 +201,7 @@ function measurements = normalizeMeasurements(measurements)
 end
 
 function settings = validateRuntimeConfiguration(cfg, design)
-% validateRuntimeConfiguration Check dimensions and smooth-transition bounds.
+% validateRuntimeConfiguration Check the LPV domain and angle-interface configuration.
     assert(isstruct(design) && isfield(design, "model") && isfield(design, "polytope") && ...
         isfield(design, "vertexGains") && isfield(design, "lyapunovBasis"), ...
         "design must come from designLateralObserverGains and include model, polytope, vertexGains, " + ...
@@ -375,60 +216,12 @@ function settings = validateRuntimeConfiguration(cfg, design)
     assert(isa(cfg.observer.nonlinearity, "function_handle"), ...
         "cfg.observer.nonlinearity must be a function handle.");
     assertFiniteVector(cfg.observer.initialState, 2, "cfg.observer.initialState");
-    if ~isempty(cfg.hybrid.initialMasterState)
-        assertFiniteVector(cfg.hybrid.initialMasterState, 2, "cfg.hybrid.initialMasterState");
+    if ~isempty(cfg.sideSlip.initialState)
+        assertFiniteVector(cfg.sideSlip.initialState, 2, "cfg.sideSlip.initialState");
     end
-    correctionInitialState = double(cfg.hybrid.initialCorrectionState);
-    assert(isequal(size(correctionInitialState), [2, 1]) && all(isfinite(correctionInitialState), "all"), ...
-        "cfg.hybrid.initialCorrectionState must be a finite [2 x 1] vector.");
-    if ~isempty(cfg.hybrid.sideSlip.initialState)
-        assertFiniteVector(cfg.hybrid.sideSlip.initialState, 2, "cfg.hybrid.sideSlip.initialState");
-    end
-
-    assertPositiveScalar(cfg.hybrid.accelerometerBiasTimeConstant, ...
-        "cfg.hybrid.accelerometerBiasTimeConstant");
-    validateCorrectionConfiguration(cfg.hybrid.correction.dynamic, ...
-        "cfg.hybrid.correction.dynamic");
-    assert(double(cfg.hybrid.dynamic.fullParticipationSpeed) > speedRange(1) && ...
-        double(cfg.hybrid.dynamic.fullParticipationSpeed) < speedRange(2), ...
-        "cfg.hybrid.dynamic.fullParticipationSpeed must lie inside the dynamic certificate.");
-    assert(double(cfg.hybrid.dynamic.upperFullParticipationSpeed) > ...
-        double(cfg.hybrid.dynamic.fullParticipationSpeed) && ...
-        double(cfg.hybrid.dynamic.upperFullParticipationSpeed) < speedRange(2), ...
-        "cfg.hybrid.dynamic.upperFullParticipationSpeed must lie between the lower full-participation speed and the certificate maximum.");
-    validateTransitionBounds(cfg.hybrid.dynamic.fullLateralAcceleration, ...
-        cfg.hybrid.dynamic.zeroLateralAcceleration, "lateral-acceleration");
-    validateTransitionBounds(cfg.hybrid.dynamic.fullLateralInnovation, ...
-        cfg.hybrid.dynamic.zeroLateralInnovation, "lateral-innovation");
-    validateTransitionBounds(cfg.hybrid.dynamic.fullYawInnovation, ...
-        cfg.hybrid.dynamic.zeroYawInnovation, "yaw-innovation");
-    assertPositiveScalar(cfg.hybrid.shadow.lateralVelocityTrackingGain, ...
-        "cfg.hybrid.shadow.lateralVelocityTrackingGain");
-    assertPositiveScalar(cfg.hybrid.shadow.yawRateTrackingGain, ...
-        "cfg.hybrid.shadow.yawRateTrackingGain");
-    assertPositiveScalar(cfg.hybrid.sideSlip.validSpeed, "cfg.hybrid.sideSlip.validSpeed");
-    assert(double(cfg.hybrid.sideSlip.fullParticipationSpeed) > ...
-        double(cfg.hybrid.sideSlip.validSpeed), ...
-        "cfg.hybrid.sideSlip.fullParticipationSpeed must exceed validSpeed.");
-    assertPositiveScalar(cfg.hybrid.sideSlip.naturalFrequency, ...
-        "cfg.hybrid.sideSlip.naturalFrequency");
-    assertPositiveScalar(cfg.hybrid.sideSlip.dampingRatio, ...
-        "cfg.hybrid.sideSlip.dampingRatio");
+    assertPositiveScalar(cfg.sideSlip.naturalFrequency, "cfg.sideSlip.naturalFrequency");
+    assertPositiveScalar(cfg.sideSlip.dampingRatio, "cfg.sideSlip.dampingRatio");
     settings = struct("speedRange", speedRange);
-end
-
-function validateCorrectionConfiguration(correctionCfg, name)
-% validateCorrectionConfiguration Check one persistent injection channel.
-    assertPositiveScalar(correctionCfg.timeConstant, name + ".timeConstant");
-    assertNonnegativeScalar(correctionCfg.velocityGain, name + ".velocityGain");
-    assertNonnegativeScalar(correctionCfg.biasGain, name + ".biasGain");
-end
-
-function validateTransitionBounds(fullValue, zeroValue, name)
-% validateTransitionBounds Require a nonempty C2 fade interval.
-    assertNonnegativeScalar(fullValue, "full " + name + " threshold");
-    assert(double(zeroValue) > double(fullValue) && isfinite(double(zeroValue)), ...
-        "The zero-participation %s threshold must exceed its full-participation threshold.", name);
 end
 
 function assertFiniteVector(value, expectedLength, name)
@@ -443,13 +236,6 @@ function assertPositiveScalar(value, name)
     numericValue = double(value);
     assert(isscalar(numericValue) && isfinite(numericValue) && numericValue > 0.0, ...
         "%s must be a positive finite scalar.", name);
-end
-
-function assertNonnegativeScalar(value, name)
-% assertNonnegativeScalar Check a nonnegative finite scalar.
-    numericValue = double(value);
-    assert(isscalar(numericValue) && isfinite(numericValue) && numericValue >= 0.0, ...
-        "%s must be a nonnegative finite scalar.", name);
 end
 
 function wrapped = wrapAngleDifference(angle)

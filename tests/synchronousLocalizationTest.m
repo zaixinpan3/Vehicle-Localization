@@ -155,6 +155,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             [d,~,~]=fullObserverSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
             testCase.verifyFalse(any(d.gnss.valid));
         end
+        function alignmentDoesNotRestoreWithdrawnLpvAiding(testCase)
+            f=unaligned();f.lateral.velocityValid=f.lateral.time<1;
+            [~,l,~]=fullObserverSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            testCase.verifyTrue(all(l.velocityValid(l.time<0.9)));
+            testCase.verifyFalse(any(l.velocityValid(l.time>=1)));
+        end
         function malformedInformationRejected(testCase)
             f=fixture();f.data.lidar.information(3,3,3)=-1;
             testCase.verifyError(@()run(f),'VehicleLocalization:InvalidFullSource');

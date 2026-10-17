@@ -33,12 +33,12 @@ classdef invariantObserverSupport
             velocityValid=velocityValid && cfg.invariantObserver.velocityAvailable;
             accelerationValid=accelerationValid && cfg.invariantObserver.accelerationAvailable;
             value=zeros(8,1);valid=[velocityValid;velocityValid&&accelerationValid; ...
-                velocityValid&&accelerationValid;gyroValid;true;velocityValid;accelerationValid;accelerationValid];
+                velocityValid&&accelerationValid;gyroValid;velocityValid;velocityValid;accelerationValid;accelerationValid];
             if valid(1),value(1)=(speed^2+vy^2)/(2*s);end
             if valid(2),value(2)=(speed*ax+vy*ay)/s;value(3)=(speed*ay-vy*ax)/s;end
             if gyroValid,value(4)=ell*gyro;end
             if accelerationValid,value(7:8)=[ax;ay];end
-            if ~velocityValid,beta=0;end
+            if ~velocityValid,beta=0;betaRate=0;end
             packet=struct('value',value,'valid',valid,'beta',beta,'betaRate',betaRate);
         end
 

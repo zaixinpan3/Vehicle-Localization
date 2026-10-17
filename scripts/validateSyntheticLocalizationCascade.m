@@ -2,7 +2,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
 % validateSyntheticLocalizationCascade Exercise the complete observer cascade.
 % A 2-DOF bicycle plant with analytic speed and steering generates the truth.
 % Synthetic wheel speed, steering, IMU, 20 Hz receiver positions and jittered
-% 10 Hz LiDAR poses then pass through the production chain: hybrid LPV
+% 10 Hz LiDAR poses then pass through the production chain: direct LPV
 % lateral observer -> frame-clock synchronization -> synchronous seven-state
 % observer (MnCAV configuration, receiver output-point correction, optional
 % online matcher callback). GNSS corrects position only; heading is the gyro

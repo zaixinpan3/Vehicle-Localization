@@ -42,7 +42,7 @@ function design = designLateralObserverGains(cfg)
 % transformed vertex-gain norm bounds within issGainRelaxation. The result
 % reports the solver-derived interval bound directly, without post-solve
 % verification or sampling. The theorem covers the continuous LPV error subsystem,
-% not discretization, speed measurement mismatch or the hybrid master state.
+% not discretization, speed measurement mismatch or out-of-domain operation.
 %
 % Requires YALMIP and an SDP solver on the MATLAB path.
 %

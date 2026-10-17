@@ -90,8 +90,7 @@ function result = runScenario(mode,noisy,lateralDesign)
     % The history is an imperfect prior, never an observer correction input.
     history = @(time) truthAt(time)+initialError;
     lateralDesign.cfg.observer.initialState = [vy+.3;q+.01];
-    lateralDesign.cfg.hybrid.initialMasterState = [vy+.3;0];
-    lateralDesign.cfg.hybrid.sideSlip.initialState = [beta;0];
+    lateralDesign.cfg.sideSlip.initialState = [beta;0];
     design = observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
     estimate = runImprovedVehicleObserver(data,lateralDesign,design,cfg,InitialHistory=history);
     e = estimate.z-truth;

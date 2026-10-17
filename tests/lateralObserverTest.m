@@ -277,7 +277,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
 
         function outputPointTransportFollowsRigidBodyKinematics(testCase)
         % outputPointTransportFollowsRigidBodyKinematics: The exported lateral
-        % velocity is the master state transported to the declared output
+        % velocity is the LPV state transported to the declared output
         % point, vyOutput = vyObserver - forwardOffset*r, and the side-slip
         % interface tracks the direction of that output-point velocity. A zero
         % offset exports the observer point unchanged.
@@ -313,17 +313,16 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 "VehicleLocalization:MissingOutputPointConfiguration");
         end
 
-        function invalidSideSlipSpeedZeroesTheOutputs(testCase)
-        % invalidSideSlipSpeedZeroesTheOutputs: Below the valid side-slip speed
-        % the persistent interface tracks zero while the common lateral state
-        % continues through inertial propagation without a zero-velocity constraint.
+        function unavailableLpvWithdrawsTheAngleCommand(testCase)
+        % Outside the LPV domain the angle filter tracks zero and the held
+        % velocity is explicitly unavailable to the global observer.
             design = testCase.CurrentDesign;
             cfg = design.cfg;
             numSamples = 200;
             measurements = struct();
             measurements.time = (0:(numSamples - 1)).' .* 0.01;
             measurements.steeringAngle = zeros(numSamples, 1);
-            measurements.longitudinalSpeed = 0.25 .* cfg.hybrid.sideSlip.validSpeed .* ones(numSamples, 1);
+            measurements.longitudinalSpeed = 0.25 .* cfg.scheduling.speedRange(1) .* ones(numSamples, 1);
             measurements.longitudinalAcceleration = zeros(numSamples, 1);
             measurements.lateralAcceleration = 0.2 .* ones(numSamples, 1);
             measurements.yawRate = 0.05 .* ones(numSamples, 1);
@@ -345,14 +344,12 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design.model.C2(:) = NaN;
             cfg = lateralObserverConfig();
             cfg.observer.initialState = [1.0; 0.2];
-            cfg.hybrid.initialMasterState = [1.0; 0.0];
             measurements = testCase.zeroMotionMeasurements(2.0);
 
             estimate = runLateralVelocityObserver(measurements, design, cfg);
 
             testCase.verifyFalse(any(estimate.diagnostics.dynamicModelEvaluated));
             testCase.verifyTrue(all(isfinite(estimate.state), "all"));
-            testCase.verifyTrue(all(isfinite(estimate.dynamicState), "all"));
             testCase.verifyEqual(estimate.lateralVelocity(1), 1.0, AbsTol=0.0);
             testCase.verifyEqual(estimate.lateralVelocity, ones(size(estimate.time)), AbsTol=0.0);
             testCase.verifyEqual(estimate.sideSlipAngle, ...
@@ -361,71 +358,72 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 zeros(size(estimate.sideSlipAngleRate)), AbsTol=0.0);
         end
 
-        function outsideDomainUsesInertialContinuationWithoutVelocityConstraints(testCase)
-        % A constant acceleration error integrates at rest and outside both
-        % speed bounds. Steering supplies no kinematic vy target there.
+        function outsideDomainHoldsLpvWithoutIntegratingImu(testCase)
+        % Out-of-domain acceleration and steering must not create a second
+        % velocity estimator or evaluate reciprocal-speed coefficients.
             design = testCase.CurrentDesign;
             design.model.A2(:) = NaN;
             design.model.C2(:) = NaN;
             cfg = design.cfg;
-            cfg.hybrid.initialMasterState = [0.4; 0.0];
+            cfg.observer.initialState = [0.4; 0.0];
             for speed = [0.0, 2.0, 35.0]
                 measurements = testCase.constantSpeedMeasurements(2.0, speed);
                 measurements.steeringAngle(:) = 0.3;
                 measurements.lateralAcceleration(:) = 0.1;
                 estimate = runLateralVelocityObserver(measurements, design, cfg);
-                testCase.verifyEqual(estimate.lateralVelocity, ...
-                    0.4 + 0.1 .* measurements.time, AbsTol=1.0e-12);
+                testCase.verifyEqual(estimate.state, ...
+                    repmat([0.4, 0.0], numel(estimate.time), 1), AbsTol=0);
+                testCase.verifyFalse(any(estimate.velocityValid));
                 testCase.verifyFalse(any(estimate.diagnostics.dynamicModelEvaluated));
-                testCase.verifyEqual(estimate.correctionInjection.total, ...
-                    zeros(numel(estimate.time), 2), AbsTol=0);
-                testCase.verifyTrue(all(estimate.mode == "inertial"));
+                testCase.verifyTrue(all(estimate.mode == "unavailable"));
             end
         end
 
-        function abruptValidityLossFadesTheStoredCorrection(testCase)
-        % abruptValidityLossFadesTheStoredCorrection A one-edge validity loss
-        % removes the raw target immediately but not the injected correction.
+        function abruptValidityLossHoldsTheLpvState(testCase)
+        % Invalid measurements withdraw the LPV flow and its public aiding.
             cfg = lateralObserverConfig();
-            cfg.observer.initialState = [0.0; 0.0];
-            cfg.hybrid.initialMasterState = [1.0; 0.0];
+            cfg.observer.initialState = [1.0; 0.0];
             measurements = testCase.constantSpeedMeasurements(3.0, 10.0);
             measurements.dynamicValid = measurements.time < 1.5;
             firstInvalid = find(~measurements.dynamicValid, 1, "first");
-
             estimate = runLateralVelocityObserver(measurements, testCase.CurrentDesign, cfg);
-
-            testCase.verifyFalse(estimate.diagnostics.dynamicModelEvaluated(firstInvalid));
-            testCase.verifyEqual(estimate.correctionTarget.dynamic(firstInvalid, :), ...
-                zeros(1, 2), AbsTol=0.0);
-            testCase.verifyGreaterThan(norm( ...
-                estimate.correctionInjection.dynamic(firstInvalid, :)), 1.0e-6);
-            testCase.verifyLessThan(norm(estimate.correctionInjection.dynamic(end, :)), ...
-                norm(estimate.correctionInjection.dynamic(firstInvalid, :)));
-            testCase.verifyLessThan(abs(estimate.lateralVelocity(firstInvalid) - ...
-                estimate.lateralVelocity(firstInvalid - 1)), 1.0e-3);
+            testCase.verifyEqual(estimate.velocityValid, measurements.dynamicValid);
+            testCase.verifyEqual(estimate.state(firstInvalid:end,:), ...
+                repmat(estimate.state(firstInvalid,:), numel(estimate.time)-firstInvalid+1, 1), AbsTol=0);
+            testCase.verifyEqual(estimate.gainNorm(firstInvalid:end), ...
+                zeros(numel(estimate.time)-firstInvalid+1,1), AbsTol=0);
             testCase.verifyTrue(all(isfinite(estimate.sideSlipAngleRate)));
         end
 
-        function stopGoModesShareOneContinuousOutputPath(testCase)
-        % stopGoModesShareOneContinuousOutputPath Exercise domain entry and exit,
-        % without resets, with a deliberately mismatched hidden state.
+        function stopGoAvailabilityFollowsTheLpvDomain(testCase)
+        % Re-entry resumes the same LPV state; no out-of-domain correction is
+        % presented as a valid estimate or as a recovery-time certificate.
             cfg = lateralObserverConfig();
-            cfg.observer.initialState = [0.0; 0.10];
-            cfg.hybrid.initialMasterState = [0.80; 0.0];
+            cfg.observer.initialState = [0.80; 0.10];
             measurements = testCase.stopGoMeasurements();
-
             estimate = runLateralVelocityObserver(measurements, testCase.CurrentDesign, cfg);
-            transitionStep = [0.0; abs(diff(estimate.lateralVelocity))];
-            transitionRateStep = [0.0; abs(diff(estimate.sideSlipAngleRate))];
-
-            testCase.verifyTrue(any(estimate.mode == "inertial"));
-            testCase.verifyTrue(any(estimate.mode == "dynamic"));
+            valid = measurements.longitudinalSpeed >= cfg.scheduling.speedRange(1) & ...
+                measurements.longitudinalSpeed <= cfg.scheduling.speedRange(2);
+            testCase.verifyEqual(estimate.velocityValid, valid);
             testCase.verifyEqual(nnz(estimate.modeChanged), 2);
-            testCase.verifyLessThan(max(transitionStep(estimate.modeChanged)), 0.10);
-            testCase.verifyLessThan(max(transitionRateStep(estimate.modeChanged)), 0.10);
             testCase.verifyTrue(all(isfinite(estimate.state), "all"));
             testCase.verifyTrue(all(isfinite(estimate.sideSlipAngleRate)));
+        end
+
+        function lpvInnovationReachesExportedVelocityWithoutAnotherEstimator(testCase)
+        % A one-step correction is the scheduled LPV correction itself,
+        % without the former master/injection lag.
+            design = testCase.CurrentDesign;
+            cfg = design.cfg;
+            cfg.observer.integrationMethod = "euler";
+            cfg.observer.initialState = [0.0; 0.0];
+            measurements = testCase.constantSpeedMeasurements(0.01, 10.0);
+            measurements.lateralAcceleration(:) = 1.0;
+            estimate = runLateralVelocityObserver(measurements, design, cfg);
+            gain = lateralObserverSupport.scheduleLateralObserverGain(design, 10.0);
+            testCase.verifyEqual(estimate.lateralVelocity(2), 0.01*gain(1,1), AbsTol=1e-12);
+            testCase.verifyEqual(estimate.state(:,1), estimate.observerPointLateralVelocity);
+            testCase.verifyEqual(estimate.stateNames, ["lateralVelocity","yawRate"]);
         end
 
         function synthesisReproducesTheCurrentDesign(testCase)
