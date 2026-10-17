@@ -127,9 +127,9 @@ classdef lateralObserverSupport
         function polytope = buildSchedulingPolytope(speedRange)
         % buildSchedulingPolytope: Build the triangle that covers the scheduling
         % curve rho(Vx) = [Vx; 1/Vx] over Vx in [Vmin, Vmax]. Because 1/Vx is
-        % convex in Vx, the curve lies below the chord joining its endpoints, so a
-        % triangle whose first two vertices are those endpoints and whose third
-        % vertex lies below the curve contains the whole arc:
+        % convex in Vx, the curve lies below its endpoint chord and above both
+        % endpoint tangents. The intersection of those two tangents supplies
+        % the third vertex of the triangle enclosing the whole arc:
         %
         %   rho1 = [Vmin; 1/Vmin]
         %   rho2 = [Vmax; 1/Vmax]
@@ -166,6 +166,44 @@ classdef lateralObserverSupport
             polytope.S = S;
             polytope.speedRange = speedRange;
             polytope.vertexSpeeds = vertices(1, :);
+        end
+
+        function domain = buildCertificateDomain(model, polytope, speedRateRange)
+        % buildCertificateDomain Position/rate vertices for continuous certification.
+        % speedRateRange bounds dVx/dt, not the body accelerometer reading.
+        % The four corners of (sigma,z), z in [1/b^2,1/a^2], enclose
+        % rhodot = [sigma;-sigma*z] by multi-affine interpolation. Taking
+        % their product with the position triangle is conservative but finite.
+            speedRateRange = double(speedRateRange(:).');
+            assert(numel(speedRateRange) == 2 && all(isfinite(speedRateRange)) && ...
+                speedRateRange(1) <= speedRateRange(2), ...
+                "VehicleLocalization:InvalidSpeedRateRange", ...
+                "The speed derivative range must be finite and ordered.");
+            a = polytope.speedRange(1);
+            b = polytope.speedRange(2);
+            domain = struct();
+            domain.speedRateRange = speedRateRange;
+            domain.speedSpan = b-a;
+            domain.reciprocalSpeedSquaredRange = [1/b^2, 1/a^2];
+            domain.rateVertices = zeros(3, 4);
+            domain.rhoRateVertices = zeros(2, 4);
+            idx = 0;
+            for sigma = speedRateRange
+                for z = domain.reciprocalSpeedSquaredRange
+                    idx = idx + 1;
+                    domain.rhoRateVertices(:, idx) = [sigma; -sigma*z];
+                    domain.rateVertices(:, idx) = polytope.S \ [sigma; -sigma*z; 0];
+                end
+            end
+            domain.vertexA = zeros(2, 2, 3);
+            domain.vertexC = zeros(2, 2, 3);
+            for idx = 1:3
+                [domain.vertexA(:, :, idx), domain.vertexC(:, :, idx)] = ...
+                    lateralObserverSupport.evaluateLateralModel(model, polytope.vertices(:, idx));
+            end
+            domain.extensionFactors = [0, 0, -(b-a)^2/(a+b)^2];
+            domain.firstColumnWeights = [b, a]/(a+b);
+            domain.numVertexPairs = 12;
         end
 
         function [L, P] = scheduleLateralObserverGain(design, longitudinalSpeed)

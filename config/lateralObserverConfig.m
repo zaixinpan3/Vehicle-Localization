@@ -1,8 +1,8 @@
 function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
 % The vehicle group defines the 2-DOF lateral bicycle model; the scheduling
-% group defines the speed range covered by the polytope and the design grid
-% over speed and longitudinal acceleration; the synthesis group holds the
+% group defines the continuous speed and speed-derivative certificate domain
+% and a supplementary diagnostic grid; the synthesis group holds the
 % Lipschitz bound, the certified decay rate, the scales of the axle-force
 % mismatch and measurement-error channels, the Finsler multiplier scales,
 % and the LMI solver settings; the
@@ -40,12 +40,11 @@ function cfg = lateralObserverConfig(profile)
     cfg.outputPoint = jsondecode(fileread(fullfile(fileparts(mfilename("fullpath")), ...
         "mncavMotionOutputPoint.json")));
 
-    % Scheduling parameter rho = [Vx; 1/Vx] and the design grid over it.
-    % The gain and the Lyapunov matrix are affine in the barycentric
-    % coordinates of rho on the triangle over speedRange, so the synthesis
-    % returns three vertex gains and the grid only fixes where the LMIs are
-    % imposed. The LMI is affine in the longitudinal acceleration through
-    % Pdot, so the two extreme accelerations already cover the whole interval.
+    % Continuous certificate: three position vertices times four derivative
+    % vertices. longitudinalAccelerationRange bounds the actual dVx/dt;
+    % a body-axis accelerometer reading need not equal that derivative.
+    % Grid counts control supplementary physical diagnostics only and never
+    % determine where synthesis constraints are imposed.
     cfg.scheduling = struct();
     cfg.scheduling.speedRange = [5.0, 30.0];
     cfg.scheduling.longitudinalAccelerationRange = [-3.0, 3.0];

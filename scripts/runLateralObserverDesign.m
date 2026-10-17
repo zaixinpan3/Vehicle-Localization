@@ -1,6 +1,6 @@
 % runLateralObserverDesign: Synthesize the LPV lateral-velocity observer and
-% exercise it on the synthetic scenario. The synthesis solves the gridded
-% ISS LMI over the configured speed and acceleration ranges for the three
+% exercise it on the synthetic scenario. The synthesis solves twelve affine
+% vertex ISS LMIs over the continuous speed and speed-derivative ranges for the three
 % vertex gains of the scheduling triangle with the smallest ISS gain from
 % axle-force mismatch and measurement error at the configured decay rate,
 % re-checks their barycentric blend against the original certificate, and
@@ -26,7 +26,8 @@ fprintf("tau = %.4g | slack scale = %.4g | decay rate = %.3g 1/s | ISS gain = %.
     design.tau, design.slackScale, design.decayRate, design.issGain, design.mismatchIssGain, design.measurementIssGain);
 fprintf("largest vertex gain norm = %.4g | error bound at unit disturbance = %.4g\n", ...
     design.maxVertexGainNorm, design.errorBound);
-fprintf("worst certificate eigenvalue = %.3e (negative definite required)\n", design.maxCertificateMargin);
+fprintf("worst continuous vertex LMI eigenvalue = %.3e (negative required)\n", ...
+    max(design.continuousCertificate.vertexMargins(:)));
 fprintf("slowest error mode = %.3f 1/s\n", design.maxErrorEigenvalueRealPart);
 
 result = simulateLateralObserverScenario(design, cfg);
