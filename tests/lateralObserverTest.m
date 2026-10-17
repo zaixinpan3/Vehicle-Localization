@@ -316,7 +316,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function invalidSideSlipSpeedZeroesTheOutputs(testCase)
         % invalidSideSlipSpeedZeroesTheOutputs: Below the valid side-slip speed
         % the persistent interface tracks zero while the common lateral state
-        % remains free to converge continuously.
+        % continues through inertial propagation without a zero-velocity constraint.
             design = testCase.CurrentDesign;
             cfg = design.cfg;
             numSamples = 200;
@@ -354,11 +354,33 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(all(isfinite(estimate.state), "all"));
             testCase.verifyTrue(all(isfinite(estimate.dynamicState), "all"));
             testCase.verifyEqual(estimate.lateralVelocity(1), 1.0, AbsTol=0.0);
-            testCase.verifyLessThan(abs(estimate.lateralVelocity(end)), 0.05);
+            testCase.verifyEqual(estimate.lateralVelocity, ones(size(estimate.time)), AbsTol=0.0);
             testCase.verifyEqual(estimate.sideSlipAngle, ...
                 zeros(size(estimate.sideSlipAngle)), AbsTol=0.0);
             testCase.verifyEqual(estimate.sideSlipAngleRate, ...
                 zeros(size(estimate.sideSlipAngleRate)), AbsTol=0.0);
+        end
+
+        function outsideDomainUsesInertialContinuationWithoutVelocityConstraints(testCase)
+        % A constant acceleration error integrates at rest and outside both
+        % speed bounds. Steering supplies no kinematic vy target there.
+            design = testCase.CurrentDesign;
+            design.model.A2(:) = NaN;
+            design.model.C2(:) = NaN;
+            cfg = design.cfg;
+            cfg.hybrid.initialMasterState = [0.4; 0.0];
+            for speed = [0.0, 2.0, 35.0]
+                measurements = testCase.constantSpeedMeasurements(2.0, speed);
+                measurements.steeringAngle(:) = 0.3;
+                measurements.lateralAcceleration(:) = 0.1;
+                estimate = runLateralVelocityObserver(measurements, design, cfg);
+                testCase.verifyEqual(estimate.lateralVelocity, ...
+                    0.4 + 0.1 .* measurements.time, AbsTol=1.0e-12);
+                testCase.verifyFalse(any(estimate.diagnostics.dynamicModelEvaluated));
+                testCase.verifyEqual(estimate.correctionInjection.total, ...
+                    zeros(numel(estimate.time), 2), AbsTol=0);
+                testCase.verifyTrue(all(estimate.mode == "inertial"));
+            end
         end
 
         function abruptValidityLossFadesTheStoredCorrection(testCase)
@@ -386,8 +408,8 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         end
 
         function stopGoModesShareOneContinuousOutputPath(testCase)
-        % stopGoModesShareOneContinuousOutputPath Exercise both speed edges,
-        % the stationary detector, and a deliberately mismatched hidden state.
+        % stopGoModesShareOneContinuousOutputPath Exercise domain entry and exit,
+        % without resets, with a deliberately mismatched hidden state.
             cfg = lateralObserverConfig();
             cfg.observer.initialState = [0.0; 0.10];
             cfg.hybrid.initialMasterState = [0.80; 0.0];
@@ -397,10 +419,9 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             transitionStep = [0.0; abs(diff(estimate.lateralVelocity))];
             transitionRateStep = [0.0; abs(diff(estimate.sideSlipAngleRate))];
 
-            testCase.verifyTrue(any(estimate.mode == "stationary"));
-            testCase.verifyTrue(any(estimate.mode == "crawl"));
+            testCase.verifyTrue(any(estimate.mode == "inertial"));
             testCase.verifyTrue(any(estimate.mode == "dynamic"));
-            testCase.verifyGreaterThanOrEqual(nnz(estimate.modeChanged), 4);
+            testCase.verifyEqual(nnz(estimate.modeChanged), 2);
             testCase.verifyLessThan(max(transitionStep(estimate.modeChanged)), 0.10);
             testCase.verifyLessThan(max(transitionRateStep(estimate.modeChanged)), 0.10);
             testCase.verifyTrue(all(isfinite(estimate.state), "all"));

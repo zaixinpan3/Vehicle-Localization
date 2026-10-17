@@ -3,13 +3,17 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
 % A division-free master state [vy; lateral-accelerometer bias] runs at every
 % speed. The certified LPV bicycle observer remains a persistent information
 % source, but its reciprocal-speed model is evaluated only inside the design
-% speed interval. Stationary, crawl, and dynamic pseudo-measurements act
-% through persistent correction-injection states:
+% speed interval. Its lateral-velocity estimate is the only correction source
+% for the master, acting through one persistent injection state:
 %
-%   xhatKDot = fK(xhatK,u) + etaStop + etaCrawl + etaDynamic
-%   tau_i eta_iDot = -eta_i + nu_iTarget.
+%   xhatKDot = fK(xhatK,u) + etaDynamic
+%   tau etaDynamicDot = -etaDynamic + nuDynamicTarget.
 %
-% A mode change alters only nu_iTarget. It never resets the master state, an
+% Outside the domain, or when dynamicValid is false, the correction target is
+% zero and the stored injection decays. Inertial continuation has no low-speed
+% drift guarantee; no stationary or kinematic velocity constraint is applied.
+%
+% A mode change alters only nuDynamicTarget. It never resets the master state, an
 % injection state, or an exported quantity, so xhatK and xhatKDot have no
 % mode-induced jump for continuous physical inputs. A persistent second-order
 % side-slip interface state similarly exports continuous beta and betaDot.
@@ -25,7 +29,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
 %
 % Output:
 %   estimate: struct containing the master and hidden dynamic states, smooth
-%       side-slip interface, persistent correction channels, operating-mode
+%       side-slip interface, persistent LPV correction, operating-mode
 %       diagnostics, and the normalized input measurements
     if nargin < 3 || isempty(cfg)
         cfg = lateralObserverConfig();
@@ -47,44 +51,29 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     masterHistory = zeros(sampleCount, 2);
     dynamicHistory = zeros(sampleCount, 2);
     sideSlipHistory = zeros(sampleCount, 2);
-    correctionHistory = zeros(sampleCount, 6);
-    correctionTargetHistory = zeros(sampleCount, 6);
+    correctionHistory = zeros(sampleCount, 2);
+    correctionTargetHistory = zeros(sampleCount, 2);
     innovationHistory = zeros(sampleCount, 2);
     gainNorm = zeros(sampleCount, 1);
     lateralVelocityRate = zeros(sampleCount, 1);
     longitudinalSpeedRate = zeros(sampleCount, 1);
     sideSlipCommand = zeros(sampleCount, 1);
     dynamicParticipation = zeros(sampleCount, 1);
-    crawlParticipation = zeros(sampleCount, 1);
-    stationaryDetected = false(sampleCount, 1);
     dynamicModelEvaluated = false(sampleCount, 1);
     sideSlipCommandValid = false(sampleCount, 1);
     operatingMode = strings(sampleCount, 1);
     modeChanged = false(sampleCount, 1);
 
-    stationaryActive = false;
-    stationaryDuration = 0.0;
     integrationMethod = lower(strtrim(string(cfg.observer.integrationMethod)));
 
     for sampleIdx = 1:sampleCount
         sample = sampleAt(measurements, sampleIdx, 0.0);
-        if sampleIdx == 1
-            detectorStep = 0.0;
-        else
-            detectorStep = measurements.time(sampleIdx) - measurements.time(sampleIdx - 1);
-        end
-        masterState = augmentedState(layout.master);
-        [stationaryActive, stationaryDuration] = updateStationaryDetector( ...
-            stationaryActive, stationaryDuration, sample, masterState, detectorStep, cfg.hybrid.stationary);
-        context = struct("stationaryActive", stationaryActive);
-
         [derivative, diagnostics] = hybridDerivative( ...
-            augmentedState, sample, design, cfg, settings, layout, context);
+            augmentedState, sample, design, cfg, settings, layout);
         masterHistory(sampleIdx, :) = augmentedState(layout.master).';
         dynamicHistory(sampleIdx, :) = augmentedState(layout.dynamic).';
         sideSlipHistory(sampleIdx, :) = augmentedState(layout.sideSlip).';
-        corrections = reshape(augmentedState(layout.corrections), 2, 3);
-        correctionHistory(sampleIdx, :) = corrections(:).';
+        correctionHistory(sampleIdx, :) = augmentedState(layout.corrections).';
         correctionTargetHistory(sampleIdx, :) = diagnostics.correctionTarget(:).';
         innovationHistory(sampleIdx, :) = diagnostics.dynamicInnovation.';
         gainNorm(sampleIdx) = diagnostics.gainNorm;
@@ -92,11 +81,13 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
         longitudinalSpeedRate(sampleIdx) = diagnostics.longitudinalSpeedRate;
         sideSlipCommand(sampleIdx) = diagnostics.sideSlipCommand;
         dynamicParticipation(sampleIdx) = diagnostics.dynamicParticipation;
-        crawlParticipation(sampleIdx) = diagnostics.crawlParticipation;
-        stationaryDetected(sampleIdx) = stationaryActive;
         dynamicModelEvaluated(sampleIdx) = diagnostics.dynamicModelEvaluated;
         sideSlipCommandValid(sampleIdx) = diagnostics.sideSlipCommandValid;
-        operatingMode(sampleIdx) = classifyOperatingMode(stationaryActive, diagnostics);
+        if diagnostics.dynamicModelEvaluated
+            operatingMode(sampleIdx) = "dynamic";
+        else
+            operatingMode(sampleIdx) = "inertial";
+        end
         if sampleIdx > 1
             modeChanged(sampleIdx) = operatingMode(sampleIdx) ~= operatingMode(sampleIdx - 1);
         end
@@ -112,24 +103,17 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
             nextSample = sampleAt(measurements, sampleIdx, 1.0);
             k1 = derivative;
             k2 = hybridDerivative(augmentedState + (0.5 .* stepTime .* k1), ...
-                midSample, design, cfg, settings, layout, context);
+                midSample, design, cfg, settings, layout);
             k3 = hybridDerivative(augmentedState + (0.5 .* stepTime .* k2), ...
-                midSample, design, cfg, settings, layout, context);
+                midSample, design, cfg, settings, layout);
             k4 = hybridDerivative(augmentedState + (stepTime .* k3), ...
-                nextSample, design, cfg, settings, layout, context);
+                nextSample, design, cfg, settings, layout);
             augmentedState = augmentedState + ((stepTime ./ 6.0) .* ...
                 (k1 + (2.0 .* k2) + (2.0 .* k3) + k4));
         end
         assert(all(isfinite(augmentedState)), ...
             "The hybrid lateral observer diverged in interval %d.", sampleIdx);
     end
-
-    stopCorrection = correctionHistory(:, 1:2);
-    crawlCorrection = correctionHistory(:, 3:4);
-    dynamicCorrection = correctionHistory(:, 5:6);
-    stopTarget = correctionTargetHistory(:, 1:2);
-    crawlTarget = correctionTargetHistory(:, 3:4);
-    dynamicTarget = correctionTargetHistory(:, 5:6);
 
     estimate = struct();
     estimate.time = measurements.time;
@@ -154,26 +138,22 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     estimate.scheduledSpeed = measurements.longitudinalSpeed;
     estimate.mode = operatingMode;
     estimate.modeChanged = modeChanged;
-    estimate.correctionInjection = struct("stationary", stopCorrection, ...
-        "crawl", crawlCorrection, "dynamic", dynamicCorrection, ...
-        "total", stopCorrection + crawlCorrection + dynamicCorrection);
-    estimate.correctionTarget = struct("stationary", stopTarget, ...
-        "crawl", crawlTarget, "dynamic", dynamicTarget);
-    estimate.diagnostics = struct("stationaryDetected", stationaryDetected, ...
-        "dynamicModelEvaluated", dynamicModelEvaluated, ...
+    estimate.correctionInjection = struct("dynamic", correctionHistory, ...
+        "total", correctionHistory);
+    estimate.correctionTarget = struct("dynamic", correctionTargetHistory);
+    estimate.diagnostics = struct("dynamicModelEvaluated", dynamicModelEvaluated, ...
         "dynamicParticipation", dynamicParticipation, ...
-        "crawlParticipation", crawlParticipation, ...
         "sideSlipCommandValid", sideSlipCommandValid, ...
         "modeChanged", modeChanged);
     estimate.measurements = measurements;
 end
 
 function [derivative, diagnostics] = hybridDerivative(augmentedState, sample, ...
-        design, cfg, settings, layout, context)
-% hybridDerivative Evaluate the common flow and every correction target.
+        design, cfg, settings, layout)
+% hybridDerivative Evaluate inertial propagation and the LPV correction target.
     masterState = augmentedState(layout.master);
     dynamicState = augmentedState(layout.dynamic);
-    correctionState = reshape(augmentedState(layout.corrections), 2, 3);
+    correctionState = augmentedState(layout.corrections);
 
     masterPrediction = [sample.lateralAcceleration - masterState(2) - ...
         (sample.yawRate .* sample.longitudinalSpeed); ...
@@ -209,32 +189,12 @@ function [derivative, diagnostics] = hybridDerivative(augmentedState, sample, ..
     dynamicParticipation = double(dynamicModelSafe) .* lowerSpeedParticipation .* ...
         upperSpeedParticipation .* lateralAccelerationParticipation .* ...
         lateralInnovationParticipation .* yawInnovationParticipation;
-    crawlParticipation = double(logical(cfg.hybrid.crawl.enabled) && ...
-        ~context.stationaryActive) .* (1.0 - lowerSpeedParticipation);
-
-    steering = min(max(sample.steeringAngle, ...
-        -double(cfg.hybrid.crawl.maximumSteeringAngle)), ...
-        double(cfg.hybrid.crawl.maximumSteeringAngle));
-    rearFraction = double(design.model.vehicle.lr) ./ ...
-        (double(design.model.vehicle.lf) + double(design.model.vehicle.lr));
-    kinematicLateralVelocity = sample.longitudinalSpeed .* rearFraction .* tan(steering);
-
-    stationaryTarget = correctionTarget(-masterState(1), ...
-        cfg.hybrid.correction.stationary, double(context.stationaryActive));
-    crawlTarget = correctionTarget(kinematicLateralVelocity - masterState(1), ...
-        cfg.hybrid.correction.crawl, crawlParticipation);
     dynamicTarget = correctionTarget(dynamicState(1) - masterState(1), ...
         cfg.hybrid.correction.dynamic, dynamicParticipation);
-    targets = [stationaryTarget, crawlTarget, dynamicTarget];
-    correctionDerivative = zeros(2, 3);
-    correctionDerivative(:, 1) = (targets(:, 1) - correctionState(:, 1)) ./ ...
-        double(cfg.hybrid.correction.stationary.timeConstant);
-    correctionDerivative(:, 2) = (targets(:, 2) - correctionState(:, 2)) ./ ...
-        double(cfg.hybrid.correction.crawl.timeConstant);
-    correctionDerivative(:, 3) = (targets(:, 3) - correctionState(:, 3)) ./ ...
+    correctionDerivative = (dynamicTarget - correctionState) ./ ...
         double(cfg.hybrid.correction.dynamic.timeConstant);
 
-    masterDerivative = masterPrediction + sum(correctionState, 2);
+    masterDerivative = masterPrediction + correctionState;
     betaDerivative = sideSlipDerivative(masterState, ...
         augmentedState(layout.sideSlip), sample, cfg.hybrid.sideSlip, cfg.outputPoint);
     derivative = [masterDerivative; dynamicDerivative; correctionDerivative(:); betaDerivative];
@@ -247,9 +207,7 @@ function [derivative, diagnostics] = hybridDerivative(augmentedState, sample, ..
         diagnostics.longitudinalSpeedRate = longitudinalSpeedRate;
         diagnostics.dynamicModelEvaluated = dynamicModelSafe;
         diagnostics.dynamicParticipation = dynamicParticipation;
-        diagnostics.lowerSpeedParticipation = lowerSpeedParticipation;
-        diagnostics.crawlParticipation = crawlParticipation;
-        diagnostics.correctionTarget = targets;
+        diagnostics.correctionTarget = dynamicTarget;
         diagnostics.sideSlipCommand = betaCommand;
         diagnostics.sideSlipCommandValid = betaCommandValid;
     end
@@ -316,46 +274,6 @@ function value = quinticStep(argument, lowerBound, upperBound)
     value = (6.0 .* fraction.^5) - (15.0 .* fraction.^4) + (10.0 .* fraction.^3);
 end
 
-function [active, duration] = updateStationaryDetector(active, duration, sample, ...
-        masterState, stepTime, stationaryCfg)
-% updateStationaryDetector Apply entry dwell and wider immediate exit bounds.
-    compensatedLateralAcceleration = sample.lateralAcceleration - masterState(2);
-    entryCandidate = sample.longitudinalSpeed <= double(stationaryCfg.entrySpeed) && ...
-        abs(sample.yawRate) <= double(stationaryCfg.maximumYawRate) && ...
-        abs(sample.longitudinalAcceleration) <= double(stationaryCfg.maximumLongitudinalAcceleration) && ...
-        abs(compensatedLateralAcceleration) <= double(stationaryCfg.maximumLateralAcceleration);
-    exitCandidate = sample.longitudinalSpeed <= double(stationaryCfg.exitSpeed) && ...
-        abs(sample.yawRate) <= 2.0 .* double(stationaryCfg.maximumYawRate) && ...
-        abs(sample.longitudinalAcceleration) <= 2.0 .* double(stationaryCfg.maximumLongitudinalAcceleration) && ...
-        abs(compensatedLateralAcceleration) <= 2.0 .* double(stationaryCfg.maximumLateralAcceleration);
-    if active
-        active = exitCandidate;
-        if ~active
-            duration = 0.0;
-        end
-    elseif entryCandidate
-        duration = duration + stepTime;
-        if duration >= double(stationaryCfg.minimumDwellTime)
-            active = true;
-        end
-    else
-        duration = 0.0;
-    end
-end
-
-function mode = classifyOperatingMode(stationaryActive, diagnostics)
-% classifyOperatingMode Report the dominant information source only.
-    if stationaryActive
-        mode = "stationary";
-    elseif diagnostics.dynamicParticipation >= 0.5
-        mode = "dynamic";
-    elseif diagnostics.lowerSpeedParticipation < 0.5
-        mode = "crawl";
-    else
-        mode = "kinematicFallback";
-    end
-end
-
 function augmentedState = initialAugmentedState(measurements, cfg, settings, layout)
 % initialAugmentedState Build all persistent states without a mode reset.
     dynamicState = double(cfg.observer.initialState(:));
@@ -384,9 +302,9 @@ function layout = stateLayout()
     layout = struct();
     layout.master = 1:2;
     layout.dynamic = 3:4;
-    layout.corrections = 5:10;
-    layout.sideSlip = 11:12;
-    layout.stateCount = 12;
+    layout.corrections = 5:6;
+    layout.sideSlip = 7:8;
+    layout.stateCount = 8;
 end
 
 function sample = sampleAt(measurements, sampleIdx, stepFraction)
@@ -461,33 +379,14 @@ function settings = validateRuntimeConfiguration(cfg, design)
         assertFiniteVector(cfg.hybrid.initialMasterState, 2, "cfg.hybrid.initialMasterState");
     end
     correctionInitialState = double(cfg.hybrid.initialCorrectionState);
-    assert(isequal(size(correctionInitialState), [2, 3]) && all(isfinite(correctionInitialState), "all"), ...
-        "cfg.hybrid.initialCorrectionState must be a finite [2 x 3] matrix.");
+    assert(isequal(size(correctionInitialState), [2, 1]) && all(isfinite(correctionInitialState), "all"), ...
+        "cfg.hybrid.initialCorrectionState must be a finite [2 x 1] vector.");
     if ~isempty(cfg.hybrid.sideSlip.initialState)
         assertFiniteVector(cfg.hybrid.sideSlip.initialState, 2, "cfg.hybrid.sideSlip.initialState");
     end
 
     assertPositiveScalar(cfg.hybrid.accelerometerBiasTimeConstant, ...
         "cfg.hybrid.accelerometerBiasTimeConstant");
-    assertPositiveScalar(cfg.hybrid.stationary.entrySpeed, "cfg.hybrid.stationary.entrySpeed");
-    assert(double(cfg.hybrid.stationary.exitSpeed) > double(cfg.hybrid.stationary.entrySpeed), ...
-        "cfg.hybrid.stationary.exitSpeed must exceed entrySpeed.");
-    assertNonnegativeScalar(cfg.hybrid.stationary.minimumDwellTime, ...
-        "cfg.hybrid.stationary.minimumDwellTime");
-    assertPositiveScalar(cfg.hybrid.stationary.maximumYawRate, ...
-        "cfg.hybrid.stationary.maximumYawRate");
-    assertPositiveScalar(cfg.hybrid.stationary.maximumLongitudinalAcceleration, ...
-        "cfg.hybrid.stationary.maximumLongitudinalAcceleration");
-    assertPositiveScalar(cfg.hybrid.stationary.maximumLateralAcceleration, ...
-        "cfg.hybrid.stationary.maximumLateralAcceleration");
-    assert(isscalar(cfg.hybrid.crawl.enabled), "cfg.hybrid.crawl.enabled must be scalar.");
-    assertPositiveScalar(cfg.hybrid.crawl.maximumSteeringAngle, ...
-        "cfg.hybrid.crawl.maximumSteeringAngle");
-
-    validateCorrectionConfiguration(cfg.hybrid.correction.stationary, ...
-        "cfg.hybrid.correction.stationary");
-    validateCorrectionConfiguration(cfg.hybrid.correction.crawl, ...
-        "cfg.hybrid.correction.crawl");
     validateCorrectionConfiguration(cfg.hybrid.correction.dynamic, ...
         "cfg.hybrid.correction.dynamic");
     assert(double(cfg.hybrid.dynamic.fullParticipationSpeed) > speedRange(1) && ...
