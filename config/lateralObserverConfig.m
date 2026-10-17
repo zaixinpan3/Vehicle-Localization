@@ -2,7 +2,7 @@ function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
 % The vehicle group defines the 2-DOF lateral bicycle model; the scheduling
 % group defines the continuous speed and speed-derivative certificate domain
-% and a supplementary diagnostic grid; the synthesis group holds the
+% used for synthesis; the synthesis group holds the
 % Lipschitz bound, the certified decay rate, the scales of the axle-force
 % mismatch and measurement-error channels, the Finsler multiplier scales,
 % and the LMI solver settings; the
@@ -43,13 +43,9 @@ function cfg = lateralObserverConfig(profile)
     % Continuous certificate: three position vertices times four derivative
     % vertices. longitudinalAccelerationRange bounds the actual dVx/dt;
     % a body-axis accelerometer reading need not equal that derivative.
-    % Grid counts control supplementary physical diagnostics only and never
-    % determine where synthesis constraints are imposed.
     cfg.scheduling = struct();
     cfg.scheduling.speedRange = [5.0, 30.0];
     cfg.scheduling.longitudinalAccelerationRange = [-3.0, 3.0];
-    cfg.scheduling.speedGridCount = 9;
-    cfg.scheduling.accelerationGridCount = 2;
 
     % ISS synthesis: Lipschitz bound of the copied nonlinearity, the
     % certified decay rate kappa of Vdot <= -2 kappa V + gamma^2 d'd (the
@@ -71,8 +67,7 @@ function cfg = lateralObserverConfig(profile)
     cfg.synthesis.slackScaleCandidates = [0.001, 0.003, 0.01, 0.03, 0.1];
     cfg.synthesis.pCeiling = 1.0e6;
     % Minimizing the ISS gain pushes the solution onto the constraint
-    % boundary, so strictnessEpsilon is what buys a real margin in the
-    % certificate that designLateralObserverGains re-checks afterwards.
+    % boundary; strictnessEpsilon specifies the requested LMI margin.
     cfg.synthesis.strictnessEpsilon = 1.0e-6;
     cfg.synthesis.solver = "sedumi";
     cfg.synthesis.verbose = 0;

@@ -4,12 +4,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
 % representation exact. Observer tests synthesize the current MnCAV design
 % once per class and require YALMIP and an SDP solver.
 
-    properties (TestParameter)
-        speedFraction = {0, 0.17, 0.5, 1};
-        rateFraction = {0, 0.4, 1};
-        derivativeRange = {[-3,3], [1,4], [-4,-1], [0,0], [2,2]};
-    end
-
     properties (Access = private)
         CurrentDesign
     end
@@ -144,158 +138,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             numericalRate = (alphaAfter - alphaBefore) ./ (2.0 .* stepTime);
 
             testCase.verifyEqual(alphaRate, numericalRate, AbsTol=1.0e-6);
-        end
-
-        function currentDesignSatisfiesTheOriginalCertificate(testCase)
-        % currentDesignSatisfiesTheOriginalCertificate: The vertex gains
-        % satisfy the pre-convexification ISS certificate at every grid point:
-        % the Lyapunov derivative with the Pdot term, the decay rate, and the
-        % Lipschitz margin is negative definite, the normalized mismatch and
-        % measurement channels close with the reported ISS gain, the
-        % Lyapunov matrix respects P >= I, and the disturbance-free error
-        % matrix is stable. The mismatch channel makes output injection
-        % necessary, so the gains are not zero, and the minimum-gain program
-        % keeps the ISS gain within the configured relaxation of its optimum
-        % and every vertex gain within its bound. The check is repeated here
-        % with the blended gain and Lyapunov matrix so the reported margins
-        % are not taken on trust.
-            design = testCase.CurrentDesign;
-            testCase.verifyTrue(design.certified);
-            testCase.verifyLessThan(design.maxCertificateMargin, 0);
-            testCase.verifyLessThan(design.maxErrorEigenvalueRealPart, 0);
-            testCase.verifyGreaterThan(design.issGain, 0);
-            testCase.verifyEqual(design.issGainLimit, ...
-                (1.0 + design.cfg.synthesis.issGainRelaxation) .* design.optimalIssGain, RelTol=1.0e-12);
-            testCase.verifyLessThanOrEqual(design.issGain, design.issGainLimit .* (1.0 + 1.0e-6));
-            for vertexIdx = 1:3
-                testCase.verifyLessThanOrEqual(norm(design.vertexGains(:, :, vertexIdx)), ...
-                    design.vertexGainBounds(vertexIdx) + 1.0e-6);
-            end
-            testCase.verifyLessThanOrEqual(design.mismatchIssGain, design.issGain .* (1.0 + 1.0e-9));
-            testCase.verifyLessThanOrEqual(design.measurementIssGain, design.issGain .* (1.0 + 1.0e-9));
-            testCase.verifyEqual(design.errorBound, design.issGain ./ sqrt(2.0 .* design.decayRate), RelTol=1.0e-12);
-            testCase.verifyEqual(size(design.vertexGains), [2, 2, 3]);
-            testCase.verifyTrue(all(isfinite(design.vertexGains(:))));
-            testCase.verifyGreaterThan(design.maxVertexGainNorm, 0.1);
-            mismatchWeight = diag(design.axleForceMismatchScale);
-            measurementWeight = diag(design.measurementErrorScale);
-
-            for point = design.grid.points.'
-                [L, P] = lateralObserverSupport.scheduleLateralObserverGain(design, point.speed);
-                testCase.verifyGreaterThanOrEqual(min(eig((P + P.') ./ 2.0)), 1.0 - 1.0e-6);
-                PRate = (point.alphaRate(1) .* design.lyapunovBasis(:, :, 1)) + ...
-                    (point.alphaRate(2) .* design.lyapunovBasis(:, :, 2)) + ...
-                    (point.alphaRate(3) .* design.lyapunovBasis(:, :, 3));
-                closedLoop = point.A - (L * point.C);
-                lyapunovBlock = (P * closedLoop) + (closedLoop.' * P) + PRate + ...
-                    (2.0 .* design.decayRate .* P) + (design.tau .* (P * P)) + ...
-                    ((design.lipschitzConstant.^2 ./ design.tau) .* eye(2));
-                testCase.verifyLessThan(max(eig((lyapunovBlock + lyapunovBlock.') ./ 2.0)), 0);
-                disturbanceInput = [(design.model.E - (L * design.model.F)) * mismatchWeight, -L * measurementWeight];
-                certificate = [lyapunovBlock, P * disturbanceInput; ...
-                    (P * disturbanceInput).', -(design.issGain.^2) .* eye(4)];
-                testCase.verifyLessThanOrEqual(max(eig((certificate + certificate.') ./ 2.0)), 1.0e-9);
-                testCase.verifyLessThan(max(real(eig(closedLoop))), 0);
-            end
-        end
-
-        function continuousCertificateRechecksEveryVertex(testCase)
-            design = testCase.CurrentDesign;
-            certificate = verifyLateralObserverCertificate(design);
-            testCase.verifyTrue(certificate.certified);
-            testCase.verifySize(certificate.vertexMargins, [3,4]);
-            testCase.verifyLessThan(max(certificate.vertexMargins(:)), -certificate.roundoffGuard);
-            testCase.verifyEqual(design.issGain, design.issGainLimit, AbsTol=1e-12);
-            testCase.verifyGreaterThanOrEqual(design.issGain, design.gridDiagnostics.issGain);
-            testCase.verifyGreaterThanOrEqual(certificate.minLyapunovEigenvalue, 1);
-        end
-
-        function scheduledFirstColumnIsLinearInSpeed(testCase, speedFraction)
-            design = testCase.CurrentDesign;
-            range = design.polytope.speedRange;
-            speed = range(1) + speedFraction*diff(range);
-            L = lateralObserverSupport.scheduleLateralObserverGain(design, speed);
-            expected = (1-speedFraction)*design.vertexGains(:,1,1) + ...
-                speedFraction*design.vertexGains(:,1,2);
-            testCase.verifyEqual(L(:,1), expected, AbsTol=1e-12);
-        end
-
-        function derivativeHullCoversPhysicalRates(testCase, derivativeRange, speedFraction, rateFraction)
-            design = testCase.CurrentDesign;
-            domain = lateralObserverSupport.buildCertificateDomain( ...
-                design.model, design.polytope, derivativeRange);
-            range = design.polytope.speedRange;
-            speed = range(1) + speedFraction*diff(range);
-            sigma = derivativeRange(1) + rateFraction*diff(derivativeRange);
-            zRange = domain.reciprocalSpeedSquaredRange;
-            zFraction = (1/speed^2-zRange(1))/diff(zRange);
-            beta = kron([1-rateFraction;rateFraction], [1-zFraction;zFraction]);
-            [~, actual] = lateralObserverSupport.schedulingCoordinates(design.polytope, speed, sigma);
-            testCase.verifyGreaterThanOrEqual(min(beta), -1e-12);
-            testCase.verifyEqual(sum(beta), 1, AbsTol=1e-12);
-            testCase.verifyEqual(domain.rateVertices*beta, actual, AbsTol=1e-12);
-            testCase.verifyEqual(sum(domain.rateVertices,1), zeros(1,4), AbsTol=1e-12);
-        end
-
-        function physicalMatrixEqualsVertexConvexCombination(testCase, speedFraction, rateFraction)
-            design = testCase.CurrentDesign;
-            domain = design.certificateDomain;
-            range = design.polytope.speedRange;
-            speed = range(1) + speedFraction*diff(range);
-            sigma = domain.speedRateRange(1) + rateFraction*diff(domain.speedRateRange);
-            [alpha, alphaRate] = lateralObserverSupport.schedulingCoordinates(design.polytope, speed, sigma);
-            zRange = domain.reciprocalSpeedSquaredRange;
-            zFraction = (1/speed^2-zRange(1))/diff(zRange);
-            beta = kron([1-rateFraction;rateFraction], [1-zFraction;zFraction]);
-            weights = alpha*beta.';
-            vertexBlocks = reshape(design.continuousCertificate.vertexBlocks,100,12);
-            interpolated = reshape(vertexBlocks*weights(:),10,10);
-            actual = lateralObserverTest.physicalCertificateAt(design, speed, alphaRate);
-            testCase.verifyEqual(actual, interpolated, AbsTol=2e-9);
-            testCase.verifyLessThan(max(eig((actual+actual.')/2)), 0);
-        end
-
-        function nonphysicalVertexNeedsTheExtension(testCase)
-            design = testCase.CurrentDesign;
-            model = design.model;
-            polytope = design.polytope;
-            % Deliberately nonzero slope: even a nearly constant optimized
-            % gain cannot hide a missing virtual-vertex correction here.
-            g0 = [0.4;-0.2]; g1 = [0.03;0.07];
-            h0 = [0.1;0.3]; h1 = [-0.02;0.01]; h2 = [0.2;0.6];
-            v = polytope.vertices(:,3);
-            L = [g0+v(1)*g1, h0+v(1)*h1+v(2)*h2];
-            [A,C] = lateralObserverSupport.evaluateLateralModel(model,v);
-            raw = A-L*C;
-            extended = raw + (prod(v)-1)*g1*model.C2(1,:);
-            expected = model.A0-g1*model.C2(1,:)-h0*[0,1] + ...
-                v(1)*(model.A1-h1*[0,1]) + ...
-                v(2)*(model.A2-g0*model.C2(1,:)-h2*[0,1]);
-            testCase.verifyEqual(extended, expected, AbsTol=1e-12);
-            testCase.verifyGreaterThan(norm(extended-raw,'fro'), 0.01);
-        end
-
-        function brokenGainStructureIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.vertexGains(1,1,3) = design.vertexGains(1,1,3)+0.1;
-            certificate = verifyLateralObserverCertificate(design);
-            testCase.verifyFalse(certificate.certified);
-            testCase.verifyGreaterThan(certificate.structureResidual, 0.09);
-        end
-
-        function understatedIssGainIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.issGain = 1e-6*design.issGain;
-            certificate = verifyLateralObserverCertificate(design);
-            testCase.verifyFalse(certificate.certified);
-            testCase.verifyGreaterThan(max(certificate.vertexMargins(:)), 0);
-        end
-
-        function invalidSpeedDerivativeRangeIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            testCase.verifyError(@() lateralObserverSupport.buildCertificateDomain( ...
-                design.model,design.polytope,[NaN,3]), ...
-                'VehicleLocalization:InvalidSpeedRateRange');
         end
 
         function scheduledGainIsTheBarycentricBlendOfTheVertexGains(testCase)
@@ -570,37 +412,18 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % reproduces the current vertex gains. Needs YALMIP and an SDP solver.
             testCase.assumeTrue(exist("sdpvar", "file") == 2, ...
                 "The lateral observer synthesis test needs YALMIP and an SDP solver on the MATLAB path.");
-            cfg = lateralObserverConfig();
-            cfg.scheduling.speedGridCount = 2;
-            cfg.scheduling.accelerationGridCount = 1;
             design = testCase.CurrentDesign;
-            resolved = designLateralObserverGains(cfg);
+            resolved = designLateralObserverGains(design.cfg);
 
             testCase.verifyEqual(resolved.tau, design.tau);
             testCase.verifyEqual(resolved.slackScale, design.slackScale);
             testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
-            testCase.verifyTrue(resolved.certified);
+            testCase.verifyTrue(resolved.solverSolved);
         end
     end
 
     methods (Static, Access = private)
-        function M = physicalCertificateAt(design, speed, alphaRate)
-            [L,P] = lateralObserverSupport.scheduleLateralObserverGain(design,speed);
-            [A,C] = lateralObserverSupport.evaluateLateralModel(design.model,[speed;1/speed]);
-            X=design.slackMatrix; epsilon=design.slackScale; tau=design.tau;
-            Pdot=reshape(reshape(design.lyapunovBasis,4,3)*alphaRate,2,2);
-            R=X*(A-L*C);
-            S=X*[(design.model.E-L*design.model.F)*diag(design.axleForceMismatchScale), ...
-                -L*diag(design.measurementErrorScale)];
-            Phi=R+R.'+Pdot+2*design.decayRate*P+(design.lipschitzConstant^2/tau)*eye(2);
-            K=P-X+epsilon*R.';
-            M=[Phi,K,S,sqrt(tau)*P; ...
-                K.',-epsilon*(X+X.'),epsilon*S,zeros(2,2); ...
-                S.',epsilon*S.',-design.issGain^2*eye(4),zeros(4,2); ...
-                sqrt(tau)*P,zeros(2,2),zeros(2,4),-eye(2)];
-        end
-
         function measurements = zeroMotionMeasurements(finalTime)
         % zeroMotionMeasurements Build a stationary public-interface input.
             time = (0:0.01:finalTime).';

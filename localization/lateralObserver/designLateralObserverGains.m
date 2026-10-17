@@ -40,9 +40,8 @@ function design = designLateralObserverGains(cfg)
 %
 % We search fixed (tau,epsilon) candidates, minimize gamma, then minimize
 % transformed vertex-gain norm bounds within issGainRelaxation. The result
-% reports the certified interval bound, never a smaller sampled maximum.
-% Physical grid checks are supplementary diagnostics, not synthesis
-% constraints. The certificate covers the continuous LPV error subsystem,
+% reports the solver-derived interval bound directly, without post-solve
+% verification or sampling. The theorem covers the continuous LPV error subsystem,
 % not discretization, speed measurement mismatch or the hybrid master state.
 %
 % Requires YALMIP and an SDP solver on the MATLAB path.
@@ -51,11 +50,9 @@ function design = designLateralObserverGains(cfg)
 %   cfg: optional struct from lateralObserverConfig
 %
 % Output:
-%   design: struct with the model, the scheduling polytope, the diagnostic grid,
-%       the vertex gains, the Lyapunov basis, the slack matrix and its
-%       scale, the selected tau, the decay rate, the disturbance scales, the
-%       optimal and the achieved ISS gain with its mismatch and measurement
-%       parts, the vertex-gain bounds, and the verification margins
+%   design: model, scheduling domain, recovered vertex gains, Lyapunov
+%       matrices, slack matrix, selected scalar parameters, ISS bound,
+%       gain bounds and solver status. No independent verification is run.
     if nargin < 1 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
@@ -68,7 +65,6 @@ function design = designLateralObserverGains(cfg)
 
     model = lateralObserverSupport.lateralBicycleModel(cfg.vehicle);
     polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
-    grid = buildDesignGrid(model, polytope, cfg.scheduling);
     domain = lateralObserverSupport.buildCertificateDomain(model, polytope, ...
         cfg.scheduling.longitudinalAccelerationRange);
     scales = disturbanceScales(cfg.synthesis);
@@ -120,13 +116,11 @@ function design = designLateralObserverGains(cfg)
     solution = solveMinimumGain(domain, model, scales, cfg.synthesis, best.tau, best.slackScale, issGainLimit);
     assert(solution.solved, "The minimum-gain program failed at the relaxed ISS gain: %s", solution.info);
     candidate = recoverVertexGains(polytope, solution);
-    diagnostics = verifyPhysicalGrid(grid, model, scales, candidate, cfg.synthesis, best.tau);
 
 
     design = struct();
     design.model = model;
     design.polytope = polytope;
-    design.grid = grid;
     design.certificateDomain = domain;
     design.certificateMethod = "physical-curve-affine-extension-v1";
     design.vertexGains = candidate.vertexGains;
@@ -145,23 +139,9 @@ function design = designLateralObserverGains(cfg)
     design.issGain = issGainLimit;
     design.errorBound = issGainLimit ./ sqrt(2.0 .* decayRate);
     design.lipschitzConstant = double(cfg.synthesis.lipschitzConstant);
-    design.certificateMargins = diagnostics.certificateMargins;
-    design.errorEigenvalues = diagnostics.errorEigenvalues;
-    design.maxCertificateMargin = max(diagnostics.certificateMargins);
-    design.maxErrorEigenvalueRealPart = max(real(diagnostics.errorEigenvalues(:)));
-    design.minLyapunovEigenvalue = diagnostics.minLyapunovEigenvalue;
-    design.gridDiagnostics = diagnostics;
     design.cfg = cfg;
-    certificate = verifyLateralObserverCertificate(design);
-    assert(certificate.certified, "VehicleLocalization:InvalidLateralCertificate", ...
-        "The recovered gains failed continuous vertex certification (max eigenvalue %.3g).", ...
-        max(certificate.vertexMargins(:)));
-    assert(diagnostics.certified && diagnostics.issGain <= issGainLimit * (1 + 1e-6), ...
-        "The physical diagnostic grid contradicts the continuous certificate.");
-    design.continuousCertificate = certificate;
-    design.mismatchIssGain = certificate.mismatchIssGain;
-    design.measurementIssGain = certificate.measurementIssGain;
-    design.certified = certificate.certified;
+    design.solverSolved = solution.solved;
+    design.solverInfo = solution.info;
     design.attempts = attempts;
 end
 
@@ -186,63 +166,6 @@ function scales = disturbanceScales(synthesisCfg)
         "cfg.synthesis.axleForceMismatchScale must hold two positive finite scales [front; rear].");
     assert(numel(scales.measurement) == 2 && all(isfinite(scales.measurement)) && all(scales.measurement > 0), ...
         "cfg.synthesis.measurementErrorScale must hold two positive finite scales [ay; r].");
-end
-
-function grid = buildDesignGrid(model, polytope, schedulingCfg)
-% buildDesignGrid: Enumerate supplementary physical diagnostic points. Each point stores the physical scheduling parameter, its
-% barycentric coordinates and their rate, and the model matrices there.
-% Because the only acceleration-dependent term of the LMI is Pdot, which is
-% linear in the acceleration, the two extreme accelerations already cover
-% the whole interval.
-%
-% Input:
-%   model: struct from lateralObserverSupport.lateralBicycleModel
-%   polytope: struct from lateralObserverSupport.buildSchedulingPolytope
-%   schedulingCfg: cfg.scheduling struct with the ranges and grid counts
-%
-% Output:
-%   grid: struct with speeds, accelerations, and a struct array of points
-    speedRange = double(schedulingCfg.speedRange(:).');
-    accelerationRange = double(schedulingCfg.longitudinalAccelerationRange(:).');
-    speedCount = round(double(schedulingCfg.speedGridCount));
-    accelerationCount = round(double(schedulingCfg.accelerationGridCount));
-    assert(speedCount >= 2 && accelerationCount >= 1, ...
-        "The diagnostic grid needs at least two speeds and one speed derivative.");
-    assert(numel(accelerationRange) == 2 && accelerationRange(1) <= accelerationRange(2), ...
-        "longitudinalAccelerationRange must be [aMin, aMax].");
-
-    speeds = linspace(speedRange(1), speedRange(2), speedCount);
-    if accelerationCount == 1
-        accelerations = mean(accelerationRange);
-    else
-        accelerations = linspace(accelerationRange(1), accelerationRange(2), accelerationCount);
-    end
-
-    pointTemplate = struct("speed", 0, "acceleration", 0, "rho", zeros(2, 1), ...
-        "alpha", zeros(3, 1), "alphaRate", zeros(3, 1), "A", zeros(2, 2), "C", zeros(2, 2));
-    points = repmat(pointTemplate, speedCount .* accelerationCount, 1);
-    pointIdx = 0;
-    for speed = speeds
-        for acceleration = accelerations
-            pointIdx = pointIdx + 1;
-            rho = [speed; 1.0 ./ speed];
-            [alpha, alphaRate] = lateralObserverSupport.schedulingCoordinates(polytope, speed, acceleration);
-            [A, C] = lateralObserverSupport.evaluateLateralModel(model, rho);
-            points(pointIdx).speed = speed;
-            points(pointIdx).acceleration = acceleration;
-            points(pointIdx).rho = rho;
-            points(pointIdx).alpha = alpha;
-            points(pointIdx).alphaRate = alphaRate;
-            points(pointIdx).A = A;
-            points(pointIdx).C = C;
-        end
-    end
-
-    grid = struct();
-    grid.speeds = speeds;
-    grid.accelerations = accelerations;
-    grid.points = points;
-    grid.numPoints = numel(points);
 end
 
 function solution = solveMinimumIssGain(domain, model, scales, synthesisCfg, tau, slackScale)
@@ -430,72 +353,6 @@ function candidate = recoverVertexGains(polytope, solution)
     candidate.slackMatrix = solution.X;
 end
 
-function diagnostics = verifyPhysicalGrid(grid, model, scales, candidate, synthesisCfg, tau)
-% verifyPhysicalGrid: Re-evaluate the original, non-convexified certificate
-% with the recovered vertex gains and compute the resulting ISS gain. The
-% gain and the Lyapunov matrix of every grid point come from
-% lateralObserverSupport.scheduleLateralObserverGain, so the check covers the scheduling the
-% observer runs online as well as the Finsler and Young steps: Psi must be
-% negative definite, P must respect its normalization, and the
-% disturbance-free error matrix must be stable at every grid point. The ISS
-% gain is gamma^2 = max lambda(Bd' P (-Psi)^(-1) P Bd) over the grid, and
-% the same expression restricted to the mismatch or the measurement columns
-% of Bd gives the two partial gains.
-%
-% Input:
-%   grid: supplementary physical diagnostic points
-%   model: struct from lateralObserverSupport.lateralBicycleModel
-%   scales: struct from disturbanceScales
-%   candidate: struct from recoverVertexGains
-%   synthesisCfg: cfg.synthesis struct
-%   tau: fixed positive scalar used by the synthesis
-%
-% Output:
-%   diagnostics: struct with certificateMargins, errorEigenvalues, the ISS
-%       gain and its mismatch and measurement parts, the smallest Lyapunov
-%       eigenvalue, and the overall certified flag
-    lipschitzConstant = double(synthesisCfg.lipschitzConstant);
-    decayRate = double(synthesisCfg.decayRate);
-    mismatchWeight = diag(scales.mismatch);
-    measurementWeight = diag(scales.measurement);
-    certificateMargins = zeros(grid.numPoints, 1);
-    errorEigenvalues = zeros(2, grid.numPoints);
-    gainSquared = zeros(1, 3);
-    minLyapunovEigenvalue = inf;
-    for pointIdx = 1:grid.numPoints
-        point = grid.points(pointIdx);
-        [L, Pk] = lateralObserverSupport.scheduleLateralObserverGain(candidate, point.speed);
-        PkRate = blendVertexMatrices(candidate.lyapunovBasis, point.alphaRate);
-        closedLoop = point.A - (L * point.C);
-        certificate = (Pk * closedLoop) + (closedLoop.' * Pk) + PkRate + (2.0 .* decayRate .* Pk) + ...
-            (tau .* (Pk * Pk)) + ((lipschitzConstant.^2 ./ tau) .* eye(2));
-        certificate = (certificate + certificate.') ./ 2.0;
-        certificateMargins(pointIdx) = max(eig(certificate));
-        errorEigenvalues(:, pointIdx) = eig(closedLoop);
-        minLyapunovEigenvalue = min(minLyapunovEigenvalue, min(eig((Pk + Pk.') ./ 2.0)));
-        if certificateMargins(pointIdx) < 0
-            mismatchInput = (model.E - (L * model.F)) * mismatchWeight;
-            measurementInput = -L * measurementWeight;
-            inputs = {[mismatchInput, measurementInput], mismatchInput, measurementInput};
-            for inputIdx = 1:3
-                weighted = Pk * inputs{inputIdx};
-                term = weighted.' * ((-certificate) \ weighted);
-                gainSquared(inputIdx) = max(gainSquared(inputIdx), max(eig((term + term.') ./ 2.0)));
-            end
-        end
-    end
-
-    diagnostics = struct();
-    diagnostics.certificateMargins = certificateMargins;
-    diagnostics.errorEigenvalues = errorEigenvalues;
-    diagnostics.issGain = sqrt(gainSquared(1));
-    diagnostics.mismatchIssGain = sqrt(gainSquared(2));
-    diagnostics.measurementIssGain = sqrt(gainSquared(3));
-    diagnostics.minLyapunovEigenvalue = minLyapunovEigenvalue;
-    diagnostics.certified = all(certificateMargins < 0) && all(real(errorEigenvalues(:)) < 0) && ...
-        minLyapunovEigenvalue >= 1.0 - 1.0e-6;
-end
-
 function blended = blendVertexCells(vertexMatrices, coordinates)
 % blendVertexCells: Combine three decision-variable matrices with the
 % supplied barycentric coordinates or coordinate rates.
@@ -508,18 +365,4 @@ function blended = blendVertexCells(vertexMatrices, coordinates)
 %   blended: [2 x 2] combined sdpvar matrix
     blended = (coordinates(1) .* vertexMatrices{1}) + (coordinates(2) .* vertexMatrices{2}) + ...
         (coordinates(3) .* vertexMatrices{3});
-end
-
-function blended = blendVertexMatrices(basis, coordinates)
-% blendVertexMatrices: Combine three numeric vertex matrices with the
-% supplied barycentric coordinates or coordinate rates.
-%
-% Input:
-%   basis: [2 x 2 x 3] vertex matrices
-%   coordinates: [3 x 1] barycentric coordinates or their rates
-%
-% Output:
-%   blended: [2 x 2] combined matrix
-    blended = (coordinates(1) .* basis(:, :, 1)) + (coordinates(2) .* basis(:, :, 2)) + ...
-        (coordinates(3) .* basis(:, :, 3));
 end

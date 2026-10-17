@@ -1,17 +1,8 @@
-% runLateralObserverDesign: Synthesize the LPV lateral-velocity observer and
-% exercise it on the synthetic scenario. The synthesis solves twelve affine
-% vertex ISS LMIs over the continuous speed and speed-derivative ranges for the three
-% vertex gains of the scheduling triangle with the smallest ISS gain from
-% axle-force mismatch and measurement error at the configured decay rate,
-% re-checks their barycentric blend against the original certificate, and
-% the scenario then reports the estimation error under measurement noise.
-% Requires YALMIP and an SDP solver (SeDuMi by default) on the MATLAB path.
-%
-% Input:
-%   lateralObserverOverrideCfg: optional workspace configuration override
-%
-% Output:
-%   design and result in the workspace
+% runLateralObserverDesign Synthesize and report the lateral LPV gains.
+% Solves twelve position/rate vertex LMIs and returns the solver result.
+% No post-solve verification, sampling or automatic simulation is performed.
+% Requires YALMIP and an SDP solver on the MATLAB path.
+% Optional input: lateralObserverOverrideCfg. Output: design.
 setupVehicleLocalization();
 assert(exist("sdpvar", "file") == 2, ...
     "Add YALMIP and an SDP solver to the MATLAB path before running the lateral observer design.");
@@ -22,17 +13,8 @@ else
 end
 
 design = designLateralObserverGains(cfg);
-fprintf("tau = %.4g | slack scale = %.4g | decay rate = %.3g 1/s | ISS gain = %.5g (mismatch %.5g, measurement %.5g)\n", ...
-    design.tau, design.slackScale, design.decayRate, design.issGain, design.mismatchIssGain, design.measurementIssGain);
+fprintf("tau = %.4g | slack scale = %.4g | decay rate = %.3g 1/s | ISS gain = %.5g\n", ...
+    design.tau, design.slackScale, design.decayRate, design.issGain);
 fprintf("largest vertex gain norm = %.4g | error bound at unit disturbance = %.4g\n", ...
     design.maxVertexGainNorm, design.errorBound);
-fprintf("worst continuous vertex LMI eigenvalue = %.3e (negative required)\n", ...
-    max(design.continuousCertificate.vertexMargins(:)));
-fprintf("slowest error mode = %.3f 1/s\n", design.maxErrorEigenvalueRealPart);
-
-result = simulateLateralObserverScenario(design, cfg);
-fprintf("peak |vy| = %.3f m/s | peak side slip = %.2f deg\n", ...
-    result.metrics.peakLateralVelocity, rad2deg(result.metrics.peakSideSlipAngle));
-fprintf("settled RMSE: vy = %.4f m/s | r = %.5f rad/s | side slip = %.4f deg\n", ...
-    result.metrics.settledLateralVelocityRmse, result.metrics.settledYawRateRmse, ...
-    rad2deg(result.metrics.settledSideSlipRmse));
+fprintf("solver: %s\n", design.solverInfo);
