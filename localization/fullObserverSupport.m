@@ -74,12 +74,17 @@ classdef fullObserverSupport
                 aligned.lidarOverlap=data.lidarOverlap;aligned.lidarOverlap.time=t;
                 aligned.lidarOverlap.sources=data.lidarOverlap.sources(selected);
                 if isfield(data.lidarOverlap,'valid'),aligned.lidarOverlap.valid=data.lidarOverlap.valid(selected);end
+                for name=["frameReliability","directionReliability"]
+                    if isfield(data.lidarOverlap,name)
+                        aligned.lidarOverlap.(name)=data.lidarOverlap.(name)(selected,:);
+                    end
+                end
             else
                 aligned.lidar=data.lidar;aligned.lidar.time=t;
                 aligned.lidar.pose=data.lidar.pose(selected,:);
                 aligned.lidar.valid=data.lidar.valid(selected);
                 aligned.lidar.information=data.lidar.information(:,:,selected);
-                for name=["frameReliability","directionReliability"]
+                for name=["frameReliability","directionReliability","poseErrorVariance"]
                     if isfield(data.lidar,name),aligned.lidar.(name)=data.lidar.(name)(selected,:);end
                 end
                 if isfield(data.lidar,'evaluateResidual')
@@ -108,6 +113,48 @@ classdef fullObserverSupport
                 'maximumGnssBracketSeconds',max(gnssBracket),'maximumGnssWaitSeconds',max(gnssWait), ...
                 'maximumMotionWaitSeconds',max(motionWait),'frameWaitSeconds',max(motionWait,gnssWait), ...
                 'inputScope',"Wheel/lateral estimates retain their native preprocessing; only aligned frame values enter localization");
+        end
+
+        function support=lidarPoseSupport(filter,cfg)
+        % lidarPoseSupport Local normalized pose support of admitted LiDAR alone.
+        % Respect the raw filter's admitted rank before inspecting weighted strength.
+        % A positive yaw diagonal can constrain only a position/yaw combination.
+        % Project a PSD factor's yaw column off its translation column space to
+        % measure heading after free translation, without Schur subtraction.
+        % Normalize nonzero translation columns before SVD: even a tiny column
+        % may absorb yaw when translation is free. These are local geometric
+        % diagnostics; neither source freshness nor correct alignment is tested.
+        % Strengths above 1e-10 count as numerical support. sectorQualified also
+        % requires the configured position, heading and coupling bounds in cfg.iss.
+            arguments
+                filter (1,1) struct
+                cfg (1,1) struct
+            end
+            U=filter.eigenvectors(:,4-filter.rank:3);
+            S=filter.S;weighted=U.'*S*U;
+            [V,E]=eig((weighted+weighted.')/2);
+            strengths=max(diag(E),0);threshold=1e-10;
+            active=strengths>threshold;dimension=nnz(active);
+            B=diag(sqrt(strengths(active)))*V(:,active).'*U.';
+            admitted=B.'*B;
+            minimumStrength=0;
+            if dimension==3,minimumStrength=min(strengths);end
+            position=B(:,1:2);heading=B(:,3);
+            columnNorm=vecnorm(position,2,1);nonzero=columnNorm>0;
+            if any(nonzero)
+                position=position(:,nonzero)./columnNorm(nonzero);
+                [Q,values,~]=svd(position,'econ','vector');
+                Q=Q(:,values>max(size(position))*eps(max(values)));
+                heading=heading-Q*(Q.'*heading);
+            end
+            headingStrength=norm(heading)^2;
+            support=struct('rank',dimension,'minimumStrength',minimumStrength, ...
+                'fullPoseSupported',dimension==3,'headingStrengthAfterPosition',headingStrength, ...
+                'headingSupported',headingStrength>threshold, ...
+                'sectorQualified',dimension==3 ...
+                    && min(eig(admitted(1:2,1:2)))>=cfg.iss.minimumPositionStrength ...
+                    && admitted(3,3)>=cfg.iss.minimumHeadingStrength ...
+                    && norm(admitted(1:2,3))<=cfg.iss.maximumPositionHeadingCoupling);
         end
 
         function [position,information]=correctGnssOutputPoint(position,information,yaw,alignment)
