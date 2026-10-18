@@ -11,6 +11,26 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function unavailableMotionKeepsOnlyTheUnmodifiedCurrentGeometry(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();
+            [~,history]=updateLocalizationSourceWindow(cloud,0,[0,0,0],[]);
+            [actual,history,details]=updateLocalizationSourceWindow(cloud,.1,[NaN,NaN,NaN],history,localizationSourceWindowConfig(),0);
+            expected=registrationSupport.projectSemanticProbabilityCloud(cloud,2);
+            testCase.verifyEqual(actual,expected);
+            testCase.verifyEmpty(history.time);
+            testCase.verifyFalse(details.historyTransportApplied);
+            testCase.verifyFalse(isfield(actual.components,'temporalStability'));
+        end
+        function aValidityGapCannotBridgeTwoVisibleQueries(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();cfg=localizationSourceWindowConfig();
+            [~,history]=updateLocalizationSourceWindow(cloud,0,[0,0,0],[],cfg,1);
+            [after,history,details]=updateLocalizationSourceWindow(cloud,.1,[0,0,0],history,cfg,2);
+            testCase.verifyEmpty(after.components.mean);
+            testCase.verifyEqual(history.time,.1);
+            testCase.verifyEqual(details.frameCount,1);
+            [recovered,~]=updateLocalizationSourceWindow(cloud,.2,[0,0,0],history,cfg,2);
+            testCase.verifyEqual(recovered.components.mean,cloud.components.mean,AbsTol=1e-12);
+        end
         function motionTransportsMeansAndFullXyCovariance(testCase)
             old=distributionRegistrationTest.exampleCloud();
             current=distributionRegistrationTest.transform(old,[0 1 -pi/2]);

@@ -1,4 +1,4 @@
-function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow(current,timestamp,motionPose,history,cfg)
+function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow(current,timestamp,motionPose,history,cfg,motionSegment)
 % updateLocalizationSourceWindow Confirm and merge recent coarse XY distributions.
 % motionPose is a cumulative planar wheel/gyro pose in any fixed odometry
 % frame. Only relative motion is used. Store Gaussian statistics, not points.
@@ -14,11 +14,18 @@ function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow
 % indexed by confirmed tracks. Old heights are never transported with SE(2).
 % confirmedCurrent contains only this acquisition's confirmed distributions.
 % It lets a pose graph consume each observation once without overlapping stacks.
+% motionSegment optionally identifies uninterrupted valid odometry. Zero
+% withdraws history transport and emits the fresh current cloud unchanged;
+% a new positive segment starts a new history. No repeated-detection weight
+% is invented for a single-scan fallback.
     if nargin<4 || isempty(history),history=struct('clouds',{{}},'time',zeros(0,1),'motion',zeros(0,3));end
     if nargin<5,cfg=localizationSourceWindowConfig();end
+    if nargin<6,motionSegment=1;end
+    assert(isscalar(motionSegment) && isfinite(motionSegment) && motionSegment>=0 && fix(motionSegment)==motionSegment, ...
+        'VehicleLocalization:InvalidMotionSegment','Require a nonnegative integer motion segment.');
     assert(isscalar(timestamp)&&isfinite(timestamp)&&isreal(timestamp), ...
         'VehicleLocalization:InvalidWindowTime','Require a finite acquisition timestamp.');
-    assert(numel(motionPose)==3&&isreal(motionPose)&&all(isfinite(motionPose)), ...
+    assert(motionSegment==0 || (numel(motionPose)==3&&isreal(motionPose)&&all(isfinite(motionPose))), ...
         'VehicleLocalization:InvalidWindowMotion','Require cumulative planar odometry.');
     assert(cfg.minimumDetectionFrames>=2 && cfg.minimumDetectionFrames==fix(cfg.minimumDetectionFrames) && ...
         isfinite(cfg.minimumDetectionFrames) && cfg.maximumFrames>=cfg.minimumDetectionFrames && ...
@@ -37,6 +44,20 @@ function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow
     mappingSupport.validateSemanticProbabilityCloud(current);
     assert(~isfield(current.components,'temporalStability'), ...
         'VehicleLocalization:AlreadyStackedSource','Supply a fresh single-scan cloud, not a previous horizon product.');
+    if motionSegment==0
+        cloud=registrationSupport.projectSemanticProbabilityCloud(current,2);
+        confirmedCurrent=cloud;
+        confirmedCurrent.acquisitionTime=timestamp;
+        confirmedCurrent.observationScope="currentAcquisitionWithoutMotion";
+        history=struct('clouds',{{}},'time',zeros(0,1),'motion',zeros(0,3),'segment',0);
+        details=struct('frameCount',1,'spanSeconds',0,'componentCount',cloud.components.numComponents, ...
+            'motionSegment',0,'historyTransportApplied',false,'motionSource',"unavailable; current scan only");
+        return;
+    end
+    if isfield(history,'segment') && history.segment~=motionSegment
+        history=struct('clouds',{{}},'time',zeros(0,1),'motion',zeros(0,3));
+    end
+    history.segment=motionSegment;
     keep=history.time>=timestamp-cfg.maximumAgeSeconds;
     history.clouds=history.clouds(keep);history.time=history.time(keep);history.motion=history.motion(keep,:);
     history.clouds{end+1,1}=registrationSupport.projectSemanticProbabilityCloud(current,2);
@@ -83,6 +104,7 @@ function [cloud,history,details,confirmedCurrent]=updateLocalizationSourceWindow
         'shapeCompatibility',"covariance Bhattacharyya distance to every original acquisition", ...
         'motionSource',"separately supplied cumulative wheel/gyro odometry", ...
         'informationCalibrated',false,'dimension',2);
+    details.motionSegment=motionSegment;details.historyTransportApplied=numel(history.time)>1;
 end
 
 function selected=selectHeightEvidence(evidence,source,target,n)

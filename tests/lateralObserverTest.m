@@ -25,6 +25,27 @@ classdef lateralObserverTest < matlab.unittest.TestCase
     end
 
     methods (Test)
+        function coordinateTransportPrecedesTheSameAngleFilter(testCase)
+            cfg=testCase.CurrentDesign.cfg;cfg.sideSlip.initialState=[0;0];
+            measurements=testCase.constantSpeedMeasurements(1,10);
+            nominal=runLateralVelocityObserver(measurements,testCase.CurrentDesign,cfg);
+            transform=repmat([1,0,0,1,1,2],numel(measurements.time),1);
+            actual=runLateralVelocityObserver(measurements,testCase.CurrentDesign,cfg,transform);
+            command=atan2(2,11);w=cfg.sideSlip.naturalFrequency;t=measurements.time;
+            testCase.verifyEqual(actual.state,nominal.state,AbsTol=0);
+            testCase.verifyEqual(actual.innovation,nominal.innovation,AbsTol=0);
+            testCase.verifyEqual(actual.velocityValid,nominal.velocityValid);
+            testCase.verifyEqual(actual.longitudinalSpeed,11*ones(size(t)));
+            testCase.verifyEqual(actual.lateralVelocity,2*ones(size(t)));
+            testCase.verifyEqual(actual.sideSlipAngle,command*(1-(1+w*t).*exp(-w*t)),AbsTol=1e-6);
+            testCase.verifyEqual(actual.sideSlipAngleRate,command*w^2*t.*exp(-w*t),AbsTol=1e-5);
+        end
+        function identityOutputMapPreservesTheOriginalInterface(testCase)
+            cfg=testCase.CurrentDesign.cfg;m=testCase.stopGoMeasurements();
+            a=runLateralVelocityObserver(m,testCase.CurrentDesign,cfg);
+            b=runLateralVelocityObserver(m,testCase.CurrentDesign,cfg,repmat([1,0,0,1,0,0],numel(m.time),1));
+            testCase.verifyEqual(a,b);
+        end
         function modelMatchesHandDerivedBicycleModel(testCase)
         % modelMatchesHandDerivedBicycleModel: The affine model reproduces the
         % textbook 2-DOF lateral bicycle matrices, and the first row of A and C

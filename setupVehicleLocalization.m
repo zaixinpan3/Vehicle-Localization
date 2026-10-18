@@ -11,6 +11,7 @@ function rootDir = setupVehicleLocalization()
 % Output:
 %   rootDir: absolute path of the vehicleLocalization root folder
     rootDir = fileparts(mfilename("fullpath"));
+    addpath(rootDir);
     addpath(fullfile(rootDir, "scripts"));
     addpath(fullfile(rootDir, "scripts", "kitti"));
     addpath(fullfile(rootDir, "scripts", "nuscenes"));

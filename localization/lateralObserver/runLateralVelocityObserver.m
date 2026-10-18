@@ -1,4 +1,4 @@
-function estimate = runLateralVelocityObserver(measurements, design, cfg)
+function estimate = runLateralVelocityObserver(measurements, design, cfg, outputVelocityMap)
 % runLateralVelocityObserver Export the LPV lateral-velocity estimate directly.
 % The only velocity state is the certified bicycle observer [vy; yawRate].
 % Inside its positive-speed domain it uses the scheduled LPV innovation.
@@ -17,6 +17,9 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
 %       cfg: current lateralObserverConfig (optional).
 % Output:
 %   estimate: LPV state, output-point velocity, angle interface and validity.
+% Optional outputVelocityMap is n-by-6: [a11 a12 a21 a22 b1 b2], applying
+% vOutput=A*[vx;vyOutputPoint]+b before the existing angle filter. It changes
+% only output coordinates, never the LPV dynamics, scheduling or innovation.
     if nargin < 3 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
@@ -30,6 +33,10 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     forwardOffset = double(cfg.outputPoint.forwardOffsetM);
     lateralObserverSupport.assertLateralVehicleMatches(design,cfg);
     measurements = normalizeMeasurements(measurements);
+    if nargin<4,outputVelocityMap=repmat([1,0,0,1,0,0],numel(measurements.time),1);end
+    assert(isequal(size(outputVelocityMap),[numel(measurements.time),6]) && all(isfinite(outputVelocityMap),'all'), ...
+        'VehicleLocalization:InvalidOutputVelocityMap','Require a finite n-by-6 affine velocity map.');
+    measurements.outputVelocityMap=double(outputVelocityMap);
     settings = validateRuntimeConfiguration(cfg, design);
     sampleCount = numel(measurements.time);
     state = double(cfg.observer.initialState(:));
@@ -81,7 +88,10 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg)
     estimate.state = history(:, 1:2);
     estimate.stateNames = ["lateralVelocity", "yawRate"];
     estimate.observerPointLateralVelocity = history(:, 1);
-    estimate.lateralVelocity = history(:, 1) - forwardOffset .* measurements.yawRate;
+    vy=history(:,1)-forwardOffset.*measurements.yawRate;
+    map=measurements.outputVelocityMap;vx=measurements.longitudinalSpeed;
+    estimate.longitudinalSpeed=map(:,1).*vx+map(:,2).*vy+map(:,5);
+    estimate.lateralVelocity=map(:,3).*vx+map(:,4).*vy+map(:,6);
     estimate.outputPoint = cfg.outputPoint;
     estimate.yawRate = history(:, 2);
     estimate.lateralVelocityRate = lateralVelocityRate;
@@ -127,7 +137,8 @@ function [command, valid] = sideSlipCommandAt(state, sample, cfg, settings)
     command = 0.0;
     if valid
         vy = state(1) - double(cfg.outputPoint.forwardOffsetM) .* sample.yawRate;
-        command = atan2(vy, sample.longitudinalSpeed);
+        map=sample.outputVelocityMap;vx=sample.longitudinalSpeed;
+        command = atan2(map(3)*vx+map(4)*vy+map(6),map(1)*vx+map(2)*vy+map(5));
     end
 end
 
@@ -151,13 +162,13 @@ end
 function sample = sampleAt(measurements, sampleIdx, stepFraction)
 % sampleAt Interpolate physical measurements without flooring speed.
     numericFields = ["steeringAngle", "longitudinalSpeed", ...
-        "longitudinalAcceleration", "lateralAcceleration", "yawRate"];
+        "longitudinalAcceleration", "lateralAcceleration", "yawRate", "outputVelocityMap"];
     nextIdx = min(sampleIdx + 1, numel(measurements.time));
     sample = struct();
     for fieldName = numericFields
         series = measurements.(fieldName);
-        sample.(fieldName) = ((1.0 - stepFraction) .* series(sampleIdx)) + ...
-            (stepFraction .* series(nextIdx));
+        sample.(fieldName) = ((1.0 - stepFraction) .* series(sampleIdx,:)) + ...
+            (stepFraction .* series(nextIdx,:));
     end
     if stepFraction <= 0.0
         sample.dynamicValid = measurements.dynamicValid(sampleIdx);

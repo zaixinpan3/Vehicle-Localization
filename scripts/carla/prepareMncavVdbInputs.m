@@ -34,7 +34,14 @@ function inputs=prepareMncavVdbInputs(datasetFolder,interfaceFile)
     assert(all(wheel.valid),'VehicleLocalization:MissingVdbWheel','Wheel input became unavailable.');
     h.longitudinalSpeed=wheel.longitudinalSpeed;
     lc=lateralObserverConfig();design=designLateralObserverGains(lc);
-    lateral=runLateralVelocityObserver(h,design,lc);
+    % Apply the existing horizontal-frame transform before the angle filter,
+    % so velocity and the filtered angle/rate pair describe the same axes.
+    velocityMap=zeros(n,6);
+    for k=1:n
+        R=tilt(:,:,k);vertical=lc.outputPoint.forwardOffsetM*s.gyroY(k);
+        velocityMap(k,:)=[R(1,1),R(1,2),R(2,1),R(2,2),R(1,3)*vertical,R(2,3)*vertical];
+    end
+    lateral=runLateralVelocityObserver(h,design,lc,velocityMap);
     % Rigid-body acceleration at the configured point behind the CG.
     angular=[s.gyroX,s.gyroY,s.gyroZ];filtered=angular;alpha=zeros(n,3);
     for k=2:n
@@ -44,15 +51,12 @@ function inputs=prepareMncavVdbInputs(datasetFolder,interfaceFile)
     lever=repmat([-lc.outputPoint.forwardOffsetM,0,0],n,1);
     aout=acc+cross(alpha,lever,2)+cross(angular,cross(angular,lever,2),2);
     % Match the horizontal map axes after tilt compensation of the LiDAR.
-    vo=zeros(n,3);ao=vo;
+    ao=zeros(n,3);
     for k=1:n
-        vo(k,:)=(tilt(:,:,k)*[h.longitudinalSpeed(k);lateral.lateralVelocity(k); ...
-            lc.outputPoint.forwardOffsetM*s.gyroY(k)]).';
         ao(k,:)=(tilt(:,:,k)*aout(k,:).').';
     end
-    globalMotion=struct('time',t,'longitudinalSpeed',vo(:,1), ...
+    globalMotion=struct('time',t,'longitudinalSpeed',lateral.longitudinalSpeed, ...
         'longitudinalAcceleration',ao(:,1),'lateralAcceleration',ao(:,2),'yawRate',yawRate);
-    lateral.lateralVelocity=vo(:,2);
     inputs=struct('highRate',globalMotion,'lateral',lateral,'lateralDesign',design,'wheel',wheel, ...
         'tilt',tilt,'angles',angles,'cgMotion',h,'sensorTable',s,'referenceUsed',false, ...
         'initialization',"Stationary IMU alignment over [2,3) seconds; pose initialization follows in the localization runner");

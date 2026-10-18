@@ -7,6 +7,17 @@ classdef recordedPlanarMotionTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function unavailableVelocityCannotMoveTheCloudFrame(testCase)
+            [poses,segment]=integrateRecordedPlanarMotion((0:.1:.4).',repmat([0,.5,0],5,1),(0:.1:.4).',false(5,1));
+            testCase.verifyTrue(all(isnan(poses),'all'));
+            testCase.verifyEqual(segment,zeros(5,1));
+        end
+        function gapBetweenQueriesStartsAnIndependentSegment(testCase)
+            [poses,segment]=integrateRecordedPlanarMotion((0:4).',repmat([2,0,0],5,1),[0;1;3;4],[1;1;0;1;1]);
+            testCase.verifyEqual(segment,[1;1;2;2]);
+            testCase.verifyEqual(poses(:,1),[0;2;0;2],AbsTol=1e-12);
+            testCase.verifyEqual(recordedMotionSegmentAt((0:4).',[1;1;0;2;2],[1;1.5;2;2.5;3;3.5]),[1;0;0;0;2;2]);
+        end
         function straightMotionUsesPhysicalElapsedTime(testCase)
             poses=integrateRecordedPlanarMotion([0;1;2],repmat([3 0 0],3,1),[.25;.75;1.75]);
             testCase.verifyEqual(poses,[0 0 0;1.5 0 0;4.5 0 0],'AbsTol',1e-12);

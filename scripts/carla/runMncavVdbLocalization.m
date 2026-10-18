@@ -41,14 +41,9 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     assert(metadata.outputPointForwardOffsetM==point.outputPoint.forwardOffsetM, ...
         'VehicleLocalization:StaleVdbCapture','Capture and observer output points differ.');
     if ~isfolder(outputFolder),mkdir(outputFolder);end
-    cache=fullfile(outputFolder,'processed_inputs.mat');
-    if isfile(cache)
-        a=load(cache,'inputs');inputs=a.inputs;lateralObserverSupport.assertLateralVehicleMatches(inputs.lateralDesign,lateralObserverConfig());
-        assert(isfield(inputs,'signature') && inputs.signature==mncavVdbInputSignature(datasetFolder,interfaceFile), ...
-            'VehicleLocalization:StaleVdbInputs','Input cache is stale. Regenerate processed_inputs.mat.');
-    else
-        inputs=prepareMncavVdbInputs(datasetFolder,interfaceFile);save(cache,'inputs','-v7.3');
-    end
+    % One fresh lateral synthesis per experiment; scenarios share it in memory.
+    fprintf('Fresh CARLA lateral gain synthesis and sensor preparation\n');
+    inputs=prepareMncavVdbInputs(datasetFolder,interfaceFile);
     frameTable=readtable(fullfile(datasetFolder,'frames.csv'));
     assert(isequal(frameTable.Properties.VariableNames,{'frame_index','lidar_stamp_sec','points'}), ...
         'VehicleLocalization:InvalidMeasurementFrames','Only acquisition metadata belongs in the frame table.');
@@ -61,8 +56,8 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
         'sideSlipAngle',inputs.lateral.sideSlipAngle(idx), ...
         'sideSlipAngleRate',inputs.lateral.sideSlipAngleRate(idx), ...
         'velocityValid',inputs.lateral.velocityValid(idx));
-    motion=integrateRecordedPlanarMotion(inputs.highRate.time, ...
-        [inputs.highRate.longitudinalSpeed,inputs.lateral.lateralVelocity,inputs.highRate.yawRate],t);
+    [motion,motionSegment]=integrateRecordedPlanarMotion(inputs.highRate.time, ...
+        [inputs.highRate.longitudinalSpeed,inputs.lateral.lateralVelocity,inputs.highRate.yawRate],t,inputs.lateral.velocityValid);
     source=load(mapFile,'cloud');map=registrationSupport.projectSemanticProbabilityCloud(source.cloud,2);
     p=perceptionConfig("Carla");cal=jsondecode(fileread(fullfile(datasetFolder,'calibration.json')));
     physicalCalibration=validateLidarFrameCalibration(cal.calibration);
@@ -113,7 +108,9 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     end
     report=struct('scenarios',vertcat(summaries{:}),'lidarChannel',options.LidarChannel,'envelope',envelope,'mapFile',mapFile,'datasetFolder',datasetFolder, ...
         'initialization',initial,'truthUsage',"None: scoring is a separate process; initial pose comes from measured GNSS", ...
-        'timing',"Zero-delay synchronous acquisition-time replay; measured processing time is reported separately");
+        'timing',"Zero-delay synchronous acquisition-time replay; measured processing time is reported separately", ...
+        'currentScanOnlyFrames',nnz(motionSegment==0), ...
+        'lateralSolverSolved',inputs.lateralDesign.solverSolved,'gainSource',"fresh-lmi; no persisted gains loaded");
     report.scanCoordinateAdapter=struct('physical',physicalCalibration,'virtual',p.frameCalibration, ...
         'description',"Virtual stored scan coordinates preserve the same body points; fixed map geometry is unchanged");
     f=fopen(fullfile(outputFolder,'summary.json'),'w');fprintf(f,'%s\n',jsonencode(report,PrettyPrint=true));fclose(f);
@@ -124,7 +121,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
             frame=store.pointClouds(1,frames(k));frame=struct('x',frame.x,'y',frame.y,'z',frame.z);
             frame=reframeLidarForCalibration(frame,physicalCalibration,cfg.perception.frameCalibration);
             current=perceiveCoarseProbabilityCloud(frame,cfg.perception);
-            [clouds{k},window]=updateLocalizationSourceWindow(current,t(k),motion(k,:),window,cfg.sourceWindow);
+            [clouds{k},window]=updateLocalizationSourceWindow(current,t(k),motion(k,:),window,cfg.sourceWindow,motionSegment(k));
             seconds(k)=toc(frameTimer);
             if mod(k,100)==0 || k==n,fprintf('overlap sources %d/%d\n',k,n);end
         end

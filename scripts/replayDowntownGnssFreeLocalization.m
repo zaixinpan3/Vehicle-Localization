@@ -33,6 +33,7 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
         'sideSlipAngleRate',interp1(inputs.lateral.time,inputs.lateral.sideSlipAngleRate,t), ...
         'velocityValid',interp1(inputs.lateral.time,double(inputs.lateral.velocityValid),t)==1);
     motion=interp1(inputs.highRate.time,inputs.motion,t);
+    motionSegment=recordedMotionSegmentAt(inputs.highRate.time,inputs.motionSegment,t);
     cfg=protocol.observer;prior=validateDowntownInitialPose(options.InitialPosePacket,ids(1),native(1));
     R=[cos(prior(3)),-sin(prior(3));sin(prior(3)),cos(prior(3))];v=R*[h.longitudinalSpeed(1);lat.lateralVelocity(1)];
     cfg.initialState=[prior(1);v(1);0;prior(2);v(2);0;prior(3)];
@@ -43,11 +44,11 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     p=perceptionConfig("Downtown");p.featureNames=protocol.featureNames;
     matching=struct('perception',p,'sourceWindow',protocol.sourceWindow);
     sourcePreparationSeconds=0;
-    sources=cell(n,1);
+    sources=cell(n,1);deskewApplied=false(n,1);
     for k=1:n
-        timerFrame=tic;frame=loadPointCloudFrame(fullfile(datasetFolder,'pointClouds.mat'),ids(k));frame=deskewDowntownMotionFrame(frame,inputs);
+        timerFrame=tic;frame=loadPointCloudFrame(fullfile(datasetFolder,'pointClouds.mat'),ids(k));[frame,deskewApplied(k)]=deskewDowntownMotionFrame(frame,inputs);
         current=perceiveCoarseProbabilityCloud(frame,matching.perception);
-        [sources{k},history]=updateLocalizationSourceWindow(current,t(k),motion(k,:),history,matching.sourceWindow);
+        [sources{k},history]=updateLocalizationSourceWindow(current,t(k),motion(k,:),history,matching.sourceWindow,motionSegment(k));
         timings(k,1)=toc(timerFrame);
         if mod(k,25)==0 || k==n,fprintf('overlap sources %s %d/%d\n',datasetFolder,k,n);end
     end
@@ -76,7 +77,8 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
         'featureNames',protocol.featureNames,'runtimeSeconds',runtime,'medianProcessingMs',median(timings(:,3))*1000, ...
         'continuousLmiVerified',estimate.diagnostics.continuousLmiVerified,'sampledSystemCertified',false, ...
         'mapFile',mapFile,'datasetFolder',datasetFolder,'trainingQueryOverlap',0,'evaluation',protocol.evaluation, ...
-        'deskew',"Measured wheel/gyro/lateral planar motion; no reference trajectory",'tiltMode',inputs.tiltMode, ...
+        'deskew',"Measured wheel/gyro/lateral planar motion within valid segments; otherwise acquired scan unchanged", ...
+        'deskewAppliedFrames',nnz(deskewApplied),'currentScanOnlyFrames',nnz(motionSegment==0),'tiltMode',inputs.tiltMode, ...
         'motionReconstruction',inputs.reconstruction,'pointAlignment',inputs.pointAlignment, ...
         'referencePoint',"front LiDAR origin; unsurveyed point transport",'informationQualifiedFrames',nnz(estimate.diagnostics.continuousInformationQualified));
     save(fullfile(outputFolder,'estimate.mat'),'estimate','cfg','report','-v7.3');
