@@ -77,7 +77,11 @@ function cfg = lateralObserverConfig(profile)
     % from the plant; the default is zero, so lipschitzConstant acts purely
     % as a robustness margin against unmodeled lateral dynamics.
     cfg.observer = struct();
-    cfg.observer.integrationMethod = "rk4";
+    % Exponentiate the stiff LPV part at each interval midpoint. The copied
+    % nonlinearity uses an explicit midpoint stage; the angle filter uses
+    % its exact constant-command flow. This is a numerical implementation,
+    % not an extension of the continuous ISS certificate to sampled data.
+    cfg.observer.integrationMethod = "exponentialMidpoint";
     cfg.observer.nonlinearity = @(x) zeros(2, 1);
     cfg.observer.initialState = [0.0; 0.0];
     % Only the LPV [vy; r] state estimates velocity. Out-of-domain samples

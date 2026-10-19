@@ -9,6 +9,12 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % The output-point transport is algebraic. A separate two-state angle filter
 % still exports beta and betaDot from this LPV velocity; it does not modify vy.
 % Consumers must honor velocityValid for velocity, angle and angle-rate aiding.
+% The default exponential-midpoint implementation freezes LPV coefficients
+% at the interval midpoint and exponentiates that linear flow. A midpoint
+% stage handles the copied nonlinearity and the angle-filter command. Speed
+% boundary crossings split an interval; unavailable LPV flow remains held.
+% Inputs are linearly interpolated between the two received endpoints,
+% as for RK4. This is not exact integration of varying/nonlinear dynamics.
 %
 % Input:
 %   measurements: aligned time, steeringAngle, longitudinalSpeed,
@@ -67,7 +73,9 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
             break;
         end
         dt = measurements.time(sampleIdx + 1) - measurements.time(sampleIdx);
-        if integrationMethod == "euler"
+        if integrationMethod == "exponentialmidpoint"
+            state = exponentialInterval(state, measurements, sampleIdx, dt, design, cfg, settings);
+        elseif integrationMethod == "euler"
             state = state + dt .* derivative;
         else
             midSample = sampleAt(measurements, sampleIdx, 0.5);
@@ -107,7 +115,8 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     estimate.mode = mode;
     estimate.modeChanged = modeChanged;
     estimate.diagnostics = struct("dynamicModelEvaluated", velocityValid, ...
-        "sideSlipCommandValid", velocityValid, "modeChanged", modeChanged);
+        "sideSlipCommandValid", velocityValid, "modeChanged", modeChanged, ...
+        "integrationMethod", integrationMethod);
     estimate.measurements = measurements;
 end
 
@@ -128,6 +137,49 @@ function [derivative, innovation, gain, command, valid] = observerDerivative( ..
     angleError = wrapAngleDifference(command - state(3));
     derivative = [lpvDerivative; state(4); ...
         frequency.^2 .* angleError - 2.0 .* damping .* frequency .* state(4)];
+end
+
+function state = exponentialInterval(state, measurements, sampleIdx, dt, design, cfg, settings)
+% exponentialInterval Resolve speed-domain boundaries before midpoint flow.
+% Boolean validity is conservative on the open interval: both endpoints
+% must be available. An isolated valid endpoint has zero integration time.
+    speed = measurements.longitudinalSpeed(sampleIdx:sampleIdx+1);
+    fractions = [0.0, 1.0];
+    if speed(2) ~= speed(1)
+        crossings = (settings.speedRange - speed(1)) ./ (speed(2) - speed(1));
+        fractions = sort([fractions, crossings(crossings > 0 & crossings < 1)]);
+    end
+    for segmentIdx = 1:numel(fractions)-1
+        left = fractions(segmentIdx);
+        right = fractions(segmentIdx+1);
+        sample = sampleAt(measurements, sampleIdx, (left+right)/2);
+        h = dt*(right-left);
+        [~, valid] = sideSlipCommandAt(state(1:2), sample, cfg, settings);
+        midpoint = state(1:2);
+        if valid
+            rho = [sample.longitudinalSpeed; 1/sample.longitudinalSpeed];
+            [A, C] = lateralObserverSupport.evaluateLateralModel(design.model, rho);
+            gain = lateralObserverSupport.scheduleLateralObserverGain(design, sample.longitudinalSpeed);
+            linear = A-gain*C;
+            forcing = (design.model.B-gain*design.model.D)*sample.steeringAngle + ...
+                gain*[sample.lateralAcceleration; sample.yawRate];
+            % The augmented exponential gives Phi and the input integral
+            % without inverting linear, including a singular linear part.
+            transition = expm((h/2)*[linear, eye(2); zeros(2,4)]);
+            phi = transition(1:2,1:2);
+            integral = transition(1:2,3:4);
+            midpoint = phi*state(1:2) + integral*(forcing + ...
+                evaluateNonlinearity(cfg.observer.nonlinearity, state(1:2)));
+            midpointForcing = forcing + evaluateNonlinearity(cfg.observer.nonlinearity, midpoint);
+            state(1:2) = phi*(phi*state(1:2) + integral*midpointForcing) + ...
+                integral*midpointForcing;
+        end
+        command = sideSlipCommandAt(midpoint, sample, cfg, settings);
+        % Unwrap the held target locally before applying the exact linear
+        % filter flow. This preserves the short angular innovation.
+        target = [state(3)+wrapAngleDifference(command-state(3)); 0];
+        state(3:4) = target + expm(h*settings.angleMatrix)*(state(3:4)-target);
+    end
 end
 
 function [command, valid] = sideSlipCommandAt(state, sample, cfg, settings)
@@ -151,12 +203,17 @@ function [derivative, innovation, gain] = dynamicObserverDerivative( ...
     measuredOutput = [sample.lateralAcceleration; sample.yawRate];
     predictedOutput = (C * state) + (design.model.D .* sample.steeringAngle);
     innovation = measuredOutput - predictedOutput;
-    nonlinearTerm = double(nonlinearity(state));
-    nonlinearTerm = nonlinearTerm(:);
-    assert(numel(nonlinearTerm) == 2 && all(isfinite(nonlinearTerm)), ...
-        "cfg.observer.nonlinearity must return a finite [2 x 1] vector.");
+    nonlinearTerm = evaluateNonlinearity(nonlinearity, state);
     derivative = (A * state) + (design.model.B .* sample.steeringAngle) + ...
         nonlinearTerm + (gain * innovation);
+end
+
+function value = evaluateNonlinearity(nonlinearity, state)
+% evaluateNonlinearity Validate every explicit nonlinear stage.
+    value = double(nonlinearity(state));
+    value = value(:);
+    assert(numel(value) == 2 && all(isfinite(value)), ...
+        "cfg.observer.nonlinearity must return a finite [2 x 1] vector.");
 end
 
 function sample = sampleAt(measurements, sampleIdx, stepFraction)
@@ -222,8 +279,8 @@ function settings = validateRuntimeConfiguration(cfg, design)
         speedRange(2) > speedRange(1), ...
         "design.polytope.speedRange must define a positive nonempty speed interval.");
     integrationMethod = lower(strtrim(string(cfg.observer.integrationMethod)));
-    assert(integrationMethod == "rk4" || integrationMethod == "euler", ...
-        "cfg.observer.integrationMethod must be rk4 or euler.");
+    assert(any(integrationMethod == ["exponentialmidpoint", "rk4", "euler"]), ...
+        "cfg.observer.integrationMethod must be exponentialMidpoint, rk4 or euler.");
     assert(isa(cfg.observer.nonlinearity, "function_handle"), ...
         "cfg.observer.nonlinearity must be a function handle.");
     assertFiniteVector(cfg.observer.initialState, 2, "cfg.observer.initialState");
@@ -232,7 +289,10 @@ function settings = validateRuntimeConfiguration(cfg, design)
     end
     assertPositiveScalar(cfg.sideSlip.naturalFrequency, "cfg.sideSlip.naturalFrequency");
     assertPositiveScalar(cfg.sideSlip.dampingRatio, "cfg.sideSlip.dampingRatio");
-    settings = struct("speedRange", speedRange);
+    frequency = double(cfg.sideSlip.naturalFrequency);
+    damping = double(cfg.sideSlip.dampingRatio);
+    settings = struct("speedRange", speedRange, ...
+        "angleMatrix", [0, 1; -frequency^2, -2*damping*frequency]);
 end
 
 function assertFiniteVector(value, expectedLength, name)
