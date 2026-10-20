@@ -4,12 +4,11 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
         Design
     end
     methods (TestClassSetup)
-        function currentExpandedDesign(testCase)
+        function currentDefaultDesign(testCase)
             root = fileparts(fileparts(mfilename('fullpath')));
             testCase.applyFixture(matlab.unittest.fixtures.PathFixture(root));
             setupVehicleLocalization;
             cfg = lateralObserverConfig();
-            cfg.scheduling.speedRange = [1,30];
             testCase.Design = designLateralObserverGains(cfg);
         end
     end

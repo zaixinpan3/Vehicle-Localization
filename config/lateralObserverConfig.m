@@ -44,7 +44,7 @@ function cfg = lateralObserverConfig(profile)
     % vertices. longitudinalAccelerationRange bounds the actual dVx/dt;
     % a body-axis accelerometer reading need not equal that derivative.
     cfg.scheduling = struct();
-    cfg.scheduling.speedRange = [5.0, 30.0];
+    cfg.scheduling.speedRange = [1.0, 30.0];
     cfg.scheduling.longitudinalAccelerationRange = [-3.0, 3.0];
 
     % ISS synthesis: Lipschitz bound of the copied nonlinearity, the

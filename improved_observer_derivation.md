@@ -296,7 +296,7 @@ these from one persistent second-order state, tracking its zero convention
 through stops. That convention does not give a stopped vehicle a physical
 motion direction. Output-point adapters must export a pair for their own
 declared motion point. The lateral reciprocal-speed
-LPV certificate covers [5,30] m/s; its division-free low-speed runtime does not
+LPV certificate covers [1,30] m/s; its division-free low-speed runtime does not
 extend that LMI to a unified stopped/hybrid theorem. These scope distinctions
 are separate from the actual-overlap margin still to be proved.
 

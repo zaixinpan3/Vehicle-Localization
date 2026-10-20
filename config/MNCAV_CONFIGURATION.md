@@ -21,6 +21,11 @@ A simulation's raw steering command is already a road-wheel angle; do not
 subtract the recorded steering-wheel zero twice. Replay preparation converts
 `(rawSteeringWheelAngle-steeringWheelOffsetRad)/steeringRatio` once.
 
+The default lateral LPV speed domain is `[1,30] m/s`, using exponential
+midpoint integration. The previous `[5,30] m/s` default is retired. Below
+1 m/s or above 30 m/s, lateral velocity aiding remains unavailable; this
+change does not extend the LPV certificate to standstill.
+
 Generate gains with `designLateralObserverGains()` or an explicitly supplied
 configuration. Lateral simulation/execution rejects a design whose stored
 vehicle differs from the requested configuration. Default experiment scripts

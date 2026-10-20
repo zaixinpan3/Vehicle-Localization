@@ -387,7 +387,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design.model.C2(:) = NaN;
             cfg = design.cfg;
             cfg.observer.initialState = [0.4; 0.0];
-            for speed = [0.0, 2.0, 35.0]
+            for speed = [0.0, 0.5*cfg.scheduling.speedRange(1), cfg.scheduling.speedRange(2)+5.0]
                 measurements = testCase.constantSpeedMeasurements(2.0, speed);
                 measurements.steeringAngle(:) = 0.3;
                 measurements.lateralAcceleration(:) = 0.1;

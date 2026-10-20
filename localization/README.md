@@ -158,7 +158,7 @@ the upstream angle/rate interface, which remains defined through stops in the
 standard lateral observer. This is an interface state, not a physical motion
 direction at a zero velocity vector. The lateral runtime uses division-free master,
 stationary/crawl and shadow branches outside the LPV domain. Its reciprocal-speed
-LPV model and LMI remain restricted to the positive interval [5,30] m/s. Safe
+LPV model and LMI remain restricted to the positive interval [1,30] m/s. Safe
 zero-speed execution is distinct from a unified zero-speed hybrid stability
 certificate; neither the current surrogate nor actual-overlap discussion claims
 that stronger result.
