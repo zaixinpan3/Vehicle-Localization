@@ -299,10 +299,14 @@ classdef lidarInjectionSupport
         % with pi_ij the pair responsibilities at scale sigma: the Gauss-Newton (EM)
         % metric of each -log E_sigma. It is positive semidefinite, exact for one
         % pair at any translation, and does not vanish at a kernel inflection, so
-        % the regularized observer step stays bounded and points to the optimum.
+        % the regularized observer step stays bounded. For mixtures this is not
+        % the true cost Hessian: pair-score covariance can cancel its apparent
+        % curvature. Full rank does not certify a restoring sector or exclude
+        % an incorrect local alignment.
         % Summing the scales fuses them in information form: the sharp scale
         % dominates near alignment, the wide ones keep a restoring force where the
-        % sharp kernels have decayed. With cfg.evidenceWeights, map view
+        % sharp kernels have decayed; they do not guarantee a capture radius.
+        % With cfg.evidenceWeights, map view
         % reliability and source temporal stability scale the mixture masses before
         % class balancing, as in registration. No pose is optimized, no
         % correspondence is selected and no acceptance test is applied; zero overlap

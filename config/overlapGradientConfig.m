@@ -12,7 +12,8 @@ function cfg=overlapGradientConfig()
     cfg.viewConditioning=true;                        % condition view-modeled map components at the prediction
     % Horizontal smoothing bandwidths. 0 is the exact overlap; a wider scale is
     % the expected overlap under an isotropic prediction error of that size.
-    % The dyadic ladder keeps a restoring force out to about 2 m. On the
+    % The dyadic ladder adds broader overlap terms up to a 2 m bandwidth;
+    % this is not a guaranteed capture radius for a multimodal map. On the
     % recorded MnCAV drive [0 0.5 1], [0 0.5 1 2] and [0 0.5 1 2 4] agreed
     % within 1 mm, while omitting 0.5 m was worse.
     cfg.scaleLadder=[0 0.5 1 2];                      % m
