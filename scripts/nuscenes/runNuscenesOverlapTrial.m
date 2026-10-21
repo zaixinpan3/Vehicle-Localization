@@ -1,7 +1,8 @@
 function [reports,estimates,referenceAudit]=runNuscenesOverlapTrial(datasetFolder,outputFolder,options)
 % runNuscenesOverlapTrial Known-map LiDAR/CAN development trial on nuScenes.
-% With one-based frame numbers, map all odd sweeps with reference poses and
-% query disjoint even sweeps at about 10 Hz. Reference is allowed for mapping, one initial pose/
+% FrameProtocol="oddEven" maps odd sweeps and queries disjoint even sweeps.
+% FrameProtocol="allAll" maps all sweeps and queries all motion-covered sweeps;
+% map/query scans overlap in that same-pass experiment. Reference is allowed for mapping, one initial pose/
 % tilt and scoring only. Live inputs are LiDAR, rear-wheel RPM, steering,
 % IMU force/gyro and IMU tilt. No pose.json or navigation velocity is loaded.
 % Fresh global and vehicle-specific lateral LMIs are solved for each call.
@@ -16,6 +17,7 @@ function [reports,estimates,referenceAudit]=runNuscenesOverlapTrial(datasetFolde
         options.Scenes (1,:) string=["scene-0061","scene-0103"]
         options.CalibrationScenes (1,:) string=["scene-0553","scene-0655","scene-0757", ...
             "scene-0796","scene-0916","scene-1077","scene-1094","scene-1100"]
+        options.FrameProtocol (1,1) string {mustBeMember(options.FrameProtocol,["oddEven","allAll"])}="oddEven"
         options.RandomSeed (1,1) double {mustBeInteger,mustBeNonnegative}=20261014
         options.ReferenceAuditDatasetFolder (1,1) string=""
         options.ReferenceAuditOutputFolder (1,1) string=""
@@ -41,12 +43,12 @@ function [reports,estimates,referenceAudit]=runNuscenesOverlapTrial(datasetFolde
     tables=loadTables(datasetFolder);reports=cell(numel(options.Scenes),1);estimates=cell(numel(options.Scenes),1);
     sceneRng=rng;
     for j=1:numel(options.Scenes)
-        [reports{j},estimates{j}]=runScene(datasetFolder,outputFolder,options.Scenes(j),tables,trial,lateralDesign);
+        [reports{j},estimates{j}]=runScene(datasetFolder,outputFolder,options.Scenes(j),tables,trial,lateralDesign,options.FrameProtocol);
     end
     [status,commit]=system(sprintf('git -C "%s" rev-parse HEAD',root));
     assert(status==0,'VehicleLocalization:MissingTrialVersion','Cannot identify executed source version.');
     writeJson(fullfile(outputFolder,'summary.json'),struct('scenes',{reports}, ...
-        'sourceBaseCommit',strtrim(commit),'randomSeed',options.RandomSeed,'developmentTrial',true,'officialBenchmark',false, ...
+        'sourceBaseCommit',strtrim(commit),'frameProtocol',options.FrameProtocol,'randomSeed',options.RandomSeed,'developmentTrial',true,'officialBenchmark',false, ...
         'reference',"nuScenes ego_pose fused localization; not independent survey truth", ...
         'vehicleIdentified',false,'independentGnssUsed',false,'sampledSystemCertified',false));
     referenceAudit=struct();
@@ -56,13 +58,13 @@ function [reports,estimates,referenceAudit]=runNuscenesOverlapTrial(datasetFolde
         auditReports=cell(size(reports));auditEstimates=cell(size(estimates));
         for j=1:numel(options.Scenes)
             [auditReports{j},auditEstimates{j}]=runScene(options.ReferenceAuditDatasetFolder, ...
-                options.ReferenceAuditOutputFolder,options.Scenes(j),tables,trial,lateralDesign);
+                options.ReferenceAuditOutputFolder,options.Scenes(j),tables,trial,lateralDesign,options.FrameProtocol);
         end
         referenceAudit=struct('reports',{auditReports},'estimates',{auditEstimates});
     end
 end
 
-function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDesign)
+function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDesign,frameProtocol)
     scene=tables.scenes(strcmp({tables.scenes.name},sceneName));
     assert(isscalar(scene),'VehicleLocalization:MissingNuscenesScene','Scene not found: %s.',sceneName);
     sampleTokens=string({tables.samples(strcmp({tables.samples.scene_token},scene.token)).token});
@@ -77,8 +79,17 @@ function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDes
     steering=jsondecode(fileread(prefix+"_steeranglefeedback.json"));
     [motion,aux]=prepareNuscenesMotion(imu,wheels,steering,trial);
     lateral=runLateralVelocityObserver(motion,lateralDesign,trial.lateral);
-    ids=(0:numel(frames)-1).';training=find(mod(ids,2)==0);
-    query=find(mod(ids,2)==1 & stamp>=aux.utime(1) & stamp<=aux.utime(end));
+    ids=(0:numel(frames)-1).';
+    motionCovered=stamp>=aux.utime(1) & stamp<=aux.utime(end);
+    if frameProtocol=="allAll"
+        training=(1:numel(frames)).';
+        query=find(motionCovered);
+        protocol="Same-pass all-frame map and all motion-covered frames for localization; map/query scans overlap";
+    else
+        training=find(mod(ids,2)==0);
+        query=find(mod(ids,2)==1 & motionCovered);
+        protocol="Same-pass odd-frame map and disjoint even-frame localization (one-based); not an independent mapping traversal";
+    end
     assert(numel(query)>=10,'VehicleLocalization:MissingNuscenesCoverage','Too few query sweeps.');
     [~,poseIndex]=ismember(string({frames.ego_pose_token}),string({tables.poses.token}));
     reference=zeros(numel(frames),4);tilt=zeros(numel(frames),2);
@@ -163,7 +174,9 @@ function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDes
     report=struct('scene',sceneName,'description',string(scene.description),'durationS',t(end), ...
         'mappingFrames',numel(training),'queryFrames',numel(query),'trainingQueryOverlap',numel(intersect(training,query)), ...
         'mappingFrameTokens',string({frames(training).token}),'queryFrameTokens',string({frames(query).token}), ...
-        'frameNumberConvention',"One-based, chronological within the scene; odd mapping, even localization", ...
+        'frameNumberConvention',"One-based, chronological within the scene", ...
+        'frameProtocol',frameProtocol,'sceneFrames',numel(frames), ...
+        'framesOutsideMotionCoverage',nnz(~motionCovered),'medianQueryIntervalS',median(diff(t)), ...
         'mappingFrameNumbers',training.','queryFrameNumbers',query.', ...
         'mappingFeatureCounts',sum(counts,1),'mapComponents',map.components.numComponents, ...
         'mapStability',stability, ...
@@ -182,7 +195,7 @@ function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDes
         'lateralObserverUsed',true,'wheelSpeedUsed',true,'steeringUsed',true,'intrinsicPredictionUsesImu',false, ...
         'queryTilt',"IMU tilt changes aligned to a single reference initial tilt", ...
         'deskew',"Disabled for map and query; no truth-based deskew", ...
-        'protocol',"Same-pass odd-frame map and disjoint even-frame localization (one-based); not an independent mapping traversal", ...
+        'protocol',protocol, ...
         'actualOverlapOperatorLmiVerified',false,'vehicleIdentified',false,'sampledSystemCertified',false, ...
         'developmentTrial',true,'initialization',initial,'metrics',table2struct(metrics));
     writeJson(fullfile(sceneOut,'summary.json'),report);
