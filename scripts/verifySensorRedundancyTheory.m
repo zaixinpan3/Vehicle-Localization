@@ -1,6 +1,6 @@
 function report=verifySensorRedundancyTheory(options)
 % verifySensorRedundancyTheory Verify the unified continuous-theory witness.
-% This checks the two sensor-adequacy sets of derivation Section 0.6 with one
+% This checks three complementary sensor-adequacy sets with one
 % constant metric and gain set. It never installs gains in the runtime.
 % With no Witness, solve temporary theoretical gains for the requested domain.
 % A supplied in-memory Witness is verified without solving the main observer.
@@ -21,20 +21,24 @@ function report=verifySensorRedundancyTheory(options)
         inputs=theoryInputs(cfg);
     end
     if isempty(fieldnames(options.Witness))
-        domain=struct('minimumGnssSpeed',options.MinimumGnssSpeed, ...
-            'informativeLidarMismatch',options.OperatorMismatch, ...
-            'degradedLidarMismatch',options.OperatorMismatch, ...
-            'speedPartitions',10,'accelerationSplit',.5,'gnssSplit',cfg.invariantObserver.gnssCouplingSplit,'lambda',1);
+        domain=cfg.invariantObserver.redundancy;
+        domain.minimumGnssSpeed=options.MinimumGnssSpeed;
+        domain.informativeLidarMismatch=options.OperatorMismatch;
+        domain.degradedLidarMismatch=options.OperatorMismatch;
         validateDomain(domain,inputs);
         external=fullfile(fileparts(root),'RobustVehicleLocalization','external');
         addpath(genpath(fullfile(external,'YALMIP')));addpath(genpath(fullfile(external,'sedumi')));
         yalmip('clear');Pc=sdpvar(3,3);Ph=sdpvar(2,2);P=blkdiag(Pc,Pc,Ph);
         gains=sdpvar(4,1);witness=struct('inputs',inputs,'domain',domain,'P',P, ...
             'kappaL',gains(1),'kappaG',gains(2),'accelerationGain',gains(3),'directionGain',gains(4));
-        [L,G]=sensorRedundancySupport.blocks(witness);constraints=[P>=eye(8),P<=1e5*eye(8), ...
-            Ph(1,2)==0,Ph<=Pc(1:2,1:2),gains>=0];
+        [L,G,M]=sensorRedundancySupport.blocks(witness);constraints=[P>=eye(8),P<=1e5*eye(8), ...
+            Ph(1,2)==0,gains>=0];
+        if cfg.invariantObserver.balancedPoseMetric
+            constraints=[constraints,Ph<=Pc(1:2,1:2)];
+        end
         for j=1:numel(L),constraints=[constraints,L{j}<=-1e-7*eye(8)];end %#ok<AGROW>
         for j=1:numel(G),constraints=[constraints,G{j}<=-1e-7*eye(8)];end %#ok<AGROW>
+        for j=1:numel(M),constraints=[constraints,M{j}<=-1e-7*eye(8)];end %#ok<AGROW>
         result=optimize(constraints,sum(gains)+.01*trace(P),sdpsettings('solver','sedumi','verbose',0));
         assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleRedundancyTheory', ...
             'The requested common theory domain is infeasible in this enclosure: %s',result.info);
@@ -61,12 +65,15 @@ function report=verifySensorRedundancyTheory(options)
     for name=["kappaL","kappaG","accelerationGain","directionGain"]
         validateattributes(witness.(name),{'double'},{'real','finite','positive','scalar'});
     end
-    [L,G]=sensorRedundancySupport.blocks(witness);worstL=worstEigenvalue(L);worstG=worstEigenvalue(G);
-    verified=worstL<0 && worstG<0;
-    assert(verified,'VehicleLocalization:UnverifiedRedundancyTheory','The common theory inequalities failed: L %.6g, G %.6g.',worstL,worstG);
+    [L,G,M]=sensorRedundancySupport.blocks(witness);
+    worstL=worstEigenvalue(L);worstG=worstEigenvalue(G);worstM=worstEigenvalue(M);
+    verified=worstL<0 && worstG<0 && worstM<0;
+    assert(verified,'VehicleLocalization:UnverifiedRedundancyTheory', ...
+        'The common theory inequalities failed: L %.6g, G %.6g, M %.6g.',worstL,worstG,worstM);
     report=struct('witness',witness,'commonLmiVerified',verified, ...
         'lidarVertices',numel(L),'gnssBernsteinVertices',numel(G), ...
         'worstLidarEigenvalue',worstL,'worstGnssEigenvalue',worstG, ...
+        'worstMixedEigenvalue',worstM,'mixedVertices',numel(M),'coversComplementaryInformationAtRest',true, ...
         'minimumMetricEigenvalue',min(eig(P)), ...
         'coversGnssAbsent',true,'coversZeroLidarInformation',true, ...
         'minimumGnssCourseSpeed',witness.domain.minimumGnssSpeed, ...
@@ -84,6 +91,7 @@ function validateDomain(d,p)
     assert(d.minimumGnssSpeed>0 && d.minimumGnssSpeed<=p.maximumSpeed, ...
         'VehicleLocalization:UnobservableGnssHeading','Position-only GNSS needs the declared positive-motion domain for full-state convergence.');
     validateattributes(d.speedPartitions,{'double'},{'finite','integer','positive','scalar'});
+    sensorRedundancySupport.courseControls(p.maximumCourseRate,d.coursePartitions);
     validateattributes(d.informativeLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
     validateattributes(d.degradedLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
     assert(d.accelerationSplit>0 && d.accelerationSplit<1 && d.gnssSplit>0 && d.gnssSplit<1 && d.lambda>0, ...

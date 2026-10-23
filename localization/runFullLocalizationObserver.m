@@ -274,9 +274,11 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     estimate.diagnostics.invariantOutputs=invariantAudits;
     estimate.diagnostics.intrinsicPredictionUsesImu=false;
     estimate.diagnostics.actualOverlapCertified=false;
-    estimate.diagnostics.finiteInvariantSecantsCertified=false;
-    estimate.diagnostics.conditionalInvariantLocalClosureEstablished=true;
-    estimate.diagnostics.numericalInvariantRadiusCertified=false;
+    certificate=continuous.continuousCertificate.verification;
+    estimate.diagnostics.finiteInvariantSecantsCertified=certificate.finiteInvariantSecantsCertified;
+    estimate.diagnostics.conditionalInvariantLocalClosureEstablished=certificate.conditionalInvariantLocalClosureEstablished;
+    estimate.diagnostics.numericalInvariantRadiusCertified=certificate.numericalInvariantRadiusCertified;
+    estimate.diagnostics.regionalIss=certificate.regionalIss;
     estimate.diagnostics.gyroOutputAvailabilitySatisfied=all(gyroValid);
 end
 

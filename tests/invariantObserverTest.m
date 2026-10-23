@@ -8,9 +8,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
     methods (Test)
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=invariantObserverSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,256);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,9984);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,5888);
+            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,9984);
+            testCase.verifyTrue(v.finiteInvariantSecantsCertified);
+            testCase.verifyTrue(v.numericalInvariantRadiusCertified);
+            testCase.verifyGreaterThan(v.regionalIss.normalizedRadius,0);
             testCase.verifySize(d.P,[8,8]);
         end
         function staleArchitectureInputsCannotReuseTheGain(testCase)

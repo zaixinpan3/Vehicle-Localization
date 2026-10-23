@@ -37,6 +37,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
         function solverClaimCannotReplaceNumericVerification(testCase)
             c=freshObserverTestConfig();h=c.invariantDesign;h.kappaL=0;h.verification.certified=true;
             v=invariantObserverSupport.verify(h,c);testCase.verifyFalse(v.certified);
+            testCase.verifyFalse(v.numericalInvariantRadiusCertified);
+            testCase.verifyFalse(v.regionalIss.certified);
             c.invariantDesign=h;
             testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:InfeasibleInvariantDesign');
         end

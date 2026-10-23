@@ -8,7 +8,7 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-intrinsic-redundancy-v2",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-intrinsic-vector-iss-v3",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('gainInformationScale',16,'outputPoint', ...
@@ -33,9 +33,10 @@ function cfg=mncavFullObserverConfig(options)
     z.noiseObjective="normalizedFullState";
     z.velocityAvailable=true;z.accelerationAvailable=true;
     z.redundancy=struct('minimumGnssSpeed',10,'informativeLidarMismatch',.001, ...
-        'degradedLidarMismatch',.001,'speedPartitions',10, ...
+        'degradedLidarMismatch',.001,'speedPartitions',10,'coursePartitions',2, ...
         'accelerationSplit',.5,'gnssSplit',.5,'lambda',1,'kinematicGnssEnclosure',true, ...
         'exactGnssLeverEnclosure',true);
+    z.regionalRadiusCap=1; % Outer normalized error ball used for Hessian bounds.
     z.headingGainLimits=[8,8]; % kappaL/P77 and directionGain/P77.
     z.matchedGainLimits=[8,8,2]; % Position L/G and velocity-direction self-feedback.
     z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]; predict uses internal r and estimated lateral sideslip rate; IMU only in invariant innovations";
@@ -43,8 +44,8 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.operatingPoints="Noise objective at informative LiDAR, LiDAR plus GNSS, weak LiDAR plus GNSS and moving GNSS only; no absolute-pose steady-state objective without a pose anchor";
     z.provenance.metric="Rotation-invariant translational blocks and a diagonal angular block; angular/translation balance is not a theorem condition and is withdrawn to permit fixed feedback-authority limits";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
-    z.provenance.noiseObjective="All eight normalized errors at pose-anchored nominal points; diagonal noise proxy is a synthesis objective, not an empirical covariance guarantee";
-    z.provenance.redundancy="Common fixed metric/gains for LiDAR-sufficient/GNSS-absent and moving-GNSS-sufficient/rank-zero-LiDAR sets; actual overlap mismatch <=0.001 is a geometric contract, not a measured map certificate; G is withdrawn when velocity/acceleration channels are unavailable";
+    z.provenance.noiseObjective="All eight normalized errors at pose-anchored nominal points; shared primitive velocity/acceleration/gyro columns and separate upstream constraint-error budgets; this energy proxy is not an empirical covariance guarantee";
+    z.provenance.redundancy="Common L/G/M metric: sufficient LiDAR, moving GNSS with invariant outputs, or GNSS position plus LiDAR heading including rest; correlated course-rate Bernstein controls; actual finite overlap mismatch <=0.001 remains a geometric contract; G/M design families are withdrawn when velocity/acceleration channels are configured unavailable";
     z.provenance.feedback="Normalized matched self-feedback limits L-position 8, G-position 8, velocity-direction 2 and heading L/direction 8; constrained inside the solve, without runtime clipping; exact G kinematics and lever coupling reduce sufficient-condition conservatism";
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];

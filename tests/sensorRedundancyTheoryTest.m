@@ -16,8 +16,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             testCase.verifyTrue(r.commonLmiVerified);
             testCase.verifyTrue(r.coversGnssAbsent);
             testCase.verifyTrue(r.coversZeroLidarInformation);
-            testCase.verifyEqual(r.lidarVertices,128);
-            testCase.verifyEqual(r.gnssBernsteinVertices,480);
+            testCase.verifyEqual(r.lidarVertices,192);
+            testCase.verifyEqual(r.gnssBernsteinVertices,8640);
+            testCase.verifyTrue(r.coversComplementaryInformationAtRest);
+            testCase.verifyEqual(r.mixedVertices,1152);
+            testCase.verifyLessThan(r.worstMixedEigenvalue,0);
             testCase.verifyLessThan(max(r.worstLidarEigenvalue,r.worstGnssEigenvalue),-.009);
         end
         function zeroMotionCannotBeAdmittedAsFullStateGnssAdequacy(testCase)
@@ -66,7 +69,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
         function freshlySolvedGainsSatisfyTheNewCommonConditions(testCase)
             c=freshObserverTestConfig();v=invariantObserverSupport.verify(c.invariantDesign,c);
             testCase.verifyTrue(v.jointSensorLmiVerified);
-            testCase.verifyEqual(v.jointSensor.vertices,5888);
+            testCase.verifyEqual(v.jointSensor.vertices,9984);
+            testCase.verifyLessThan(v.jointSensor.worstMixedEigenvalue,0);
             testCase.verifyLessThan(v.jointSensor.worstLidarEigenvalue,0);
             testCase.verifyLessThan(v.jointSensor.worstGnssEigenvalue,-.009);
         end
@@ -94,7 +98,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             v=invariantObserverSupport.verify(c.invariantDesign,c);
             testCase.verifyTrue(v.jointSensorLmiVerified);
             testCase.verifyFalse(v.jointSensor.gnssAdequacyEnabled);
-            testCase.verifyEqual(v.jointSensor.lidarVertices,64);
+            testCase.verifyEqual(v.jointSensor.lidarVertices,96);
             testCase.verifyEqual(v.jointSensor.gnssBernsteinVertices,0);
         end
         function zeroLeverRetainsFeasibilityWithOneWeightCorner(testCase)
@@ -103,7 +107,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
                 h.gyroGainNormalized,h.speedGainNormalized);
             v=sensorRedundancySupport.verify(w,true,true);
             testCase.verifyTrue(v.certified);
-            testCase.verifyEqual(v.gnssBernsteinVertices,240);
+            testCase.verifyEqual(v.gnssBernsteinVertices,360);
         end
     end
 end

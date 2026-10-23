@@ -25,17 +25,20 @@ classdef sensorRedundancySupport
         end
 
         function v=verify(w,includeGnss,velocityAvailable)
-            [L,G]=sensorRedundancySupport.blocks(w,includeGnss,velocityAvailable);
-            worstL=worstEigenvalue(L);worstG=worstEigenvalue(G);
-            v=struct('certified',worstL<0 && worstG<0, ...
+            [L,G,M]=sensorRedundancySupport.blocks(w,includeGnss,velocityAvailable);
+            worstL=worstEigenvalue(L);worstG=worstEigenvalue(G);worstM=worstEigenvalue(M);
+            v=struct('certified',worstL<0 && worstG<0 && worstM<0, ...
                 'worstLidarEigenvalue',worstL,'worstGnssEigenvalue',worstG, ...
+                'worstMixedEigenvalue',worstM,'mixedVertices',numel(M), ...
                 'lidarVertices',numel(L),'gnssBernsteinVertices',numel(G), ...
-                'vertices',numel(L)+numel(G),'gnssAdequacyEnabled',includeGnss, ...
+                'vertices',numel(L)+numel(G)+numel(M),'gnssAdequacyEnabled',includeGnss, ...
+                'mixedInformationEnabled',~isempty(M), ...
                 'minimumGnssCourseSpeed',w.domain.minimumGnssSpeed);
             if isempty(G),v.worstGnssEigenvalue=[];end
+            if isempty(M),v.worstMixedEigenvalue=[];end
         end
 
-        function [L,G]=blocks(w,includeGnss,velocityAvailable)
+        function [L,G,Mixed]=blocks(w,includeGnss,velocityAvailable)
             arguments
                 w (1,1) struct
                 includeGnss (1,1) logical=true
@@ -48,7 +51,7 @@ classdef sensorRedundancySupport
             rho=norm(p.gnssBodyOffset)/ell;tau=d.gnssSplit;eta=d.accelerationSplit;
             A0=zeros(8);A0(1,2)=1;A0(2,3)=1;A0(4,5)=1;A0(5,6)=1;A0(7,8)=1;
             corners=[1,1;1,-1;-1,1;-1,-1];speeds=linspace(d.minimumGnssSpeed,p.maximumSpeed,d.speedPartitions+1);
-            L={};G={};speedModes=0;if velocityAvailable,speedModes=[0,1];end
+            L={};G={};Mixed={};speedModes=0;if velocityAvailable,speedModes=[0,1];end
             exactLever=isfield(d,'exactGnssLeverEnclosure') && d.exactGnssLeverEnclosure;
             Wg={eye(2)};lever=zeros(2,1);
             if exactLever && rho>0
@@ -64,57 +67,96 @@ classdef sensorRedundancySupport
                 % suffices. Do not send duplicated zero-lever vertices to SDP.
                 Wg={p.minimumGnssWeight*eye(2)};
             end
-            for u=[0,q^2]
-                for rate=[-q,q]
-                    for j=1:4
-                        A=A0;A([3,6],[2,5])=u/th^2*eye(2);
-                        A([3,6],[3,6])=2*rate/th*[0,-1;1,0];
-                        A([3,6],8)=b/(th^2*ell)*corners(j,:).';
-                        for k=1:4
-                            c=p.maximumLidarCoupling*corners(k,:).';
-                            S=[p.minimumLidarPositionStrength*eye(2),c;c.',p.minimumLidarHeadingStrength];
-                            for speedMode=speedModes
-                                M=P*(A-p.gyroGainNormalized*(e8*e8.')-speedMode*p.speedGainNormalized*(e2*e2.')) ...
-                                    -w.kappaL*C.'*S*C;
-                                L{end+1}=M+M.'+w.kappaG*rho^2*(e7*e7.') ...
-                                    +2*w.kappaL*d.informativeLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
+            controls=sensorRedundancySupport.courseControls(q,d.coursePartitions);
+            qg=q;
+            if isfield(d,'kinematicGnssEnclosure') && d.kinematicGnssEnclosure
+                qg=min(q,p.maximumAcceleration/d.minimumGnssSpeed);
+            end
+            gcontrols=sensorRedundancySupport.courseControls(qg,d.coursePartitions);
+            for iQ=1:size(controls,1)
+                rate=controls(iQ,1);u=controls(iQ,2);
+                for j=1:4
+                    A=A0;A([3,6],[2,5])=u/th^2*eye(2);
+                    A([3,6],[3,6])=2*rate/th*[0,-1;1,0];
+                    A([3,6],8)=b/(th^2*ell)*corners(j,:).';
+                    for k=1:4
+                        c=p.maximumLidarCoupling*corners(k,:).';
+                        S=[p.minimumLidarPositionStrength*eye(2),c;c.',p.minimumLidarHeadingStrength];
+                        for speedMode=speedModes
+                            M=P*(A-p.gyroGainNormalized*(e8*e8.')-speedMode*p.speedGainNormalized*(e2*e2.')) ...
+                                -w.kappaL*C.'*S*C;
+                            L{end+1}=M+M.'+w.kappaG*rho^2*(e7*e7.') ...
+                                +2*w.kappaL*d.informativeLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
+                        end
+                    end
+                    if includeGnss
+                        % Complementary position and heading information
+                        % may jointly anchor the state even at rest.
+                        % No positive LiDAR position floor is assumed.
+                        S=diag([0,0,p.minimumLidarHeadingStrength]);
+                        for speedMode=speedModes
+                            for iW=1:numel(Wg)
+                                for iR=1:size(lever,2)
+                                    if exactLever
+                                        gnss=-w.kappaG*Cp.'*Wg{iW}*(Cp+lever(:,iR)*e7.');penalty=0;
+                                    else
+                                        gnss=-w.kappaG*(1-tau)*p.minimumGnssWeight*(Cp.'*Cp);penalty=w.kappaG*rho^2/tau;
+                                    end
+                                    M=P*(A-p.gyroGainNormalized*(e8*e8.')-speedMode*p.speedGainNormalized*(e2*e2.')) ...
+                                        -w.kappaL*C.'*S*C+gnss;
+                                    Mixed{end+1}=M+M.'+penalty*(e7*e7.') ...
+                                        +2*w.kappaL*d.informativeLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
+                                end
                             end
                         end
-                        if ~includeGnss,continue;end
-                        Ag=A;
-                        if isfield(d,'kinematicGnssEnclosure') && d.kinematicGnssEnclosure
-                            % In the true course frame a_perp=s*q, hence
-                            % d(f_a)/d(r)=[0;2*a_parallel]. Also |q|<=a_max/s0.
-                            % Upstream angle/rate errors are bounded inputs;
-                            % the ideal true-point enclosure uses this identity.
-                            if j>2,continue;end
-                            qg=min(q,p.maximumAcceleration/d.minimumGnssSpeed);
-                            Ag([3,6],[2,5])=double(u>0)*qg^2/th^2*eye(2);
-                            Ag([3,6],[3,6])=2*sign(rate)*qg/th*[0,-1;1,0];
-                            Ag([3,6],8)=[0;2*p.maximumAcceleration/(th^2*ell)*corners(j,2)];
-                        end
-                        for k=1:d.speedPartitions
-                            left=e5-speeds(k)/(th*ell)*e7;right=e5-speeds(k+1)/(th*ell)*e7;
-                            B=cat(3,left*left.',(left*right.'+right*left.')/2,right*right.');
-                            for jB=1:3
-                                for iW=1:numel(Wg)
-                                    for iR=1:size(lever,2)
-                                        if exactLever
-                                            gnss=-w.kappaG*Cp.'*Wg{iW}*(Cp+lever(:,iR)*e7.');penalty=0;
-                                        else
-                                            gnss=-w.kappaG*(1-tau)*p.minimumGnssWeight*(Cp.'*Cp);penalty=w.kappaG*rho^2/tau;
-                                        end
-                                        M=P*(Ag-p.gyroGainNormalized*(e8*e8.')-p.speedGainNormalized*(e2*e2.')) ...
-                                            +gnss-w.directionGain*B(:,:,jB)-(1-eta)*w.accelerationGain*Dacc;
-                                        G{end+1}=M+M.'+(penalty ...
-                                            +2*w.accelerationGain*(1/eta-1)*p.maximumAcceleration^2/(th^4*ell^2))*(e7*e7.') ...
-                                            +2*w.kappaL*d.degradedLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
+                    end
+                    if ~includeGnss,continue;end
+                    Ag=A;
+                    if isfield(d,'kinematicGnssEnclosure') && d.kinematicGnssEnclosure
+                        % In the true course frame a_perp=s*q, hence
+                        % d(f_a)/d(r)=[0;2*a_parallel]. Also |q|<=a_max/s0.
+                        % Upstream angle/rate errors are bounded inputs;
+                        % the ideal true-point enclosure uses this identity.
+                        if j>2,continue;end
+                        Ag([3,6],[2,5])=gcontrols(iQ,2)/th^2*eye(2);
+                        Ag([3,6],[3,6])=2*gcontrols(iQ,1)/th*[0,-1;1,0];
+                        Ag([3,6],8)=[0;2*p.maximumAcceleration/(th^2*ell)*corners(j,2)];
+                    end
+                    for k=1:d.speedPartitions
+                        left=e5-speeds(k)/(th*ell)*e7;right=e5-speeds(k+1)/(th*ell)*e7;
+                        B=cat(3,left*left.',(left*right.'+right*left.')/2,right*right.');
+                        for jB=1:3
+                            for iW=1:numel(Wg)
+                                for iR=1:size(lever,2)
+                                    if exactLever
+                                        gnss=-w.kappaG*Cp.'*Wg{iW}*(Cp+lever(:,iR)*e7.');penalty=0;
+                                    else
+                                        gnss=-w.kappaG*(1-tau)*p.minimumGnssWeight*(Cp.'*Cp);penalty=w.kappaG*rho^2/tau;
                                     end
+                                    M=P*(Ag-p.gyroGainNormalized*(e8*e8.')-p.speedGainNormalized*(e2*e2.')) ...
+                                        +gnss-w.directionGain*B(:,:,jB)-(1-eta)*w.accelerationGain*Dacc;
+                                    G{end+1}=M+M.'+(penalty ...
+                                        +2*w.accelerationGain*(1/eta-1)*p.maximumAcceleration^2/(th^4*ell^2))*(e7*e7.') ...
+                                        +2*w.kappaL*d.degradedLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
                                 end
                             end
                         end
                     end
                 end
+            end
+        end
+
+        function controls=courseControls(bound,partitions)
+        % Degree-two Bernstein controls of [q,q^2] on each signed subinterval.
+        % Convex combinations certify the entire curve, not sampled rates.
+            validateattributes(bound,{'double'},{'real','finite','nonnegative','scalar'});
+            validateattributes(partitions,{'double'},{'real','finite','integer','positive','scalar'});
+            assert(mod(partitions,2)==0,'VehicleLocalization:InvalidRedundancyDomain', ...
+                'Use an even number of course partitions so zero is a boundary.');
+            edge=linspace(-bound,bound,partitions+1);controls=zeros(3*partitions,2);
+            for j=1:partitions
+                a=edge(j);b=edge(j+1);
+                controls(3*j-2:3*j,:)=[a,a^2;(a+b)/2,a*b;b,b^2];
             end
         end
     end
