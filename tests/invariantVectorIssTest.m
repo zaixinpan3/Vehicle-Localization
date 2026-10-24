@@ -122,7 +122,16 @@ function ratios=regionalDissipation(c)
         x=zeros(8,1);x(7:8)=[psi;q-rate];x([2,5])=s*dc;x([3,6])=u*dc+s*q*nc;
         eps=randn(stream,8,1);eps=.9*r.normalizedRadius*eps/norm(eps);hat=x-B*eps;
         WG=.5*eye(2);S=diag([.25,.25,.97]);valid=true(8,1);
-        if family==1,WG=zeros(2);elseif family==2,S=zeros(3);else,S=diag([0,0,.97]);valid([1,2,3,5,6])=false;end
+        if family==1
+            WG=zeros(2);
+        elseif family==2
+            S=zeros(3);
+        else
+            % Rank-one PSD LiDAR with cross coupling. It satisfies the scalar
+            % bounds but does not dominate the former diagonal heading floor.
+            coupling=c.iss.maximumPositionHeadingCoupling*[cos(k);sin(k)];h=c.iss.minimumHeadingStrength;
+            S=[coupling*coupling.'/h,coupling;coupling.',h];valid([1,2,3,5,6])=false;
+        end
         mismatch=c.invariantObserver.redundancy.informativeLidarMismatch;
         W=S-mismatch*eye(3)+.01*[0,1,0;-1,0,0;0,0,0];
         [hx,~]=invariantObserverSupport.outputs(x,beta,rate,c);

@@ -68,6 +68,9 @@ classdef invariantIssSupport
         % theta*k*(3*h*L*|eps|^3+L^2*|eps|^4), without changing Hhat to Htrue.
         % The actual finite LiDAR operator obeys sym(W)>=S-delta*I on
         % the WHOLE error tube; a nominal PSD Hessian alone is insufficient.
+        % In M, S is PSD with the configured heading diagonal and coupling
+        % bounds. Its cross block remains in the joint GNSS/LiDAR LMIs;
+        % S>=diag(0,0,hmin) is neither inferred nor required.
         % A common P allows switching between valid families without jumps.
             arguments
                 design (1,1) struct

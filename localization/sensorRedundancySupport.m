@@ -12,6 +12,7 @@ classdef sensorRedundancySupport
                 'minimumLidarPositionStrength',s.minimumPositionStrength, ...
                 'minimumLidarHeadingStrength',s.minimumHeadingStrength, ...
                 'maximumLidarCoupling',s.maximumPositionHeadingCoupling, ...
+                'mixedLidarEnclosure',"psd-heading-coupling-v1", ...
                 'minimumGnssWeight',z.minimumGnssWeight, ...
                 'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).', ...
                 'gyroGainNormalized',gyroGain,'speedGainNormalized',speedGain);
@@ -33,6 +34,8 @@ classdef sensorRedundancySupport
                 'lidarVertices',numel(L),'gnssBernsteinVertices',numel(G), ...
                 'vertices',numel(L)+numel(G)+numel(M),'gnssAdequacyEnabled',includeGnss, ...
                 'mixedInformationEnabled',~isempty(M), ...
+                'mixedLidarCouplingRetained',~isempty(M), ...
+                'mixedLidarCouplingBound',w.inputs.maximumLidarCoupling, ...
                 'minimumGnssCourseSpeed',w.domain.minimumGnssSpeed);
             if isempty(G),v.worstGnssEigenvalue=[];end
             if isempty(M),v.worstMixedEigenvalue=[];end
@@ -73,6 +76,7 @@ classdef sensorRedundancySupport
                 qg=min(q,p.maximumAcceleration/d.minimumGnssSpeed);
             end
             gcontrols=sensorRedundancySupport.courseControls(qg,d.coursePartitions);
+            mixedLidar=sensorRedundancySupport.mixedLidarLowerControls(p);
             for iQ=1:size(controls,1)
                 rate=controls(iQ,1);u=controls(iQ,2);
                 for j=1:4
@@ -92,20 +96,25 @@ classdef sensorRedundancySupport
                     if includeGnss
                         % Complementary position and heading information
                         % may jointly anchor the state even at rest.
-                        % No positive LiDAR position floor is assumed.
-                        S=diag([0,0,p.minimumLidarHeadingStrength]);
-                        for speedMode=speedModes
-                            for iW=1:numel(Wg)
-                                for iR=1:size(lever,2)
-                                    if exactLever
-                                        gnss=-w.kappaG*Cp.'*Wg{iW}*(Cp+lever(:,iR)*e7.');penalty=0;
-                                    else
-                                        gnss=-w.kappaG*(1-tau)*p.minimumGnssWeight*(Cp.'*Cp);penalty=w.kappaG*rho^2/tau;
+                        % Keep translation-heading coupling. PSD and S33>=h
+                        % do NOT imply S>=diag(0,0,h). The lower controls can
+                        % be indefinite; dissipation is certified jointly
+                        % with GNSS, without a LiDAR position floor.
+                        for iS=1:numel(mixedLidar)
+                            S=mixedLidar{iS};
+                            for speedMode=speedModes
+                                for iW=1:numel(Wg)
+                                    for iR=1:size(lever,2)
+                                        if exactLever
+                                            gnss=-w.kappaG*Cp.'*Wg{iW}*(Cp+lever(:,iR)*e7.');penalty=0;
+                                        else
+                                            gnss=-w.kappaG*(1-tau)*p.minimumGnssWeight*(Cp.'*Cp);penalty=w.kappaG*rho^2/tau;
+                                        end
+                                        M=P*(A-p.gyroGainNormalized*(e8*e8.')-speedMode*p.speedGainNormalized*(e2*e2.')) ...
+                                            -w.kappaL*C.'*S*C+gnss;
+                                        Mixed{end+1}=M+M.'+penalty*(e7*e7.') ...
+                                            +2*w.kappaL*d.informativeLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
                                     end
-                                    M=P*(A-p.gyroGainNormalized*(e8*e8.')-speedMode*p.speedGainNormalized*(e2*e2.')) ...
-                                        -w.kappaL*C.'*S*C+gnss;
-                                    Mixed{end+1}=M+M.'+penalty*(e7*e7.') ...
-                                        +2*w.kappaL*d.informativeLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
                                 end
                             end
                         end
@@ -143,6 +152,25 @@ classdef sensorRedundancySupport
                         end
                     end
                 end
+            end
+        end
+
+        function controls=mixedLidarLowerControls(p)
+        % For actual S=[T,c;c',h]>=0, h>=hmin and ||c||_2<=b:
+        % S-[zeros(2),c;c',hmin]=blkdiag(T,h-hmin)>=0.
+        % Each c_j lies in [-b,b], so four affine corner controls enclose
+        % the retained cross block. No PSD claim is made for a lower control.
+        % The combined GNSS/LiDAR LMI, not LiDAR alone, supplies dissipation.
+            arguments
+                p (1,1) struct
+            end
+            b=p.maximumLidarCoupling;h=p.minimumLidarHeadingStrength;
+            validateattributes([b,h],{'double'},{'real','finite','nonnegative'});
+            corners=[1,1;1,-1;-1,1;-1,-1];
+            if b==0,corners=zeros(1,2);end
+            controls=cell(1,size(corners,1));
+            for j=1:numel(controls)
+                c=b*corners(j,:).';controls{j}=[zeros(2),c;c.',h];
             end
         end
 

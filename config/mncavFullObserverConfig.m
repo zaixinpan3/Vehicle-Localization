@@ -8,7 +8,7 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-intrinsic-vector-iss-v3",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-intrinsic-vector-iss-v4",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('gainInformationScale',16,'outputPoint', ...
@@ -45,7 +45,7 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.metric="Rotation-invariant translational blocks and a diagonal angular block; angular/translation balance is not a theorem condition and is withdrawn to permit fixed feedback-authority limits";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
     z.provenance.noiseObjective="All eight normalized errors at pose-anchored nominal points; shared primitive velocity/acceleration/gyro columns and separate upstream constraint-error budgets; this energy proxy is not an empirical covariance guarantee";
-    z.provenance.redundancy="Common L/G/M metric: sufficient LiDAR, moving GNSS with invariant outputs, or GNSS position plus LiDAR heading including rest; correlated course-rate Bernstein controls; actual finite overlap mismatch <=0.001 remains a geometric contract; G/M design families are withdrawn when velocity/acceleration channels are configured unavailable";
+    z.provenance.redundancy="Common L/G/M metric: sufficient LiDAR, moving GNSS with invariant outputs, or GNSS position plus PSD LiDAR with S33>=heading floor and bounded translation-heading coupling, including rest; Mixed LMIs retain coupling rather than infer a diagonal matrix floor; correlated course-rate Bernstein controls; finite overlap mismatch <=0.001 remains a geometric contract; G/M families are withdrawn when velocity/acceleration channels are configured unavailable";
     z.provenance.feedback="Normalized matched self-feedback limits L-position 8, G-position 8, velocity-direction 2 and heading L/direction 8; constrained inside the solve, without runtime clipping; exact G kinematics and lever coupling reduce sufficient-condition conservatism";
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];

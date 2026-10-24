@@ -19,7 +19,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             testCase.verifyEqual(r.lidarVertices,192);
             testCase.verifyEqual(r.gnssBernsteinVertices,8640);
             testCase.verifyTrue(r.coversComplementaryInformationAtRest);
-            testCase.verifyEqual(r.mixedVertices,1152);
+            testCase.verifyEqual(r.mixedVertices,4608);
             testCase.verifyLessThan(r.worstMixedEigenvalue,0);
             testCase.verifyLessThan(max(r.worstLidarEigenvalue,r.worstGnssEigenvalue),-.009);
         end
@@ -38,6 +38,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
         end
         function changedManeuverInputsRejectTheWitness(testCase)
             r=testCase.TheoryReport;w=r.witness;w.inputs.maximumSpeed=17;
+            testCase.verifyError(@()verifySensorRedundancyTheory(Witness=w,Config=freshObserverTestConfig()), ...
+                'VehicleLocalization:StaleRedundancyWitness');
+        end
+        function obsoleteMixedEnclosureRejectsTheTheoryWitness(testCase)
+            w=testCase.TheoryReport.witness;w.inputs=rmfield(w.inputs,'mixedLidarEnclosure');
             testCase.verifyError(@()verifySensorRedundancyTheory(Witness=w,Config=freshObserverTestConfig()), ...
                 'VehicleLocalization:StaleRedundancyWitness');
         end
@@ -69,7 +74,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
         function freshlySolvedGainsSatisfyTheNewCommonConditions(testCase)
             c=freshObserverTestConfig();v=invariantObserverSupport.verify(c.invariantDesign,c);
             testCase.verifyTrue(v.jointSensorLmiVerified);
-            testCase.verifyEqual(v.jointSensor.vertices,9984);
+            testCase.verifyEqual(v.jointSensor.vertices,13440);
+            testCase.verifyTrue(v.jointSensor.mixedLidarCouplingRetained);
             testCase.verifyLessThan(v.jointSensor.worstMixedEigenvalue,0);
             testCase.verifyLessThan(v.jointSensor.worstLidarEigenvalue,0);
             testCase.verifyLessThan(v.jointSensor.worstGnssEigenvalue,-.009);
