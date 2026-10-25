@@ -6,6 +6,8 @@ function [reports,estimates,referenceAudit]=runNuscenesOverlapTrial(datasetFolde
 % tilt and scoring only. Live inputs are LiDAR, rear-wheel RPM, steering,
 % IMU force/gyro and IMU tilt. No pose.json or navigation velocity is loaded.
 % Fresh global and vehicle-specific lateral LMIs are solved for each call.
+% GlobalObserverConfig optionally replaces the complete global design input;
+% it is synthesized afresh without applying dataset-specific global defaults.
 % Keep only small summaries/figures; all feature/state arrays stay in memory.
 % Optional estimates output permits paired reference-isolation checks without
 % persisting state arrays or exposing scoring references to the estimator.
@@ -19,6 +21,7 @@ function [reports,estimates,referenceAudit]=runNuscenesOverlapTrial(datasetFolde
             "scene-0796","scene-0916","scene-1077","scene-1094","scene-1100"]
         options.FrameProtocol (1,1) string {mustBeMember(options.FrameProtocol,["oddEven","allAll"])}="oddEven"
         options.RandomSeed (1,1) double {mustBeInteger,mustBeNonnegative}=20261014
+        options.GlobalObserverConfig (1,1) struct=struct()
         options.ReferenceAuditDatasetFolder (1,1) string=""
         options.ReferenceAuditOutputFolder (1,1) string=""
     end
@@ -30,6 +33,9 @@ function [reports,estimates,referenceAudit]=runNuscenesOverlapTrial(datasetFolde
     previousRng=rng;restoreRng=onCleanup(@()rng(previousRng));rng(options.RandomSeed,'twister');
     calibration=calibrateNuscenesSteering(datasetFolder,options.CalibrationScenes);
     trial=nuscenesTrialConfig(calibration.steeringRatio);
+    if ~isempty(fieldnames(options.GlobalObserverConfig))
+        trial.global=options.GlobalObserverConfig;
+    end
     fprintf('Fresh nuScenes global gain synthesis\n');[globalDesign,trial.global]=synthesizeMncavInvariantDesign(trial.global);
     fprintf('Fresh assumed-Zoe lateral gain synthesis\n');lateralDesign=designLateralObserverGains(trial.lateral);
     writeJson(fullfile(outputFolder,'gain_and_vehicle_summary.json'),struct( ...
