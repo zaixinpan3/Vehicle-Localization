@@ -65,3 +65,37 @@ Tests share fresh designs only within their fixture lifetime. The former main-ob
 factories and saved measured-course gains were
 removed on 2026-10-13; retrieve their historical code from Git if needed.
 The lateral vehicle parameters and their synthesis workflow are unchanged.
+
+## Temporary small-offset global design
+
+`mncavSmallOffsetObserverConfig()` selects an explicit design scenario with
+a 0.01 m GNSS measurement-point offset and global course-speed bounds
+`[1,30] m/s`. The assumed offset keeps the measured forward/left direction.
+The measured calibration in `mncavBestposOutputPoint.json` and the ordinary
+`mncavFullObserverConfig()` remain unchanged. This scenario changes geometry;
+it does not reduce GNSS noise or the declared alignment uncertainty.
+
+The scenario uses a 1 m heading length instead of 10 m, including the
+corresponding LiDAR pose-information normalization. Its normalized information
+floors and coupling bounds therefore refer to that new scale. The L-position
+feedback cap is 16 instead of 8; the G-position, velocity-direction and heading
+caps retain their ordinary values. The nonlinear overlap mismatch bounds,
+vehicle parameters and observer equations are unchanged.
+
+```matlab
+cfg = mncavSmallOffsetObserverConfig();
+[design, cfg] = synthesizeMncavInvariantDesign(cfg);
+```
+
+The result must pass all L, G and coupling-preserving Mixed constraints and
+the conditional regional ISS verification. Gains are returned in memory and
+must be solved again for the next experiment. Changing the offset or domain
+invalidates the temporary design. `GnssOffsetNormM` is an explicit geometry
+override, not a promise of feasibility at every requested value.
+
+Synthetic sensor outputs must use the assumed measurement point. Applying
+this scenario directly to native BESTPOS recordings with the measured
+approximately 1.75 m offset would use the wrong geometry. It is not a new
+calibration of those recordings. The associated sampled tests use ideal
+motion inputs and ideal pose measurements at the assumed point; they do not
+qualify a real overlap map or establish a discrete-time ISS theorem.
