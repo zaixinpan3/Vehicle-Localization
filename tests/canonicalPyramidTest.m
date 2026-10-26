@@ -1,5 +1,5 @@
 classdef canonicalPyramidTest < matlab.unittest.TestCase
-% canonicalPyramidTest Cloud canonicalization and the coarse-to-fine registration contract.
+% canonicalPyramidTest Map canonicalization preserves mass and spatial moments.
     methods (TestClassSetup)
         function paths(~)
             setupVehicleLocalization;
@@ -70,51 +70,6 @@ classdef canonicalPyramidTest < matlab.unittest.TestCase
             testCase.verifyFalse(e.available(g));
             testCase.verifyTrue(all(e.available(setdiff(1:numel(groups),g))));
         end
-        function pyramidRecoversTheTrueBasinOfASplitLandmark(testCase)
-            [fixed,moving,cfg]=canonicalPyramidTest.aliasRegistrationScene();
-            flat=cfg;flat.pyramid.mapMergeRadius=0;flat.pyramid.sourceMergeRadius=0;
-            if isfield(flat,'softPointAssociation'),flat=rmfield(flat,'softPointAssociation');end
-            single=registerSemanticProbabilityCloud(fixed,moving,[.7 0 0],flat);
-            pyramid=registerSemanticProbabilityCloud(fixed,moving,[.7 0 0],cfg);
-            testCase.verifyGreaterThan(abs(single.poseXYTheta(1)),.3,"A single-level solve locks onto the split sub-components.");
-            testCase.verifyTrue(pyramid.accepted,pyramid.reason);
-            testCase.verifyEqual(pyramid.poseXYTheta,[0 0 0],AbsTol=2e-2);
-            testCase.verifyTrue(pyramid.pyramid.coarseAccepted);
-            testCase.verifyFalse(pyramid.pyramid.coarseRetained);
-            testCase.verifyEqual(pyramid.initialPoseXYTheta,[.7 0 0]);
-            testCase.verifyEqual(pyramid.pyramid.fineSeedXYTheta,pyramid.pyramid.coarsePoseXYTheta);
-            testCase.verifyLessThan(pyramid.pyramid.coarseComponents,fixed.components.numComponents);
-        end
-        function trustRadiusRetainsTheCoarsePoseForPlanarOnlyRefinement(testCase)
-            [fixed,moving,cfg]=canonicalPyramidTest.fullyAliasedScene();
-            % Exercise the hard-refinement trust gate explicitly. Soft
-            % ambiguity matching legitimately stays at the midpoint.
-            if isfield(cfg,'softPointAssociation'),cfg=rmfield(cfg,'softPointAssociation');end
-            r=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
-            testCase.verifyTrue(r.accepted);
-            testCase.verifyTrue(r.pyramid.coarseRetained);
-            testCase.verifyEqual(r.reason,"coarseRetainedByTrustRadius");
-            testCase.verifyEqual(r.poseXYTheta,r.pyramid.coarsePoseXYTheta);
-            testCase.verifyGreaterThan(r.pyramid.refinementShiftM,cfg.pyramid.trustRadius);
-            testCase.verifyTrue(all(r.correspondences.target>=1 & r.correspondences.target<=fixed.components.numComponents));
-            testCase.verifyFalse(r.positionAiding.used);
-            % Position aid lifts the gate: the refinement is then informed by
-            % more than planar geometry. (relativeHeightAssociationTest covers
-            % the same lift by height association.)
-            aid=struct('position',[0 0],'covariance',.01*eye(2),'valid',true);
-            aided=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg,aid);
-            testCase.verifyFalse(aided.pyramid.coarseRetained);
-            testCase.verifyFalse(aided.pyramid.planarOnlyRefinement);
-            testCase.verifyEqual(aided.poseXYTheta,[0 0 0],AbsTol=1e-6);
-        end
-        function obsoleteConfigurationIsRejected(testCase)
-            [fixed,moving,cfg]=canonicalPyramidTest.aliasRegistrationScene();
-            testCase.verifyError(@()registerSemanticProbabilityCloud(fixed,moving,[0 0 0],rmfield(cfg,'pyramid')), ...
-                'VehicleLocalization:MissingPyramidConfiguration');
-            bad=cfg;bad.pyramid.trustRadius=0;
-            testCase.verifyError(@()registerSemanticProbabilityCloud(fixed,moving,[0 0 0],bad), ...
-                'VehicleLocalization:InvalidPyramidConfiguration');
-        end
     end
     methods (Static)
         function cloud=splitScene()
@@ -132,33 +87,6 @@ classdef canonicalPyramidTest < matlab.unittest.TestCase
             for k=find(keep(:)).'
                 value=value+c.mixtureWeight(k)*(c.covariance(:,:,k)+c.mean(k,:).'*c.mean(k,:));
             end
-        end
-        function [fixed,moving,cfg]=aliasRegistrationScene()
-        % Source: three poles that the map splits into two sub-components
-        % 0.6 m apart along x, two poles the map keeps single, and two curb
-        % lines along x. A planar solve seeded 0.7 m ahead locks onto the
-        % split sub-components; the canonical level does not.
-            means=[0 0;4 2;-4 -2;0 -6;0 6;6 5;-6 -5];
-            names=[repmat("pole",5,1);"curb";"curb"];n=numel(names);
-            covariance=repmat(.03*eye(2),1,1,n);covariance(:,:,n-1)=[3 0;0 .01];covariance(:,:,n)=[3 0;0 .01];
-            c=struct('mean',means,'covariance',covariance,'semanticName',names,'mixtureWeight',ones(n,1)/n,'numComponents',n);
-            c.repeatability=ones(n,1);
-            moving=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());
-            fixed=moving;f=fixed.components;
-            f.mean=[f.mean;means(1:3,:)+[.6 0]];f.covariance=cat(3,f.covariance,repmat(.03*eye(2),1,1,3));
-            f.semanticName=[f.semanticName;repmat("pole",3,1)];f.mixtureWeight=[f.mixtureWeight;ones(3,1)/n];
-            f.mixtureWeight=f.mixtureWeight/sum(f.mixtureWeight);f.repeatability=ones(n+3,1);f.numComponents=n+3;
-            fixed.components=f;cfg=distributionRegistrationConfig();
-        end
-        function [fixed,moving,cfg]=fullyAliasedScene()
-        % Every pole of the map is duplicated 0.4 m behind, so the canonical
-        % pose is the midpoint and any planar refinement leaves it by 0.2 m.
-            [~,moving,cfg]=canonicalPyramidTest.aliasRegistrationScene();
-            fixed=moving;f=fixed.components;poles=find(f.semanticName=="pole");
-            f.mean=[f.mean;f.mean(poles,:)-[.4 0]];f.covariance=cat(3,f.covariance,f.covariance(:,:,poles));
-            f.semanticName=[f.semanticName;f.semanticName(poles)];f.mixtureWeight=[f.mixtureWeight;f.mixtureWeight(poles)];
-            f.mixtureWeight=f.mixtureWeight/sum(f.mixtureWeight);f.repeatability=[f.repeatability;f.repeatability(poles)];
-            f.numComponents=numel(f.semanticName);fixed.components=f;
         end
     end
 end

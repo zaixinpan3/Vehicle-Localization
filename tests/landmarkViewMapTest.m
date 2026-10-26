@@ -24,28 +24,6 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
             a=registrationSupport.conditionSemanticMapOnView(cloud,[1 0 0]);b=registrationSupport.conditionSemanticMapOnView(other,[1 0 0]);
             t.verifyEqual(a.components,b.components);
         end
-        function unsupportedDirectionsContributeNoPoseInformation(t)
-            source=geometricRegistrationTest.parallelRoad();map=source;
-            source=landmarkViewMapTest.appendPole(source);map=landmarkViewMapTest.appendPole(map);
-            n=map.components.numComponents;observations=cell(n,1);
-            observations{n}=[1000 0 0 3 5 .01 0 .01 4];
-            map.landmarkViews=struct('schemaVersion',1,'config',landmarkViewMapConfig(),'observations',{observations});
-            r=registerSemanticProbabilityCloud(map,source,[.6 .2 .02]);
-            t.verifyTrue(r.directionalAccepted,r.reason);t.verifyFalse(r.accepted);
-            t.verifyEqual(r.observableRank,2);
-            t.verifyEqual(r.poseXYTheta,[.6 0 0],AbsTol=1e-4);
-            t.verifyLessThan(abs(r.directionalInformation(1,1)),1e-10);
-            t.verifyEqual(r.directionalInformation*(eye(3)-r.physicalObservableProjector),zeros(3),AbsTol=1e-8);
-        end
-        function unsupportedPointOnlyMapRejectsCleanly(t)
-            cloud=distributionRegistrationTest.exampleCloud();n=cloud.components.numComponents;
-            cloud.components.semanticName(:)="pole";
-            cloud.landmarkViews=struct('schemaVersion',1,'config',landmarkViewMapConfig(),'observations',{cell(n,1)});
-            source=rmfield(cloud,'landmarkViews');r=registerSemanticProbabilityCloud(cloud,source,[0 0 0]);
-            t.verifyFalse(r.accepted||r.directionalAccepted);
-            t.verifyEqual(r.information,zeros(3),AbsTol=0);
-            t.verifyTrue(all(isfinite(r.poseXYTheta)));
-        end
         function coordinateTransformCommutesWithConditioning(t)
             cloud=landmarkViewMapTest.example();pose=[.7 -.1 .05];angle=.8;shift=[7e5 4e6];
             R=[cos(angle) -sin(angle);sin(angle) cos(angle)];
@@ -108,7 +86,7 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
         end
         function rejectsUncalibratedSupportOutsideUnitInterval(t)
             cloud=distributionRegistrationTest.exampleCloud();cloud.components.viewReliability=-ones(cloud.components.numComponents,1);
-            t.verifyError(@()prepareSemanticRegistrationGeometry(cloud,cloud,[0 0 0],distributionRegistrationConfig()), ...
+            t.verifyError(@()prepareSemanticOverlapGeometry(cloud,cloud,[0 0 0],semanticGeometryConfig()), ...
                 'VehicleLocalization:InvalidViewReliability');
         end
         function preventsSecondCanonicalization(t)

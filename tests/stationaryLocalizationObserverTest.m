@@ -28,24 +28,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyTrue(all(s.correctionApplied(2:end)));
             testCase.verifyEqual(r.internalState(1,:),f.cfg.initialState.',AbsTol=0);
         end
-        function matcherRunsWithUnavailableLateralOutputs(testCase)
-            f=fixture();f.data=rmfield(f.data,'lidar');f.data.lidarMatcher=@stationaryMatch;
-            r=execute(f);dt=[0;diff(r.time)];
-            previous=[f.cfg.initialState.';r.internalState(1:end-1,:)];
-            expected=[previous(:,[1,4])+dt.*previous(:,[2,5]),previous(:,7)+dt.*previous(:,8)];
-            testCase.verifyEqual(r.matchingSeeds,expected,AbsTol=1e-12);
-            testCase.verifyEqual(numel(r.matchingResults),numel(r.time));
-            testCase.verifyLessThan(norm(r.position(end,:)),1e-3);
-            testCase.verifyLessThan(abs(r.heading(end)),1e-4);
-            testCase.verifyTrue(all(r.diagnostics.lidarPoseSupport.headingSupported));
-        end
-        function rejectedMatcherDoesNotCorrect(testCase)
-            f=fixture();f.data=rmfield(f.data,'lidar');f.data.lidarMatcher=@rejectedMatch;
-            r=execute(f);
-            testCase.verifyFalse(any(r.diagnostics.lidarPoseSupport.sourceValid));
-            testCase.verifyFalse(any(r.diagnostics.lidarPoseSupport.correctionApplied));
-            testCase.verifyEqual(r.pose,repmat(f.cfg.initialState([1,4,7]).',numel(r.time),1),AbsTol=1e-12);
-        end
         function gnssPositionAndGyroLeaveStationaryYawOffset(testCase)
             f=fixture();f.data=rmfield(f.data,'lidar');t=f.data.highRate.time;n=numel(t);
             yaw=f.cfg.initialState(7);R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];
@@ -201,13 +183,7 @@ function r=execute(f)
     r=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
 end
 
-function m=stationaryMatch(~,~,~)
-    m=struct('poseXYTheta',[0,0,0],'information',diag([1e6,1.5e6,2e8]),'accepted',true);
-end
 
-function m=rejectedMatch(k,seed,aid)
-    m=stationaryMatch(k,seed,aid);m.accepted=false;
-end
 
 function f=overlapFixture()
     f=fixture();f.data=rmfield(f.data,'lidar');

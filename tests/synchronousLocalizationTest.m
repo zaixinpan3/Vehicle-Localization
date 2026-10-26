@@ -14,24 +14,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             testCase.verifyEqual(r.diagnostics.virtualPoseUpdates,0);
             testCase.verifyEqual(r.diagnostics.integrationSubsteps,0);
         end
-        function onlineMatcherReceivesCurrentAlignedAid(testCase)
-            f=fixture();f.data=rmfield(f.data,'lidar');
-            f.data.lidarMatcher=@onlineResult;
-            r=run(f);
-            testCase.verifyEqual(r.position,[8*r.time,zeros(size(r.time))],AbsTol=1e-10);
-            testCase.verifyTrue(r.diagnostics.matchingFeedback);
-            testCase.verifyEqual(r.matchingResults{11}.aidTimestamp,1,AbsTol=1e-12);
-            testCase.verifyEqual(r.matchingSeeds(:,1),8*r.time,AbsTol=1e-10);
-        end
-        function onlineMatcherDoesNotUseFutureGnss(testCase)
-            f=fixture();f.data=rmfield(f.data,'lidar');f.data.lidarMatcher=@onlineResult;
-            a=run(f);f.data.gnss.position(12:end,:)=100;b=run(f);
-            testCase.verifyEqual(a.z(1:11,:),b.z(1:11,:),AbsTol=0);
-        end
-        function onlineAndRecordedLidarCannotBeMixed(testCase)
-            f=fixture();f.data.lidarMatcher=@onlineResult;
-            testCase.verifyError(@()run(f),'VehicleLocalization:AmbiguousLidarInput');
-        end
         function asynchronousSourceIsRejected(testCase)
             f=fixture();f.data.gnss.time(2)=.11;
             testCase.verifyError(@()run(f),'VehicleLocalization:SynchronousInputsRequired');
@@ -92,16 +74,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             f=fixture();f.data.lidar.information=zeros(3,3,21);a=run(f);
             f.data=rmfield(f.data,'lidar');b=run(f);
             testCase.verifyEqual(a.z,b.z,AbsTol=0);
-        end
-        function validDirectionalMatcherFeedsItsFilteredInformation(testCase)
-            f=fixture();f.data=rmfield(f.data,{'gnss','lidar'});
-            f.cfg.initialState(1)=2;f.cfg.initialState(4)=.2;
-            f.data.lidarMatcher=@directionalResult;r=run(f);
-            base=f;base.cfg.initialState(1)=0;plain=run(base);
-            testCase.verifyEqual(r.position(:,1)-plain.position(:,1),2*ones(size(r.time)),AbsTol=1e-11);
-            testCase.verifyEqual(r.velocity,plain.velocity,AbsTol=1e-12);
-            testCase.verifyLessThan(abs(r.position(end,2)),.002);
-            testCase.verifyEqual(r.diagnostics.lidarMatched{2}.filter.rank,2);
         end
         function runtimeResidualProviderUsesPostBaselinePrediction(testCase)
             f=fixture();f.cfg.initialState(4)=.2;
@@ -178,11 +150,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
     end
 end
 
-function r=directionalResult(~,seed,~)
-    r=struct('poseXYTheta',[seed(1),0,0],'information',100*eye(3),'accepted',false, ...
-        'directionalAccepted',true,'supportedConverged',true,'observableRank',2, ...
-        'directionalInformation',diag([0,100,100]),'physicalObservableProjector',diag([0,1,1]));
-end
 
 function m=lineResidual(~,pose)
     points=[-2,0;0,0;2,0];
@@ -193,10 +160,6 @@ function m=rejectedResidual(k,pose)
     m=lineResidual(k,pose);m.frameReliability=0;
 end
 
-function r=onlineResult(~,seed,aid)
-    r=struct('poseXYTheta',seed,'information',100*eye(3),'accepted',false,'aidTimestamp',aid.timestamp);
-    if aid.valid,r.poseXYTheta(1:2)=aid.position;r.accepted=true;end
-end
 
 function f=turning(step)
     f=fixture();t=(0:step:2).';z=zeros(size(t));n=numel(t);r=.2;v=8;

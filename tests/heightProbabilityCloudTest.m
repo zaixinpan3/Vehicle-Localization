@@ -80,35 +80,19 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
                 registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose-step,cfg))/(2e-6);
             testCase.verifyEqual(details.gradient(poseAxis),numerical,'AbsTol',1e-7);
         end
-        function recoversPlanarPoseWithKnownGlobalHeight(testCase)
-            moving=heightProbabilityCloudTest.spatialCloud();
-            expected=[700001.2 4300000.7 0.16];
-            fixed=heightProbabilityCloudTest.transform(moving,expected,500);
-            cfg=heightProbabilityCloudTest.exactHeightConfig(500);
-            result=registerSemanticProbabilityCloud(fixed,moving,expected+[-0.5 0.3 -0.05],cfg);
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyTrue(result.height.heightUsed);
-            testCase.verifyEqual(result.poseXYTheta,expected,'AbsTol',3e-4);
-        end
         function missingVerticalReferenceUsesExactXYMarginal(testCase)
             moving=heightProbabilityCloudTest.spatialCloud();
             fixed=heightProbabilityCloudTest.transform(moving,[1 -2 0.1],100);
-            cfg=distributionRegistrationConfig(); cfg.heightMode="auto";
+            cfg=semanticGeometryConfig(); cfg.heightMode="auto";
             [score,details]=registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,[0.9 -1.9 0.08],cfg);
             expected=registrationSupport.scoreSemanticProbabilityCloudAlignment(registrationSupport.projectSemanticProbabilityCloud(fixed,2), ...
                 registrationSupport.projectSemanticProbabilityCloud(moving,2),[0.9 -1.9 0.08]);
             testCase.verifyEqual(score,expected,'AbsTol',0);
             testCase.verifyEqual(details.height.heightReason,"verticalReferenceUnavailable");
         end
-        function explicitXYZRejectsMissingHeight(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            cfg=heightProbabilityCloudTest.exactHeightConfig(0);
-            testCase.verifyError(@() registerSemanticProbabilityCloud(cloud,cloud,[0 0 0],cfg), ...
-                'VehicleLocalization:HeightUnavailable');
-        end
         function defaultKeepsHeightWithoutEnablingExperimentalMatcher(testCase)
             cloud=heightProbabilityCloudTest.spatialCloud();
-            cfg=distributionRegistrationConfig(); cfg.heightTranslation=0;
+            cfg=semanticGeometryConfig(); cfg.heightTranslation=0;
             [~,details]=registrationSupport.scoreSemanticProbabilityCloudAlignment(cloud,cloud,[0 0 0],cfg);
             testCase.verifyFalse(details.height.heightUsed);
             testCase.verifyEqual(details.height.heightReason,"explicitXY");
@@ -145,7 +129,7 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
             covariance=[a(1) a(2) h(1);a(2) a(3) h(2);h(1) h(2) h(3)];
         end
         function cfg=exactHeightConfig(height)
-            cfg=distributionRegistrationConfig(); cfg.heightMode="xyz";
+            cfg=semanticGeometryConfig(); cfg.heightMode="xyz";
             cfg.heightTranslation=height; cfg.heightStandardDeviation=0; cfg.tiltStandardDeviation=0;
         end
         function cloud=spatialCloud()

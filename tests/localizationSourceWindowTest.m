@@ -87,43 +87,10 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             testCase.verifyError(@()updateLocalizationSourceWindow(cloud,.1,[0 0 0],h), ...
                 'VehicleLocalization:CalibrationMismatch');
         end
-        function repeatedScansDoNotMultiplyPoseInformation(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            single=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
-            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
-            [~,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
-            [~,h]=updateLocalizationSourceWindow(cloud,.2,[0 0 0],h);
-            [~,h]=updateLocalizationSourceWindow(cloud,.3,[0 0 0],h);
-            [pooled,~]=updateLocalizationSourceWindow(cloud,.4,[0 0 0],h);
-            result=registerSemanticProbabilityCloud(cloud,pooled,[0 0 0]);
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyEqual(result.poseXYTheta,single.poseXYTheta,AbsTol=1e-12);
-            testCase.verifyEqual(result.information,single.information,AbsTol=1e-10);
-            testCase.verifyFalse(result.informationCalibrated);
-        end
-        function preservesRealNullDirectionsWithRepeatedScans(testCase)
-            cloud=geometricRegistrationTest.parallelRoad();
-            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
-            [pooled,~]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
-            result=registerSemanticProbabilityCloud(cloud,pooled,[.8 .3 .02]);
-            testCase.verifyEqual(result.observableRank,2);
-            testCase.verifyTrue(result.directionalAccepted,result.reason);
-            testCase.verifyEqual(result.poseXYTheta(1),.8,AbsTol=1e-8);
-            testCase.verifyLessThan(abs(result.directionalInformation(1,1)),1e-10);
-            testCase.verifyEqual(result.directionalInformation*(eye(3)-result.physicalObservableProjector),zeros(3),AbsTol=1e-8);
-        end
         function rejectsOneFrameHorizon(testCase)
             cloud=distributionRegistrationTest.exampleCloud();cfg=localizationSourceWindowConfig();cfg.maximumFrames=1;
             testCase.verifyError(@()updateLocalizationSourceWindow(cloud,0,[0 0 0],[],cfg), ...
                 'VehicleLocalization:InvalidWindowConfiguration');
-        end
-        function firstFrameCannotProvideTemporalEvidence(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            [pooled,~,details]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
-            result=registerSemanticProbabilityCloud(cloud,pooled,[0 0 0]);
-            testCase.verifyEqual(details.componentCount,0);
-            testCase.verifyFalse(result.accepted);
-            testCase.verifyEmpty(registrationSupport.registrationPoseMeasurement(result,0));
         end
         function singleScanFlashIsAbsentFromMatchingCloud(testCase)
             cloud=distributionRegistrationTest.exampleCloud();
@@ -194,32 +161,6 @@ classdef localizationSourceWindowTest < matlab.unittest.TestCase
             [expired,~]=updateLocalizationSourceWindow(testCase.empty(cloud),.5,[0 0 0],h);
             testCase.verifyEqual(actual.components.detectionFrameCount,2*ones(6,1),AbsTol=0);
             testCase.verifyEmpty(expired.components.mean);
-        end
-        function repeatedSupportIncreasesWeightWithoutInflatingScatter(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            [~,h]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
-            [twice,h]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],h);
-            [thrice,h]=updateLocalizationSourceWindow(cloud,.2,[0 0 0],h);
-            [four,h]=updateLocalizationSourceWindow(cloud,.3,[0 0 0],h);
-            [five,~]=updateLocalizationSourceWindow(cloud,.4,[0 0 0],h);
-            a=registerSemanticProbabilityCloud(cloud,twice,[0 0 0]);
-            b=registerSemanticProbabilityCloud(cloud,thrice,[0 0 0]);
-            testCase.verifyEqual(twice.components.temporalStability,2/5*ones(6,1),AbsTol=1e-12);
-            testCase.verifyEqual(thrice.components.temporalStability,3/5*ones(6,1),AbsTol=1e-12);
-            testCase.verifyEqual(four.components.temporalStability,4/5*ones(6,1),AbsTol=1e-12);
-            testCase.verifyEqual(five.components.temporalStability,ones(6,1),AbsTol=1e-12);
-            testCase.verifyEqual(a.information,b.information*2/3,AbsTol=1e-10);
-            testCase.verifyEqual(twice.components.covariance,thrice.components.covariance,AbsTol=1e-12);
-            testCase.verifyEqual(twice.components.covariance,five.components.covariance,AbsTol=1e-12);
-        end
-        function stabilitySurvivesClassNormalization(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            weighted=cloud;weighted.components.temporalStability=ones(6,1);
-            weighted.components.temporalStability(weighted.components.semanticName=="pole")=2/3;
-            result=registerSemanticProbabilityCloud(cloud,weighted,[0 0 0]);
-            pairs=result.correspondences;
-            testCase.verifyEqual(sum(pairs.weight(pairs.semanticName=="pole")),2/9,AbsTol=1e-12);
-            testCase.verifyEqual(sum(pairs.weight(pairs.semanticName=="curb")),1/3,AbsTol=1e-12);
         end
 
     end

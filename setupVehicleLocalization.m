@@ -3,7 +3,7 @@ function rootDir = setupVehicleLocalization()
 % path in pipeline order: scripts, configuration, perception (with its ground and
 % off-ground feature branches and the semantic product), mapping (with the
 % temporal-stability Gaussian support map), and localization (with the LPV
-% lateral-velocity observer and the seven-state improved observer).
+% lateral-velocity observer and the eight-state invariant observer).
 %
 % Input:
 %   none

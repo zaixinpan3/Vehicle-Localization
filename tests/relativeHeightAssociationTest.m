@@ -1,5 +1,5 @@
 classdef relativeHeightAssociationTest < matlab.unittest.TestCase
-% relativeHeightAssociationTest Height resolves aliases without creating XY force.
+% relativeHeightAssociationTest Source-window height stays tied to its acquisition.
     methods (TestClassSetup)
         function paths(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
@@ -8,63 +8,6 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function distinguishesPlanarAliases(testCase)
-            [fixed,moving,cfg]=scene();
-            baseline=cfg;baseline.relativeHeight.enabled=false;
-            before=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],baseline);
-            after=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
-            % Planar geometry cannot tell the aliases apart: the pyramid keeps
-            % their canonical midpoint instead of whichever alias the seed favours.
-            % Finite anisotropy retains a small tangent force; the canonical
-            % ambiguity remains within one millimeter of its midpoint.
-            testCase.verifyEqual(before.poseXYTheta,[-.2 0 0],AbsTol=1e-3);
-            testCase.verifyLessThanOrEqual(norm(before.poseXYTheta(1:2)-before.pyramid.coarsePoseXYTheta(1:2)),cfg.pyramid.trustRadius);
-            testCase.verifyTrue(after.accepted,after.reason);
-            testCase.verifyEqual(after.poseXYTheta,[0 0 0],AbsTol=1e-5);
-            testCase.verifyTrue(after.height.relativeAssociation.enabled);
-            testCase.verifyEqual(after.correspondences.target(after.correspondences.semanticName=="pole"),[7;8]);
-        end
-        function arbitraryVerticalDatumsCancel(testCase)
-            [fixed,moving,cfg]=scene();
-            before=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
-            fixed.components.meanXYZ(:,3)=fixed.components.meanXYZ(:,3)+1500;
-            moving.components.meanXYZ(:,3)=moving.components.meanXYZ(:,3)-20;
-            after=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
-            testCase.verifyEqual(after.poseXYTheta,before.poseXYTheta,AbsTol=1e-10);
-            testCase.verifyEqual(after.height.relativeAssociation.offset,1620,AbsTol=1e-9);
-        end
-        function correctPairsKeepPlanarInformation(testCase)
-            % Without aliases the planar refinement is not gated, so height
-            % evidence that confirms the correct pairs must leave the planar
-            % pose and information untouched.
-            [fixed,moving,cfg]=scene();fixed=subsetScene(fixed,[1:4 7 8]);
-            baseline=cfg;baseline.relativeHeight.enabled=false;
-            before=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],baseline);
-            after=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
-            testCase.verifyEqual(after.poseXYTheta,before.poseXYTheta,AbsTol=0);
-            testCase.verifyEqual(after.information,before.information,AbsTol=0);
-            testCase.verifyFalse(after.height.relativeAssociation.planarForce);
-        end
-        function unavailableAnchorHeightUsesExactXyResult(testCase)
-            [fixed,moving,cfg]=scene();
-            moving.components.heightAvailable(1:4)=false;
-            moving.components.meanXYZ(1:4,:)=NaN;
-            baseline=cfg;baseline.relativeHeight.enabled=false;
-            before=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],baseline);
-            after=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
-            testCase.verifyFalse(after.height.relativeAssociation.enabled);
-            testCase.verifyEqual(after.poseXYTheta,before.poseXYTheta,AbsTol=0);
-            testCase.verifyEqual(after.information,before.information,AbsTol=0);
-        end
-        function anUnavailableCandidateDoesNotRemovePlanarSupport(testCase)
-            [fixed,moving,cfg]=scene();
-            fixed.components.heightAvailable(7)=false;
-            fixed.components.meanXYZ(7,:)=NaN;
-            result=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyEqual(result.poseXYTheta,[0 0 0],AbsTol=1e-7);
-            testCase.verifyEqual(result.correspondences.heightAssociationCost(result.correspondences.target==7),0,AbsTol=0);
-        end
         function currentHeightDoesNotMixDifferentVerticalOrigins(testCase)
             [~,old,~]=scene();
             current=old;current.components.meanXYZ(:,3)=current.components.meanXYZ(:,3)+2;
@@ -90,58 +33,12 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
             [pooled,~]=updateLocalizationSourceWindow(current,.1,[0 0 0],history);
             testCase.verifyEqual(pooled.heightEvidence.mean,cloud.components.meanXYZ,AbsTol=0);
         end
-        function partialVerticalVisibilityDoesNotDiscardCorrectSupport(testCase)
-            [fixed,moving,cfg]=scene();fixed=subsetScene(fixed,[1:4 7:8]);
-            moving.components.meanXYZ(5:6,3)=moving.components.meanXYZ(5:6,3)+2;
-            moving.components.covarianceXYZ(3,3,5:6)=4;
-            result=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyEqual(result.poseXYTheta,[0 0 0],AbsTol=1e-7);
-            testCase.verifyEqual(height(result.correspondences),6);
-        end
         function croppingKeepsHeightIndicesAligned(testCase)
             [fixed,~,~]=scene();
             [local,ids]=registrationSupport.selectLocalProbabilityCloud(fixed,[2 3 0],.1);
             testCase.verifyEqual(ids,8);
             testCase.verifyEqual(local.components.meanXYZ,fixed.components.meanXYZ(8,:),AbsTol=0);
             testCase.verifyEqual(local.components.covarianceXYZ,fixed.components.covarianceXYZ(:,:,8),AbsTol=0);
-        end
-        function unselectedClassKeepsPlanarAssociation(testCase)
-            [fixed,moving,cfg]=scene();cfg.relativeHeight.semanticNames="trafficSign";
-            baseline=cfg;baseline.relativeHeight.enabled=false;
-            before=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],baseline);
-            result=registerSemanticProbabilityCloud(fixed,moving,[-.4 0 0],cfg);
-            % Evidence for another class must not resolve the pole ambiguity.
-            testCase.verifyEqual(result.poseXYTheta,before.poseXYTheta,AbsTol=1e-6);
-            testCase.verifyEqual(result.information,before.information,AbsTol=1e-9);
-            testCase.verifyTrue(result.height.relativeAssociation.enabled);
-            testCase.verifyEqual(result.correspondences.heightAssociationCost,zeros(6,1),AbsTol=0);
-        end
-        function cropDoesNotClaimWholeMapNormalization(testCase)
-            [fixed,moving,cfg]=scene();
-            fixed.queryRelationship="exactIntensityNormalization";
-            fixed.totalMass=80;fixed.components.mass=10*ones(8,1);
-            [local,ids]=registrationSupport.selectLocalProbabilityCloud(fixed,[0 0 0],6);
-            result=registerSemanticProbabilityCloud(local,moving,[0 0 0],cfg);
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyFalse(isfield(local,'queryRelationship'));
-            testCase.verifyEqual(local.components.mixtureWeight,fixed.components.mixtureWeight(ids),AbsTol=0);
-        end
-        function marginalHeightDoesNotExtrapolateVerticalStructure(testCase)
-            [fixed,moving,cfg]=scene();
-            fixed.components.covarianceXYZ(:,:,7)=[.02 0 .2;0 .02 0;.2 0 4];
-            pairs=struct('source',(1:4).','target',(1:4).','semanticName',repmat("curb",4,1));
-            model=registrationSupport.prepareRelativeHeightAssociation(fixed,moving,[0 0 0],pairs,cfg.relativeHeight);
-            [nearCost,nearResidual]=model.cost(5,7,[0 0 0]);
-            [shiftedCost,shiftedResidual]=model.cost(5,7,[1 0 0]);
-            testCase.verifyEqual(nearResidual,0,AbsTol=1e-10);
-            testCase.verifyEqual(shiftedResidual,nearResidual,AbsTol=1e-10);
-            testCase.verifyEqual(shiftedCost,nearCost,AbsTol=1e-10);
-        end
-        function conflictingHeightModesAreRejected(testCase)
-            [fixed,moving,cfg]=scene();cfg.heightMode="xyz";cfg.heightTranslation=100;
-            testCase.verifyError(@()registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg), ...
-                'VehicleLocalization:ConflictingHeightModes');
         end
     end
 end
@@ -163,7 +60,7 @@ function [fixed,moving,cfg]=scene()
     f.mean(5:6,1)=f.mean(5:6,1)-.4;f.meanXYZ(5:6,1)=f.mean(5:6,1);
     f.meanXYZ(5:6,3)=f.meanXYZ(5:6,3)+3;
     fixed=struct('components',f,'frameCalibration',moving.frameCalibration);
-    cfg=distributionRegistrationConfig();cfg.relativeHeight.enabled=true;
+    cfg=semanticGeometryConfig();
 end
 
 function cloud=subsetScene(cloud,ids)

@@ -3,12 +3,11 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
 % A 2-DOF bicycle plant with analytic speed and steering generates the truth.
 % Synthetic wheel speed, steering, IMU, 20 Hz receiver positions and jittered
 % 10 Hz LiDAR poses then pass through the production chain: direct LPV
-% lateral observer -> frame-clock synchronization -> synchronous seven-state
-% observer (MnCAV configuration, receiver output-point correction, optional
-% online matcher callback). GNSS corrects position only; heading is the gyro
-% corrected by LiDAR yaw.
+% lateral observer -> frame-clock synchronization -> intrinsic eight-state
+% observer with current MnCAV configuration and receiver output-point correction.
+% GNSS corrects position; gyro and LiDAR supply heading/rate innovations.
 % Scenarios separate convention errors (clean signals), noise/bias accuracy,
-% source availability, closed-loop matching and lateral-model mismatch.
+% source availability and lateral-model mismatch.
 % All signals are synthetic; no recorded data or reference trajectory is read.
 % NoiseOverrides replaces named noise settings for ablations; Scenarios
 % selects a subset (pass/fail checks then need the complete default set).
@@ -39,7 +38,6 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
         "lidar_outage_40_60",nominal,"noisy","perturbed",["gnss","lidar"],struct('lidar',[40,60]); ...
         "both_outage_40_50",nominal,"noisy","perturbed",["gnss","lidar"],struct('gnss',[40,50],'lidar',[40,50]); ...
         "alternating_1s",nominal,"noisy","perturbed",["gnss","lidar"],"alternating"; ...
-        "online_matcher",nominal,"noisy","perturbed",["gnss","matcher"],[]; ...
         "plant_mismatch_both",mismatch,"noisy","perturbed",["gnss","lidar"],[]};
     if ~isempty(options.Scenarios)
         selected=ismember([definitions{:,1}],options.Scenarios);
@@ -65,15 +63,9 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
             current.gnss.valid=current.gnss.valid & mod(floor(t),2)==0;
             current.lidar.valid=current.lidar.valid & mod(floor(t),2)==1;
         end
-        matcherLog=[];
-        if ismember("matcher",sources)
-            matcherLog=matcherState(numel(t));
-            current.lidarMatcher=@(i,seed,aid) syntheticMatcher(i,seed,aid,aligned.lidar,frameTruth,settings.matcher,matcherLog);
-        end
         runCfg=cfg;runCfg.initialState=initialState(frameTruth,aligned.highRate,alignedLateral,settings,init);
         timer=tic;estimate=runFullLocalizationObserver(current,struct(),runCfg,LateralInputs=alignedLateral);seconds=toc(timer);
         metrics=scoreRun(estimate,frameTruth,truth,lateral,current,settings,mask);
-        if ~isempty(matcherLog),metrics=addMatcherMetrics(metrics,matcherLog,t,settings);end
         runs{k}=struct('scenario',name,'truthModel',string(ifelse(truth.mismatch,"mismatch","nominal")), ...
             'noise',noise,'initialization',init,'sources',sources,'estimate',estimate,'metrics',metrics, ...
             'synchronization',synchronization,'lateralSeconds',lateralSeconds,'observerSeconds',seconds, ...
@@ -128,7 +120,6 @@ function s=scenarioSettings(lateralCfg,cfg)
         'lidarRejectFraction',.05,'lidarJitterS',.003);
     s.gnss=struct('periodS',.05,'offsetS',.013);s.lidar=struct('periodS',.1,'offsetS',.05);
     s.initialError=struct('positionM',[1.5;-1.0],'headingRad',deg2rad(3));
-    s.matcher=struct('captureRadiusM',1.0,'captureYawRad',deg2rad(3));
     s.outageRecoveryToleranceM=.15;s.convergenceToleranceM=.10;
 end
 
@@ -238,25 +229,6 @@ function x=initialState(truth,h,lateral,s,mode)
     x=[p(1);v(1);a(1);p(2);v(2);a(2);yaw];
 end
 
-function log=matcherState(n)
-    log=containers.Map('KeyType','char','ValueType','any');
-    log('seedError')=nan(n,2);log('accepted')=false(n,1);
-end
-
-function r=syntheticMatcher(k,seed,~,lidar,truth,settings,log)
-    % Stand-in for localizeLidarFrame: converges to the recorded synthetic
-    % measurement only when the fused seed lies inside its capture basin.
-    positionError=norm(seed(1:2)-truth.position(k,:));
-    yawError=abs(atan2(sin(seed(3)-truth.heading(k)),cos(seed(3)-truth.heading(k))));
-    captured=positionError<=settings.captureRadiusM && yawError<=settings.captureYawRad;
-    accepted=lidar.valid(k) && captured;
-    pose=seed;information=lidar.information(:,:,k);
-    if accepted,pose=lidar.pose(k,:);end
-    e=log('seedError');e(k,:)=[positionError,yawError];log('seedError')=e;
-    a=log('accepted');a(k)=accepted;log('accepted')=a; %#ok<NASGU> containers.Map is a handle
-    r=struct('poseXYTheta',pose,'information',information,'accepted',accepted);
-end
-
 function m=scoreRun(estimate,truth,fine,lateral,data,s,mask)
     t=estimate.time;e=vecnorm(estimate.position-truth.position,2,2);
     headingError=atan2(sin(estimate.headingUnwrapped-truth.heading),cos(estimate.headingUnwrapped-truth.heading));
@@ -300,12 +272,6 @@ function m=scoreRun(estimate,truth,fine,lateral,data,s,mask)
     m.settledAccelerationRmseMps2=rms(m.acceleration(settled));
 end
 
-function m=addMatcherMetrics(m,log,t,s)
-    a=log('accepted');e=log('seedError');settled=t>=s.settleS;
-    m.matcherAcceptanceAfterSettle=mean(a(settled));m.matcherFirstAcceptS=t(find(a,1));
-    m.settledSeedErrorRmseM=rms(e(settled,1));m.matcherSeedError=e;m.matcherAccepted=a;
-end
-
 function w=rotateBody(b,yaw)
     w=[cos(yaw).*b(:,1)-sin(yaw).*b(:,2),sin(yaw).*b(:,1)+cos(yaw).*b(:,2)];
 end
@@ -342,11 +308,6 @@ function checks=evaluateChecks(runs,s)
     rows=add(rows,"both_outage_40_50_recovery",o.recoveryTimeS,3,o.recoveryTimeS<=3,"Error <= 15 cm within 3 s after outage");
     a=get("alternating_1s");
     rows=add(rows,"alternating_sources",a.settledPositionRmseM,.1,a.settledPositionRmseM<=.1,"Sources alternating each second: settled RMSE <= 10 cm");
-    m=get("online_matcher");
-    rows=add(rows,"online_matcher_acceptance",m.matcherAcceptanceAfterSettle,.9,m.matcherAcceptanceAfterSettle>=.9, ...
-        "Closed-loop matcher with 1 m capture basin: acceptance after 5 s >= 90%");
-    rows=add(rows,"online_matcher_accuracy",m.settledPositionRmseM,1.1*b.settledPositionRmseM,m.settledPositionRmseM<=1.1*b.settledPositionRmseM, ...
-        "Closed-loop matching RMSE within 10% of recorded-LiDAR fusion");
     rows=add(rows,"lateral_observer_nominal",b.settledLateralVelocityRmseMps,.05,b.settledLateralVelocityRmseMps<=.05, ...
         "Lateral velocity RMSE at output point after 5 s <= 0.05 m/s (nominal plant, noise and ay bias)");
     p=get("plant_mismatch_both");
@@ -386,9 +347,6 @@ function plotRuns(runs,folder)
     plot(l.time,l.lateralVelocity-b.metrics.lateralVelocityError,'k',DisplayName="truth");
     p=get("plant_mismatch_both");plot(p.lateral.time,p.metrics.lateralVelocityError,DisplayName="mismatch error");
     grid on;legend(Location="best");title("Lateral velocity at output point");xlabel("t (s)");ylabel("m/s");
-    nexttile;m=get("online_matcher");yyaxis left;plot(m.estimate.time,m.metrics.matcherSeedError(:,1));ylabel("seed error (m)");
-    set(gca,YScale="log");yyaxis right;stairs(m.estimate.time,double(m.metrics.matcherAccepted));ylim([-.1,1.1]);ylabel("accepted");
-    grid on;title("Online matcher: fused seed error and acceptance");xlabel("t (s)");
     exportgraphics(f,fullfile(folder,'cascade_overview.png'),Resolution=130);close(f);
 end
 

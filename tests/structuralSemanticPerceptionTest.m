@@ -123,24 +123,6 @@ classdef structuralSemanticPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(actual.featureMasks,reference.featureMasks);
             testCase.verifyEqual(actual.probabilityCloud.components.meanXYZ,reference.probabilityCloud.components.meanXYZ,'AbsTol',1e-12);
         end
-        function facadeDoesNotInventAlongWallObservability(testCase)
-            cloud=geometricRegistrationTest.parallelRoad();
-            cloud.components.semanticName(:)="facade";
-            result=registerSemanticProbabilityCloud(cloud,cloud,[0.8 0.3 0.02],distributionRegistrationConfig());
-            testCase.verifyEqual(result.observableRank,2);
-            testCase.verifyFalse(result.accepted);
-            testCase.verifyEqual(result.poseXYTheta,[0.8 0 0],'AbsTol',1e-4);
-        end
-        function signsConstrainThreePlanarStates(testCase)
-            moving=distributionRegistrationTest.exampleCloud();
-            moving.components.semanticName(:)="trafficSign";
-            expected=[1.2 -0.7 0.16];
-            fixed=distributionRegistrationTest.transform(moving,expected);
-            result=registerSemanticProbabilityCloud(fixed,moving,[1 -0.6 0.12],distributionRegistrationConfig());
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyEqual(result.poseXYTheta,expected,'AbsTol',1e-4);
-            testCase.verifySize(result.poseXYTheta,[1 3]);
-        end
         function mappingEntryUsesTheRequestedFeatureNames(testCase)
             file=fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','raw','downTownPointClouds.mat');
             testCase.assumeTrue(isfile(file));

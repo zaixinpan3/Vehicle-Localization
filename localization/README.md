@@ -1,14 +1,10 @@
 # Vehicle localization observer
 
-The current dataset localization entries use **overlapGradient only**.
-The pose-registration branch was archived on 2026-10-12; see
-[the scope, historical version and recovery instructions](REGISTRATION_ARCHIVE.md).
-The registration sections below document historical experiments and shared
-geometry. They do not select an alternative current localization channel.
-New Mississippi runs use `runMncavFullObserverExperiment` without a matching
-replay prerequisite; Downtown and CARLA use their existing entries with the
-same overlap-only default.
-
+The maintained estimator is the eight-state invariant observer with
+**overlapGradient** LiDAR corrections. See [the current entry points](CURRENT_PIPELINE.md).
+The retired pose-registration and seven-state implementations were removed;
+[the retirement record](REGISTRATION_ARCHIVE.md) identifies their Git recovery
+revision. Historical studies retain their original configurations and results.
 
 ## File layout
 
@@ -19,23 +15,17 @@ Stages with a single caller are local functions of that entry point.
 
 | File | Contents |
 | --- | --- |
-| `localizeLidarFrame.m` | Archived standalone frame-registration diagnostic |
 | `updateLocalizationSourceWindow.m` | Causal multi-scan source horizon on recorded odometry |
-| `registerSemanticProbabilityCloud.m` | Archived standalone pose-registration solver |
-| `prepareSemanticRegistrationGeometry.m` | Geometric, support and anisotropic D2D models: association, residuals, linearization |
-| `registrationSupport.m` | Registration utilities: projection, preparation, overlap, pose events, map selection and view conditioning, canonical pyramid, position-aided selection, soft association, line directions, relative height, residual primitives |
+| `registrationSupport.m` | Shared projection, overlap, map selection/view conditioning, canonicalization and finite-residual algebra |
+| `prepareSemanticOverlapGeometry.m` | Mixture support axes and evidence weights for landmark overlap |
 | `runFullLocalizationObserver.m` | Current intrinsic eight-state observer; seven-column public state interface |
 | `invariantObserverSupport.m` | Intrinsic prediction, invariant innovations, common gain synthesis and solver-free verification |
-| `sensorRedundancySupport.m` | Shared common L/G matrix construction, exact GNSS lever enclosure and certificate verification |
+| `sensorRedundancySupport.m` | Shared common L/G/M matrix construction, exact GNSS lever enclosure and certificate verification |
 | `fullObserverSupport.m` | Continuous ISS gain design and certificate, input synchronization, GNSS output point |
 | `lidarInjectionSupport.m` | LiDAR information filter, matched correction, residual reevaluation, correspondence-free overlap gradient, calibrated error moments, line measurements |
 | `lidarCalibrationSupport.m` | Causal LiDAR IMU tilt and its provenance check, offline pitch and translation calibration |
 | `poseSupport.m` | Planar pose and rigid transform of recorded pose-table rows |
 | `estimateWheelLongitudinalSpeed.m` | Four-wheel longitudinal speed estimate |
-| `runImprovedVehicleObserver.m` | Continuous MO-HGO analysis runner for GNSS or delayed LiDAR |
-| `runMotionAidedVehicleObserver.m` | Historical LiDAR-only motion-aided observer |
-| `observerAnalysisSupport.m` | Design, certificates, channel evaluation, scenarios and signal reconstruction of the two analysis runners |
-| `poseGraphSupport.m` | Experimental robust sliding-window pose graph |
 | `lateralObserver/designLateralObserverGains.m` | LPV lateral-observer gain synthesis |
 | `lateralObserver/runLateralVelocityObserver.m` | Hybrid lateral-velocity observer runtime |
 | `lateralObserver/simulateLateralObserverScenario.m` | Lateral-observer scenario simulation |
@@ -341,29 +331,15 @@ Rank-deficient and zero information are valid. A curb's longitudinal nullspace
 is preserved. There is no minimum-eigenvalue information floor, yaw-diagonal
 gate or extra multiplication by point count.
 
-Accepted D2D registration now exports `lidarResidualModel`, a serializable
-model of the actual accepted coarse or fine solution. It retains source/map
-Gaussian geometry, normals or shape factors, frozen robust/class/temporal/view
-influence, and the admitted pose subspace. The online matcher passes it directly
-to `lidarInjectionSupport.evaluateLidarRegistrationResidual`, which reevaluates the residual and its
-physical Jacobian at the post-baseline prediction. The source Gaussian scatter
-rotates using the same analytic derivative as the matcher. The support model's
-latent sliding covariance and any soft-association scatter are retained.
-
-Partial geometry evaluates `anchor+projector*(prediction-anchor)` and applies
-the same projector to its Jacobian. This preserves rejected directions in both
-innovation and information. Between-hypothesis pose spread from GNSS-assisted
-selection is applied as a low-rank residual whitening to both quantities; it
-can only reduce information, and adds no GNSS curvature. New replay MAT files
-retain models in `report.lidarResidualModels`; aligned observer packets use
-`data.lidar.residualModels`. Existing files without this geometry use the local
-approximation `xi=S*(D\(qL-predictedPose))`, with wrapped heading difference.
-Validated directional events use filtered `directionalInformation`. Rejected
-registrations remain rejected, and a directional match cannot initialize a full
-absolute pose. Both interfaces assume a consistent local angle chart and
-associations. Initializer, GNSS candidate selection and map correlations remain
-possible: information is a geometric surrogate, not calibrated inverse pose
-covariance or an assertion of independent measurement noise.
+The generic `data.lidar` interface supports synthetic pose and finite-residual
+validation of the same observer. `data.lidar.residualModels` can carry frozen
+geometry for reevaluation by `lidarInjectionSupport.evaluateLidarRegistrationResidual`.
+Pose-only inputs use the local approximation
+`xi=S*(D\(qL-predictedPose))`, with wrapped heading difference. These interfaces
+require a consistent local angle chart and stated residual assumptions.
+Information is a geometric surrogate, not automatically calibrated inverse
+pose covariance or independent measurement noise. Dataset entries instead
+evaluate the overlap gradient directly, as described below.
 
 For an external residual model, `data.lidar.evaluateResidual(k,predictedPose)` can supply
 `residual`, physical `jacobian`, `weights`, and `linearizationPose` at the
@@ -389,13 +365,11 @@ model. The reusable correction helper also offers explicit updates capped at
 `h*max(lambdaZ)<=1.8<2`. Neither result certifies nonlinear association changes,
 map errors or the entire baseline-plus-jump system. The diagnostics retain
 `sampledSystemCertified=false` and `baselineFullStateCertified=false`.
-The current continuous surrogate has a separately verified LMI enclosure;
-its actual overlap operator margin remains unproved. The finite invariant
-secants have a conditional local remainder bound, without a numerical radius. Thus
-`fullContinuousStateCertified=false`, while `surrogateContinuousLmiVerified`
-reports the numerical inequalities. An arbitrary longitudinal outage with
-curb-only geometry cannot guarantee full position convergence. Historical
-seven-state ISS certificates retain their own declared assumptions.
+The continuous certificate requires the sensor and finite-error assumptions
+stated above, including the actual overlap operator. Its conditional local
+region does not certify arbitrary map geometry or sampled switching. An
+arbitrary longitudinal outage with curb-only geometry cannot guarantee full
+position convergence.
 
 This extension follows the fixed quadratic metric and two-chain coordinates
 in Bessafa et al., *Generalized multi-output high-gain observer with application
@@ -431,8 +405,8 @@ INSPVA reference, rather than independent absolute ground truth.
 ### Correspondence-free overlap-gradient channel
 
 `data.lidarOverlap=struct('map',map,'sources',{sources},'valid',valid,'config',overlapGradientConfig())`
-replaces the registration channel and is mutually exclusive with `data.lidar`
-and `data.lidarMatcher`. `sources{k}` is the coarse source horizon of frame
+is mutually exclusive with `data.lidar`. Retired `data.lidarMatcher` callbacks
+are rejected. `sources{k}` is the coarse source horizon of frame
 `k` in its current body axes; the optional `valid` defaults to the nonempty
 sources. At every valid frame the runtime calls
 `lidarInjectionSupport.evaluateOverlapGradient(map,sources{k},prediction,config)`
@@ -549,7 +523,7 @@ uniform outlier floor. The terms are:
 - `u_i`: map masses, normalized to one per class.
 - `v_j`: source masses, with a share of 1/C per class.
 - `K_ij`: with `orientation`, every component carries registration's support
-  axis (from `prepareSemanticRegistrationGeometry`), and each pair is weighted
+  axis (from `prepareSemanticOverlapGeometry`), and each pair is weighted
   by `exp(-kappa_ij*sin(dtheta_ij)^2/2)`, with
   `kappa_ij=c_i*c_j/(angularFloor^2+a_i+a_j)`.
 
@@ -614,349 +588,19 @@ now weighted by intensity responsibility, with a minimum soft sign mass (see the
 top-level README). Source horizons now hold 1.86 signs instead of 2.90, and the
 burst frames publish no sign.
 
-## Historical LiDAR-only motion-aided baseline
+## Maintained inputs and validation
 
-The independent historical comparison entry points below are not selectable
-design or runtime branches of `runFullLocalizationObserver`. Its configuration
-no longer inherits `motionAidedObserverConfig`. Earlier transported-runtime
-results remain in their dated studies and Git history; reproducing that removed
-implementation requires the corresponding historical revision.
+`prepareMncavMotionInputs` prepares wheel, IMU and steering inputs with the
+current vehicle and receiver-clock metadata. GNSS positions and overlap
+sources are prepared by their own stages. Use
+`fullObserverSupport.synchronizeLocalizationInputs` to align motion and lateral
+outputs before calling `runFullLocalizationObserver`.
 
-For the historical MnCAV experiment with precomputed, zero-delay LiDAR, use
-`runMncavMotionAidedExperiment`. Its seven-state motion-aided observer directly
-corrects velocity and acceleration with body-frame motion measurements.
-LiDAR position residuals correct position without feeding the derivative
-states. The nominal physical gains `[kp,kv,ka,kpsi]=[4,4,12,4]` were selected
-on the first 60 s, subject to a new common quadratic certificate and four
-accuracy constraints. The same frozen gains improve position RMSE, peak,
-P95 and heading RMSE against INSPVA over the full and reserved intervals.
-The all-reference/all-metric gate remains false because mixed-ODOM full-run
-P95 rises by 5.18 mm; this exception is retained in the report.
-
-```matlab
-cfg = motionAidedObserverConfig;
-design = observerAnalysisSupport.designMotionAidedObserverGains(cfg);
-estimate = runMotionAidedVehicleObserver(data, lateralInputs, cfg);
-% Recorded comparison using all existing precomputed frames:
-report = runMncavMotionAidedExperiment;
-```
-
-This path accepts aligned piecewise-linear LiDAR pose with `delay=0` and
-`headingConvention="unwrapped"`. Motion inputs and lateral outputs use the
-same grid as the prior zero-delay experiment. Initialize from the first
-measurement and measured motion, or supply `cfg.initialState` on that yaw
-lift. The runner never receives evaluation references. Geometric weights
-come from the full information matrix; its XY block and yaw diagonal are
-applied in separate cascade stages, without XY-yaw feedback cross terms.
-Qualified knot weights are linearly reconstructed between knots.
-
-See the [derivation and gain design](../research/mncav_motion_aided_20260914/design.md)
-and [recorded/synthetic validation](../research/mncav_motion_aided_20260914/validation.md).
-This design has its own conditional ISS certificate. The old delayed-HGO
-certificate is not reused for it. Positive-delay and GNSS behavior below
-continue to use `runImprovedVehicleObserver`.
-
-The global observer integrates the seven states
-`[X,Vx,Ax,Y,Vy,Ay,psi]`. It implements the two continuous measurement contracts
-in [the ISS derivation](../improved_observer_derivation.md): position-only
-GNSS, or uniformly informative LiDAR pose with a known fixed delay. The mode is
-fixed for a run. The independent lateral observer supplies `vy`, `beta`, and
-`betaDot`; its output can also be supplied explicitly for isolated testing.
-
-The vehicle and observer are continuous systems with constant matrices within
-each measurement mode. The integration grid is a numerical approximation of
-their equations.
-
-## Continuous input contract
-
-Call `setupVehicleLocalization` from the repository root. `sensorData.highRate`
-contains aligned finite column vectors `time`, `steeringAngle`,
-`longitudinalSpeed`, `longitudinalAcceleration`, `lateralAcceleration`, and
-`yawRate`. Time increases strictly. Body acceleration is inertial acceleration
-after gravity/lever-arm compensation. These arrays define linear numerical
-input reconstructions; they are not measurement-arrival events.
-
-The selected source is exactly one of:
-
-* `sensorData.gnss.evaluate(t)`: a pure function returning the current physical
-  position `[X;Y]`. No continuous heading output is used.
-* `sensorData.lidar.evaluate(t)`: a pure function returning a struct with
-  `pose=[X;Y;psi]` and a symmetric physical `information` matrix. At evaluation
-  time `t`, the pose describes time `t-d`, where `d=source.delay` equals
-  `cfg.measurement.fixedLidarDelay`. Declare `headingConvention="unwrapped"`.
-  The runner subtracts its own estimate at **that same past time** and does
-  not delay the measurement again.
-
-Providers must meet the continuous-signal contract over the whole interval.
-They are queried only at current integration/evaluation times; missing or
-nonfinite measurements raise an error. Information bounds are checked at every
-evaluated LiDAR point. These finite evaluations cannot establish a bound
-between evaluations for an arbitrary function provider.
-
-For an explicitly reconstructed numerical signal, replace `evaluate` with
-`representation="piecewiseLinear"`, `time` equal to the high-rate grid, and
-`position` (N-by-2) or `pose` (N-by-3). LiDAR also needs a 3-by-3-by-N
-`information` array, its fixed `delay`, and the lifted-heading declaration.
-Finite aligned arrays have no missing-sample fallback. Interpolation of positive
-information matrices preserves their common lower matrix bound. Linear
-reconstruction from stored samples can use future endpoints and is an offline
-input model, not a claim of physical continuous delivery or online causality.
-
-`observerAnalysisSupport.reconstructContinuousObserverSignals` is the separate recorded-data adapter.
-It takes physical pose timestamps, applies the fixed LiDAR offset once, trims
-to covered input times, and explicitly constructs aligned continuous arrays.
-It rejects original gaps exceeding its declared interpolation limit (default
-0.12 s) and rejects inadequate LiDAR directions. That limit is a reconstruction
-quality setting; it is not a timer or a measurement-switching theorem.
-Registration records from `localizeLidarFrame` are data products and are not
-direct continuous-observer inputs.
-
-## GNSS position mode
-
-```matlab
-cfg = improvedObserverConfig("gnss");
-design = observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
-data.highRate = highRateInputs;
-data.gnss = struct('evaluate', @(t) [8*t;0]);
-cfg.observer.initialState = [0;8;0;0;0;0;0];
-estimate = runImprovedVehicleObserver(data, lateralDesign, design, cfg);
-```
-
-The first six states use the position and three rotational-invariant outputs.
-The yaw row uses raw estimated velocity in
-`psiHatDot = r_m + kPsi*(VyHat*cos(psiHat+betaHat)-VxHat*sin(psiHat+betaHat))`.
-It does not feed heading errors back into the first six states. State and
-prediction are never clipped; only the first three auxiliary maps are
-extended outside their velocity/acceleration box.
-
-The theorem requires sustained motion and an invariant local heading-error
-sector. Standstill runs remain numerically possible, but their diagnostics
-report that the motion condition is unmet; the observer cannot infer heading
-at rest from position alone. A measured speed check does not prove the true
-speed bound or the initial heading-error bound. `initialHeading` is an initial
-estimate used if `initialState` is omitted, not another measurement channel.
-
-## LiDAR fixed-delay mode
-
-```matlab
-cfg = improvedObserverConfig("lidar");
-design = observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
-d = cfg.measurement.fixedLidarDelay;
-data = struct('highRate', highRateInputs);
-data.lidar = struct('delay', d, 'headingConvention', "unwrapped", ...
-    'evaluate', @(t) struct('pose', [8*(t-d);0;0], ...
-                           'information', 1e6*eye(3)));
-cfg.observer.initialState = [0;8;0;0;0;0;0];
-history = @(t) [8*t;8;0;0;0;0;0];
-estimate = runImprovedVehicleObserver(data, lateralDesign, design, cfg, ...
-    InitialHistory=history);
-```
-
-For positive delay, `InitialHistory(t)` must return seven finite states on
-`[t0-d,t0]` and match the initial current estimate at `t0`. An old LiDAR pose
-cannot silently initialize the current state. Arbitrary continuous estimated
-histories are permitted by the theorem; their true error is an initial
-condition whose magnitude is not known from sensor data alone.
-
-RK4 uses the method of steps: a numerical step is no longer than the delay,
-so every stage can read an already available past estimate. Cubic Hermite
-interpolation uses accepted endpoint states and their actual ODE/DDE
-slopes. Numerical cuts also respect propagated initial-history derivative
-breaks at multiples of the delay. Only a delay-length history bracket is kept;
-old outputs are never changed. A zero delay is supported as the current-output
-ODE limit, with its matrices reverified for that delay.
-
-Information is normalized with the fixed pose scales `S`:
-`J=S'*information*S`, `W=J/(gainInformationScale*I+J)`. The injection is
-`T*K*W*(S\measuredPose-S\pastEstimatedPose)`. It retains all translation/yaw
-cross terms. No inverse information, artificial eigenvalue floor, or partial
-pose substitution is used. Insufficient information raises an explicit error.
-All four extended auxiliary outputs remain continuously active in this mode.
-
-## Design and certification
-
-For reduced GNSS startup peaking, select the optional constant-gain preset:
-
-```matlab
-cfg = improvedObserverConfig("gnss", "lowPeaking");
-design = observerAnalysisSupport.improvedObserverReferenceDesign(cfg);
-```
-
-This uses `theta=8`, chain coefficients `[6;8;3]` and `yawGain=0.1`.
-The metric is recomputed and verified at the original operating bounds.
-The reference profile remains the default. In the same synthetic noisy
-sedan trial, the acceleration-error peak falls from 134.17 to 34.60 m/s²,
-while sampled settling increases from 0.89 to 3.51 s. Peaks remain substantial;
-this preset has a smaller certificate margin and is not an optimum or a
-general physical validation. Run `tuneSyntheticObserverPeaking` for the
-[parameter comparison](../research/observer_peaking_tuning_20260913/validation.md).
-
-`observerAnalysisSupport.improvedObserverReferenceDesign(cfg)` loads
-[the constant-matrix artifact](../config/continuousObserverCertificate.json)
-and recomputes its numerical certificate. `observerAnalysisSupport.verifyImprovedObserverDesign`
-checks actual matrices and gains; it ignores saved `certified` flags.
-`observerAnalysisSupport.designImprovedObserverGains` constructs the GNSS chain gains or synthesizes
-constant LiDAR `P,Q,R` for fixed gains using either a norm enclosure or
-a four-vertex course-rate enclosure with residual norm bounds. There is one
-runtime and one current certificate implementation.
-
-| Reference mode | Scaling | Course-rate bound | Additional requirement |
-|---|---:|---:|---|
-| GNSS position | 20 | 0.6 rad/s | Positive speed and admitted local yaw sector |
-| LiDAR pose | 1 | 0.00215032 rad/s | 150 ms delay, `0.99852005 I <= W <= I` |
-
-Both use true velocity/acceleration component bounds of 16 m/s and 5 m/s².
-The LiDAR artifact is a conservative existence example, not a newly certified
-0.6 rad/s vehicle design. Increasing delay or widening its sector requires
-successful reverification or synthesis. Actual rate excursions are evaluated
-without clamping and are reported as outside the certificate envelope.
-
-`observer.certificateVerified` means the continuous matrix inequalities passed.
-`observer.certified` remains false because true-state/noise/heading assumptions
-and numerical integration error are not established by the runner.
-`diagnostics.certificateConditions` separates coefficient observations from
-these unverified hypotheses. A successful simulation is not a full ISS
-certificate for a physical sensor implementation.
-
-## Outputs and validation
-
-`z` and `onlineZ` contain the same immutable states with **lifted yaw**.
-`pose` and `heading` wrap yaw to `[-pi,pi]`; `headingUnwrapped` retains the lift.
-Other outputs include position, velocity, acceleration, speed, lateral inputs,
-pose/auxiliary innovations, normalized information weights, and the delayed
-states actually used. No residual is wrapped across angle branches internally.
-
-`LateralInputs` optionally supplies aligned `time`, `lateralVelocity`,
-`sideSlipAngle`, and `sideSlipAngleRate`; pass `struct()` for the unused
-`lateralDesign` when isolating the global stage. If omitted, the real lateral
-observer runs once and supplies its interface as before.
-
-```matlab
-results = runtests('tests/improvedObserverTest.m');
-report = validateStandaloneObserver;
-demo = demoSyntheticVehicleObserver;
-```
-
-`demoSyntheticVehicleObserver` provides a self-contained sedan experiment
-using the actual lateral/global cascade, analytic steady-turn truth, incorrect
-initial states, and clean/noisy GNSS and delayed LiDAR signals. It displays
-all state traces and saves figures and metrics. See the
-[synthetic demonstration results](../research/synthetic_vehicle_observer_20260913/validation.md),
-including GNSS startup peaking and the LiDAR startup certificate excursion.
-
-The tests compare GNSS yaw with its nonlinear analytic solution and delayed
-yaw with the independent MATLAB `dde23` solver, as well as checking the delay
-history, information directions, missing measurements, source clocks, unit
-normalization, bounded memory, and immutable prefix outputs. The standalone
-validation exercises all seven states under analytic motion and continuous
-bounded noise. See [the runtime validation](../research/continuous_observer_runtime_20260913/validation.md).
-
-The recorded-data entry offers separate `gnss` and `lidar` reconstructions
-and retains contract failures as failures.
-
-`validateSyntheticLocalizationCascade` can exercise the current synchronous
-production chain end to end with synthetic signals and exact truth: lateral
-observer, frame alignment, MnCAV synchronous observer, source outages, the
-online matcher callback and lateral-model mismatch. See the
-[synthetic cascade record](../research/synthetic_localization_cascade_20260929/README.md),
-including its historical GNSS-only bias limitation and the numerically zero
-LPV gain. That September record predates the intrinsic eight-state revision
-and does not validate its new equations.
-
-## Registration helpers
-
-The archived standalone registration entry points are `localizeLidarFrame` and
-`registerSemanticProbabilityCloud`; `prepareSemanticRegistrationGeometry`
-builds the geometric, support and anisotropic models. Shared methods are static
-methods of `registrationSupport`: cloud projection and preparation, Gaussian
-overlap and its scoring, pose-event export, local map selection and matching,
-view conditioning, the canonical pyramid, position-aided hypothesis selection,
-soft point association, line directions, relative-height association and the
-Gaussian/support residual primitives.
-
-## LiDAR tracking preset
-
-`improvedObserverConfig("lidar","tracking")` selects a verified constant-gain
-alternative for the current continuous delayed LiDAR observer. Each Cartesian
-chain changes from `[3;3;1]` to `[3;3;1.5]`; theta, N, yaw gain, delay and
-operating/information bounds are unchanged. Load it through
-`observerAnalysisSupport.improvedObserverReferenceDesign(cfg)`; stored matrices are reverified.
-The default stays `reference`. The preset reduces settled position, velocity
-and acceleration error by about 20% on a synthetic variable-speed gentle turn,
-with a 36% larger acceleration-error peak. Its narrow course-rate certificate
-is unchanged. See the [experiment and tradeoffs](../research/lidar_tracking_tuning_20260914/validation.md)
-and `tuneContinuousLidarTracking` for reproduction.
-
-## Target vehicle: UMN MnCAV
-
-Use `mncavVehicleConfig` and `lateralObserverConfig("mncav")` for new
-vehicle-dependent work. The central source identifies the 2021 Pacifica Hybrid,
-stock mass/geometry/steering ratio, and explicitly unmeasured inertia/stiffness
-priors. Re-synthesize lateral gains for this vehicle; the archived reference
-sedan gains are not its identified design. `validateMncavObserverParameters`
-checks the global LiDAR profiles with motion generated by the nominal MnCAV
-bicycle plant and separate dynamic-parameter sensitivities. The global
-kinematic equations themselves contain no mass or stiffness parameter.
-See [MnCAV parameter provenance and limits](../research/mncav_parameter_validation_20260914/validation.md).
-The current `tracking` profile remains provisional: recorded MnCAV course rates
-extend far outside its narrow LiDAR certificate. Stock parameter matching
-alone does not establish deployment suitability.
-
-
-## MnCAV LiDAR operating-range preset
-
-Select `improvedObserverConfig("lidar","mncav")` for the new data-informed
-course-rate design. It uses theta=2 and a common four-vertex delay certificate
-covering |yawRate+sideSlipAngleRate| <= 0.4 rad/s at 150 ms delay. This covers
-the existing recorded audit maximum of 0.354975 rad/s, with unchanged stated
-information and true-state bounds. The 0.4 bound is a design envelope, not a
-physical vehicle limit or a guarantee for every future drive.
-
-The verifier retains q and q^2 explicitly instead of replacing both by one
-unstructured disturbance bound. It recomputes all four matrix inequalities;
-no runtime turn-rate clamping is introduced. The reference/tracking profiles
-remain historical alternatives. Fourteen wider-turn nominal MnCAV simulations
-show improved position/velocity/acceleration tracking with larger initial
-peaks and slightly worse heading noise response. Use
-`validateMncavObserverParameters(folder,SteeringScale=220,Profiles=["tracking","mncav"])`
-to reproduce. See the [proof, results and limitations](../research/mncav_lidar_envelope_20260914/validation.md).
-
-## Archived recorded registration cascade
-
-`runMncavFullLocalizationExperiment` freshly synthesizes MnCAV lateral and
-global gains, runs the actual lateral observer, uses its velocity with
-corrected gyro/speed for recursive raw-scan map matching, and executes the
-global observer. `auditMncavFullLocalizationExperiment` compares both outputs
-at identical scan timestamps and exports actual gains and error traces.
-
-This historical experiment was explicitly offline: accepted pose gaps up to
-one second are linearly reconstructed, and information gain-shaping lambda
-is set to .001 with fresh verification. Original matching information is
-preserved. Recorded gaps require future scans for some reconstructed inputs;
-the 150 ms DDE setting is not demonstrated real-time latency. Same-drive map
-results show improved heading and worse position RMSE after global fusion.
-See the [complete experiment and limitations](../research/mncav_full_localization_20260914/validation.md).
-
-## Archived precomputed registration poses
-
-The archived entry `runMncavZeroDelayExperiment` now refuses execution. Its
-pre-retirement implementation is recoverable at the commit in REGISTRATION_ARCHIVE.md.
-It computes and saves all 1,170 raw-frame matching results before starting
-the global observer. A separate cache records frame IDs, capture times,
-acceptance, original poses and information. Rejected frames have no valid
-cached measurement pose; their prediction output is not relabeled as LiDAR.
-
-`observerAnalysisSupport.reconstructFrameAlignedLidarSignals` merges the original LiDAR timestamps
-into the numerical input grid. With `fixedLidarDelay=0`, each accepted frame
-supplies its unchanged pose/information at exactly its own capture time.
-The existing continuous observer integrates between frames using the declared
-offline linear reconstruction of adjacent accepted poses. There is no
-instantaneous state reset or 150 ms source shift. All frame times, including
-the final fractional motion-grid interval, have explicit output rows.
-
-The entry retains the MnCAV feedback gains and independently verifies the
-existing certificate matrices at zero delay. It freshly designs and runs
-the lateral observer. Whole-sequence metrics use the original 100 Hz grid
-and native scan grid separately, avoiding extra weight for inserted knots.
-Both the mixed ODOM reference and the same-receiver INSPVA diagnostic
-reference are reported. See the [zero-delay experiment](../research/mncav_zero_delay_20260914/validation.md).
+`validateSyntheticLocalizationCascade` exercises the current observer with
+synthetic measurements, availability changes and lateral-model mismatch.
+`validateFullLocalizationObserver` covers the maintained MnCAV entry.
+The tests under `tests/` synthesize fresh gains; they include invariant-output,
+Mixed-coupling, source-window, overlap-gradient and pipeline-reference checks.
+See [the pipeline guide](CURRENT_PIPELINE.md) for the supported dataset entries
+and [the vehicle configuration](../config/MNCAV_CONFIGURATION.md) for parameter
+and small-offset scenario requirements.

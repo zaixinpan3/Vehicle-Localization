@@ -294,64 +294,33 @@ loop. `runLateralVelocityObserver` supplies exactly this interface:
 * `diagnostics.sideSlipCommandValid`, which indicates whether the raw side-slip
   direction is valid.
 
-The global stage has seven continuous states
-`[X,Vx,Ax,Y,Vy,Ay,psi]` and planar pose output `[X,Y,psi]`.
-The [continuous-time ISS derivation](improved_observer_derivation.md)
-analyzes two independent measurement cases:
+The global stage is the intrinsic eight-state observer
+`[X,Vx,Ax,Y,Vy,Ay,psi,r]`. `runFullLocalizationObserver` combines GNSS
+position, wheel/lateral-velocity information, body acceleration, gyro and
+semantic LiDAR overlap gradients. Missing or invalid channels withdraw their
+own innovations. The rotation-invariant outputs and coupled L/G/M inequalities
+share one continuous Lyapunov design; translation-heading coupling remains
+in the Mixed GNSS-LiDAR constraints.
 
-* Continuous GNSS position: a triangular MO-HGO has seven-state local ISS
-  during sustained motion, with an explicit invariant heading-error region.
-  Position-only GNSS cannot observe heading at standstill.
-* Continuous LiDAR pose with a known fixed delay: uniformly positive pose
-  information supports a delayed-residual MO-HGO, subject to a verified
-  delay-dependent LMI using constant Lyapunov--Krasovskii matrices.
+`mncavFullObserverConfig` provides current MnCAV parameters and
+`synthesizeMncavInvariantDesign` solves fresh gains. The continuous ISS result
+is conditional on its sensor, dynamics and local-domain assumptions; it is
+not a certification of arbitrary map geometry or the full sampled runtime.
+See [the current pipeline](localization/CURRENT_PIPELINE.md) and
+[the observer design](localization/README.md).
 
-The continuous theory retains LiDAR delay and the full matrix information,
-including cross terms.
-The [reproducible certificate checks](research/continuous_observer_iss_20260913/validation.md)
-record a constructive GNSS block certificate and a conservative 150 ms LiDAR
-example with all four auxiliary channels. These are new theoretical designs.
-
-The analysis runner `runImprovedVehicleObserver` integrates these continuous
-ODE/DDE equations. Select `improvedObserverConfig("gnss")` or
-`improvedObserverConfig("lidar")`; each mode uses independently verified,
-constant certificate matrices. Delayed LiDAR requires an explicit estimate
-history, and the innovation compares measurements with that past estimate.
-See [the runtime contract](localization/README.md) and
-[implementation validation](research/continuous_observer_runtime_20260913/validation.md).
-Recorded data require an explicitly declared continuous reconstruction; they do
-not establish physical sensor continuity.
-
-The complete runtime is `runFullLocalizationObserver`: independent GNSS and
-LiDAR streams simultaneously correct one seven-state motion-aided observer.
-Missing/invalid/expired channels are withdrawn independently. Separate ISS
-analyses do not imply mutually exclusive sensor operation. Its current
-zero-delay, sampled implementation has a
-[separate conditional common certificate and outage analysis](research/full_observer_20260916/design.md).
-
-Registration is the default LiDAR channel. The opt-in `data.lidarOverlap`
-channel works at the observer prediction instead. It sums, over a ladder of
-horizontal smoothing bandwidths, the analytic SE(2) gradient of `-log` of the
-class-balanced `semanticGaussianOverlap` between each coarse source horizon and
-the map. Its information is the summed Gauss-Newton metric (responsibility-weighted
-pair precisions), and it applies registration's evidence weights. It uses no
-pose optimization, frozen correspondences or acceptance test.
-`overlapGradientConfig` holds its settings. On the 1169-frame MnCAV replay, its
-position RMSE is 9.7, 7.3, 6.4 and 5.9 cm, against 10.2, 7.8, 5.7 and 6.0 cm
-for registration. The four settings are the former nominal and fixed-scale
-gains (both replaced by the single tuned set on 2026-10-10), each without and
-with GNSS. Its heading RMSE is 0.15--0.23 deg, against
-0.11--0.14 deg. The opt-in `aggregation="landmark"` with `orientation` replaces
-the frame-level overlap by the per-landmark mixture likelihood of oriented
-components. This closes the heading gap: 9.3, 7.1, 5.9 and 5.7 cm, with
-0.115--0.131 deg heading RMSE. See the
-[channel description and measurements](localization/README.md#correspondence-free-overlap-gradient-channel).
+Current dataset entries supply `data.lidarOverlap`. Its analytic SE(2)
+gradient and information matrix are evaluated at the observer prediction
+over the configured smoothing ladder. `overlapGradientConfig` selects frame
+or per-landmark aggregation and optional orientation information;
+`semanticGeometryConfig` supplies spatial support settings. The retired
+seven-state and pose-optimization implementations are recoverable from
+Git as described in [the retirement record](localization/REGISTRATION_ARCHIVE.md).
 
 ## Configuration (`config/`)
 
-One config per stage. The geometric baseline is retained where experiments
-support it; coarse distribution, offline validation, and registration controls
-are explicit:
+One config per stage. Perception, mapping, overlap geometry and observer
+settings are explicit:
 
 | config | consumed by |
 | --- | --- |
@@ -361,7 +330,7 @@ are explicit:
 | `latticeTunedValue` | selects the 0.3 m or 0.6 m value of a pillar-stage parameter inside the stage configs |
 | `structuralPillarConfig` | whole-pillar pole/facade/sign detection |
 | `finePerceptionConfig` | `refinePerceptionCandidates` (offline only) |
-| `distributionRegistrationConfig` | `registerSemanticProbabilityCloud` (`.pyramid` canonical coarse-to-fine levels) |
+| `semanticGeometryConfig` | Shared map/overlap projection and support geometry |
 | `groundSegmentationConfig` | `segmentGround` |
 | `groundFeatureConfig` (`.curb`, `.road`) | `extractGroundFeatures` |
 | `offGroundFeatureConfig` | `extractOffGroundFeatures` (historical facade switch; modern calls use `featureNames`) |
@@ -370,7 +339,6 @@ are explicit:
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |
 | `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` (`.outputPoint` from `mncavMotionOutputPoint.json` for MnCAV) |
 | `wheelSpeedObserverConfig` | `estimateWheelLongitudinalSpeed`, `prepareWheelMotionInputs` |
-| `improvedObserverConfig` | `observerAnalysisSupport.designImprovedObserverGains`, `runImprovedVehicleObserver` |
 | `mncavFullObserverConfig` | `fullObserverSupport.designFullObserverGains`, `runFullLocalizationObserver` |
 | `overlapGradientConfig` | `lidarInjectionSupport.evaluateOverlapGradient`, `runFullLocalizationObserver` (`data.lidarOverlap.config`) |
 
@@ -412,13 +380,6 @@ and rendering commands in that record. The 1080p/30 fps video repeats actual
 10 Hz outputs and is saved as
 `output/localization_video_20260917/mncav_localization.mp4`.
 
-The historical LiDAR-only offline experiment is `runMncavMotionAidedExperiment`.
-The [motion-aided seven-state observer](research/mncav_motion_aided_20260914/validation.md)
-retains the turning model and uses direct velocity/acceleration correction.
-Its recorded comparison includes the actual continuous LiDAR input, every
-native matching frame, both diagnostic references and a reserved interval.
-Use `designMncavMotionAidedGains` to reproduce the training-only gain search.
-
 ```matlab
 setupVehicleLocalization();                       % add modules to the path
 buildPerceptionKernels();                         % optional; requires a C++ compiler
@@ -438,69 +399,31 @@ selfScore = registrationSupport.scoreSemanticProbabilityCloudAlignment( ...
 design = designLateralObserverGains(lateralObserverConfig("mncav")); % nominal MnCAV LPV ISS synthesis
 estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
 
-lateral = designLateralObserverGains(); % current MnCAV; requires YALMIP/SDP
-improved = observerAnalysisSupport.improvedObserverReferenceDesign();
-result = observerAnalysisSupport.simulateImprovedObserverScenario( ...
-    improved, lateral, improvedObserverConfig());        % complete cascade
+report = runMncavFullObserverExperiment; % fresh gains and current overlap cascade
 ```
 
 `scripts/` holds the runnable entry points: `extractPointCloudsFromBag.m` and
 `extractGnssFromBag.py` (ROS bag → MAT frames and GNSS/INS CSV tables),
 `buildMississippiFeatureMap.m`, `runLateralObserverDesign.m`, and
-`runImprovedObserverDesign.m`. `benchmarkCoarseProbabilityCloud` measures current
+`synthesizeMncavInvariantDesign.m`. `benchmarkCoarseProbabilityCloud` measures current
 coarse/fine calls; `evaluateWholePillarPerception` compares frozen output data.
 `evaluateRepeatedObservationMap` records actual construction, convergence and
 query/export consistency on Mississippi frames 260--289.
 `showMississippiPerception(260,"","coarseProbabilityCloud")` displays the complete
 cloud with candidate pillar members colored; `"offline"` displays accepted fine points.
 
-For an explicitly requested archived D2D diagnostic (outside current localization),
-cache the canonical field as a Gaussian cloud:
+Evaluate the current LiDAR information directly at a predicted pose:
 
 ```matlab
 mapCloud = temporalMapToProbabilityCloud(probabilityCloudMap);
-[measurement, diagnostic] = localizeLidarFrame( ...
-    frame, mapCloud, predictedPoseXYTheta, acquisitionTimestamp);
-% Empty measurement means rejected alignment. Set measurement.arrivalTime
-% to its actual delivery time before adding it to the observer lidar stream.
+measurement = lidarInjectionSupport.evaluateOverlapGradient( ...
+    mapCloud, localCloud, predictedPoseXYTheta(:), overlapGradientConfig());
 ```
 
-The localization state and every accepted measurement are **[X, Y, psi]** in
-meters/radians. The caller supplies a local prediction, a map cloud, and known
-IMU tilt. This is local SE(2) alignment. Online perception remains pillar-only;
-fine point verification is confined to offline mapping.
-
-`distributionRegistrationConfig` now defaults to `method="geometricD2D"`.
-It matches same-class Gaussian components using both covariances. Elongated
-curbs and markings constrain their normal directions; poles constrain XY.
-Positive mixture masses do not attract the solution toward sampling-density
-peaks. Full-pose acceptance requires three observable directions and class
-consistency. A rejected result produces no observer event; partial geometry
-is available only as a diagnostic. Its normal matrix is not calibrated sensor
-information. The separate `registrationSupport.scoreSemanticProbabilityCloudAlignment` function
-evaluates a Gaussian-overlap diagnostic; it does not select another pose solver.
-
-Registration is coarse to fine on a **canonical map pyramid**
-(`cfg.pyramid`). `registrationSupport.canonicalizeSemanticCloud` merges same-class point
-components closer than `mapMergeRadius` (1.5 m) in the local map and
-`sourceMergeRadius` (0.5 m) in the source window into one moment-matched
-Gaussian each, which removes the sub-metre association aliases of split or
-tile-duplicated landmarks; the same solver runs on those canonical clouds
-first and its pose seeds the solve on the original clouds. Position aid and
-additional seeds act on the fine level. Without aid or relative-height
-association, a refinement that moves more than `trustRadius` (0.15 m) from
-the coarse pose is a new search rather than a refinement, and the coarse pose
-is kept (`reason="coarseRetainedByTrustRadius"`). Every result carries a
-`pyramid` diagnostic. See [the mode-ambiguity study](research/alias_hypotheses_20260924/README.md)
-and [the production record](research/canonical_pyramid_20260924/README.md).
-
-Full XYZ means/covariances, including xz and yz, remain in every supported
-probability-cloud component. The default `heightMode="xy"` uses the XY
-marginal. Opt-in `"xyz"` makes geometric D2D check conditional height
-compatibility; it never estimates Z, roll, or pitch. Supply `heightTranslation`
-as the moving origin's map Z (the third output of `poseSupport.poseRowToPlanarPose`).
-`"auto"` falls back to XY when height or its reference is absent. Small
-compatible height residuals do not exert a planar pose force.
+The pose is `[X,Y,psi]` in meters/radians. The result supplies a gradient and
+full information matrix, including translation-heading coupling. Online
+perception remains pillar based; fine point verification belongs to offline
+mapping. The map and source must use consistent calibration and coordinates.
 
 Optional `perceptionConfig().frameCalibration` and
 `featureMapBuildConfig().frameCalibration` specify the same rigid increment
@@ -511,8 +434,6 @@ complete sensor extrinsic calibration. Rebuild a map with the chosen transform
 before using it online. Missing or mismatched calibration provenance is rejected.
 Fixed map components must include repeatability; it is never synthesized from
 mixture mass or substituted with unit weights.
-
-See [algorithm, equations, configuration, and recorded validation](research/geometric_d2d_registration.md).
 
 ### Data layout expected under `dataRoot`
 
@@ -612,8 +533,6 @@ buildCarlaPointCloudMat("data/raw/Carla/<run>/mapping_prepared");
 % Optional: run collectCarlaFeatureObservations on sweep blocks in parallel
 % processes and pass the files as ObservationFiles.
 buildCarlaFeatureMap("data/raw/Carla/<run>/mapping_prepared", "output/<map>");
-runCarlaLocalization("data/raw/Carla/<run>/localization_prepared", ...
-    "output/<map>/view_conditioned_cloud.mat", "output/<run>");
 ```
 
 `perceptionConfig("Carla", mode)` selects curb, pole and facade with the
@@ -631,12 +550,9 @@ ground-height map to the structural branch. This keeps online facades
 consistent with the mapped facades, so that tree canopies are not reported as
 facades. Without these fields, perception is unchanged.
 
-On the outer ring driven in the mapped direction, recursive matching with
-wheel/gyro prediction stayed within a few centimetres of the ground truth.
-The view-conditioned map weights poles by the headings seen during mapping.
-A drive opposite to a single-direction mapping pass therefore loses pole
-constraints; use the plain `probability_cloud.mat` there, or map both
-directions.
+The maintained MnCAV VDB localization entry is `runMncavVdbLocalization`.
+See [the current pipeline](localization/CURRENT_PIPELINE.md). Historical
+registration comparisons remain in their dated studies and Git revisions.
 
 ## Verification
 

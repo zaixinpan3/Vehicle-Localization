@@ -19,7 +19,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     overlapConfig=overlapGradientConfig();
     if ~isempty(options.OverlapScaleLadder),overlapConfig.scaleLadder=options.OverlapScaleLadder;end
     sensorFolder="output/mncav_wheel_only_20260916/sensors";
-    [prepared,~,inputMetadata]=prepareMncavObserverReplay(sensorFolder,"",table(),0,IncludeOdom=false);
+    [prepared,inputMetadata]=prepareMncavMotionInputs(sensorFolder);
     h=prepared.highRate;
     lateralDesign=designLateralObserverGains(lateralObserverConfig());
     lateral=runLateralVelocityObserver(h,lateralDesign,lateralObserverConfig("mncav"));

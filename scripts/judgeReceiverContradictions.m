@@ -49,7 +49,7 @@ function summary=judgeReceiverContradictions()
     poses=readtable(fullfile(root,'data','raw','Missisipi','gnss','raw_data_2024-06-07-12-09-31_0_front_lidar_synchronized_pose_1_1170.csv'));
     inspva=readtable(fullfile(root,'data','raw','Missisipi','gnss','raw_data_2024-06-07-12-09-31_0_inspva.csv'));
     assert(height(inspva)==height(samples),'Consistency table and INSPVA log differ in length.');
-    [prepared,~,~]=prepareMncavObserverReplay("output/mncav_wheel_only_20260916/sensors","",table(),0,IncludeOdom=false);
+    prepared=prepareMncavMotionInputs("output/mncav_wheel_only_20260916/sensors");
     h=prepared.highRate;
     lateral=runLateralVelocityObserver(h,designLateralObserverGains(lateralObserverConfig()),lateralObserverConfig("mncav"));
     interface=jsondecode(fileread(fullfile(root,'config','mncavReplayInterface.json')));vehicle=mncavVehicleConfig();

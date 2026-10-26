@@ -22,6 +22,8 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
         cfg (1,1) struct=mncavFullObserverConfig()
         options.LateralInputs (1,1) struct=struct()
     end
+    assert(~isfield(data,'lidarMatcher'),'VehicleLocalization:ArchivedRegistration', ...
+        'Pose-registration callbacks are removed. Supply overlap-gradient sources.');
     estimate=runSynchronousLocalizationObserver(data,cfg,options.LateralInputs);
 end
 
@@ -32,15 +34,10 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
 % measurements withdraw their own correction. An implicit baseline step is
 % followed by an implicit Lyapunov-matched LiDAR step. Only the locally affine
 % LiDAR jump is certified as nonexpansive; the full sampled system is not.
-% Optional data.lidarMatcher(k,seed,positionAid) runs before the current update.
-% It replaces data.lidar, receives the previous fused-state prediction and
-% current point-corrected GNSS, and returns a registration result. Candidate
-% selection may depend on GNSS; its information must exclude GNSS curvature.
 % Wheel and lateral-observer velocities are used without LiDAR-derived bias.
 % GNSS corrects position only; the full LiDAR information corrects pose jointly.
-% Matcher events and recorded data.lidar.residualModels supply accepted frozen
-% geometry for predicted-pose residual evaluation. Old pose-only records use
-% the local information approximation with its initialization dependence.
+% Synthetic data.lidar.residualModels supply frozen geometry for finite-residual
+% validation. Pose inputs use the local information approximation.
 % Optional data.lidar.evaluateResidual(k,predictedPose) supplies residual-level
 % geometry at the post-baseline pose on each valid frame, overriding that model.
 % Optional data.lidarOverlap replaces registration: struct with map, sources
@@ -81,25 +78,18 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         lateral.(name)=lateral.(name)(:);lateral.(name)(~valid)=0;
     end
     G=source(data,'gnss',t,2);L=source(data,'lidar',t,3);
-    onlineMatching=isfield(data,'lidarMatcher');
-    if onlineMatching
-        assert(isa(data.lidarMatcher,'function_handle') && ~isfield(data,'lidar'), ...
-            'VehicleLocalization:AmbiguousLidarInput','Supply a matcher or recorded LiDAR measurements, not both.');
-    end
     overlapChannel=isfield(data,'lidarOverlap');
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
         'minimumInformation',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3));
     if overlapChannel
-        assert(~isfield(data,'lidar') && ~onlineMatching,'VehicleLocalization:AmbiguousLidarInput', ...
-            'Supply exactly one LiDAR channel: recorded measurements, a matcher or overlap sources.');
+        assert(~isfield(data,'lidar'),'VehicleLocalization:AmbiguousLidarInput', ...
+            'Supply exactly one LiDAR channel: pose/residual measurements or overlap sources.');
         assert(~isfield(cfg.lidar,'errorCalibration'),'VehicleLocalization:OverlapCalibrationUnavailable', ...
             'The overlap-gradient channel uses the geometric information filter; calibrated error moments are fitted to registration features.');
         overlap=overlapSource(data.lidarOverlap,t);L.valid=overlap.valid;
         L.frameReliability=overlap.frameReliability;
         L.directionReliability=overlap.directionReliability;
     end
-    matchingResults=cell(0,1);matchingSeeds=zeros(0,3);
-    if onlineMatching,matchingResults=cell(n,1);matchingSeeds=zeros(n,3);end
     alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     [continuous,cfg]=fullObserverSupport.designFullObserverGains(cfg);
@@ -130,24 +120,6 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         speed=h.longitudinalSpeed(k);vy=lateral.lateralVelocity(k);
         rate=x(8);
         predYaw=x(7)+rate*dt;
-        if onlineMatching
-            seed=[(x([1,4])+dt*x([2,5])).',predYaw];
-            aid=struct('valid',G.valid(k),'timestamp',t(k));
-            if aid.valid
-                [aid.position,I]=fullObserverSupport.correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),predYaw,alignment);
-                aid.covariance=I\eye(2);
-            end
-            matched=data.lidarMatcher(k,seed,aid);
-            matchingResults{k}=matched;matchingSeeds(k,:)=seed;
-            event=registrationSupport.registrationPoseMeasurement(matched,t(k));
-            L.valid(k)=~isempty(event);
-            if L.valid(k)
-                L.values(k,:)=event.pose;L.information(:,:,k)=event.information;
-                if isfield(event,'lidarResidualModel'),L.residualModels{k}=event.lidarResidualModel;end
-                if isfield(matched,'frameReliability'),L.frameReliability(k)=matched.frameReliability;end
-                if isfield(matched,'directionReliability'),L.directionReliability(k,:)=matched.directionReliability(:).';end
-            end
-        end
         q=rate+lateral.sideSlipAngleRate(k);
         maximumRate=max(maximumRate,abs(q));
         yaw=predYaw;
@@ -255,7 +227,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'bodyVelocityValid',nnz(velocityValid),'bodyAccelerationValid',nnz(accelerationValid)), ...
         'localizationUpdates',n-1,'virtualPoseUpdates',0,'integrationSubsteps',0, ...
         'nominalOutputRateHz',1/median(diff(t)),'referenceUsed',false, ...
-        'lidarChannel',channelName(onlineMatching,overlapChannel,isfield(data,'lidar')), ...
+        'lidarChannel',channelName(overlapChannel,isfield(data,'lidar')), ...
         'lidarOverlap',overlapDiagnostics, ...
         'lidarPoseSupport',lidarPoseSupport, ...
         'motionOutputValidity',struct('bodyVelocity',velocityValid, ...
@@ -263,11 +235,6 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             'yawRate',gyroValid), ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
         'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. Continuous ISS is conditional and is not an automatic numerical or arbitrary-outage guarantee. Alignment remains offline.");
-    if onlineMatching
-        estimate.matchingResults=matchingResults;estimate.matchingSeeds=matchingSeeds;
-        estimate.diagnostics.matchingFeedback=true;
-        estimate.diagnostics.matchingSource="Per-frame callback with fused seed and optional current position aid";
-    end
     estimate.internalState=z;estimate.yawRate=z(:,8);
     estimate.diagnostics.intrinsicPrediction=intrinsicStates;
     estimate.diagnostics.baselineInternalState=baselineStates;
@@ -373,10 +340,9 @@ function o=overlapSource(o,t)
     if ~isfield(o,'config'),o.config=overlapGradientConfig();end
 end
 
-function name=channelName(matcher,overlap,recorded)
+function name=channelName(overlap,recorded)
     name="none";
     if recorded,name="recordedPoseOrResidual";end
-    if matcher,name="registrationMatcher";end
     if overlap,name="overlapGradient";end
 end
 

@@ -14,7 +14,7 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             target=heightProbabilityCloudTest.transform(source,[1.2 -0.7 0.16],0);
             moving=registrationSupport.projectSemanticProbabilityCloud(source,dimension);
             fixed=registrationSupport.projectSemanticProbabilityCloud(target,dimension);
-            cfg=distributionRegistrationConfig(); cfg.heightMode="auto"; cfg.heightTranslation=0;
+            cfg=semanticGeometryConfig(); cfg.heightMode="auto"; cfg.heightTranslation=0;
             pose=[1.1 -0.6 0.12];
             [expected,reference]=registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose,cfg);
             [actual,details]=registrationSupport.scoreSemanticProbabilityCloudAlignment( ...
@@ -42,15 +42,6 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             end
             testCase.verifyEqual(details.gradient,numerical,'AbsTol',1e-7);
         end
-        function recoversKnownPoseAtLargeMapCoordinates(testCase)
-            moving = distributionRegistrationTest.exampleCloud();
-            expected = [700001.2 4300000.7 0.16];
-            fixed = distributionRegistrationTest.transform(moving,expected);
-            result = registerSemanticProbabilityCloud(fixed,moving,expected+[-0.6 0.3 -0.09]);
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyEqual(result.poseXYTheta,expected,'AbsTol',3e-4);
-            testCase.verifyGreaterThan(result.similarity,0.99999);
-        end
         function classBalanceIsInvariantToSemanticMassScale(testCase)
             moving=distributionRegistrationTest.exampleCloud();
             fixed=distributionRegistrationTest.transform(moving,[1.2 -0.7 0.16]);
@@ -60,26 +51,6 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             moving.components.mixtureWeight(moving.components.semanticName=="pole")=1e-6;
             after=registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose);
             testCase.verifyEqual(after,before,'AbsTol',1e-12);
-        end
-        function rejectsUnobservableYaw(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            cloud.components.mean(:)=0;
-            cloud.components.covariance=repmat(eye(2),1,1,6);
-            result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0]);
-            testCase.verifyFalse(result.accepted);
-            testCase.verifyTrue(result.directionalAccepted);
-            testCase.verifyLessThan(result.observableRank,3);
-            testCase.verifyEqual(result.reason,"acceptedDirectional");
-        end
-        function rejectsNoOverlapAndIncompatibleSemantics(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            result=registerSemanticProbabilityCloud(cloud,cloud,[100 100 0]);
-            testCase.verifyFalse(result.accepted);
-            testCase.verifyEqual(result.reason,"insufficientOverlap");
-            other=cloud; other.components.semanticName(:)="unmatched";
-            result=registerSemanticProbabilityCloud(other,cloud,[0 0 0]);
-            testCase.verifyFalse(result.accepted);
-            testCase.verifyEqual(result.reason,"insufficientComponents");
         end
         function supportsSingletonAndRejectsInvalidCovariance(testCase)
             cloud=distributionRegistrationTest.exampleCloud();
@@ -96,14 +67,6 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
                 'VehicleLocalization:UnsupportedMapSchema');
             testCase.verifyError(@() queryTemporalStabilityGmmMap(map,[0 0]), ...
                 'VehicleLocalization:UnsupportedMapSchema');
-        end
-        function emptyMapProducesRejectedResult(testCase)
-            cfg=temporalStabilityMapConfig(); cfg.classes="pole";
-            map=buildTemporalStabilityGmmMap(zeros(0,2),strings(0,1),zeros(0,1),cfg);
-            empty=temporalMapToProbabilityCloud(map);
-            testCase.verifyEqual(registrationSupport.scoreSemanticProbabilityCloudAlignment(empty,empty,[0 0 0]),0);
-            result=registerSemanticProbabilityCloud(empty,empty,[0 0 0]);
-            testCase.verifyFalse(result.accepted);
         end
     end
     methods (Static)

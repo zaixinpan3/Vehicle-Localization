@@ -1,121 +1,11 @@
 classdef geometricRegistrationTest < matlab.unittest.TestCase
-% geometricRegistrationTest: Sampling invariance and honest pose observability.
-    properties (TestParameter)
-        repeatedComponents = {1,200}
-    end
+% geometricRegistrationTest Calibration transforms and shared spatial fixtures.
     methods (TestClassSetup)
         function paths(~)
             setupVehicleLocalization();
         end
     end
     methods (Test)
-        function oneCorrespondenceRejectsWithoutDimensionError(testCase)
-            c=struct('mean',[0 0;10 0;0 10], ...
-                'covariance',repmat(.05*eye(2),1,1,3), ...
-                'semanticName',repmat("pole",3,1),'mixtureWeight',ones(3,1)/3, ...
-                'numComponents',3,'repeatability',ones(3,1));
-            moving=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());
-            fixed=moving;fixed.components.mean=[0 0;100 0;0 100];
-            initial=[.1 .2 .01];
-            result=registerSemanticProbabilityCloud(fixed,moving,initial);
-            testCase.verifyEqual(result.reason,"insufficientOverlap");
-            testCase.verifyFalse(result.accepted || result.directionalAccepted);
-            testCase.verifyEqual(height(result.correspondences),1);
-            testCase.verifyEqual(result.poseXYTheta,initial,'AbsTol',1e-14);
-            testCase.verifyTrue(all(isfinite(result.information),'all'));
-            testCase.verifyEmpty(registrationSupport.registrationPoseMeasurement(result,0));
-        end
-        function repeatedTargetsPreserveFirstTieAcrossBlocks(testCase,repeatedComponents)
-            cloud=repeatedCloud(repeatedComponents);
-            cfg=geometricRegistrationTest.configuration();
-            result=registerSemanticProbabilityCloud(cloud,cloud,[0 0 0],cfg);
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyEqual(result.poseXYTheta,[0 0 0],'AbsTol',1e-12);
-            testCase.verifyEqual(result.correspondences.target,repmat((1:6).',repeatedComponents,1));
-        end
-        function recoversGaussianPoseAtLargeCoordinates(testCase)
-            moving=distributionRegistrationTest.exampleCloud();
-            expected=[700001.2 4300000.7 0.16];
-            fixed=distributionRegistrationTest.transform(moving,expected);
-            cfg=geometricRegistrationTest.configuration();
-            result=registerSemanticProbabilityCloud(fixed,moving,expected+[-.6 .3 -.09],cfg);
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyEqual(result.poseXYTheta,expected,'AbsTol',3e-4);
-            testCase.verifyEqual(result.observableRank,3);
-        end
-        function commonMapMassScaleDoesNotChangeGeometry(testCase)
-            moving=distributionRegistrationTest.exampleCloud();
-            fixed=distributionRegistrationTest.transform(moving,[1.2 -.7 .16]);
-            cfg=geometricRegistrationTest.configuration();
-            before=registerSemanticProbabilityCloud(fixed,moving,[1 -.6 .12],cfg);
-            fixed.components.mixtureWeight=1e7*fixed.components.mixtureWeight;
-            moving.components.mixtureWeight=10* moving.components.mixtureWeight;
-            after=registerSemanticProbabilityCloud(fixed,moving,[1 -.6 .12],cfg);
-            testCase.verifyEqual(after.poseXYTheta,before.poseXYTheta,'AbsTol',1e-12);
-            testCase.verifyEqual(after.scaledCurvature,before.scaledCurvature,'AbsTol',1e-10);
-        end
-        function parallelRoadKeepsPredictedLongitudinalPosition(testCase)
-            cloud=geometricRegistrationTest.parallelRoad();
-            cfg=geometricRegistrationTest.configuration();
-            result=registerSemanticProbabilityCloud(cloud,cloud,[.8 .3 .02],cfg);
-            testCase.verifyFalse(result.accepted);
-            testCase.verifyEqual(result.reason,"acceptedDirectional");
-            testCase.verifyTrue(result.directionalAccepted);
-            testCase.verifyEqual(result.observableRank,2);
-            testCase.verifyTrue(result.partialPoseAvailable);
-            testCase.verifyEqual(result.poseXYTheta,[.8 0 0],'AbsTol',1e-4);
-            testCase.verifyEqual(result.observableProjector*[1;0;0],zeros(3,1),'AbsTol',1e-10);
-        end
-        function shiftingRoadDensityCannotCreateLongitudinalConstraint(testCase)
-            moving=geometricRegistrationTest.parallelRoad();
-            fixed=moving; fixed.components.mean(:,1)=fixed.components.mean(:,1)+1;
-            cfg=geometricRegistrationTest.configuration();
-            result=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
-            testCase.verifyEqual(result.observableRank,2);
-            testCase.verifyEqual(result.poseXYTheta,[0 0 0],'AbsTol',1e-10);
-            testCase.verifyFalse(result.accepted);
-        end
-        function conflictingClassesCannotProduceAcceptedPose(testCase)
-            moving=distributionRegistrationTest.exampleCloud();
-            fixed=moving;
-            fixed.components.mean(fixed.components.semanticName=="pole",2)= ...
-                fixed.components.mean(fixed.components.semanticName=="pole",2)+1.8;
-            cfg=geometricRegistrationTest.configuration();
-            result=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
-            testCase.verifyFalse(result.accepted);
-            testCase.verifyGreaterThan(max(result.classDiagnostics.observableCorrection),cfg.geometric.maximumClassCorrection);
-        end
-        function weakClassDirectionDoesNotVetoStrongSharedGeometry(testCase)
-            [moving,fixed]=weakClassConflict();
-            cfg=geometricRegistrationTest.configuration();
-            result=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
-            testCase.verifyTrue(result.accepted,result.reason);
-            testCase.verifyLessThan(norm(result.poseXYTheta(1:2)),.05);
-            testCase.verifyGreaterThan(max(result.classDiagnostics.observableCorrection),cfg.geometric.maximumClassCorrection);
-            testCase.verifyLessThan(max(result.classDiagnostics.informationWeightedCorrection),cfg.geometric.maximumClassCorrection);
-        end
-        function heightRejectsAnotherFloor(testCase)
-            moving=heightProbabilityCloudTest.spatialCloud();
-            fixed=moving; fixed.components.mean(:,3)=fixed.components.mean(:,3)+5;
-            cfg=geometricRegistrationTest.configuration(); cfg.heightMode="xyz"; cfg.heightTranslation=0;
-            result=registerSemanticProbabilityCloud(fixed,moving,[0 0 0],cfg);
-            testCase.verifyFalse(result.accepted);
-            testCase.verifyEqual(result.reason,"insufficientOverlap");
-            testCase.verifyEmpty(result.correspondences);
-        end
-        function compatibleHeightDoesNotPullPlanarPose(testCase)
-            moving=heightProbabilityCloudTest.spatialCloud();
-            fixed=heightProbabilityCloudTest.transform(moving,[1.2 -.7 .16],100);
-            fixed.components.mean(:,3)=fixed.components.mean(:,3)+.2;
-            cfg=geometricRegistrationTest.configuration(); cfg.heightTranslation=100;
-            planar=registerSemanticProbabilityCloud(fixed,moving,[1 -.6 .12],cfg);
-            cfg.heightMode="xyz";
-            spatial=registerSemanticProbabilityCloud(fixed,moving,[1 -.6 .12],cfg);
-            testCase.verifyTrue(spatial.accepted,spatial.reason);
-            testCase.verifyEqual(spatial.poseXYTheta,planar.poseXYTheta,'AbsTol',0);
-            testCase.verifyFalse(spatial.height.planarForce);
-            testCase.verifyEqual(spatial.height.medianConditionalResidual,.2,'AbsTol',1e-5);
-        end
         function transformsGeometryConsistentlyBeforeRecordedAttitude(testCase)
             points=[1 2 3;2 1 5;3 4 4;5 3 8];
             r=[cos(.1) 0 sin(.1);0 1 0;-sin(.1) 0 cos(.1)];
@@ -126,19 +16,6 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
             testCase.verifyEqual([moments.mean,moments.meanZ],mean(expected,1),'AbsTol',1e-12);
             testCase.verifyEqual(heightProbabilityCloudTest.unpack(moments),cov(expected,1),'AbsTol',1e-12);
         end
-        function requiresMatchingExplicitCalibration(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            other=cloud; other.frameCalibration=lidarFrameCalibrationConfig();
-            cfg=geometricRegistrationTest.configuration();
-            current=registerSemanticProbabilityCloud(cloud,other,[0 0 0],cfg);
-            other.frameCalibration.translation=[.1 0 0];
-            testCase.verifyEqual(current.height.calibrationStatus,"verifiedTransform");
-            missing=rmfield(cloud,'frameCalibration');
-            testCase.verifyError(@() registerSemanticProbabilityCloud(missing,cloud,[0 0 0],cfg), ...
-                'VehicleLocalization:MissingCalibration');
-            testCase.verifyError(@() registerSemanticProbabilityCloud(cloud,other,[0 0 0],cfg), ...
-                'VehicleLocalization:CalibrationMismatch');
-        end
         function exportsCalibrationFromSelectedMapWindow(testCase)
             cfg=temporalStabilityMapConfig(); cfg.classes="curb";
             calibration=lidarFrameCalibrationConfig(); calibration.translation=[.1 .2 .3];
@@ -146,13 +23,6 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
             map=buildTemporalStabilityGmmMap(zeros(0,2),strings(0,1),zeros(0,1),cfg);
             cloud=temporalMapToProbabilityCloud(map);
             testCase.verifyEqual(cloud.frameCalibration,calibration);
-        end
-        function rejectsInvalidSemanticQuality(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();
-            cloud.components.semanticProbability=nan(6,1);
-            cfg=geometricRegistrationTest.configuration();
-            testCase.verifyError(@() registerSemanticProbabilityCloud(cloud,cloud,[0 0 0],cfg), ...
-                'VehicleLocalization:InvalidSemanticQuality');
         end
         function recoversOfflinePitchWithoutAddingPoseStates(testCase)
             [observations,rotation]=geometricRegistrationTest.calibrationFixture();
@@ -169,23 +39,8 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
             testCase.verifyError(@() lidarCalibrationSupport.fitLidarPitchCalibration(observations), ...
                 'VehicleLocalization:InsufficientCalibrationExcitation');
         end
-        function projectionPreservesCalibrationAndGeometricEvidence(testCase)
-            cloud=heightProbabilityCloudTest.spatialCloud();
-            cloud.frameCalibration=lidarFrameCalibrationConfig();
-            cloud.frameCalibration.translation=[.1 0 0];
-            cloud.components.semanticProbability=(1:6).'/6;
-            projected=registrationSupport.projectSemanticProbabilityCloud(cloud,2);
-            testCase.verifyEqual(projected.frameCalibration,cloud.frameCalibration);
-            testCase.verifyEqual(projected.components.semanticProbability,cloud.components.semanticProbability);
-            identity=projected; identity.frameCalibration=lidarFrameCalibrationConfig();
-            testCase.verifyError(@() registerSemanticProbabilityCloud(identity,projected,[0 0 0]), ...
-                'VehicleLocalization:CalibrationMismatch');
-        end
     end
     methods (Static)
-        function cfg=configuration()
-            cfg=distributionRegistrationConfig(); cfg.method="geometricD2D";
-        end
         function cloud=parallelRoad()
             means=[(-4:2:4).',zeros(5,1);(-4:2:4).',4*ones(5,1)];
             c=struct('mean',means,'covariance',repmat(diag([2 .01]),1,1,10), ...
@@ -209,23 +64,4 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
                 'frameIndices',1:4,'framePoseTable',poses);
         end
     end
-end
-
-function cloud=repeatedCloud(copies)
-    cloud=distributionRegistrationTest.exampleCloud(); c=cloud.components;
-    cloud.components=struct('mean',repmat(c.mean,copies,1), ...
-        'covariance',repmat(c.covariance,1,1,copies), ...
-        'mixtureWeight',repmat(c.mixtureWeight,copies,1), ...
-        'semanticName',repmat(c.semanticName,copies,1),'numComponents',6*copies, ...
-        'repeatability',ones(6*copies,1));
-end
-
-function [moving,fixed]=weakClassConflict()
-    c=struct('mean',[-4 -2;0 -2;4 -2;-2 -4;-2 0;-2 4;5 5;5 -5;-5 5;-5 -5], ...
-        'covariance',cat(3,repmat(diag([2 .01]),1,1,3), ...
-        repmat(diag([.01 2]),1,1,3),repmat(diag([1 .03]),1,1,4)), ...
-        'semanticName',[repmat("curb",3,1);repmat("facade",3,1);repmat("pole",4,1)], ...
-        'mixtureWeight',ones(10,1)/10,'numComponents',10);
-    moving=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());
-    fixed=moving;fixed.components.mean(7:10,1)=fixed.components.mean(7:10,1)+1;
 end

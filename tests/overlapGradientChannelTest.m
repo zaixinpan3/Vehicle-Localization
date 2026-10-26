@@ -14,13 +14,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             steps=[1e-6,1e-6,1e-7];expected=zeros(3,1);
             for j=1:3
                 e=zeros(1,3);e(j)=steps(j);
-                plus=registrationSupport.scoreSemanticProbabilityCloudAlignment(map,source,pose+e,cfg.registration);
-                minus=registrationSupport.scoreSemanticProbabilityCloudAlignment(map,source,pose-e,cfg.registration);
+                plus=registrationSupport.scoreSemanticProbabilityCloudAlignment(map,source,pose+e,cfg.geometry);
+                minus=registrationSupport.scoreSemanticProbabilityCloudAlignment(map,source,pose-e,cfg.geometry);
                 expected(j)=-(log(plus)-log(minus))/(2*steps(j));
             end
             testCase.verifyTrue(m.available);
             testCase.verifyEqual(m.similarity,registrationSupport.scoreSemanticProbabilityCloudAlignment( ...
-                map,source,pose,cfg.registration),RelTol=1e-12);
+                map,source,pose,cfg.geometry),RelTol=1e-12);
             testCase.verifyEqual(m.gradient,expected,RelTol=1e-5,AbsTol=1e-8);
             testCase.verifyEqual(m.linearizationPose,pose(:));
         end
@@ -280,9 +280,17 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:),invalid), ...
                 'VehicleLocalization:InvalidOverlapAggregation');
         end
+        function retiredSolverConfigurationCannotReachOverlap(testCase)
+            cloud=distributionRegistrationTest.exampleCloud();cfg=overlapGradientConfig();
+            cfg.registration=cfg.geometry;cfg=rmfield(cfg,'geometry');
+            testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(cloud,cloud,zeros(3,1),cfg), ...
+                'VehicleLocalization:ObsoleteOverlapConfig');
+        end
         function overlapChannelIsExclusiveAndRejectsCalibratedWeights(testCase)
             f=movingFixture(1);
-            ambiguous=f.data;ambiguous.lidarMatcher=@(~,~,~)struct();
+            ambiguous=f.data;n=numel(f.lateral.time);
+            ambiguous.lidar=struct('time',f.lateral.time,'pose',zeros(n,3), ...
+                'information',repmat(eye(3),1,1,n),'valid',true(n,1),'delay',0);
             testCase.verifyError(@()runFullLocalizationObserver(ambiguous,struct(),f.cfg,LateralInputs=f.lateral), ...
                 'VehicleLocalization:AmbiguousLidarInput');
             calibrated=f.cfg;calibrated.lidar=rmfield(calibrated.lidar,'gainInformationScale');
@@ -315,8 +323,8 @@ function c=place(c,pose)
 end
 
 function [f,m]=likelihoodInputs(map,source,origin)
-% Registration's support geometry, masses normalized as the landmark channel does.
-    g=prepareSemanticRegistrationGeometry(map,source,origin,distributionRegistrationConfig());
+% Support geometry with masses normalized as the landmark channel does.
+    g=prepareSemanticOverlapGeometry(map,source,origin,semanticGeometryConfig());
     f=g.fixed;m=g.moving;f.mean=f.mean(:,1:2);m.mean=m.mean(:,1:2);
     f.covariance=f.planarCovariance;m.covariance=m.planarCovariance;names=unique(f.semanticName);
     for name=names.'

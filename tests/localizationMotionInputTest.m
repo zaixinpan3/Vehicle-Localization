@@ -14,13 +14,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) localizationMotionInpu
             testCase.verifyEqual(b.lateral,f.lateral);
             testCase.verifyGreaterThan(norm(b.internalState(end,:)-a.internalState(end,:)),.01);
         end
-        function onlineSeedUsesInternalEstimatedVelocity(testCase)
-            f=fixture();f.data=rmfield(f.data,'lidar');
-            f.data.lidarMatcher=@(k,seed,aid) onlineResult(k,seed,aid,f.time);r=run(f);
-            testCase.verifyEqual(r.matchingSeeds(2:end,1:2)-r.position(1:end-1,:), ...
-                diff(f.time).*r.velocity(1:end-1,:),AbsTol=1e-10);
-            testCase.verifyGreaterThan(norm(r.position(end,:)-[8.4*f.time(end),-.25*f.time(end)]),1);
-        end
         function removedLearnerHasNoConfigurationOrDiagnostics(testCase)
             f=fixture();r=run(f);
             testCase.verifyFalse(isfield(f.cfg,'bias'));
@@ -43,7 +36,4 @@ function f=fixture()
 end
 function r=run(f)
     r=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
-end
-function r=onlineResult(k,~,~,t)
-    r=struct('poseXYTheta',[8*t(k),.2*t(k),0],'accepted',true,'information',1e6*eye(3));
 end

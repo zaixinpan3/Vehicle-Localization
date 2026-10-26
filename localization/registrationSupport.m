@@ -1,7 +1,7 @@
 classdef registrationSupport
-% registrationSupport: Shared semantic D2D geometry and pose-event helpers.
+% registrationSupport: Shared semantic geometry for overlap, mapping and source horizons.
 % Static methods preserve cloud projection, preparation, class balancing,
-% Gaussian overlap and accepted-event validation in one implementation.
+% Gaussian overlap and finite-residual validation in one implementation.
 % Example: cloud = registrationSupport.projectSemanticProbabilityCloud(cloud,3).
 
     methods (Static)
@@ -234,7 +234,7 @@ classdef registrationSupport
         % angularFloor, components also carry an axis: K_ij = exp(-kappa_ij*s_ij^2/2)
         % with s_ij the sine between the fixed axis and the rotated moving axis and
         % kappa_ij = c_i*c_j/(angularFloor^2+a_i+a_j), from the support geometry of
-        % prepareSemanticRegistrationGeometry (orientationNormal or supportTangent,
+        % prepareSemanticOverlapGeometry (orientationNormal or supportTangent,
         % axisConfidence c, angularVariance a). GRADIENT is d(cost)/d[x y psi]
         % (3-by-1) and METRIC the Gauss-Newton metric sum_j v_j sum_i r_ij
         % (J_ij'*Sigma_ij^-1*J_ij + kappa_ij*ds_ij^2*e3*e3'), with responsibilities
@@ -305,61 +305,6 @@ classdef registrationSupport
             metric = metric + triu(metric,1).';
         end
 
-        function measurement = registrationPoseMeasurement(result,timestamp,arrivalTime)
-        % registrationPoseMeasurement Export full or explicitly accepted directional data.
-        % partialPoseAvailable alone never authorizes export. Optional arrivalTime
-        % uses the acquisition clock. Omission is marked as a delivery placeholder.
-            assert(~isfield(result,'independentLidarMeasurement') || result.independentLidarMeasurement, ...
-                'VehicleLocalization:FusedPoseIsNotLidar','Do not export a fused graph pose as independent LiDAR.');
-            assert(isscalar(timestamp) && isfinite(timestamp),'Invalid acquisition time.');
-            placeholder=nargin<3 || isempty(arrivalTime);
-            if placeholder, arrivalTime=timestamp; end
-            assert(isscalar(arrivalTime) && isfinite(arrivalTime) && arrivalTime>=timestamp, ...
-                'Invalid delivery time.');
-            measurement=[];
-            directional=isfield(result,'directionalAccepted') && result.directionalAccepted;
-            if ~result.accepted && ~directional, return; end
-            assert(isfield(result,'information'), ...
-                'VehicleLocalization:RegistrationInformationUnavailable', ...
-                'Accepted D2D registration must provide its pose information matrix.');
-            information=double(result.information);
-            kind="fullPose";rank=3;projector=eye(3);
-            if ~result.accepted && directional
-                assert(result.supportedConverged && result.observableRank>0 && result.observableRank<3, ...
-                    'VehicleLocalization:InvalidRegistrationInformation','Directional result lacks supported convergence.');
-                information=double(result.directionalInformation);
-                kind="directionalPose";rank=result.observableRank;
-                projector=result.physicalObservableProjector;
-            end
-            assert(isequal(size(information),[3 3]) && isreal(information) && ...
-                all(isfinite(information),'all') && ...
-                norm(information-information.','fro')<=1e-10*max(1,norm(information,'fro')), ...
-                'VehicleLocalization:InvalidRegistrationInformation','Invalid pose information matrix.');
-            if kind=="fullPose"
-                [~,failure]=chol(information);
-                assert(failure==0,'VehicleLocalization:InvalidRegistrationInformation', ...
-                    'A full accepted pose must have positive definite information.');
-            else
-                values=eig((information+information.')/2);tol=1e-10*max(1,norm(information,2));
-                assert(min(values)>=-tol && max(values)>tol ...
-                    && isequal(size(projector),[3 3]) && all(isfinite(projector),'all') ...
-                    && norm(projector*projector-projector,'fro')<1e-8 ...
-                    && abs(trace(projector)-rank)<1e-8 ...
-                    && norm(information*(eye(3)-projector),'fro')<1e-8*max(1,norm(information,'fro')), ...
-                    'VehicleLocalization:InvalidRegistrationInformation','Invalid supported PSD information or projector.');
-            end
-            measurement=struct('timestamp',double(timestamp),'arrivalTime',double(arrivalTime), ...
-                'pose',result.poseXYTheta,'information',information,'measurementType',kind, ...
-                'observableRank',rank,'observableProjector',projector, ...
-                'observableProjectorCoordinates',"additive map X,Y,psi; oblique projector", ...
-                'arrivalTimeIsPlaceholder',placeholder);
-            measurement.conditionedOnPositionAid=isfield(result,'positionAiding') && result.positionAiding.used;
-            measurement.positionAidInformationAdded=false;
-            if isfield(result,'lidarResidualModel')
-                measurement.lidarResidualModel=result.lidarResidualModel;
-            end
-        end
-
         function [fixed,indices]=selectLocalProbabilityCloud(map,seed,radius)
         % selectLocalProbabilityCloud Select map components without changing their priors.
             c=map.components;keep=sum((c.mean(:,1:2)-seed(1:2)).^2,2)<=radius^2;
@@ -387,19 +332,6 @@ classdef registrationSupport
                 fixed.heightEvidence.mean=e.mean(keep,:);
                 fixed.heightEvidence.covariance=e.covariance(:,:,keep);
                 fixed.heightEvidence.available=e.available(keep);
-            end
-        end
-
-        function result=matchLocalProbabilityCloud(map,source,seed,cfg,positionAid,additionalSeeds)
-        % matchLocalProbabilityCloud Crop a semantic map and retain global pair indices.
-        % The source is the confirmed coarse horizon, already in current body axes.
-            if nargin<5,positionAid=[];end
-            if nargin<6,additionalSeeds=zeros(0,3);end
-            [fixed,indices]=registrationSupport.selectLocalProbabilityCloud(map,seed,cfg.localMapRadius);
-            timer=tic;result=registerSemanticProbabilityCloud(fixed,source,seed,cfg,positionAid,additionalSeeds);
-            result.matchingSeconds=toc(timer);
-            if isfield(result,'correspondences')
-                result.correspondences.globalTarget=indices(result.correspondences.target);
             end
         end
 
@@ -555,7 +487,7 @@ classdef registrationSupport
         % Components are planar Gaussians in meters; pose is moving-to-fixed [x,y,yaw]
         % with yaw in radians. Both means and covariances transform. Empty clouds
         % return zero similarity. gradient is with respect to the three pose entries.
-            if nargin<4, cfg=distributionRegistrationConfig(); end
+            if nargin<4, cfg=semanticGeometryConfig(); end
             [fixed,moving,heightDetails] = registrationSupport.prepareSemanticRegistration(fixedCloud,movingCloud,cfg);
             [fixed,moving] = registrationSupport.balanceSemanticDistributions(fixed,moving);
             pose = double(poseXYTheta(:).');
@@ -575,229 +507,6 @@ classdef registrationSupport
                 'movingSelfEnergy',movingSelf,'squaredL2Distance',max(fixedSelf+movingSelf-2*crossEnergy,0), ...
                 'poseXYTheta',pose,'gradient',gradient);
             details.height=heightDetails;
-        end
-
-        function result=selectPositionAidedRegistration(solve,initialPose,aid,cfg,additionalSeeds)
-        % selectPositionAidedRegistration Resolve local LiDAR modes with position aid.
-        % aid.position/covariance refer to the map/observer point at scan acquisition.
-        % Source/map stability remains inside solve. No GNSS term is added to its
-        % objective or Hessian. Selection still creates statistical dependence on
-        % GNSS; the exported matrix is conditional geometry, not independent evidence.
-        % Hypothesis scores are engineering compatibility scores, not calibrated
-        % posterior probabilities. Between-mode disagreement can only reduce information.
-            initialPose=double(initialPose(:).');
-            if nargin<5,additionalSeeds=zeros(0,3);end
-            assert(size(additionalSeeds,2)==3 && isreal(additionalSeeds) && all(isfinite(additionalSeeds),'all'), ...
-                'VehicleLocalization:InvalidRegistrationSeed','Additional seeds must be finite SE(2) poses.');
-            result=solve(initialPose);
-            result.positionAiding=struct('used',false,'reason',"unavailable", ...
-                'selected',1,'candidateCount',1,'gnssInformationAdded',false, ...
-                'selectionDependsOnGnss',false);
-            if isempty(aid) || (isfield(aid,'valid') && ~aid.valid),return;end
-            a=cfg.positionAid;
-            parameters=[a.maximumStandardDeviation,a.standardDeviationFloor,a.minimumSeedSeparation, ...
-                a.hypothesisSeparation,a.maximumSquaredInnovation];
-            assert(all(isfinite(parameters) & parameters>0), ...
-                'VehicleLocalization:InvalidPositionAidConfig','Position-aid thresholds must be finite and positive.');
-            validateattributes(aid.position,{'numeric'},{'real','finite','numel',2});
-            C=double(aid.covariance);
-            assert(isequal(size(C),[2,2]) && all(isfinite(C),'all') && ...
-                norm(C-C.','fro')<1e-9 && min(eig(C))>0, ...
-                'VehicleLocalization:InvalidPositionAid','Require positive definite position covariance.');
-            if sqrt(max(eig(C)))>a.maximumStandardDeviation
-                result.positionAiding.reason="uncertainPosition";return;
-            end
-            C=C+a.standardDeviationFloor^2*eye(2);
-            seeds=initialPose;gnssSeed=[double(aid.position(:).'),initialPose(3)];
-            candidates={result};
-            if norm(gnssSeed(1:2)-initialPose(1:2))>=a.minimumSeedSeparation
-                seeds(end+1,:)=gnssSeed;candidates{end+1}=solve(gnssSeed);
-            end
-            for k=1:size(additionalSeeds,1)
-                delta=seeds-additionalSeeds(k,:);delta(:,3)=wrap(delta(:,3));
-                if all(vecnorm(delta.*[1 1 cfg.yawLeverArm],2,2)>=a.minimumSeedSeparation)
-                    seeds(end+1,:)=additionalSeeds(k,:);candidates{end+1}=solve(additionalSeeds(k,:)); %#ok<AGROW>
-                end
-            end
-            count=numel(candidates);scores=inf(count,1);innovation=scores;
-            poses=zeros(count,3);similarity=zeros(count,1);valid=false(count,1);
-            for k=1:count
-                r=candidates{k};poses(k,:)=r.poseXYTheta;similarity(k)=r.similarity;
-                delta=r.poseXYTheta(1:2)-aid.position(:).';innovation(k)=delta/C*delta.';
-                valid(k)=r.accepted || r.directionalAccepted;
-                if valid(k)
-                    scores(k)=-2*log(max(r.similarity,realmin))+innovation(k);
-                end
-            end
-            [~,selected]=min(scores);
-            result=candidates{selected};
-            distinct=false(count,1);representatives=zeros(0,1);[~,order]=sort(scores);
-            for k=order(:).'
-                if ~valid(k),continue;end
-                delta=poses(representatives,:)-poses(k,:);delta(:,3)=wrap(delta(:,3));
-                if all(vecnorm(delta.*[1 1 cfg.yawLeverArm],2,2)>=a.hypothesisSeparation)
-                    distinct(k)=true;representatives(end+1,1)=k; %#ok<AGROW>
-                end
-            end
-            probabilities=zeros(count,1);eligible=valid & distinct;
-            spread=zeros(3);
-            if any(eligible)
-                probabilities(eligible)=exp(-.5*(scores(eligible)-min(scores(eligible))));
-                probabilities=probabilities/sum(probabilities);
-                for k=find(eligible).'
-                    delta=poses(k,:)-poses(selected,:);delta(3)=wrap(delta(3));
-                    spread=spread+probabilities(k)*(delta.'*delta);
-                end
-                % Preserve genuine null directions and never increase geometry information.
-                result.information=reduceInformation(result.information,spread);
-                result.directionalInformation=reduceInformation(result.directionalInformation,spread);
-            end
-            if isfield(result,'lidarResidualModel')
-                % The residual exporter must apply this uncertainty to both the
-                % innovation and Jacobian, not undo the information reduction.
-                result.lidarResidualModel.poseSpread=spread;
-                result.lidarResidualModel.conditionedOnPositionAid=true;
-            end
-            result.positionAiding=struct('used',true,'reason',"hypothesisSelection", ...
-                'selected',selected,'candidateCount',count,'seedPoses',seeds(1:count,:), ...
-                'candidatePoses',poses,'geometricallyValid',valid,'similarity',similarity, ...
-                'scores',scores,'squaredInnovation',innovation,'relativeSupport',probabilities, ...
-                'betweenHypothesisSecondMoment',spread,'gnssInformationAdded',false, ...
-                'selectionDependsOnGnss',true,'informationSemantics',"conditionalLiDARGeometryWithModeDisagreement");
-            if valid(selected) && innovation(selected)>a.maximumSquaredInnovation
-                result.accepted=false;result.directionalAccepted=false;
-                result.reason="positionAidConflict";result.positionAiding.reason="selectedOptimumConflictsWithPosition";
-            end
-        end
-
-        function [mu,covariance,count]=softPointAssociationTarget(means,covariances,cost,priorCost,closest,cfg)
-        % softPointAssociationTarget Moment-match nearby ambiguous map components.
-        % Compatibility costs include priors and optional height penalties. Temper only
-        % the geometry,
-        % preserve that nongeometric evidence, and restrict support around the original MAP target.
-        % Between-component scatter prevents an ambiguous mean becoming a sharp anchor.
-        % Inputs are prevalidated by prepareSemanticRegistrationGeometry.
-            nearby=sum((means-means(closest,:)).^2,2)<=cfg.radius^2 & isfinite(cost);
-            ids=find(nearby);
-            value=(cost(ids)-priorCost(ids))/cfg.temperature+priorCost(ids);
-            value=value-min(value);
-            keep=value<=9;ids=ids(keep);value=value(keep);
-            probability=exp(-.5*value);probability=probability/sum(probability);
-            [confidence,mode]=max(probability);
-            if confidence>=cfg.minimumPosterior && ids(mode)==closest
-                mu=means(closest,:);covariance=covariances(:,:,closest);count=1;return;
-            end
-            mu=sum(means(ids,:).*probability,1);covariance=zeros(2);count=numel(ids);
-            for k=1:count
-                delta=means(ids(k),:)-mu;
-                covariance=covariance+probability(k)*(covariances(:,:,ids(k))+delta.'*delta);
-            end
-        end
-
-        function validateSoftPointAssociation(cfg)
-        % validateSoftPointAssociation Validate local ambiguity and anchor controls.
-            fields={'temperature','radius','minimumPosterior','hardWithUnmergedAnchors'};
-            valid=isstruct(cfg)&&isscalar(cfg)&&all(isfield(cfg,fields));
-            if valid
-                values=cellfun(@(f)cfg.(f),fields,UniformOutput=false);
-                valid=all(cellfun(@(v)isnumeric(v)&&isscalar(v)&&isreal(v)&&isfinite(v),values));
-            end
-            if valid
-                valid=cfg.temperature>0 && cfg.radius>0 && cfg.minimumPosterior>.5 && cfg.minimumPosterior<=1 ...
-                    && cfg.hardWithUnmergedAnchors>=2 && cfg.hardWithUnmergedAnchors==fix(cfg.hardWithUnmergedAnchors);
-            end
-            assert(valid,'VehicleLocalization:InvalidSoftPointAssociation', ...
-                'Use positive temperature/radius, posterior in (0.5,1], and at least two integer anchors.');
-        end
-
-        function [tangent,valid,angularScatter]=sourceLineDirections(c,cfg)
-        % sourceLineDirections Estimate local unoriented curb axes from selected means.
-        % A direction requires multiple spatially separated, nearly collinear means.
-        % No reference pose, map geometry, point labels or frame index is used.
-            values=[cfg.radius,cfg.minimumComponents,cfg.minimumAnisotropy,cfg.minimumSpan,cfg.standardDeviation];
-            assert(isreal(values)&&all(isfinite(values)&values>0) && cfg.minimumComponents>=3 ...
-                && cfg.minimumComponents==fix(cfg.minimumComponents) && cfg.minimumAnisotropy>1 ...
-                && cfg.standardDeviation<pi/2,'VehicleLocalization:InvalidLineDirectionConfiguration', ...
-                'Line-direction neighborhoods and angular scale must be finite and positive.');
-            n=c.numComponents;tangent=zeros(n,2);valid=false(n,1);angularScatter=zeros(n,1);
-            for name=["curb","facade"]
-                eligible=c.semanticName==name & c.mixtureWeight>0;
-                if isfield(c,'quality'),eligible=eligible & c.quality>0;end
-                ids=find(eligible);centers=c.mean(ids,1:2);p=unique(centers,'rows');
-                for k=1:numel(ids)
-                    keep=sum((p-centers(k,:)).^2,2)<=cfg.radius^2;q=p(keep,:);
-                    if size(q,1)<cfg.minimumComponents,continue;end
-                    d=q-mean(q,1);cov=d.'*d/size(d,1);[v,e]=eig(cov,'vector');[major,j]=max(e);
-                    axis=v(:,j);along=d*axis;
-                    if major<cfg.minimumAnisotropy*max(min(e),1e-6) || (max(along)-min(along))<cfg.minimumSpan,continue;end
-                    tangent(ids(k),:)=axis.';valid(ids(k))=true;
-                    angularScatter(ids(k))=sqrt(max(0,min(e))/max(major,eps));
-                end
-            end
-        end
-
-        function model=prepareRelativeHeightAssociation(fixedCloud,movingCloud,origin,initialPairs,cfg)
-        % prepareRelativeHeightAssociation Infer a common Z datum from curb evidence.
-        % Height changes candidate costs only. The retained SE(2) pose residual and
-        % information remain planar. Heights are current-scan observations; the XY
-        % cloud can still contain five acquisitions. No reference altitude is used.
-            values=[cfg.minimumAnchors,cfg.minimumAnchorSpan,cfg.maximumAnchorDistance, ...
-                cfg.noiseStandardDeviation,cfg.tiltStandardDeviation,cfg.weight,cfg.maximumPenalty];
-            assert(all(isfinite(values))&&all(values>0)&&cfg.minimumAnchors>=2 && ...
-                cfg.minimumAnchors==fix(cfg.minimumAnchors),'VehicleLocalization:InvalidHeightConfiguration', ...
-                'Relative-height bounds must be positive, with at least two anchors.');
-            assert(isscalar(string(cfg.candidateModel)) && ismember(string(cfg.candidateModel),["marginal","conditional"]), ...
-                'VehicleLocalization:InvalidHeightConfiguration','Use marginal or conditional height evidence.');
-            f=registrationSupport.getHeightEvidence(fixedCloud);
-            m=registrationSupport.getHeightEvidence(movingCloud);
-            m.semanticName=string(movingCloud.components.semanticName);
-            f.mean(:,1:2)=f.mean(:,1:2)-origin(1:2);
-            n=numel(f.available);f.slope=zeros(n,2);f.conditionalVariance=zeros(n,1);
-            for k=find(f.available).'
-                covariance=f.covariance(:,:,k);beta=covariance(1:2,1:2)\covariance(1:2,3);
-                f.slope(k,:)=beta.';
-                f.conditionalVariance(k)=max(0,covariance(3,3)-covariance(3,1:2)*beta);
-            end
-            details=struct('enabled',false,'reason',"insufficientHeightAnchors", ...
-                'anchorCount',0,'anchorSpan',0,'offset',NaN,'offsetScatter',NaN, ...
-                'sourceHeightCount',nnz(m.available),'mapHeightCount',nnz(f.available), ...
-                'verticalReference',"mapCurbConsensus",'referenceAltitudeUsed',false, ...
-                'planarForce',false,'weight',cfg.weight,'candidateModel',string(cfg.candidateModel));
-            model=struct('details',details,'cost',[]);
-            s=initialPairs.source;t=initialPairs.target;
-            select=initialPairs.semanticName=="curb" & f.available(t) & m.available(s);
-            s=s(select);t=t(select);
-            r=rotation(origin(3));world=m.mean(s,1:2)*r.';
-            delta=world-f.mean(t,1:2);
-            % The XY normal residual selects local curb support without demanding
-            % agreement along an extended line component's tangent.
-            distance=zeros(numel(s),1);
-            for k=1:numel(s)
-                [v,d]=eig(f.covariance(1:2,1:2,t(k)),'vector');[~,small]=min(d);
-                distance(k)=abs(delta(k,:)*v(:,small));
-            end
-            [~,order]=sort(distance);s=s(order);t=t(order);world=world(order,:);distance=distance(order);
-            [~,uniqueTarget]=unique(t,'stable');
-            use=uniqueTarget(distance(uniqueTarget)<=cfg.maximumAnchorDistance);
-            s=s(use);t=t(use);world=world(use,:);
-            dz=f.mean(t,3)+sum((world-f.mean(t,1:2)).*f.slope(t,:),2)-m.mean(s,3);
-            if numel(dz)<cfg.minimumAnchors,return;end
-            center=median(dz);scatter=1.4826*median(abs(dz-center));
-            inlier=abs(dz-center)<=3*max(scatter,cfg.noiseStandardDeviation);
-            dz=dz(inlier);world=world(inlier,:);
-            details.anchorCount=numel(dz);
-            if isempty(dz),model.details=details;return;end
-            details.anchorSpan=norm(max(world,[],1)-min(world,[],1));
-            details.offset=median(dz);
-            % Scatter includes common anchor/model disagreement and is not divided
-            % by the number of correlated curb observations.
-            details.offsetScatter=1.4826*median(abs(dz-details.offset));
-            details.enabled=numel(dz)>=cfg.minimumAnchors && details.anchorSpan>=cfg.minimumAnchorSpan;
-            if details.enabled,details.reason="enabled";end
-            model.details=details;
-            if details.enabled
-                model.cost=@(source,target,pose) candidateCost(f,m,source,target,pose,details,cfg);
-            end
         end
 
         function [residual,J,precision,shapeUsed]=gaussianRegistrationResiduals(sourceMean,sourceCov,targetMean,targetCov,pose,noiseStd)
@@ -927,42 +636,4 @@ function S=momentMatch(covariance,means,mu,w)
         delta=(means(k,1:d)-mu(1:d)).';S=S+w(k)*(covariance(:,:,k)+delta*delta.');
     end
     S=S/sum(w);S=(S+S.')/2;
-end
-
-function information=reduceInformation(information,spread)
-    I=(information+information.')/2;
-    [V,D]=eig(I);root=V*diag(sqrt(max(0,diag(D))))*V.';
-    information=root*((eye(3)+root*spread*root)\root);
-    information=(information+information.')/2;
-end
-
-function x=wrap(x)
-    x=atan2(sin(x),cos(x));
-end
-
-function [cost,residual]=candidateCost(f,m,source,target,pose,details,cfg)
-    r=rotation(pose(3));mean=m.mean(source,1:2)*r.'+pose(1:2);
-    beta=f.slope(target,:);mapVariance=f.conditionalVariance(target);
-    if string(cfg.candidateModel)=="marginal"
-        % A narrow vertical structure does not define a reliable Z surface
-        % over XY. Do not extrapolate its height from a small lateral offset.
-        beta(:)=0;mapVariance=reshape(f.covariance(3,3,target),[],1);
-    end
-    dx=mean(:,1).'-f.mean(target,1);dy=mean(:,2).'-f.mean(target,2);
-    residual=f.mean(target,3)+beta(:,1).*dx+beta(:,2).*dy-m.mean(source,3).'-details.offset;
-    r3=blkdiag(r,1);c=pagemtimes(pagemtimes(r3,m.covariance(:,:,source)),r3.');
-    xx=reshape(c(1,1,:),1,[]);xy=reshape(c(1,2,:),1,[]);yy=reshape(c(2,2,:),1,[]);
-    xz=reshape(c(1,3,:),1,[]);yz=reshape(c(2,3,:),1,[]);zz=reshape(c(3,3,:),1,[]);
-    variance=mapVariance+zz+beta(:,1).^2.*xx+beta(:,2).^2.*yy ...
-        +2*beta(:,1).*beta(:,2).*xy-2*beta(:,1).*xz-2*beta(:,2).*yz ...
-        +cfg.noiseStandardDeviation^2+details.offsetScatter^2 ...
-        +cfg.tiltStandardDeviation^2*sum(m.mean(source,1:2).^2,2).';
-    q=residual.^2./max(variance,eps);
-    cost=cfg.weight*cfg.maximumPenalty*q./(cfg.maximumPenalty+q);
-    available=f.available(target)&m.available(source).' & ismember(m.semanticName(source),cfg.semanticNames).';
-    cost(~available)=0;residual(~available)=NaN;
-end
-
-function r=rotation(yaw)
-    r=[cos(yaw) -sin(yaw);sin(yaw) cos(yaw)];
 end

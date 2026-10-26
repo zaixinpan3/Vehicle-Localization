@@ -327,6 +327,8 @@ classdef lidarInjectionSupport
                 pose (3,1) double {mustBeReal,mustBeFinite}
                 cfg (1,1) struct = overlapGradientConfig()
             end
+            assert(isfield(cfg,'geometry') && ~isfield(cfg,'registration'), ...
+                'VehicleLocalization:ObsoleteOverlapConfig','Rebuild overlap settings with overlapGradientConfig.');
             timer=tic;linearization=pose;pose=pose(:).';
             ladder=cfg.scaleLadder(:).';
             validateattributes(ladder,{'double'},{'real','finite','nonnegative','nonempty','vector'});
@@ -348,7 +350,7 @@ classdef lidarInjectionSupport
                 measurement=landmarkLikelihoodGradient(local,movingCloud,pose,cfg,measurement);
                 measurement.seconds=toc(timer);return;
             end
-            [f,m]=registrationSupport.prepareSemanticRegistration(local,movingCloud,cfg.registration);
+            [f,m]=registrationSupport.prepareSemanticRegistration(local,movingCloud,cfg.geometry);
             if cfg.evidenceWeights
                 % Map view reliability and source temporal stability scale the masses
                 % before class balancing, so an unsupported or flickering landmark
@@ -470,10 +472,10 @@ end
 function measurement=landmarkLikelihoodGradient(local,movingCloud,pose,cfg,measurement)
 % Per-landmark mixture likelihood at every ladder scale (semanticLandmarkLikelihood).
 % Map masses form one density per class and source masses carry 1/C per class;
-% evidence factors multiply after this normalization, as registration's weights.
-% The support geometry (axes, confidences, angular variances) is registration's.
+% Evidence factors multiply after this normalization. Support geometry supplies
+% axes, confidences and angular variances for the optional orientation kernel.
     ladder=measurement.scaleLadder;
-    geometry=prepareSemanticRegistrationGeometry(local,movingCloud,pose,cfg.registration);
+    geometry=prepareSemanticOverlapGeometry(local,movingCloud,pose,cfg.geometry);
     f=geometry.fixed;m=geometry.moving; % map means relative to POSE
     f.mean=f.mean(:,1:2);m.mean=m.mean(:,1:2);f.covariance=f.planarCovariance;m.covariance=m.planarCovariance;
     names=intersect(unique(f.semanticName(f.mixtureWeight>0)),unique(m.semanticName(m.mixtureWeight>0)));
@@ -487,7 +489,7 @@ function measurement=landmarkLikelihoodGradient(local,movingCloud,pose,cfg,measu
     end
     if cfg.evidenceWeights,u=u.*f.viewReliability(:);v=v.*m.temporalStability(:);end
     f.mixtureWeight=u;m.mixtureWeight=v;
-    angularFloor=NaN;if cfg.orientation,angularFloor=cfg.registration.support.angularFloor;end
+    angularFloor=NaN;if cfg.orientation,angularFloor=cfg.geometry.support.angularFloor;end
     origin=[0,0,pose(3)];gradient=zeros(3,1);information=zeros(3);
     for k=1:numel(ladder)
         fk=f;mk=m;

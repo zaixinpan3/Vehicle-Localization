@@ -27,8 +27,9 @@ classdef activeLocalizationChannelTest < matlab.unittest.TestCase
             test.verifyError(@()runMncavVdbLocalization("missing","missing","missing","missing", ...
                 LidarChannel="registration"),'VehicleLocalization:ArchivedRegistration');
         end
-        function archivedProductionEntryCannotExecute(test)
-            test.verifyError(@()runMncavCoarseLocalizationExperiment(), ...
+        function retiredMatcherCannotReachTheObserver(test)
+            data=struct('lidarMatcher',@(~,~,~)struct());
+            test.verifyError(@()runFullLocalizationObserver(data,struct()), ...
                 'VehicleLocalization:ArchivedRegistration');
         end
         function synchronizationPreservesCoveredOverlapSources(test)
