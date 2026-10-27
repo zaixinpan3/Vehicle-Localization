@@ -46,12 +46,21 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             testCase.verifyEqual(b.diagnostics.packetCounts.bodyVelocityValid,0);
             for k=1:numel(l.time)
                 testCase.verifyEqual(b.diagnostics.invariantOutputs{k}.valid, ...
-                    logical([0;0;0;1;0;0;1;1]));
+                    logical([0;0;0;0;1]));
             end
         end
         function invalidLateralMaskIsRejected(testCase)
             [d,l,c]=fixture();l.velocityValid=NaN(size(l.time));
             testCase.verifyError(@()execute(d,l,c),'VehicleLocalization:InvalidMotionValidity');
+        end
+        function accelerationCannotActAloneWithoutVelocity(testCase)
+            [d,l,c]=fixture();l.velocityValid=false(size(l.time));a=execute(d,l,c);
+            d.highRate.longitudinalAcceleration(:)=20;d.highRate.lateralAcceleration(:)=-30;
+            b=execute(d,l,c);
+            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
+            testCase.verifyFalse(any(b.diagnostics.motionOutputValidity.bodyAcceleration));
+            testCase.verifyEqual(b.diagnostics.invariantOutputNames, ...
+                ["speedSquared","velocityAccelerationDot","velocityAccelerationCross","courseDirection","yawRate"]);
         end
         function validityRequiresOneBooleanPerFrame(testCase)
             [d,l,c]=fixture();d.highRate.bodyVelocityValid=[true;false];

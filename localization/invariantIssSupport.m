@@ -24,14 +24,11 @@ classdef invariantIssSupport
             F=zeros(8);F(1,2)=1;F(2,3)=1;F(4,5)=1;F(5,6)=1;F(7,8)=1;
             F([3,6],[2,5])=(q^2+e(8)^2/4)*eye(2);
             F([3,6],[3,6])=2*q*J;F([3,6],8)=2*q*v+2*J*a;
-            H=zeros(8);H(1,[2,5])=v.'/s;
+            H=zeros(5,8);H(1,[2,5])=v.'/s;
             H(2,[2,5])=a.'/s;H(2,[3,6])=v.'/s;
             H(3,[2,5])=(-J*a).'/s;H(3,[3,6])=(J*v).'/s;
-            H(4,8)=ell;H(5,:)=H(3,:);H(5,[2,5])=H(5,[2,5])-2*q*v.'/s;
-            H(5,8)=-(v.'*v+norm(e([2,5]))^2/4)/s;
-            H(6,[2,5])=c*nc.';H(6,7)=-cardinal*dc.'*v;
-            H(7,[3,6])=c*d.';H(7,7)=cardinal*n.'*a;
-            H(8,[3,6])=c*n.';H(8,7)=-cardinal*d.'*a;
+            H(4,[2,5])=c*nc.';H(4,7)=-cardinal*dc.'*v;
+            H(5,8)=ell;
             Hgnss=zeros(2,8);Hgnss(:,[1,4])=eye(2);
             Hgnss(:,7)=cardinal*[d,n]*J*cfg.gnss.outputPoint.bodyOffset(:);
         end
@@ -47,10 +44,10 @@ classdef invariantIssSupport
                 cfg (1,1) struct
             end
             v=(v+vm)/2;a=(a+am)/2;s=cfg.iss.maximumSpeed;J=[0,-1;1,0];
-            N=zeros(8,5);N(1,1:2)=v.'/s;
+            N=zeros(5,5);N(1,1:2)=v.'/s;
             N(2,1:2)=a.'/s;N(2,3:4)=v.'/s;
             N(3,1:2)=(-J*a).'/s;N(3,3:4)=(J*v).'/s;
-            N(4,5)=cfg.invariantObserver.headingLengthM;N(7:8,3:4)=eye(2);
+            N(5,5)=cfg.invariantObserver.headingLengthM;
         end
 
         function c=regionalCertificate(design,cfg,joint)
@@ -80,19 +77,14 @@ classdef invariantIssSupport
             V=cfg.iss.maximumSpeed;A=cfg.iss.maximumAcceleration;Q=cfg.maximumTrackAngleRate;
             outer=min(z.regionalRadiusCap,pi*ell/(2*t));
             validateattributes(outer,{'double'},{'real','finite','positive','scalar'});
-            hp=t/ell;hr=t^2/ell;vt=V+t^2*outer;at=A+t^3*outer;qt=Q+hr*outer;
+            hp=t/ell;vt=V+t^2*outer;
             % Bounds on normalized Jacobian rows at the true state, and on
             % their Hessians throughout the declared outer error ball.
-            h=[1;hypot(A/(V*t),1);hypot(A/(V*t),1);1; ...
-                norm([(A+2*Q*V)/(V*t),1,V/(t*ell)]); ...
-                hypot(1,V/(t*ell));hypot(1,A/(t^2*ell));hypot(1,A/(t^2*ell))];
-            L=[t^2/V;t^2/V;t^2/V;0; ...
-                t^2/V+2*t*qt/V+2*t*vt/(ell*V); ...
-                hp+vt/ell^2;hp+at/(t*ell^2);hp+at/(t*ell^2)];
-            k=design.auxiliaryWeights([1,2,2,3,4,5,2,2]);k=k(:);k(4)=0;
+            h=[1;hypot(A/(V*t),1);hypot(A/(V*t),1);hypot(1,V/(t*ell));1];
+            L=[t^2/V;t^2/V;t^2/V;hp+vt/ell^2;0];
+            k=[design.auxiliaryWeights([1,2,2,3]);0];
             active=[z.velocityAvailable;z.velocityAvailable&&z.accelerationAvailable; ...
-                z.velocityAvailable&&z.accelerationAvailable;false;z.velocityAvailable; ...
-                z.velocityAvailable;z.accelerationAvailable;z.accelerationAvailable];
+                z.velocityAvailable&&z.accelerationAvailable;z.velocityAvailable;false];
             k=k.*active;E=eye(8);pa=norm(P*E(:,[3,6]),2);
             c1=2*pa*(t*V/ell^2+2*Q*t/ell+2*t^2/ell) ...
                 +design.kappaG*norm(cfg.gnss.outputPoint.bodyOffset)*hp^2 ...

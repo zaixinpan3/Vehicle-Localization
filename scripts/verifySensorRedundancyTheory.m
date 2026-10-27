@@ -29,7 +29,7 @@ function report=verifySensorRedundancyTheory(options)
         addpath(genpath(fullfile(external,'YALMIP')));addpath(genpath(fullfile(external,'sedumi')));
         yalmip('clear');Pc=sdpvar(3,3);Ph=sdpvar(2,2);P=blkdiag(Pc,Pc,Ph);
         gains=sdpvar(5,1);witness=struct('inputs',inputs,'domain',domain,'P',P, ...
-            'kappaL',gains(1),'kappaG',gains(2),'accelerationGain',gains(3),'directionGain',gains(4),'speedSquaredGain',gains(5));
+            'kappaL',gains(1),'kappaG',gains(2),'bilinearGain',gains(3),'directionGain',gains(4),'speedSquaredGain',gains(5));
         [L,G,M]=sensorRedundancySupport.blocks(witness);constraints=[P>=eye(8),P<=1e5*eye(8), ...
             Ph(1,2)==0,gains>=1e-7];
         if cfg.invariantObserver.balancedPoseMetric
@@ -44,7 +44,7 @@ function report=verifySensorRedundancyTheory(options)
         % Homogeneous rescaling preserves all matched feedback ratios and
         % moves the lambda-normalized inequalities away from solver tolerance.
         witness.P=1.01*value(P);witness.P=(witness.P+witness.P.')/2;
-        for name=["kappaL","kappaG","accelerationGain","directionGain","speedSquaredGain"]
+        for name=["kappaL","kappaG","bilinearGain","directionGain","speedSquaredGain"]
             witness.(name)=1.01*value(witness.(name));
         end
         witness.solverStatus=result.problem;
@@ -61,7 +61,7 @@ function report=verifySensorRedundancyTheory(options)
         +norm(P(1:6,7:8),'fro')+norm(P(1:3,4:6),'fro');
     assert(rotationStructure<1e-9*max(1,norm(P,'fro')), ...
         'VehicleLocalization:InvalidRedundancyMetric','The proof requires the declared rotation-invariant metric.');
-    for name=["kappaL","kappaG","accelerationGain","directionGain","speedSquaredGain"]
+    for name=["kappaL","kappaG","bilinearGain","directionGain","speedSquaredGain"]
         validateattributes(witness.(name),{'double'},{'real','finite','positive','scalar'});
     end
     [L,G,M]=sensorRedundancySupport.blocks(witness);
@@ -93,7 +93,7 @@ function validateDomain(d,p)
     sensorRedundancySupport.courseControls(p.maximumCourseRate,d.coursePartitions);
     validateattributes(d.informativeLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
     validateattributes(d.degradedLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
-    assert(d.accelerationSplit>0 && d.accelerationSplit<1 && d.gnssSplit>0 && d.gnssSplit<1 && d.lambda>0, ...
+    assert(d.bilinearSplit>0 && d.bilinearSplit<1 && d.gnssSplit>0 && d.gnssSplit<1 && d.lambda>0, ...
         'VehicleLocalization:InvalidRedundancyDomain','Declare positive decay and Young splits strictly between zero and one.');
 end
 

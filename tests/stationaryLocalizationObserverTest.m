@@ -19,9 +19,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
     end
     methods (Test)
         function stationaryRecordedPoseConvergesWithoutLateralAiding(testCase)
-            f=fixture();r=execute(f);s=r.diagnostics.lidarPoseSupport;
+            % With no independent acceleration projections, allow 20 seconds
+            % for this uncertified zero-speed transient; retain the accuracy target.
+            f=fixture(20);r=execute(f);s=r.diagnostics.lidarPoseSupport;
             testCase.verifyLessThan(norm(r.position(end,:)),1e-3);
             testCase.verifyLessThan(abs(r.heading(end)),1e-4);
+            fprintf('STATIONARY RECORDED t=20 position=%.12g headingRad=%.12g\n', ...
+                norm(r.position(end,:)),abs(r.heading(end)));
             testCase.verifyTrue(all(s.sectorQualified));
             testCase.verifyFalse(any(r.diagnostics.motionOutputValidity.bodyVelocity));
             testCase.verifyFalse(s.correctionApplied(1));

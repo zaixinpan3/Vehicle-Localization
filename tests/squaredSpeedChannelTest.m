@@ -46,15 +46,15 @@ end
 function [cfg,design,packet,state]=fixture()
     cfg=mncavFullObserverConfig();
     design=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
-        'auxiliaryWeights',[2;0;0;0;0],'gyroGainNormalized',1);
-    packet=invariantObserverSupport.measurements(8,0,0,0,0,.2,0,true,false,false,cfg);
+        'auxiliaryWeights',[2;0;0],'gyroGainNormalized',1);
+    packet=invariantObserverSupport.measurements(8,0,0,0,0,.2,true,false,false,cfg);
     state=[0;3;0;0;4;0;.4;0];
 end
 
 function [actual,expected]=speedControlDifference()
     cfg=mncavFullObserverConfig();cfg.invariantObserver.redundancy.speedPartitions=1;
     cfg.invariantObserver.redundancy.exactGnssLeverEnclosure=false;
-    w=sensorRedundancySupport.witness(cfg,eye(8),1,1,ones(5,1),1);
+    w=sensorRedundancySupport.witness(cfg,eye(8),1,1,ones(3,1),1);
     [~,withSpeed]=sensorRedundancySupport.blocks(w);
     w.speedSquaredGain=0;[~,withoutSpeed]=sensorRedundancySupport.blocks(w);
     u=.37;weights=[(1-u)^2,2*u*(1-u),u^2];actual=zeros(8);

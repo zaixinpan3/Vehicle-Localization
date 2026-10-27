@@ -14,10 +14,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         function equalStatesRecoverTheJacobianIncludingZeroSpeed(testCase)
             c=mncavFullObserverConfig();x=zeros(8,1);
             [F,H,G]=invariantIssSupport.secants(x,x,0,0,c);
-            [~,J]=invariantObserverSupport.outputs(x,0,0,c);
+            [~,J]=invariantObserverSupport.outputs(x,0,c);
             testCase.verifyEqual(H,J,AbsTol=0);
             testCase.verifyTrue(all(isfinite([F(:);H(:);G(:)])));
-            testCase.verifyEqual(H(6,[2,5]),[0,1],AbsTol=0);
+            testCase.verifyEqual(H(4,[2,5]),[0,1],AbsTol=0);
         end
         function finiteSecantsTransformWithTheRotatingFrame(testCase)
             errors=rotationErrors(mncavFullObserverConfig());
@@ -26,10 +26,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         function sharedSensorVectorReconstructsEveryPacketIncrement(testCase)
             c=mncavFullObserverConfig();v=[12;.4];a=[.3;1.2];dv=[.2;-.1];da=[-.04;.08];dr=.003;
             N=invariantIssSupport.measurementSecant(v,a,v+dv,a+da,c);
-            p=invariantObserverSupport.measurements(v(1),v(2),a(1),a(2),.1,0,0,true,true,true,c);
-            m=invariantObserverSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),.1+dr,0,0,true,true,true,c);
+            p=invariantObserverSupport.measurements(v(1),v(2),a(1),a(2),.1,0,true,true,true,c);
+            m=invariantObserverSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),.1+dr,0,true,true,true,c);
             testCase.verifyEqual(m.value-p.value,N*[dv;da;dr],AbsTol=2e-14);
-            testCase.verifyEqual(N(7:8,3:4),eye(2),AbsTol=0);
+            testCase.verifySize(N,[5,5]);
+            testCase.verifyEqual(N(4,:),zeros(1,5),AbsTol=0);
             testCase.verifyGreaterThan(norm(N(2:3,3:4)),0);
         end
         function bernsteinControlsRepresentCoupledRatesThroughoutCells(testCase)
@@ -89,7 +90,7 @@ function errors=finiteIdentityErrors(c)
         x([2,5])=10*x([2,5]);y([2,5])=10*y([2,5]);
         if k==1,y(7)=x(7);elseif k==2,y(7)=x(7)+1e-12;end
         [F,H,G]=invariantIssSupport.secants(x,y,beta,rate,c);e=x-y;
-        dh=invariantObserverSupport.outputs(x,beta,rate,c)-invariantObserverSupport.outputs(y,beta,rate,c);
+        dh=invariantObserverSupport.outputs(x,beta,c)-invariantObserverSupport.outputs(y,beta,c);
         dg=antenna(x,c)-antenna(y,c);df=drift(x,rate)-drift(y,rate);
         errors(k,:)=[norm(F*e-df)/max(1,norm(df)),norm(H*e-dh)/max(1,norm(dh)), ...
             norm(G*e-dg)/max(1,norm(dg))];
@@ -108,8 +109,8 @@ end
 
 function ratios=regionalDissipation(c)
     d=c.invariantDesign;r=d.verification.regionalIss;t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;
-    B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=diag(t.^-[2,3,3,2,3,2,3,3]);
-    E=eye(8);C=E([1,4,7],:);Cp=C(1:2,:);K=diag(d.auxiliaryWeights([1,2,2,3,4,5,2,2]));
+    B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=diag(t.^-[2,3,3,2,2]);
+    E=eye(8);C=E([1,4,7],:);Cp=C(1:2,:);K=diag([d.auxiliaryWeights([1,2,2,3]);0]);
     stream=RandStream('mt19937ar','Seed',2302);ratios=zeros(180,1);
     for k=1:numel(ratios)
         family=mod(k-1,3)+1;psi=6*rand(stream)-3;beta=.2;rate=.02;s=10+5*rand(stream);
@@ -119,7 +120,7 @@ function ratios=regionalDissipation(c)
         dc=direction(psi+beta);nc=[-dc(2);dc(1)];
         x=zeros(8,1);x(7:8)=[psi;q-rate];x([2,5])=s*dc;x([3,6])=u*dc+s*q*nc;
         eps=randn(stream,8,1);eps=.9*r.normalizedRadius*eps/norm(eps);hat=x-B*eps;
-        WG=.5*eye(2);S=diag([.25,.25,.97]);valid=true(8,1);
+        WG=.5*eye(2);S=diag([.25,.25,.97]);valid=true(5,1);
         if family==1
             WG=zeros(2);
         elseif family==2
@@ -128,13 +129,13 @@ function ratios=regionalDissipation(c)
             % Rank-one PSD LiDAR with cross coupling. It satisfies the scalar
             % bounds but does not dominate the former diagonal heading floor.
             coupling=c.iss.maximumPositionHeadingCoupling*[cos(k);sin(k)];h=c.iss.minimumHeadingStrength;
-            S=[coupling*coupling.'/h,coupling;coupling.',h];valid([1,2,3,5,6])=false;
+            S=[coupling*coupling.'/h,coupling;coupling.',h];valid(1:4)=false;
         end
         mismatch=c.invariantObserver.redundancy.informativeLidarMismatch;
         W=S-mismatch*eye(3)+.01*[0,1,0;-1,0,0;0,0,0];
-        [hx,~]=invariantObserverSupport.outputs(x,beta,rate,c);
-        [hh,Hh]=invariantObserverSupport.outputs(hat,beta,rate,c);
-        Ka=K*diag(double(valid));Ka(4,4)=0;
+        [hx,~]=invariantObserverSupport.outputs(x,beta,c);
+        [hh,Hh]=invariantObserverSupport.outputs(hat,beta,c);
+        Ka=K*diag(double(valid));Ka(5,5)=0;
         rhs=B\(drift(x,rate)-drift(hat,rate));
         rhs=rhs-t*d.gyroGainNormalized*E(:,8)*eps(8);
         rhs=rhs-t*d.kappaL*(d.P\(C.'*W*C*eps));

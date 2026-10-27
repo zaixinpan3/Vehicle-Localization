@@ -1,9 +1,11 @@
 # Continuous observer theory: overlap closure and historical MO-HGO proofs
 
-**Current implementation:** [Section 0.8a](#08a-current-squared-speed-feedback-and-positive-speed-iss-domain)
-(2026-10-26) restores direct squared-speed feedback and restricts every L/G/M
-ISS claim to the declared strictly positive speed interval. It supersedes the
-projected-speed and zero-speed claims in the preceding design revisions.
+**Current implementation:** [Section 0.8a](#08a-current-five-output-observer-and-positive-speed-iss-domain)
+(2026-10-26) implements five auxiliary outputs: squared speed, velocity-
+acceleration dot/cross, course direction and yaw rate. Its new paired-output
+G-family bound replaces the removed body-acceleration projection bound. Every
+L/G/M ISS claim remains restricted to the declared strictly positive speed
+interval. Earlier auxiliary-output and zero-speed claims are superseded.
 
 Current sensor-redundancy theorem: 2026-10-14. Overlap closure: 2026-10-12.
 Historical mode-specific derivation: 2026-09-13.
@@ -1097,174 +1099,252 @@ common-domain inputs reject stale in-memory metadata.
 The upstream lateral design and physical vehicle/sensor parameters are unchanged.
 
 
-### 0.8a Current squared-speed feedback and positive-speed ISS domain
+### 0.8a Current five-output observer and positive-speed ISS domain
 
-Revision 2026-10-26 (`intrinsic-vector-iss-v5`). This subsection supersedes the
-projected-speed feedback and speed-domain claims in Sections 0.5--0.8. Their
-numerical witnesses describe earlier observers. The current implementation has
-one matched invariant-output correction and a separate scalar gyro correction;
-there is no scalar projected-speed correction or scalar speed-gain synthesis.
+Revision 2026-10-26 (`intrinsic-vector-iss-v6-five-output`). This is the
+current auxiliary-output and common L/G/M formulation. It supersedes the
+eight-output packet, body-acceleration projection bound, projected-speed
+feedback and zero-speed claims in the earlier design revisions. The intrinsic
+eight-state predictor and the GNSS/LiDAR measurement interfaces are retained.
 
-**Declared domain.** Every current L, G and Mixed ISS claim requires
-
-$$
-0<s_{\min}\le s(t)=\|\mathbf v(t)\|\le V_{\max}.
-$$
-
-The configuration fields are `invariantObserver.redundancy.minimumCourseSpeed`
-and `iss.maximumSpeed`: the ordinary configuration uses [10,15] m/s and the
-explicit small-offset scenario uses [1,30] m/s. These are true course-speed
-bounds at the global output point, not a clamp on the estimated velocity.
-The lateral model has its own longitudinal-speed domain. Its errors and
-output-point transport must satisfy the global disturbance contract.
-All acceleration, course-rate, angle-chart, sensor-availability and actual
-finite-overlap assumptions remain necessary. Leaving the speed interval ends
-the present ISS guarantee; returning alone does not establish that the error
-has returned to the certified local sublevel. No recurring-stop extension is
-claimed for this revision.
-
-**Active invariant output.** Retain the original scalar
+**Five outputs.** With $V=V_{\max}>0$ and heading length $\ell>0$, the runtime
+uses the following fixed normalization of the requested invariants:
 
 $$
-h_s(x)=\frac{\mathbf v^\top\mathbf v}{2V_{\max}},\qquad
- y_s=\frac{u_m^2+\bar v_y^2}{2V_{\max}},\qquad
- Dh_s(x)e=\frac{\mathbf v^\top e_v}{V_{\max}}.
+h(x;\bar\beta)=\begin{bmatrix}
+\mathbf v^\top\mathbf v/(2V)\\
+\mathbf v^\top\mathbf a/V\\
+\operatorname{cr}(\mathbf v,\mathbf a)/V\\
+n(\psi+\bar\beta)^\top\mathbf v\\
+\ell r
+\end{bmatrix},\qquad
+y=\begin{bmatrix}
+(u_m^2+\bar v_y^2)/(2V)\\
+(u_m a_{x,m}+\bar v_y a_{y,m})/V\\
+(u_m a_{y,m}-\bar v_y a_{x,m})/V\\
+0\\
+\ell r_m
+\end{bmatrix}.
 $$
 
-Here the measured forward speed and upstream lateral velocity refer to the
-same output point. The dot and signed cross products remain
-$h_2=\mathbf v^\top\mathbf a/V_{\max}$ and
-$h_3=\operatorname{cr}(\mathbf v,\mathbf a)/V_{\max}$; the other output rows
-are unchanged. These three quantities are invariant under simultaneous planar
-proper rotations. They are derived from shared primitive velocity/acceleration
-measurements, so their disturbances are correlated, not independent sensors.
-`measurementSecant` and the synthesis noise objective retain that shared input
-map; enabling the squared-speed row creates no new independent noise column.
+All motion quantities refer to the same configured output point. These
+constant normalizers change neither information content nor rank. The output
+packet, exact secant, measurement-error map and runtime audit all have five
+rows, in this order. There is no cross-minus-rate consistency output, body-axis
+acceleration projection, projected-speed replacement or hidden correction
+implementing one of those removed channels.
 
-Let $B$ be the existing state scaling, $D$ the output scaling,
-$\epsilon=B^{-1}(x-\hat x)$, and $\widehat J=D\,Dh(\hat x)B$.
-For the validity mask $\Gamma$, the continuous auxiliary correction is
+All five functions are invariant under a simultaneous planar proper rotation
+of $\mathbf v,\mathbf a$ and heading, and are independent of global position.
+The signed cross product is invariant under $SO(2)$, not under reflection.
+The upstream sideslip angle is held fixed under this frame transformation.
+Its rate remains an input to the intrinsic predictor; it is not an auxiliary
+packet field and does not enter the five output functions.
 
-$$
-\dot{\hat x}\big|_{\rm aux}
-=\theta B P^{-1}\widehat J^\top K\Gamma D(y-h(\hat x)),\qquad
-K=\operatorname{diag}(k_s,k_a,k_a,0,k_c,k_d,k_a,k_a),\quad k_s>0.
-$$
-
-The zero fourth entry avoids duplicating the separate linear gyro innovation.
-Synthesis imposes a positive lower bound on $k_s$, and verification rejects a
-zero squared-speed weight. `correct` implements the existing frozen-Jacobian
-implicit update with this row active. Metric coupling can distribute its
-correction to other states; it is not an extra radial scalar observer.
-
-**Exact increment and dissipation.** No division by instantaneous speed is
-needed to factor the finite error:
+**Local completeness, with its exact qualification.** For $s=\|\mathbf v\|>0$,
+let $\alpha$ be the velocity direction and define
 
 $$
-h_s(x)-h_s(\hat x)
-=\frac{(\mathbf v+\hat{\mathbf v})^\top}{2V_{\max}}
- (\mathbf v-\hat{\mathbf v}).
+\mathbf a=a_\parallel d(\alpha)+a_\perp n(\alpha),\qquad
+\delta=\alpha-\psi-\bar\beta.
 $$
 
-At a true state in the course-aligned coordinates, the normalized Jacobian is
-$j_s(s)=(s/V_{\max})e_2^\top$. With
-$V_e=\epsilon^\top P\epsilon$, its nominal matched contribution is
+After quotienting the state by global planar translation and rotation, local
+coordinates are $(s,a_\parallel,a_\perp,\delta,r)$. The outputs become
 
 $$
-\dot V_e\big|_s=-2\theta k_s(s/V_{\max})^2\epsilon_2^2.
+\left(s^2/(2V),\;s a_\parallel/V,\;s a_\perp/V,\;s\sin\delta,\;\ell r\right).
 $$
 
-The G-family LMI includes this term together with the existing direction row
-$j_d(s)=e_5^\top-s e_7^\top/(\theta\ell)$. On a speed subinterval $[a,b]$,
-write $s=(1-t)a+tb$. The degree-two Bernstein coefficients for
-$(s/V_{\max})^2$ are $[a^2,ab,b^2]/V_{\max}^2$. The direction Gram matrix has
-coefficients
+Their Jacobian determinant in these five coordinates is
+$\ell s^4\cos\delta/V^3$. Thus they form a complete set of local invariant
+coordinates when $s>0$ and $\cos\delta\ne0$. On the selected correct branch
+$|\delta|<\pi/2$, the inverse is
 
 $$
-[d_a d_a^\top,\ (d_a d_b^\top+d_b d_a^\top)/2,\ d_b d_b^\top],
-\qquad d_a=e_5-a e_7/(\theta\ell),\quad d_b=e_5-b e_7/(\theta\ell).
+s=\sqrt{2Vh_1},\quad
+(a_\parallel,a_\perp)=\frac{V}{s}(h_2,h_3),\quad
+\delta=\arcsin(h_4/s),\quad r=h_5/\ell.
 $$
 
-The corresponding coefficients are paired with the same convex weights
-$[(1-t)^2,2t(1-t),t^2]$. Negativity of every resulting matrix therefore
-certifies the whole speed interval while preserving the two rows' shared
-speed dependence. It is not a speed-grid check. In the L and Mixed sufficient
-inequalities, all nominal matched auxiliary Gram terms may be dropped because
-they only add dissipation; this also covers withdrawn motion outputs in those
-families. G requires its declared velocity and acceleration aiding.
+This inverse is an analysis identity, not a runtime operation. The observer
+never divides by instantaneous speed. Local completeness does not remove the
+global translation/rotation ambiguity; GNSS and LiDAR still supply the absolute
+constraints. The branch condition matters: parallel and antiparallel headings
+both make the direction output zero, and rank is lost at $\cos\delta=0$.
+Rank is also lost at zero speed. This is not a global observability theorem.
 
-The Mixed construction still uses the actual translation-heading cross block.
-For $S=[T,c;c^\top,h]\succeq0$, $h\ge h_{\min}$ and the declared coupling
-bound, the valid lower control is
+On the selected branch, the removed body-acceleration projections can be
+reconstructed as $R(\bar\beta+\delta)[a_\parallel,a_\perp]^\top$. The removed
+consistency function is $h_3-2h_1(r+\dot{\bar\beta})$. These are functional
+dependences, not statements that noise weighting, availability or transient
+performance are unchanged. In particular, velocity withdrawal now removes both
+bilinear acceleration outputs; there is no remaining independent acceleration
+projection to use during that interval.
+
+**Correction and shared errors.** Let
+$B=\operatorname{diag}(\theta^{[1,2,3,1,2,3,1,2]}/[1,1,1,1,1,1,\ell,\ell])$,
+$D=\operatorname{diag}(\theta^{-[2,3,3,2,2]})$,
+$\epsilon=B^{-1}(x-\hat x)$ and $\widehat J=D\,Dh(\hat x)B$.
+The matched correction remains
 
 $$
-S\succeq\begin{bmatrix}0_{2\times2}&c\\c^\top&h_{\min}\end{bmatrix},
+\dot{\hat x}\big|_{\rm matched}
+=\theta BP^{-1}\widehat J^\top K\Gamma D(y-h(\hat x)),\qquad
+K=\operatorname{diag}(k_s,k_a,k_a,k_d,0),\quad k_s,k_a,k_d>0.
 $$
 
-because the difference is $\operatorname{diag}(T,h-h_{\min})\succeq0$.
-The control itself can be indefinite. Its coupling corners are verified
-jointly with GNSS; no claim $S\succeq\operatorname{diag}(0,0,h_{\min})$ is
-made. At the current ordinary partition settings, the common synthesis and
-solver-free verification use 48 L, 8640 G and 1152 Mixed controls (9840 total).
-These counts change when the declared geometry, partitions or availability
-change.
+There are three synthesized matched weights. Dot and cross share one weight;
+rate has its existing separately synthesized scalar innovation and is consumed
+exactly once. The zero fifth matched weight prevents double-counting gyro
+feedback. The implicit runtime solve uses this five-row Jacobian directly.
+Missing velocity withdraws rows 1--4; missing acceleration withdraws rows 2--3;
+missing gyro withdraws row 5. `motionOutputValidity.bodyAcceleration` reports
+the effective velocity-and-acceleration availability of the bilinear pair.
+Raw sample counts and the five-row validity audit remain separate diagnostics.
 
-**One coupled dynamic enclosure.** Positive speed defines the ideal course
-frame for all three sensor families. Write
-$\mathbf v=s e_1$ and $\mathbf a=a_\parallel e_1+s q e_2$, where
-$q=r+\dot\beta$. The intrinsic acceleration drift is
-$f_a=q^2\mathbf v+2qJ\mathbf a$. Its rate derivative simplifies exactly to
+The outputs are locally independent functions of quotient coordinates, not
+five independent sensor measurements. `measurementSecant` maps one primitive
+error vector $[\Delta v_b;\Delta a_b;\Delta r_m]\in\mathbb R^5$ to all five
+packet increments, with a shared $5\times5$ matrix and a zero fourth row.
+The zero direction value has an upstream angle-error residual, not an invented
+independent measurement. The noise objective retains the shared primitive
+columns and one separate direction-interface error budget. Errors in sideslip
+angle/rate remain bounded inputs to the output/predictor equations; a lagging
+upstream angle is not asserted to equal the physical velocity direction.
+
+**Positive-speed domain and one dynamic enclosure.** Every current L, G and
+Mixed ISS claim requires
+
+$$
+0<s_{\min}\le s(t)=\|\mathbf v(t)\|\le V.
+$$
+
+The fields are `invariantObserver.redundancy.minimumCourseSpeed` and
+`iss.maximumSpeed`. The ordinary configuration uses [10,15] m/s; the explicit
+small-offset scenario uses [1,30] m/s. These are true course-speed bounds at the
+global output point, separate from the lateral LPV longitudinal-speed domain.
+No runtime speed clamp enforces them. Leaving the interval ends this guarantee;
+returning alone does not prove the error has reentered its local sublevel.
+All acceleration, rate, angle, availability and finite-overlap contracts also
+remain necessary. No recurring-stop or full switched-cascade claim is made.
+
+In the ideal true course frame, $\mathbf v=s e_1$ and
+$\mathbf a=a_\parallel e_1+s q e_2$, where $q=r+\dot\beta$. The intrinsic
+acceleration drift $f_a=q^2\mathbf v+2qJ\mathbf a$ satisfies
 
 $$
 \frac{\partial f_a}{\partial r}=2q\mathbf v+2J\mathbf a
 =2a_\parallel e_2,\qquad
-|q|\le\min(q_{\max},A_{\max}/s_{\min}),\quad
-|a_\parallel|\le A_{\max}.
+|q|\le\min(q_{\max},A_{\max}/s_{\min}).
 $$
 
-The previous independent box bound $2q_{\max}V_{\max}+2A_{\max}$ loses
-this cancellation. The current common L/G/M matrices retain it, using the
-two tangential-acceleration endpoints and correlated Bernstein controls for
-$[q,q^2]$. There is no sensor-specific alternative dynamics matrix. These
-identities concern the ideal true course field; upstream angle/rate errors
-remain disturbance inputs and cannot be discarded from the actual observer.
-This tighter enclosure follows from the now-common positive-speed contract.
+All three sensor families use this cancellation, the two tangential-
+acceleration endpoints and correlated Bernstein controls of $[q,q^2]$.
+Upstream discrepancies are disturbances; the ideal-course identity is not
+silently imposed on the measured upstream angle or rate.
 
-**Finite-error closure.** The exact secant is used without replacing the
-estimated-state Jacobian gain by a true-state gain. The normalized squared-speed
-row has true-point norm at most one and Hessian bound
-$L_s=\theta^2/V_{\max}$. Its contribution to the matched-output remainder is
-bounded by
+**Acceleration information from dot and cross.** In normalized error
+coordinates, the true-point Jacobian of rows 2--3 acts as
 
 $$
-\theta k_s\left(3L_s\|\epsilon\|^3+L_s^2\|\epsilon\|^4\right).
+J_{23}\epsilon=\frac{s}{V}\begin{bmatrix}\epsilon_3\\\epsilon_6\end{bmatrix}
++\frac{1}{\theta V}
+\begin{bmatrix}a_\parallel&a_\perp\\a_\perp&-a_\parallel\end{bmatrix}
+\begin{bmatrix}\epsilon_2\\\epsilon_5\end{bmatrix}.
 $$
 
-`invariantIssSupport.regionalCertificate` includes it in the common cubic and
-quartic bounds and removes the obsolete projected-speed remainder. Combined
-with the predictor, other outputs and actual finite-overlap bounds, this gives
+The $2\times2$ acceleration matrix $M$ satisfies $M^\top M=\|\mathbf a\|^2 I$.
+For a fixed $0<\eta<1$, Young's inequality therefore gives the uniform bound
+
+$$
+J_{23}^\top J_{23}\succeq
+(1-\eta)(s/V)^2 D_a
+-(\eta^{-1}-1)(A_{\max}/(\theta V))^2 D_v,
+$$
+
+where $D_a=e_3e_3^\top+e_6e_6^\top$ and
+$D_v=e_2e_2^\top+e_5e_5^\top$. The G-family dissipative matrix includes
+$-2k_a(1-\eta)(s/V)^2D_a$ and the corresponding positive velocity penalty.
+The configuration calls this parameter `bilinearSplit`. The old body-axis
+projection bound, including its heading penalty, is removed: it is not valid
+to retain its dissipation after deleting those output rows.
+
+The squared-speed and direction rows are
+$j_s=(s/V)e_2^\top$ and $j_d=e_5^\top-s e_7^\top/(\theta\ell)$.
+On a speed cell $[a,b]$, the squared-speed coefficients are
+$[a^2,ab,b^2]/V^2$. Pair them with the direction-Gram coefficients
+$[d_a d_a^\top,(d_a d_b^\top+d_b d_a^\top)/2,d_b d_b^\top]$, where
+$d_a=e_5-ae_7/(\theta\ell)$ and $d_b=e_5-be_7/(\theta\ell)$.
+The same convex Bernstein weights $[(1-t)^2,2t(1-t),t^2]$ represent the speed,
+direction and bilinear acceleration bound simultaneously. This certifies the
+whole speed interval, not sampled speeds. The L and Mixed sufficient LMIs drop
+all matched auxiliary Gram terms, which only add nominal dissipation; they
+therefore also allow these outputs to be withdrawn. G requires valid velocity
+and acceleration aiding. Configuring either unavailable withdraws the current
+G/M certificate family, as before.
+
+Mixed retains translation-heading coupling. For
+$S=[T,c;c^\top,h]\succeq0$, $h\ge h_{\min}$ and the declared coupling bound,
+
+$$
+S\succeq\begin{bmatrix}0_{2\times2}&c\\c^\top&h_{\min}\end{bmatrix}
+$$
+
+because the difference is $\operatorname{diag}(T,h-h_{\min})\succeq0$.
+The lower control itself can be indefinite. Its coupling corners are verified
+jointly with GNSS; no diagonal heading-only PSD lower bound is inferred.
+With the ordinary geometry and partitions, synthesis and independent
+verification use 48 L, 8640 G and 1152 Mixed controls (9840 total).
+
+**Finite-error closure and runtime limits.** The squared-speed increment is
+exactly $(\mathbf v+\hat{\mathbf v})^\top(\mathbf v-\hat{\mathbf v})/(2V)$.
+The bilinear midpoint identities and trigonometric secant similarly produce an
+exact five-row $H(x,\hat x)$, including coincident angles and zero velocity.
+The estimated-state gain $Dh(\hat x)$ is retained in the finite-error proof.
+For the five normalized rows, true-point norm bounds are
+
+$$
+h_*=[1,\sqrt{1+(A_{\max}/(V\theta))^2},
+\sqrt{1+(A_{\max}/(V\theta))^2},
+\sqrt{1+(V/(\theta\ell))^2},1]^\top,
+$$
+
+and Hessian bounds on the declared outer normalized ball of radius $R_o$ are
+$L_*=[\theta^2/V,\theta^2/V,\theta^2/V,
+\theta/\ell+(V+\theta^2R_o)/\ell^2,0]^\top$.
+Each matched row contributes at most
+$\theta k_i(3h_{*,i}L_{*,i}\|\epsilon\|^3+L_{*,i}^2\|\epsilon\|^4)$.
+The deleted rows contribute neither dissipation nor remainder terms.
+Together with the predictor and actual finite-overlap bounds, this yields
 $\dot V_e\le-\mu\|\epsilon\|^2+c_3\|\epsilon\|^3+
- c_4\|\epsilon\|^4+2\epsilon^\top P d$.
-Choose $R$ within the declared outer ball with $c_3R+c_4R^2\le\mu/2$.
-Young's inequality then gives
+ c_4\|\epsilon\|^4+2\epsilon^\top Pd$, for $V_e=\epsilon^\top P\epsilon$.
+Choose $R\le R_o$ with $c_3R+c_4R^2\le\mu/2$. Then
 $\dot V_e\le-2\alpha V_e+\gamma\|d\|^2$, where
 $\alpha=\mu/(8\lambda_{\max}(P))$ and
 $\gamma=4\lambda_{\max}(P)^2/\mu$.
-An initial value below $\lambda_{\min}(P)R^2$ and an input budget satisfying
-$\gamma\|d\|_\infty^2<2\alpha\lambda_{\min}(P)R^2$ prevent local error exit,
-provided the true speed and other external domain contracts hold throughout.
-This is conditional continuous local ISS, not certification of an actual map,
-the upstream cascade, arbitrary initial errors or the sampled implementation.
+The initial level and input budget must satisfy
+$V_e(0)<\lambda_{\min}(P)R^2$ and
+$\gamma\|d\|_\infty^2<2\alpha\lambda_{\min}(P)R^2$ while all external domain
+contracts hold. The computed region is conditional and can be very small.
+No actual-map, arbitrary-initial-error, sampled-system or full-cascade theorem
+is inferred from LMI feasibility or successful numerical examples.
 
-**Zero-speed execution.** The main predictor and correction contain no
-$1/s$ or $1/s^2$. Constant normalization by $V_{\max}>0$ is harmless at rest.
-The implicit auxiliary matrix is nonsingular for $P\succ0$, $K\Gamma\succeq0$
-and nonnegative time step. Thus zero velocity causes no speed-denominator
-singularity. Nevertheless $Dh_s=0$ at $\hat{\mathbf v}=0$: this channel alone
-cannot create a direction or escape that estimate. No artificial escape
-correction is added. Finite stationary tests establish numerical behavior only;
-all certificates expose `zeroSpeedCertified=false`. Runtime speed diagnostics
-use measured/upstream speed as a proxy and cannot prove the true-speed contract.
+The predictor and correction contain no instantaneous-speed denominator.
+The implicit auxiliary matrix is nonsingular for $P\succ0$, nonnegative
+matched weights and a nonnegative step. Nevertheless the squared-speed
+Jacobian vanishes at zero estimated velocity and the invariant coordinates
+lose rank at rest. No artificial escape direction is added. All certificates
+retain `zeroSpeedCertified=false`; finite stationary execution is not a zero-
+speed ISS theorem. Runtime speed diagnostics are measured/upstream proxies,
+not verification of the true-speed contract.
+
+The five-output regression includes a changed stationary settling target: the
+recorded-pose synthetic case reaches 1.66 mm at 8 s, missing its former 1 mm
+limit. At 20 s it reaches approximately 0.0062 mm; the test retains the same
+1 mm and $10^{-4}$ rad accuracy requirements at this longer horizon. This
+is an uncertified zero-speed numerical example, not unchanged transient
+performance or an extension of the positive-speed theorem.
 
 
 

@@ -300,10 +300,12 @@ position, wheel/lateral-velocity information, body acceleration, gyro and
 semantic LiDAR overlap gradients. Missing or invalid channels withdraw their
 own innovations. The rotation-invariant outputs and coupled L/G/M inequalities
 share one continuous Lyapunov design; translation-heading coupling remains
-in the Mixed GNSS-LiDAR constraints. Squared speed contributes direct matched
-feedback alongside the velocity-acceleration dot and cross products; no
-projected-speed substitute is used. All L/G/M ISS claims require the declared
-strictly positive true course-speed interval ([10,15] m/s by default, [1,30]
+in the Mixed GNSS-LiDAR constraints. Exactly five auxiliary outputs remain:
+squared speed, velocity-acceleration dot/cross, course-direction constraint
+and yaw rate. The cross-minus-rate constraint and both body-acceleration
+projections are removed. Dot/cross share one matched gain and retain their
+shared measurement errors. No projected-speed substitute is used. All L/G/M
+ISS claims require the declared strictly positive true course-speed interval ([10,15] m/s by default, [1,30]
 m/s for the explicit small-offset scenario). The main observer has no speed
 division at rest, but rest is outside this guarantee.
 

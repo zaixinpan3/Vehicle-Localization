@@ -42,15 +42,28 @@ predictor has no IMU argument and no speed denominator. Public `.z` and
 `.onlineZ` keep their seven-column interface; `.internalState` and `.yawRate`
 expose the additional estimated rate.
 
-The scalar outputs include squared speed, velocity/acceleration dot and cross
-products, estimated rate, kinematic/course-direction constraints and acceleration
-projections onto estimated body directions. Each is invariant to a simultaneous
-rotation of the global states and heading. The two acceleration projections
-remain available without wheel speed and preserve acceleration direction.
-Squared speed has a strictly positive matched-output weight synthesized with
-all other global gains. There is no projected-speed substitute or independent
-scalar speed gain. Gyro retains its separate LMI-designed scalar gain and
-corrects the rate state; heading prediction uses the posterior state.
+The auxiliary packet contains exactly five scalar outputs, in this order:
+
+1. `v'*v/(2*maximumSpeed)` (squared speed).
+2. `v'*a/maximumSpeed` (velocity-acceleration dot product).
+3. `cross(v,a)/maximumSpeed` (signed planar cross product).
+4. `n(psi+estimatedBeta)'*v` (course-direction constraint).
+5. `headingLengthM*r` (estimated yaw rate).
+
+They are invariant under simultaneous planar proper rotation of the global
+vectors and heading. On the nonzero-speed, correct local heading branch they
+form five local coordinates modulo global translation and rotation. They are
+not independent sensor samples: the first three share velocity/acceleration
+errors, and the fourth is a kinematic constraint with upstream angle error.
+
+Squared speed, the dot/cross pair and direction have three strictly positive
+matched weights. Gyro retains its separate LMI-designed scalar gain and is
+used once as the fifth output. The cross-minus-rate constraint and both body-
+acceleration projections are removed. Missing velocity withdraws rows 1--4;
+missing acceleration withdraws rows 2--3. There is no acceleration-only output
+when velocity is unavailable. `diagnostics.invariantOutputNames` and the
+five-row `diagnostics.invariantOutputs` expose this order and availability.
+There is no projected-speed substitute or independent scalar speed gain.
 
 The global runtime consumes `LateralInputs.sideSlipAngle` and
 `LateralInputs.sideSlipAngleRate` together with lateral velocity. Synchronization
@@ -102,18 +115,18 @@ regional ISS theorem still requires the declared actual-overlap geometry/bias,
 motion, auxiliary-error and local-region contracts. A conditional finite-error
 radius is computed from the synthesized gains, but actual map bounds and sampled
 stability remain unverified. Physical full-state and sampled certificate flags
-therefore remain false. See [the current speed-output and domain proof](../improved_observer_derivation.md#08a-current-squared-speed-feedback-and-positive-speed-iss-domain).
+therefore remain false. See [the current five-output and domain proof](../improved_observer_derivation.md#08a-current-five-output-observer-and-positive-speed-iss-domain).
 
 ## Unified sensor-redundancy theory
 
-[Section 0.6](../improved_observer_derivation.md#06-one-complete-observer-with-complementary-gnsslidar-guarantees)
-now proves local nonlinear ISS for one complete continuous observer when either
-GNSS or LiDAR supplies sufficient information. The two adequacy sets share one
-constant Lyapunov matrix and one constant gain set; they do not select different
-observers. Informative LiDAR permits GNSS weight zero. Sufficient position-only
-GNSS permits LiDAR information of any rank, including zero, provided motion and
-the velocity-direction/body-acceleration auxiliary channels supply heading
-information. A parked vehicle with no LiDAR heading remains unobservable from
+[The current proof](../improved_observer_derivation.md#08a-current-five-output-observer-and-positive-speed-iss-domain)
+uses one metric and gain set across L, G and Mixed adequacy conditions.
+Informative LiDAR permits GNSS weight zero. Sufficient position-only GNSS
+permits LiDAR information of any rank, including zero, provided the declared
+positive motion and auxiliary availability hold. The G-family acceleration
+bound now comes from the dot/cross pair and includes its velocity-error penalty;
+it does not reuse dissipation from removed body-acceleration projections.
+A parked vehicle with no LiDAR heading remains unobservable from
 position and gyro rate alone. Every current L/G/M certificate is restricted to
 `minimumCourseSpeed <= true course speed <= maximumSpeed`, with a strictly
 positive lower bound. The default interval is [10,15] m/s; the explicit

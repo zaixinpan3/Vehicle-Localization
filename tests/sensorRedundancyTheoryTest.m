@@ -58,8 +58,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             a=zeros(8,1);a([1,4])=-d;
             b=zeros(8,1);b([1,4])=-R*d;b(7)=psi;
             testCase.verifyEqual(a([1,4])+d,b([1,4])+R*d,AbsTol=1e-12);
-            testCase.verifyEqual(invariantObserverSupport.outputs(a,0,0,c), ...
-                invariantObserverSupport.outputs(b,0,0,c),AbsTol=1e-12);
+            testCase.verifyEqual(invariantObserverSupport.outputs(a,0,c), ...
+                invariantObserverSupport.outputs(b,0,c),AbsTol=1e-12);
             testCase.verifyEqual(invariantObserverSupport.predict(a,.1,0),a,AbsTol=1e-12);
             testCase.verifyEqual(invariantObserverSupport.predict(b,.1,0),b,AbsTol=1e-12);
             testCase.verifyGreaterThan(abs(a(7)-b(7)),.1);
@@ -82,7 +82,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             testCase.verifyLessThan(v.jointSensor.worstGnssEigenvalue,-.009);
         end
         function inadequateDirectionGainCannotReuseASavedClaim(testCase)
-            c=freshObserverTestConfig();c.invariantDesign.auxiliaryWeights(5)=1e-10;
+            c=freshObserverTestConfig();c.invariantDesign.auxiliaryWeights(3)=1e-10;
             c.invariantDesign.verification.jointSensorLmiVerified=true;
             v=invariantObserverSupport.verify(c.invariantDesign,c);
             testCase.verifyFalse(v.certified);

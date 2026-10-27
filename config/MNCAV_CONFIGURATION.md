@@ -76,6 +76,14 @@ output is active in matched feedback; the projected-speed replacement and
 scalar speed-gain synthesis have been removed. This architecture change
 invalidates earlier gains and requires a fresh solve.
 
+The current auxiliary architecture is `intrinsic-vector-iss-v6-five-output`.
+The five-row packet is ordered as squared speed, dot product, cross product,
+course direction and scaled yaw rate. `auxiliaryWeights` contains three
+positive weights: squared speed, shared dot/cross, and direction. Gyro keeps
+its own scalar design. `redundancy.bilinearSplit` controls the Young bound
+for the retained dot/cross pair; the old projection-based `accelerationSplit`
+and the removed rate-constraint noise parameter are no longer used.
+
 ## Temporary small-offset global design
 
 `mncavSmallOffsetObserverConfig()` selects an explicit design scenario with
