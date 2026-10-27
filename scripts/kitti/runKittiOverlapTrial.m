@@ -69,10 +69,11 @@ function [report,estimate,trial]=runKittiOverlapTrial(datasetFolder,outputFolder
     % transfer-trial assumptions. Design revisions used this development drive;
     % no navigation reference series enters prediction or innovations.
     cfg=mncavFullObserverConfig();cfg.kind="kitti-global-overlap-transfer-trial";
-    cfg.invariantObserver.velocityAvailable=false;
+    % The normal-speed design credits all outputs. This recording lacks
+    % velocity: its per-frame mask withdraws feedback and the ISS claim.
     cfg.invariantObserver.operatingPoints=["lidar","weakLidar"];
-    % This transfer design has no GNSS/direction adequacy set. Keep its
-    % prior angular balance and re-solve the L-only mismatch constraints;
+    % Keep the transfer angular balance and re-solve the current common
+    % design; this motion-incomplete replay has no normal-speed ISS claim;
     % MnCAV's moving-GNSS feedback-authority limits are not transfer defaults.
     cfg.invariantObserver.balancedPoseMetric=true;
     cfg.invariantObserver=rmfield(cfg.invariantObserver,{'headingGainLimits','matchedGainLimits'});

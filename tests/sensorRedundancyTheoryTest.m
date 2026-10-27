@@ -16,11 +16,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             testCase.verifyTrue(r.commonLmiVerified);
             testCase.verifyTrue(r.coversGnssAbsent);
             testCase.verifyTrue(r.coversZeroLidarInformation);
-            testCase.verifyEqual(r.lidarVertices,48);
+            testCase.verifyEqual(r.lidarVertices,1440);
             testCase.verifyEqual(r.gnssBernsteinVertices,8640);
             testCase.verifyFalse(r.zeroSpeedCertified);
             testCase.verifyEqual(r.speedInterval,[10,15],AbsTol=0);
-            testCase.verifyEqual(r.mixedVertices,1152);
+            testCase.verifyEqual(r.mixedVertices,34560);
             testCase.verifyLessThan(r.worstMixedEigenvalue,0);
             testCase.verifyLessThan(max(r.worstLidarEigenvalue,r.worstGnssEigenvalue),-.009);
         end
@@ -75,7 +75,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
         function freshlySolvedGainsSatisfyTheNewCommonConditions(testCase)
             c=freshObserverTestConfig();v=invariantObserverSupport.verify(c.invariantDesign,c);
             testCase.verifyTrue(v.jointSensorLmiVerified);
-            testCase.verifyEqual(v.jointSensor.vertices,9840);
+            testCase.verifyEqual(v.jointSensor.vertices,44640);
             testCase.verifyTrue(v.jointSensor.mixedLidarCouplingRetained);
             testCase.verifyLessThan(v.jointSensor.worstMixedEigenvalue,0);
             testCase.verifyLessThan(v.jointSensor.worstLidarEigenvalue,0);
@@ -100,13 +100,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
-        function absentVelocityWithdrawsTheGnssAdequacyClaim(testCase)
+        function absentVelocityWithdrawsTheWholeNormalSpeedCertificate(testCase)
             c=freshObserverTestConfig();c.invariantObserver.velocityAvailable=false;
             v=invariantObserverSupport.verify(c.invariantDesign,c);
-            testCase.verifyTrue(v.jointSensorLmiVerified);
-            testCase.verifyFalse(v.jointSensor.gnssAdequacyEnabled);
-            testCase.verifyEqual(v.jointSensor.lidarVertices,48);
-            testCase.verifyEqual(v.jointSensor.gnssBernsteinVertices,0);
+            testCase.verifyFalse(v.certified);
+            testCase.verifyFalse(v.regionalIss.certified);
+            testCase.verifyFalse(v.motionAvailabilityConfigured);
+            testCase.verifyTrue(v.allAuxiliaryOutputsRequired);
         end
         function zeroLeverRetainsFeasibilityWithOneWeightCorner(testCase)
             c=freshObserverTestConfig();c.gnss.outputPoint.bodyOffset=[0;0];h=c.invariantDesign;

@@ -24,6 +24,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             testCase.verifyEqual(a.position(:,1),expectedPosition,AbsTol=1e-12);
             testCase.verifyEqual(a.diagnostics.packetCounts.bodyVelocityValid,0);
             testCase.verifyFalse(a.diagnostics.observedMotionEnvelopeSatisfied);
+            testCase.verifyFalse(a.diagnostics.auxiliaryAvailabilityContractSatisfied);
+            testCase.verifyFalse(any(a.diagnostics.allAuxiliaryOutputsAvailable));
         end
         function withdrawnPayloadCannotInfluenceAnyState(testCase)
             [d,l,c]=fixture();n=numel(l.time);

@@ -13,7 +13,8 @@ classdef sensorRedundancySupport
                 'minimumLidarHeadingStrength',s.minimumHeadingStrength, ...
                 'maximumLidarCoupling',s.maximumPositionHeadingCoupling, ...
                 'mixedLidarEnclosure',"psd-heading-coupling-v1", ...
-                'speedOutput',"matched-squared-speed-v1", ...
+                'speedOutput',"raw-squared-speed-matched-rate-v2", ...
+                'allAuxiliaryOutputsRequired',true, ...
                 'auxiliaryOutputs',"squared-dot-cross-direction-rate-v1", ...
                 'minimumGnssWeight',z.minimumGnssWeight, ...
                 'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).', ...
@@ -40,7 +41,8 @@ classdef sensorRedundancySupport
                 'mixedLidarCouplingBound',w.inputs.maximumLidarCoupling, ...
                 'minimumCourseSpeed',w.domain.minimumCourseSpeed, ...
                 'speedInterval',[w.domain.minimumCourseSpeed,w.inputs.maximumSpeed], ...
-                'zeroSpeedCertified',false);
+                'zeroSpeedCertified',false,'allAuxiliaryOutputsRequired',true, ...
+                'nominalDecayRatePerSecond',w.domain.nominalDecayRatePerSecond);
             if isempty(G),v.worstGnssEigenvalue=[];end
             if isempty(M),v.worstMixedEigenvalue=[];end
         end
@@ -53,6 +55,8 @@ classdef sensorRedundancySupport
             p=w.inputs;d=w.domain;P=w.P;th=p.theta;ell=p.headingLengthM;
             validateattributes(d.minimumCourseSpeed,{'double'}, ...
                 {'real','finite','positive','scalar','<=',p.maximumSpeed});
+            validateattributes(d.nominalDecayRatePerSecond,{'double'}, ...
+                {'real','finite','positive','scalar'});
             E=eye(8);e2=E(:,2);e3=E(:,3);e5=E(:,5);e6=E(:,6);e7=E(:,7);e8=E(:,8);
             C=E([1,4,7],:);Cp=C(1:2,:);Dacc=e3*e3.'+e6*e6.';Dvel=e2*e2.'+e5*e5.';
             q=min(p.maximumCourseRate,p.maximumAcceleration/d.minimumCourseSpeed);
@@ -88,50 +92,29 @@ classdef sensorRedundancySupport
                     % This cancellation is kinematic, not sensor-specific.
                     % Upstream angle/rate discrepancies remain input errors.
                     A([3,6],8)=[0;2*p.maximumAcceleration/(th^2*ell)*tangentialSign];
-                    for k=1:4
-                        c=p.maximumLidarCoupling*corners(k,:).';
-                        S=[p.minimumLidarPositionStrength*eye(2),c;c.',p.minimumLidarHeadingStrength];
-                        % Every active matched auxiliary row contributes
-                        % negative semidefinite energy. Dropping these terms
-                        % covers both available and withdrawn motion outputs.
-                        M=P*(A-p.gyroGainNormalized*(e8*e8.'))-w.kappaL*C.'*S*C;
-                        L{end+1}=M+M.'+w.kappaG*rho^2*(e7*e7.') ...
-                            +2*w.kappaL*d.informativeLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
-                    end
-                    if includeGnss
-                        % Complementary position and heading information
-                        % jointly anchor the state on the declared speed domain.
-                        % Keep translation-heading coupling. PSD and S33>=h
-                        % do NOT imply S>=diag(0,0,h). The lower controls can
-                        % be indefinite; dissipation is certified jointly
-                        % with GNSS, without a LiDAR position floor.
-                        for iS=1:numel(mixedLidar)
-                            S=mixedLidar{iS};
-                            for iW=1:numel(Wg)
-                                for iR=1:size(lever,2)
-                                    if exactLever
-                                        gnss=-w.kappaG*Cp.'*Wg{iW}*(Cp+lever(:,iR)*e7.');penalty=0;
-                                    else
-                                        gnss=-w.kappaG*(1-tau)*p.minimumGnssWeight*(Cp.'*Cp);penalty=w.kappaG*rho^2/tau;
-                                    end
-                                    M=P*(A-p.gyroGainNormalized*(e8*e8.')) ...
-                                        -w.kappaL*C.'*S*C+gnss;
-                                    Mixed{end+1}=M+M.'+penalty*(e7*e7.') ...
-                                        +2*w.kappaL*d.informativeLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
-                                end
-                            end
-                        end
-                    end
-                    if ~includeGnss,continue;end
+                    % All five motion outputs are available in every family.
+                    % Use the SAME speed-correlated auxiliary lower bound in
+                    % L/G/M; gyro remains in the common intrinsic dynamics.
                     for k=1:d.speedPartitions
                         left=e5-speeds(k)/(th*ell)*e7;right=e5-speeds(k+1)/(th*ell)*e7;
                         B=cat(3,left*left.',(left*right.'+right*left.')/2,right*right.');
-                        % Joint degree-two Bernstein enclosure: in the true
-                        % course frame the normalized squared-speed row is
-                        % (s/s_max)*e2'. Keep its speed dependence correlated
-                        % with the direction row on the same subinterval.
                         speedSquared=[speeds(k)^2,speeds(k)*speeds(k+1),speeds(k+1)^2]/p.maximumSpeed^2;
                         for jB=1:3
+                            M=P*(A-p.gyroGainNormalized*(e8*e8.')) ...
+                                -w.speedSquaredGain*speedSquared(jB)*(e2*e2.') ...
+                                -w.directionGain*B(:,:,jB) ...
+                                -(1-eta)*w.bilinearGain*speedSquared(jB)*Dacc;
+                            common=M+M.' ...
+                                +2*w.bilinearGain*(1/eta-1)*(p.maximumAcceleration/(th*p.maximumSpeed))^2*Dvel ...
+                                +d.lambda*E+2*d.nominalDecayRatePerSecond/th*P;
+                            for iS=1:4
+                                c=p.maximumLidarCoupling*corners(iS,:).';
+                                S=[p.minimumLidarPositionStrength*eye(2),c;c.',p.minimumLidarHeadingStrength];
+                                L{end+1}=common-2*w.kappaL*C.'*S*C ...
+                                    +w.kappaG*rho^2*(e7*e7.') ...
+                                    +2*w.kappaL*d.informativeLidarMismatch*(C.'*C); %#ok<AGROW>
+                            end
+                            if ~includeGnss,continue;end
                             for iW=1:numel(Wg)
                                 for iR=1:size(lever,2)
                                     if exactLever
@@ -139,17 +122,16 @@ classdef sensorRedundancySupport
                                     else
                                         gnss=-w.kappaG*(1-tau)*p.minimumGnssWeight*(Cp.'*Cp);penalty=w.kappaG*rho^2/tau;
                                     end
-                                    % Dot/cross form one coupled vector output.
-                                    % Its Gram matrix is bounded below by
-                                    % (1-eta)*(s/V)^2*Dacc - (1/eta-1)*
-                                    % (Amax/(theta*V))^2*Dvel. No body-axis
-                                    % acceleration projection is used here.
-                                    M=P*(A-p.gyroGainNormalized*(e8*e8.')) ...
-                                        +gnss-w.speedSquaredGain*speedSquared(jB)*(e2*e2.') ...
-                                        -w.directionGain*B(:,:,jB)-(1-eta)*w.bilinearGain*speedSquared(jB)*Dacc;
-                                    G{end+1}=M+M.'+penalty*(e7*e7.') ...
-                                        +2*w.bilinearGain*(1/eta-1)*(p.maximumAcceleration/(th*p.maximumSpeed))^2*Dvel ...
-                                        +2*w.kappaL*d.degradedLidarMismatch*(C.'*C)+d.lambda*E; %#ok<AGROW>
+                                    paired=common+gnss+gnss.'+penalty*(e7*e7.');
+                                    G{end+1}=paired+2*w.kappaL*d.degradedLidarMismatch*(C.'*C); %#ok<AGROW>
+                                    for iS=1:numel(mixedLidar)
+                                        % Keep actual translation-heading coupling;
+                                        % PSD plus a heading diagonal is not a
+                                        % diagonal Loewner lower bound.
+                                        S=mixedLidar{iS};
+                                        Mixed{end+1}=paired-2*w.kappaL*C.'*S*C ...
+                                            +2*w.kappaL*d.informativeLidarMismatch*(C.'*C); %#ok<AGROW>
+                                    end
                                 end
                             end
                         end

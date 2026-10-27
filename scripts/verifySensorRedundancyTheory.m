@@ -35,10 +35,8 @@ function report=verifySensorRedundancyTheory(options)
         if cfg.invariantObserver.balancedPoseMetric
             constraints=[constraints,Ph<=Pc(1:2,1:2)];
         end
-        for j=1:numel(L),constraints=[constraints,L{j}<=-1e-7*eye(8)];end %#ok<AGROW>
-        for j=1:numel(G),constraints=[constraints,G{j}<=-1e-7*eye(8)];end %#ok<AGROW>
-        for j=1:numel(M),constraints=[constraints,M{j}<=-1e-7*eye(8)];end %#ok<AGROW>
-        result=optimize(constraints,sum(gains)+.01*trace(P),sdpsettings('solver','sedumi','verbose',0));
+        [result,solveAudit]=solveCommonObserverLmis(constraints,sum(gains)+.01*trace(P), ...
+            [L,G,M],[numel(L),numel(G),numel(M)],witness,cfg.invariantObserver);
         assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleRedundancyTheory', ...
             'The requested common theory domain is infeasible in this enclosure: %s',result.info);
         % Homogeneous rescaling preserves all matched feedback ratios and
@@ -47,7 +45,7 @@ function report=verifySensorRedundancyTheory(options)
         for name=["kappaL","kappaG","bilinearGain","directionGain","speedSquaredGain"]
             witness.(name)=1.01*value(witness.(name));
         end
-        witness.solverStatus=result.problem;
+        witness.solverStatus=result.problem;witness.constraintGeneration=solveAudit;
     else
         witness=options.Witness;
     end
@@ -93,6 +91,7 @@ function validateDomain(d,p)
     sensorRedundancySupport.courseControls(p.maximumCourseRate,d.coursePartitions);
     validateattributes(d.informativeLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
     validateattributes(d.degradedLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
+    validateattributes(d.nominalDecayRatePerSecond,{'double'},{'finite','positive','scalar'});
     assert(d.bilinearSplit>0 && d.bilinearSplit<1 && d.gnssSplit>0 && d.gnssSplit<1 && d.lambda>0, ...
         'VehicleLocalization:InvalidRedundancyDomain','Declare positive decay and Young splits strictly between zero and one.');
 end

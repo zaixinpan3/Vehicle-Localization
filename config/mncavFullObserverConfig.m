@@ -8,7 +8,7 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-intrinsic-vector-iss-v6-five-output",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-intrinsic-vector-iss-v7-matched-output",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('gainInformationScale',16,'outputPoint', ...
@@ -21,7 +21,7 @@ function cfg=mncavFullObserverConfig(options)
         'noise',struct('lidarPositionM',.0279,'lidarHeadingRad',.00211,'gnssPositionM',.23, ...
             'velocityMps',.256,'accelerationMps2',.233,'gyroRadps',.0018,'jerkMps3',.05), ...
         'weakPositionStrength',.05,'minimumGnssWeight',.5,'nominalGnssWeight',.5, ...
-        'gnssCouplingSplit',.5,'operatingPoints',["lidar","lidarGnss","weakLidarGnss","gnssOnly"], ...
+        'gnssCouplingSplit',.5,'operatingPoints',["lidar","lidarGnss","weakLidarGnss","gnssOnly","weakLidar"], ...
         'lambda',1,'margin',1e-7,'solver',"sedumi");
     z.provenance=struct( ...
         'noise',"Inherited declared sensor priors: conditional registration moments on the first 60 s of the 2026-10-02 study; BESTPOS reported sigma on 12-09-31; adopted lateral identification and independently corrected IMU on 12-11-24; these are design priors, not an overlap covariance certificate", ...
@@ -32,21 +32,22 @@ function cfg=mncavFullObserverConfig(options)
     z.angularMetricDiagonal=true;
     z.noiseObjective="normalizedFullState";
     z.velocityAvailable=true;z.accelerationAvailable=true;
+    z.minimumDirectRatesPerSecond=[.1,.01]; % Radial speed and acceleration at the speed floor.
     z.redundancy=struct('minimumCourseSpeed',10,'informativeLidarMismatch',.001, ...
         'degradedLidarMismatch',.001,'speedPartitions',10,'coursePartitions',2, ...
-        'bilinearSplit',.5,'gnssSplit',.5,'lambda',1, ...
+        'bilinearSplit',.5,'gnssSplit',.5,'lambda',1,'nominalDecayRatePerSecond',.1, ...
         'exactGnssLeverEnclosure',true);
-    z.provenance.speedOutput="Squared speed is an active matched invariant output; no projected-speed replacement. All L/G/M ISS claims require minimumCourseSpeed <= true course speed <= maximumSpeed, with minimumCourseSpeed > 0; zero-speed runtime is division-free but uncertified";
+    z.provenance.speedOutput="Physical output is v'*v. Fixed numerical normalization is separate from the output and matched weights. Direct speed/acceleration rate floors hold throughout the positive-speed interval; no instantaneous-speed division or replacement output";
     z.regionalRadiusCap=1; % Outer normalized error ball used for Hessian bounds.
     z.headingGainLimits=[8,8]; % kappaL/P77 and directionGain/P77.
     z.matchedGainLimits=[8,8,2]; % Position L/G and velocity-direction self-feedback.
     z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]; predict uses internal r and estimated lateral sideslip rate; Five outputs: squared speed, velocity-acceleration dot/cross, course-direction constraint and yaw rate; no body-acceleration projections or cross-minus-rate constraint; IMU only in invariant innovations";
     z.provenance.angularModel="Yaw-rate process scale maximumTrackAngleRate / 2 s; upstream sideslip-rate error remains a predictor disturbance, not a separate auxiliary measurement";
-    z.provenance.operatingPoints="Noise objective at informative LiDAR, LiDAR plus GNSS, weak LiDAR plus GNSS and moving GNSS only; no absolute-pose steady-state objective without a pose anchor";
+    z.provenance.operatingPoints="Noise objective at five pose-information cases including weak LiDAR without GNSS; motion cases cover minimum/midpoint/maximum speed and zero, tangential and normal acceleration";
     z.provenance.metric="Rotation-invariant translational blocks and a diagonal angular block; angular/translation balance is not a theorem condition and is withdrawn to permit fixed feedback-authority limits";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
     z.provenance.noiseObjective="All eight normalized errors at pose-anchored nominal points; shared primitive velocity/acceleration/gyro columns and one upstream direction-constraint error budget; this energy proxy is not an empirical covariance guarantee";
-    z.provenance.redundancy="Common L/G/M metric: sufficient LiDAR, moving GNSS with invariant outputs, or GNSS position plus PSD LiDAR with S33>=heading floor and bounded translation-heading coupling, on the declared positive course-speed interval; Mixed LMIs retain coupling rather than infer a diagonal matrix floor; shared exact course-kinematic Jacobian and correlated course-rate Bernstein controls; finite overlap mismatch <=0.001 remains a geometric contract; G/M families are withdrawn when velocity/acceleration channels are configured unavailable";
+    z.provenance.redundancy="All five auxiliary outputs are required throughout every L/G/M certificate. Every family credits squared speed, paired dot/cross and direction dissipation. Shared correlated speed/course controls and full Mixed translation-heading coupling remain. Output withdrawal and zero speed have defined runtime but no current ISS guarantee";
     z.provenance.feedback="Normalized matched self-feedback limits L-position 8, G-position 8, velocity-direction 2 and heading L/direction 8; constrained inside the solve, without runtime clipping; exact common course kinematics and GNSS lever coupling reduce sufficient-condition conservatism";
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];

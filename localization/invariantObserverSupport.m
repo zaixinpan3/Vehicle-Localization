@@ -11,32 +11,39 @@ classdef invariantObserverSupport
         end
 
         function [value,H]=outputs(state,beta,cfg)
-            v=state([2,5]);a=state([3,6]);s=cfg.iss.maximumSpeed;ell=cfg.invariantObserver.headingLengthM;
+            v=state([2,5]);a=state([3,6]);
             cross=v(1)*a(2)-v(2)*a(1);angle=state(7)+beta;
             direction=[-sin(angle);cos(angle)];
-            value=[(v.'*v)/(2*s);(v.'*a)/s;cross/s;direction.'*v;ell*state(8)];
+            % Physical outputs; numerical scales belong to the feedback metric.
+            value=[v.'*v;v.'*a;cross;direction.'*v;state(8)];
             if nargout>1
                 [~,H]=invariantIssSupport.secants(state,state,beta,0,cfg);
             end
         end
 
+        function D=outputNormalization(cfg,theta)
+        % Fixed, invertible numerical scaling; never divides by actual speed.
+            if nargin<2,theta=cfg.invariantObserver.theta;end
+            V=cfg.iss.maximumSpeed;ell=cfg.invariantObserver.headingLengthM;
+            D=diag([1/(2*V),1/V,1/V,1,ell].*theta.^-[2,3,3,2,2]);
+        end
+
         function packet=measurements(speed,vy,ax,ay,gyro,beta,velocityValid,accelerationValid,gyroValid,cfg)
         % Five outputs only. Sideslip rate belongs to the predictor, not this packet.
-            s=cfg.iss.maximumSpeed;ell=cfg.invariantObserver.headingLengthM;
             velocityValid=velocityValid && cfg.invariantObserver.velocityAvailable;
             accelerationValid=accelerationValid && cfg.invariantObserver.accelerationAvailable;
             value=zeros(5,1);valid=[velocityValid;velocityValid&&accelerationValid; ...
                 velocityValid&&accelerationValid;velocityValid;gyroValid];
-            if valid(1),value(1)=(speed^2+vy^2)/(2*s);end
-            if valid(2),value(2)=(speed*ax+vy*ay)/s;value(3)=(speed*ay-vy*ax)/s;end
-            if gyroValid,value(5)=ell*gyro;end
+            if valid(1),value(1)=speed^2+vy^2;end
+            if valid(2),value(2)=speed*ax+vy*ay;value(3)=speed*ay-vy*ax;end
+            if gyroValid,value(5)=gyro;end
             if ~velocityValid,beta=0;end
             packet=struct('value',value,'valid',valid,'beta',beta);
         end
 
         function [next,audit]=correct(state,packet,dt,design,cfg)
             [value,H]=invariantObserverSupport.outputs(state,packet.beta,cfg);
-            D=diag(design.theta.^-[2,3,3,2,2]);
+            D=invariantObserverSupport.outputNormalization(cfg,design.theta);
             C=D*H*design.toPhysical;
             k=[design.auxiliaryWeights([1,2,2,3]);0].*double(packet.valid);
             residual=D*(packet.value-value);weighted=C.'*diag(k);
@@ -45,18 +52,20 @@ classdef invariantObserverSupport
             if packet.valid(5)
                 % The gyro innovation acts on its estimated rate state only.
                 % Its own scalar LMI supplies the gain; heading is untouched.
-                measuredRate=packet.value(5)/cfg.invariantObserver.headingLengthM;
+                measuredRate=packet.value(5);
                 gain=design.theta*design.gyroGainNormalized;
                 next(8)=(next(8)+dt*gain*measuredRate)/(1+dt*gain);
             end
             audit=struct('innovation',packet.value-value,'valid',packet.valid, ...
+                'allAuxiliaryOutputsAvailable',all(packet.valid), ...
                 'predicted',value,'normalizedCorrection',delta, ...
                 'frozenInvariantMetricNonexpansive',min(eig((Q+Q.')/2))>=-1e-10*max(1,norm(Q,2)));
         end
 
         function inputs=inputs(cfg)
             z=cfg.invariantObserver;if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-vector-iss-v6-five-output", ...
+            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-vector-iss-v7-matched-output", ...
+                'physicalOutputs',"squared-dot-cross-direction-rate", ...
                 'outputDegrees',[2,3,3,2,2], ...
                 'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
                 'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).','poseScales',cfg.lidar.poseScales(:).', ...
@@ -65,9 +74,17 @@ classdef invariantObserverSupport
 
         function design=synthesize(cfg)
             assert(exist('sdpvar','file')==2,'VehicleLocalization:MissingSolver','Add YALMIP and SeDuMi before synthesis.');
-            m=model(cfg);z=cfg.invariantObserver;yalmip('clear');Pc=sdpvar(3,3);Ph=sdpvar(2,2);
+            m=model(cfg);z=cfg.invariantObserver;
+            assert(m.motionAvailable,'VehicleLocalization:MotionOutputsRequired', ...
+                'The normal-speed design requires velocity and acceleration outputs throughout.');
+            yalmip('clear');Pc=sdpvar(3,3);Ph=sdpvar(2,2);
             P=blkdiag(Pc,Pc,Ph);kL=sdpvar(1);kG=sdpvar(1);kI=sdpvar(3,1);
             constraints=[P>=eye(8),kL>=0,kG>=0,kI>=z.margin];
+            % inv(P)jj >= 1/Pjj: affine sufficient floors on the actual
+            % direct matched rates over the entire declared speed interval.
+            factor=cfg.iss.maximumSpeed^2/(z.theta*z.redundancy.minimumCourseSpeed^2);
+            constraints=[constraints,kI(1)>=factor*z.minimumDirectRatesPerSecond(1)*Pc(2,2), ...
+                kI(2)>=factor*z.minimumDirectRatesPerSecond(2)*Pc(3,3)];
             if z.angularMetricDiagonal
                 constraints=[constraints,Ph(1,2)==0];
             end
@@ -89,35 +106,46 @@ classdef invariantObserverSupport
             end
             witness=sensorRedundancySupport.witness(cfg,P,kL,kG,kI,m.gyroGainNormalized);
             [jointL,jointG,jointM]=sensorRedundancySupport.blocks(witness,m.gnssAdequacyEnabled);
-            for block=[jointL,jointG,jointM]
-                constraints=[constraints,block{1}<=-z.margin*eye(8)]; %#ok<AGROW>
-            end
-            cost=0;weights=[kI(1);kI(2);kI(2);kI(3);0];
+            commonBlocks=[jointL,jointG,jointM];counts=[numel(jointL),numel(jointG),numel(jointM)];
+            weights=[kI(1);kI(2);kI(2);kI(3);0];
             for j=1:numel(m.points)
-                p=m.points(j);H=m.Hnominal;
+                p=m.points(j);H=m.motion(p.motion).H;
                 % Each noise-objective case has a global pose anchor. Invariant
                 % outputs alone cannot remove global translation/rotation.
                 A=P*(z.sigma*(m.A-m.gyroGainNormalized*m.e8*m.e8.')-p.leak*(m.C.'*m.C))-z.sigma*kL*m.C.'*p.S*m.C ...
                     -z.sigma*kG*p.w*m.Cp.'*m.Cp-z.sigma*H.'*diag(weights)*H;
-                % A sensor sample driving several outputs remains ONE input.
-                auxiliary=-z.sigma*H.'*diag(weights)*m.DI;
-                auxiliary(:,5)=auxiliary(:,5)-P*m.e8*(m.gyroGainNormalized*z.headingLengthM*z.noise.gyroRadps/z.sigma);
-                PG=[-kL*m.C.'*p.S*m.DL,-kG*p.w*m.Cp.'*m.DG,auxiliary,P*m.B*m.Dd];
-                Q=sdpvar(size(PG,2));
-                constraints=[constraints,A+A.'+z.sigma^2*eye(8)<=0,[Q,PG.';PG,P]>=0]; %#ok<AGROW>
-                cost=cost+trace(Q);
+                constraints=[constraints,A+A.'+z.sigma^2*eye(8)<=0]; %#ok<AGROW>
             end
-            result=optimize(constraints,cost,sdpsettings('solver',char(z.solver),'verbose',0));
-            assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleInvariantDesign','Invariant synthesis failed: %s',result.info);
+            % The Cartesian operating-point average separates by primitive
+            % noise group. Scalar Schur epigraphs give EXACTLY trace(G'*P^-1*G)
+            % without introducing a large free matrix Q for every pair.
+            cost=0;
+            for p=m.posePoints
+                PG=[-kL*m.C.'*p.S*m.DL,-kG*p.w*m.Cp.'*m.DG];
+                [bound,blocks]=noiseEnergy(PG,P);
+                constraints=[constraints,blocks];cost=cost+bound/numel(m.posePoints); %#ok<AGROW>
+            end
+            for motion=m.motion
+                PG=-z.sigma*motion.H.'*diag(weights)*motion.DI;
+                % One primitive sample remains one full state-input column.
+                PG(:,5)=PG(:,5)-P*m.e8*(m.gyroGainNormalized*z.headingLengthM*z.noise.gyroRadps/z.sigma);
+                [bound,blocks]=noiseEnergy(PG,P);
+                constraints=[constraints,blocks];cost=cost+bound/numel(m.motion); %#ok<AGROW>
+            end
+            [bound,blocks]=noiseEnergy(P*m.B*m.Dd,P);
+            constraints=[constraints,blocks];cost=cost+bound;
+            fprintf('Verifying %d common LMIs with %d noise operating points\n',sum(counts),numel(m.points));
+            [result,solveAudit]=solveCommonObserverLmis(constraints,cost,commonBlocks,counts,witness,z);
             Pv=value(P);Pv=(Pv+Pv.')/2;
             weights=value(kI);
             % Homogeneous normalization preserves all matched feedback ratios
             % while creating a clear margin in the lambda-normalized LMIs.
             Pv=1.01*Pv;weights=1.01*weights;
-            design=struct('architecture',"intrinsic-vector-iss-v6-five-output",'sigma',z.sigma,'P',Pv, ...
+            design=struct('architecture',"intrinsic-vector-iss-v7-matched-output",'sigma',z.sigma,'P',Pv, ...
                 'kappaL',1.01*value(kL),'kappaG',1.01*value(kG),'auxiliaryWeights',weights, ...
                 'gyroGainNormalized',m.gyroGainNormalized,'gyroDesign',m.gyroDesign, ...
                 'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem,'solverInfo',string(result.info));
+            design.constraintGeneration=solveAudit;
             design.inputs=invariantObserverSupport.inputs(cfg);
             design.verification=invariantObserverSupport.verify(design,cfg);
             assert(design.verification.certified,'VehicleLocalization:InfeasibleInvariantDesign', ...
@@ -147,7 +175,7 @@ classdef invariantObserverSupport
             worst=max([joint.worstLidarEigenvalue,joint.worstGnssEigenvalue,joint.worstMixedEigenvalue]);
             regional=invariantIssSupport.regionalCertificate(design,cfg,joint);
             v=struct('certified',worst<0 && min(eig(P))>=1-1e-6 && design.kappaL>=0 && design.kappaG>=0 ...
-                && joint.certified && regional.certified && authority.verified ...
+                && joint.certified && regional.certified && authority.verified && m.motionAvailable ...
                 && design.sigma==cfg.invariantObserver.sigma && design.lambda>0 ...
                 && design.lambda==cfg.invariantObserver.lambda ...
                 && norm(design.P-design.P.','fro')<=1e-10*max(1,norm(P,'fro')) ...
@@ -163,6 +191,7 @@ classdef invariantObserverSupport
                 'conditionalNonlinearGainConditionsVerified',joint.certified, ...
                 'feedbackAuthority',authority, ...
                 'gyroAvailabilityRequired',true, ...
+                'allAuxiliaryOutputsRequired',true,'motionAvailabilityConfigured',m.motionAvailable, ...
                 'scope',regional.scope);
             if ~v.certified
                 v.regionalIss.certified=false;
@@ -206,7 +235,10 @@ function m=model(cfg,storedGyro)
     validateattributes([r.informativeLidarMismatch,r.degradedLidarMismatch],{'double'},{'finite','nonnegative'});
     assert(r.bilinearSplit>0 && r.bilinearSplit<1 && r.gnssSplit>0 && r.gnssSplit<1 ...
         && r.lambda==z.lambda,'VehicleLocalization:InvalidRedundancyDomain','Require valid common theory bounds and Young splits.');
-    m.gnssAdequacyEnabled=z.velocityAvailable && z.accelerationAvailable;
+    m.motionAvailable=z.velocityAvailable && z.accelerationAvailable;
+    m.gnssAdequacyEnabled=true;
+    validateattributes(z.minimumDirectRatesPerSecond,{'double'},{'real','finite','positive','numel',2});
+    validateattributes(r.nominalDecayRatePerSecond,{'double'},{'real','finite','positive','scalar'});
     if isfield(z,'headingGainLimits')
         validateattributes(z.headingGainLimits,{'double'},{'real','finite','positive','numel',2});
         assert(z.angularMetricDiagonal,'VehicleLocalization:FeedbackAuthorityMetric','Heading caps require the declared diagonal angular metric.');
@@ -227,26 +259,42 @@ function m=model(cfg,storedGyro)
     m.B=zeros(8,3);m.B(3,1)=1;m.B(6,2)=1;m.B(8,3)=1;m.e7=zeros(8,1);m.e7(7)=1;m.e8=zeros(8,1);m.e8(8)=1;
     m.e1=zeros(8,1);m.e1(1)=1;m.e2=zeros(8,1);m.e2(2)=1;m.e5=zeros(8,1);m.e5(5)=1;
     m.DL=diag([n.lidarPositionM,n.lidarPositionM,ell*n.lidarHeadingRad]);m.DG=n.gnssPositionM*eye(2);
-    N=invariantIssSupport.measurementSecant([s.maximumSpeed;0],zeros(2,1), ...
-        [s.maximumSpeed;0],zeros(2,1),cfg);
-    N=N*diag([n.velocityMps,n.velocityMps,n.accelerationMps2,n.accelerationMps2,n.gyroRadps]);
-    % The zero-valued direction constraint has an upstream interface-error
-    % budget; it is not an independent sensor measurement.
-    N(:,6)=0;N(4,6)=n.velocityMps;
-    m.DI=diag(sigma.^-[2,3,3,2,2])*N;
-    m.Dd=diag([n.jerkMps3/sigma^3,n.jerkMps3/sigma^3,ell*z.yawAccelerationRadps2/sigma^2]);
-    nominal=zeros(8,1);nominal(2)=s.maximumSpeed;
-    [~,H]=invariantObserverSupport.outputs(nominal,0,cfg);
+    D=invariantObserverSupport.outputNormalization(cfg,sigma);
     E=diag([ones(1,6),ell,ell]);T=diag(sigma.^[1,2,3,1,2,3,1,2]);
-    m.Hnominal=diag(sigma.^-[2,3,3,2,2])*H*(E\T);
-    available=[z.velocityAvailable,z.velocityAvailable&&z.accelerationAvailable, ...
-        z.velocityAvailable&&z.accelerationAvailable,z.velocityAvailable,true];
-    m.Hnominal(~available,:)=0;
-    sw=z.weakPositionStrength;m.points=struct('S',{eye(3),eye(3),diag([sw,sw,1]),zeros(3),diag([sw,sw,1])}, ...
+    speedPoints=unique([r.minimumCourseSpeed,(r.minimumCourseSpeed+s.maximumSpeed)/2,s.maximumSpeed]);
+    accelerationPoints=s.maximumAcceleration*[0,1,-1,0,0;0,0,0,1,-1];
+    m.motion=struct('H',{},'DI',{});
+    for speed=speedPoints
+        for j=1:size(accelerationPoints,2)
+            a=accelerationPoints(:,j);nominal=zeros(8,1);nominal(2)=speed;nominal([3,6])=a;
+            N=invariantIssSupport.measurementSecant([speed;0],a,[speed;0],a);
+            N=N*diag([n.velocityMps,n.velocityMps,n.accelerationMps2,n.accelerationMps2,n.gyroRadps]);
+            % One primitive sample remains one correlated input column.
+            N(:,6)=0;N(4,6)=n.velocityMps;
+            [~,H]=invariantObserverSupport.outputs(nominal,0,cfg);
+            m.motion(end+1)=struct('H',D*H*(E\T),'DI',D*N);
+        end
+    end
+    m.Dd=diag([n.jerkMps3/sigma^3,n.jerkMps3/sigma^3,ell*z.yawAccelerationRadps2/sigma^2]);
+    sw=z.weakPositionStrength;points=struct('S',{eye(3),eye(3),diag([sw,sw,1]),zeros(3),diag([sw,sw,1])}, ...
         'w',{0,z.nominalGnssWeight,z.nominalGnssWeight,z.nominalGnssWeight,0},'leak',{0,0,0,0,0});
     [found,index]=ismember(string(z.operatingPoints),["lidar","lidarGnss","weakLidarGnss","gnssOnly","weakLidar"]);
     assert(all(found) && ~isempty(index),'VehicleLocalization:InvalidInvariantDesign','Unknown invariant-noise operating point.');
-    m.points=m.points(index);
+    m.posePoints=points(index);m.points=struct('S',{},'w',{},'leak',{},'motion',{});
+    for j=index
+        for motion=1:numel(m.motion)
+            m.points(end+1)=struct('S',points(j).S,'w',points(j).w,'leak',0,'motion',motion);
+        end
+    end
+end
+
+function [cost,constraints]=noiseEnergy(G,P)
+% Sum primitive-column energies without splitting correlated output effects.
+    q=sdpvar(size(G,2),1);constraints=[];
+    for j=1:size(G,2)
+        constraints=[constraints,[q(j),G(:,j).';G(:,j),P]>=0]; %#ok<AGROW>
+    end
+    cost=sum(q);
 end
 
 function d=gyroDesign(z)
@@ -268,7 +316,11 @@ function v=feedbackAuthority(d,cfg)
         'positionG',d.kappaG*inverse(1,1), ...
         'velocityDirection',d.auxiliaryWeights(3)*inverse(5,5), ...
         'headingL',d.kappaL*inverse(7,7),'headingDirection',d.auxiliaryWeights(3)*inverse(7,7));
+    speedFactor=(z.redundancy.minimumCourseSpeed/cfg.iss.maximumSpeed)^2;
+    v.minimumDirectRatesPerSecond=z.theta*speedFactor*d.auxiliaryWeights(1:2).'.*[inverse(2,2),inverse(3,3)];
+    v.requiredDirectRatesPerSecond=z.minimumDirectRatesPerSecond(:).';
     tolerance=1e-6;
+    v.verified=all(v.minimumDirectRatesPerSecond>=v.requiredDirectRatesPerSecond*(1-tolerance));
     if isfield(z,'matchedGainLimits')
         v.verified=v.verified && all([v.positionL,v.positionG,v.velocityDirection]<=z.matchedGainLimits*(1+tolerance));
     end

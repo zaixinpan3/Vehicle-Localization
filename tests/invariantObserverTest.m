@@ -8,9 +8,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
     methods (Test)
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=invariantObserverSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,9840);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,44640);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,9840);
+            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,44640);
             testCase.verifyTrue(v.finiteInvariantSecantsCertified);
             testCase.verifyTrue(v.numericalInvariantRadiusCertified);
             testCase.verifyGreaterThan(v.regionalIss.normalizedRadius,0);
@@ -102,6 +102,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyGreaterThan(design.auxiliaryWeights(1),0);
             testCase.verifyFalse(isfield(design,'speedGainNormalized'));
             testCase.verifyFalse(isfield(c.invariantDesign,'speedDesign'));
+        end
+        function matchedRatesAndMetricDecayMeetTheirDesignRequirements(testCase)
+            c=freshObserverTestConfig();v=c.invariantDesign.verification;
+            testCase.verifyGreaterThanOrEqual(v.feedbackAuthority.minimumDirectRatesPerSecond, ...
+                c.invariantObserver.minimumDirectRatesPerSecond*(1-1e-6));
+            testCase.verifyGreaterThanOrEqual(v.regionalIss.alpha, ...
+                c.invariantObserver.redundancy.nominalDecayRatePerSecond);
+            testCase.verifyTrue(v.allAuxiliaryOutputsRequired);
         end
         function eightOutputCertificateCannotBeReused(testCase)
             c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='intrinsic-vector-iss-v5';

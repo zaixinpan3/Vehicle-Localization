@@ -12,8 +12,8 @@ classdef fiveInvariantOutputsTest < matlab.unittest.TestCase
     methods (Test)
         function exactlyTheFiveRequestedOutputsAreReturned(testCase)
             c=mncavFullObserverConfig();x=[1;3;1;2;4;-2;.2;.3];beta=.1;
-            [h,H]=invariantObserverSupport.outputs(x,beta,c);V=c.iss.maximumSpeed;
-            expected=[25/(2*V);-5/V;-10/V;-3*sin(.3)+4*cos(.3);c.invariantObserver.headingLengthM*.3];
+            [h,H]=invariantObserverSupport.outputs(x,beta,c);
+            expected=[25;-5;-10;-3*sin(.3)+4*cos(.3);.3];
             testCase.verifyEqual(h,expected,AbsTol=1e-13);
             testCase.verifySize(H,[5,8]);
             testCase.verifyEqual(H(:,[1,4]),zeros(5,2),AbsTol=0);
@@ -23,14 +23,14 @@ classdef fiveInvariantOutputsTest < matlab.unittest.TestCase
             y=x;y(8)=y(8)+.2;
             a=invariantObserverSupport.outputs(x,.1,c);b=invariantObserverSupport.outputs(y,.1,c);
             testCase.verifyEqual(b(1:4),a(1:4),AbsTol=0);
-            testCase.verifyEqual(b(5)-a(5),.2*c.invariantObserver.headingLengthM,AbsTol=1e-14);
+            testCase.verifyEqual(b(5)-a(5),.2,AbsTol=1e-14);
         end
         function localQuotientCoordinatesAreRecovered(testCase,localAngle)
             c=mncavFullObserverConfig();beta=.1;speed=12;parallel=.6;normal=1.2;rate=.03;
             x=[0;speed;parallel;0;0;normal;-beta-localAngle;rate];
             h=invariantObserverSupport.outputs(x,beta,c);
-            s=sqrt(2*c.iss.maximumSpeed*h(1));
-            recovered=[s;c.iss.maximumSpeed*h(2:3)/s;asin(h(4)/s);h(5)/c.invariantObserver.headingLengthM];
+            s=sqrt(h(1));
+            recovered=[s;h(2:3)/s;asin(h(4)/s);h(5)];
             testCase.verifyEqual(recovered,[speed;parallel;normal;localAngle;rate],AbsTol=2e-14);
         end
         function jacobianHasFiveIndependentRowsAndTheRotationNullDirection(testCase)
@@ -55,7 +55,7 @@ classdef fiveInvariantOutputsTest < matlab.unittest.TestCase
             c=mncavFullObserverConfig();
             p=invariantObserverSupport.measurements(NaN,NaN,20,-30,.1,NaN,false,true,true,c);
             testCase.verifyEqual(p.valid,logical([0;0;0;0;1]));
-            testCase.verifyEqual(p.value,[0;0;0;0;.1*c.invariantObserver.headingLengthM],AbsTol=0);
+            testCase.verifyEqual(p.value,[0;0;0;0;.1],AbsTol=0);
             testCase.verifyFalse(isfield(p,'betaRate'));
         end
         function missingAccelerationKeepsSpeedDirectionAndGyro(testCase)
@@ -85,6 +85,24 @@ classdef fiveInvariantOutputsTest < matlab.unittest.TestCase
             [actual,expected]=bilinearControlDifference();
             testCase.verifyEqual(actual,expected,AbsTol=2e-12);
         end
+        function everySensorFamilyCreditsSquaredSpeed(testCase)
+            c=mncavFullObserverConfig();c.invariantObserver.redundancy.speedPartitions=1;
+            c.invariantObserver.redundancy.exactGnssLeverEnclosure=false;
+            w=sensorRedundancySupport.witness(c,eye(8),1,1,ones(3,1),1);
+            [a,b,d]=sensorRedundancySupport.blocks(w);
+            w.speedSquaredGain=0;[a0,b0,d0]=sensorRedundancySupport.blocks(w);
+            E=eye(8);expected=-2*(w.domain.minimumCourseSpeed/w.inputs.maximumSpeed)^2*(E(:,2)*E(:,2).');
+            for pair={{a,a0},{b,b0},{d,d0}}
+                p=pair{1};testCase.verifyEqual(p{1}{1}-p{2}{1},expected,AbsTol=2e-12);
+            end
+        end
+        function numericalNormalizationPreservesThePhysicalOutputs(testCase)
+            c=mncavFullObserverConfig();x=[0;3;1;0;4;-2;.2;.3];
+            h=invariantObserverSupport.outputs(x,.1,c);D=invariantObserverSupport.outputNormalization(c,1);
+            V=c.iss.maximumSpeed;
+            expected=[25/(2*V);-5/V;-10/V;-3*sin(.3)+4*cos(.3);c.invariantObserver.headingLengthM*.3];
+            testCase.verifyEqual(D*h,expected,AbsTol=1e-13);
+        end
     end
 end
 
@@ -105,7 +123,7 @@ function minimum=pairBoundMinimum()
             speed=c.invariantObserver.redundancy.minimumCourseSpeed+rand(stream)*(V-c.invariantObserver.redundancy.minimumCourseSpeed);
             angle=2*pi*rand(stream);a=A*rand(stream)*[cos(angle);sin(angle)];
             x=[0;speed;a(1);0;0;a(2);0;.03];[~,H]=invariantObserverSupport.outputs(x,0,c);
-            pair=t^-3*H(2:3,:)*B;
+            D=invariantObserverSupport.outputNormalization(c);pair=D(2:3,2:3)*H(2:3,:)*B;
             lower=(1-eta)*(speed/V)^2*Da-(1/eta-1)*(A/(t*V))^2*Dv;
             minimum=min(minimum,min(eig(pair.'*pair-lower)));
         end

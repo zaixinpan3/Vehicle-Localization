@@ -25,10 +25,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         end
         function sharedSensorVectorReconstructsEveryPacketIncrement(testCase)
             c=mncavFullObserverConfig();v=[12;.4];a=[.3;1.2];dv=[.2;-.1];da=[-.04;.08];dr=.003;
-            N=invariantIssSupport.measurementSecant(v,a,v+dv,a+da,c);
+            N=invariantIssSupport.measurementSecant(v,a,v+dv,a+da);
             p=invariantObserverSupport.measurements(v(1),v(2),a(1),a(2),.1,0,true,true,true,c);
             m=invariantObserverSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),.1+dr,0,true,true,true,c);
-            testCase.verifyEqual(m.value-p.value,N*[dv;da;dr],AbsTol=2e-14);
+            testCase.verifyEqual(m.value-p.value,N*[dv;da;dr],AbsTol=3e-13);
             testCase.verifySize(N,[5,5]);
             testCase.verifyEqual(N(4,:),zeros(1,5),AbsTol=0);
             testCase.verifyGreaterThan(norm(N(2:3,3:4)),0);
@@ -109,7 +109,7 @@ end
 
 function ratios=regionalDissipation(c)
     d=c.invariantDesign;r=d.verification.regionalIss;t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;
-    B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=diag(t.^-[2,3,3,2,2]);
+    B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=invariantObserverSupport.outputNormalization(c);
     E=eye(8);C=E([1,4,7],:);Cp=C(1:2,:);K=diag([d.auxiliaryWeights([1,2,2,3]);0]);
     stream=RandStream('mt19937ar','Seed',2302);ratios=zeros(180,1);
     for k=1:numel(ratios)
@@ -129,7 +129,7 @@ function ratios=regionalDissipation(c)
             % Rank-one PSD LiDAR with cross coupling. It satisfies the scalar
             % bounds but does not dominate the former diagonal heading floor.
             coupling=c.iss.maximumPositionHeadingCoupling*[cos(k);sin(k)];h=c.iss.minimumHeadingStrength;
-            S=[coupling*coupling.'/h,coupling;coupling.',h];valid(1:4)=false;
+            S=[coupling*coupling.'/h,coupling;coupling.',h];
         end
         mismatch=c.invariantObserver.redundancy.informativeLidarMismatch;
         W=S-mismatch*eye(3)+.01*[0,1,0;-1,0,0;0,0,0];

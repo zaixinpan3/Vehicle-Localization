@@ -254,6 +254,9 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     estimate.diagnostics.numericalInvariantRadiusCertified=certificate.numericalInvariantRadiusCertified;
     estimate.diagnostics.regionalIss=certificate.regionalIss;
     estimate.diagnostics.gyroOutputAvailabilitySatisfied=all(gyroValid);
+    estimate.diagnostics.allAuxiliaryOutputsAvailable=velocityValid & accelerationValid & gyroValid ...
+        & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable;
+    estimate.diagnostics.auxiliaryAvailabilityContractSatisfied=all(estimate.diagnostics.allAuxiliaryOutputsAvailable);
 end
 
 function valid=motionValidity(h,name,n)
