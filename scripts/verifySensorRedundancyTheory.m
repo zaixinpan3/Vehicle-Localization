@@ -7,32 +7,31 @@ function report=verifySensorRedundancyTheory(options)
     arguments
         options.Witness (1,1) struct=struct()
         options.Config (1,1) struct=mncavFullObserverConfig()
-        options.MinimumGnssSpeed (1,1) double {mustBeReal,mustBeFinite,mustBePositive}=10
+        options.MinimumCourseSpeed (1,1) double {mustBeReal}=NaN
         options.OperatorMismatch (1,1) double {mustBeReal,mustBeFinite,mustBeNonnegative}=.001
     end
     root=setupVehicleLocalization();cfg=options.Config;
     if ~isfield(cfg,'invariantDesign')
         external=fullfile(fileparts(root),'RobustVehicleLocalization','external');
         addpath(genpath(fullfile(external,'YALMIP')));addpath(genpath(fullfile(external,'sedumi')));
-        [gyro,speed]=invariantObserverSupport.scalarDesigns(cfg);
-        inputs=sensorRedundancySupport.inputs(cfg,gyro.physicalGain/cfg.invariantObserver.sigma, ...
-            speed.physicalGain/cfg.invariantObserver.sigma);
+        gyro=invariantObserverSupport.scalarGyroDesign(cfg);
+        inputs=sensorRedundancySupport.inputs(cfg,gyro.physicalGain/cfg.invariantObserver.sigma);
     else
         inputs=theoryInputs(cfg);
     end
     if isempty(fieldnames(options.Witness))
         domain=cfg.invariantObserver.redundancy;
-        domain.minimumGnssSpeed=options.MinimumGnssSpeed;
+        if ~isnan(options.MinimumCourseSpeed),domain.minimumCourseSpeed=options.MinimumCourseSpeed;end
         domain.informativeLidarMismatch=options.OperatorMismatch;
         domain.degradedLidarMismatch=options.OperatorMismatch;
         validateDomain(domain,inputs);
         external=fullfile(fileparts(root),'RobustVehicleLocalization','external');
         addpath(genpath(fullfile(external,'YALMIP')));addpath(genpath(fullfile(external,'sedumi')));
         yalmip('clear');Pc=sdpvar(3,3);Ph=sdpvar(2,2);P=blkdiag(Pc,Pc,Ph);
-        gains=sdpvar(4,1);witness=struct('inputs',inputs,'domain',domain,'P',P, ...
-            'kappaL',gains(1),'kappaG',gains(2),'accelerationGain',gains(3),'directionGain',gains(4));
+        gains=sdpvar(5,1);witness=struct('inputs',inputs,'domain',domain,'P',P, ...
+            'kappaL',gains(1),'kappaG',gains(2),'accelerationGain',gains(3),'directionGain',gains(4),'speedSquaredGain',gains(5));
         [L,G,M]=sensorRedundancySupport.blocks(witness);constraints=[P>=eye(8),P<=1e5*eye(8), ...
-            Ph(1,2)==0,gains>=0];
+            Ph(1,2)==0,gains>=1e-7];
         if cfg.invariantObserver.balancedPoseMetric
             constraints=[constraints,Ph<=Pc(1:2,1:2)];
         end
@@ -45,7 +44,7 @@ function report=verifySensorRedundancyTheory(options)
         % Homogeneous rescaling preserves all matched feedback ratios and
         % moves the lambda-normalized inequalities away from solver tolerance.
         witness.P=1.01*value(P);witness.P=(witness.P+witness.P.')/2;
-        for name=["kappaL","kappaG","accelerationGain","directionGain"]
+        for name=["kappaL","kappaG","accelerationGain","directionGain","speedSquaredGain"]
             witness.(name)=1.01*value(witness.(name));
         end
         witness.solverStatus=result.problem;
@@ -62,7 +61,7 @@ function report=verifySensorRedundancyTheory(options)
         +norm(P(1:6,7:8),'fro')+norm(P(1:3,4:6),'fro');
     assert(rotationStructure<1e-9*max(1,norm(P,'fro')), ...
         'VehicleLocalization:InvalidRedundancyMetric','The proof requires the declared rotation-invariant metric.');
-    for name=["kappaL","kappaG","accelerationGain","directionGain"]
+    for name=["kappaL","kappaG","accelerationGain","directionGain","speedSquaredGain"]
         validateattributes(witness.(name),{'double'},{'real','finite','positive','scalar'});
     end
     [L,G,M]=sensorRedundancySupport.blocks(witness);
@@ -73,23 +72,23 @@ function report=verifySensorRedundancyTheory(options)
     report=struct('witness',witness,'commonLmiVerified',verified, ...
         'lidarVertices',numel(L),'gnssBernsteinVertices',numel(G), ...
         'worstLidarEigenvalue',worstL,'worstGnssEigenvalue',worstG, ...
-        'worstMixedEigenvalue',worstM,'mixedVertices',numel(M),'coversComplementaryInformationAtRest',true, ...
+        'worstMixedEigenvalue',worstM,'mixedVertices',numel(M),'zeroSpeedCertified',false, ...
         'minimumMetricEigenvalue',min(eig(P)), ...
         'coversGnssAbsent',true,'coversZeroLidarInformation',true, ...
-        'minimumGnssCourseSpeed',witness.domain.minimumGnssSpeed, ...
+        'minimumCourseSpeed',witness.domain.minimumCourseSpeed, ...
+        'speedInterval',[witness.domain.minimumCourseSpeed,inputs.maximumSpeed], ...
         'appliesToDefaultRuntimeGains',false,'runtimeModified',false, ...
-        'scope',"One continuous observer with a common metric/gains; nonlinear local ISS follows under the explicit geometry, motion, bias and auxiliary-input conditions of Section 0.6; temporary runtime gains are verified separately");
+        'scope',"One continuous observer with a common metric/gains; nonlinear local ISS follows only on the declared strictly positive speed interval and under the geometry, bias and auxiliary-input conditions; zero-speed runtime is not certified; temporary runtime gains are verified separately");
     if nargout==0,disp(rmfield(report,'witness'));end
 end
 
 function inputs=theoryInputs(cfg)
-    inputs=sensorRedundancySupport.inputs(cfg,cfg.invariantDesign.gyroGainNormalized, ...
-        cfg.invariantDesign.speedGainNormalized);
+    inputs=sensorRedundancySupport.inputs(cfg,cfg.invariantDesign.gyroGainNormalized);
 end
 
 function validateDomain(d,p)
-    assert(d.minimumGnssSpeed>0 && d.minimumGnssSpeed<=p.maximumSpeed, ...
-        'VehicleLocalization:UnobservableGnssHeading','Position-only GNSS needs the declared positive-motion domain for full-state convergence.');
+    assert(d.minimumCourseSpeed>0 && d.minimumCourseSpeed<=p.maximumSpeed, ...
+        'VehicleLocalization:InvalidIssSpeedInterval','All sensor families require the declared strictly positive course-speed interval.');
     validateattributes(d.speedPartitions,{'double'},{'finite','integer','positive','scalar'});
     sensorRedundancySupport.courseControls(p.maximumCourseRate,d.coursePartitions);
     validateattributes(d.informativeLidarMismatch,{'double'},{'finite','nonnegative','scalar'});

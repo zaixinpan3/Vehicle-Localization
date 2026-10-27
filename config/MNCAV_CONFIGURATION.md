@@ -66,6 +66,16 @@ factories and saved measured-course gains were
 removed on 2026-10-13; retrieve their historical code from Git if needed.
 The lateral vehicle parameters and their synthesis workflow are unchanged.
 
+The global ISS speed domain is the true course-speed interval
+`[invariantObserver.redundancy.minimumCourseSpeed, iss.maximumSpeed]`, with a
+strictly positive lower bound, for every L/G/M sensor family. The ordinary
+configuration uses [10,15] m/s. This is separate from the lateral LPV
+longitudinal-speed interval. The main runtime has no speed denominator and can
+execute at rest, but reports no ISS certification there. Its speed-squared
+output is active in matched feedback; the projected-speed replacement and
+scalar speed-gain synthesis have been removed. This architecture change
+invalidates earlier gains and requires a fresh solve.
+
 ## Temporary small-offset global design
 
 `mncavSmallOffsetObserverConfig()` selects an explicit design scenario with

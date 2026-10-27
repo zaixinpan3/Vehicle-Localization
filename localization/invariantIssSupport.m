@@ -5,7 +5,7 @@ classdef invariantIssSupport
 % The finite identities below accommodate this observer's estimated-state
 % Jacobian gain; a constant-gain theorem is not applied to it verbatim.
     methods (Static)
-        function [F,H,Hspeed,Hgnss]=secants(x,xhat,beta,betaRate,cfg)
+        function [F,H,Hgnss]=secants(x,xhat,beta,betaRate,cfg)
         % f(x)-f(xhat)=F*(x-xhat), likewise for all nonlinear outputs.
         % These identities are finite differences, including at equal states.
             arguments
@@ -32,7 +32,6 @@ classdef invariantIssSupport
             H(6,[2,5])=c*nc.';H(6,7)=-cardinal*dc.'*v;
             H(7,[3,6])=c*d.';H(7,7)=cardinal*n.'*a;
             H(8,[3,6])=c*n.';H(8,7)=-cardinal*d.'*a;
-            Hspeed=zeros(1,8);Hspeed([2,5])=c*dc.';Hspeed(7)=cardinal*nc.'*v;
             Hgnss=zeros(2,8);Hgnss(:,[1,4])=eye(2);
             Hgnss(:,7)=cardinal*[d,n]*J*cfg.gnss.outputPoint.bodyOffset(:);
         end
@@ -59,7 +58,7 @@ classdef invariantIssSupport
         % Uniform over the common L/G/M families, subject to their contracts.
         % No actual-map, sampled-system or upstream LPV-domain assertion.
         % With B=diag(theta.^degrees./[1,...,1,ell,ell]), eps=B\(x-xhat),
-        % true |v|<=V, |a|<=A, |r+betaRate|<=Q, and v=s*d(psi+beta), s>=0:
+        % true 0<s_min<=|v|<=V, |a|<=A, |r+betaRate|<=Q, and v=s*d(psi+beta):
         % He(P*A0)<=-mu*I. The exact nonlinear remainder obeys
         % 2*eps'*P*remainder <= c1*|eps|^3+c2*|eps|^4 on |eps|<=outer.
         % For each normalized invariant row, |Htrue|<=h and |Hessian|<=L;
@@ -94,14 +93,11 @@ classdef invariantIssSupport
             active=[z.velocityAvailable;z.velocityAvailable&&z.accelerationAvailable; ...
                 z.velocityAvailable&&z.accelerationAvailable;false;z.velocityAvailable; ...
                 z.velocityAvailable;z.accelerationAvailable;z.accelerationAvailable];
-            k=k.*active;E=eye(8);pa=norm(P*E(:,[3,6]),2);pv=norm(P*E(:,[2,5]),2);
+            k=k.*active;E=eye(8);pa=norm(P*E(:,[3,6]),2);
             c1=2*pa*(t*V/ell^2+2*Q*t/ell+2*t^2/ell) ...
                 +design.kappaG*norm(cfg.gnss.outputPoint.bodyOffset)*hp^2 ...
                 +3*t*sum(k.*h.*L);
             c2=2*pa*t^3/ell^2+t*sum(k.*L.^2);
-            if z.velocityAvailable
-                c1=c1+2*t*design.speedGainNormalized*pv*(hp+(hp+vt/ell^2)/2);
-            end
             worst=max([joint.worstLidarEigenvalue,joint.worstGnssEigenvalue,joint.worstMixedEigenvalue]);
             mu=t*(design.lambda-worst);ev=eig(P);pmin=min(ev);pmax=max(ev);
             valid=joint.certified && pmin>0 && mu>0 && all(isfinite([c1,c2,mu,pmin,pmax]));
@@ -112,11 +108,12 @@ classdef invariantIssSupport
                 inputLimit=sqrt(2*alpha*level/gamma);
             end
             c=struct('certified',valid && radius>0,'normalizedRadius',radius, ...
+                'speedInterval',[z.redundancy.minimumCourseSpeed,V],'zeroSpeedCertified',false, ...
                 'outerRadius',outer,'lyapunovLevel',level,'alpha',alpha,'gamma',gamma, ...
                 'normalizedAdditiveInputLimit',inputLimit,'nominalDissipation',mu, ...
                 'cubicRemainderBound',c1,'quarticRemainderBound',c2, ...
                 'minimumMetricEigenvalue',pmin,'maximumMetricEigenvalue',pmax, ...
-                'scope',"Conditional continuous eight-state ISS: V(0)<level and ||d||_infinity<inputLimit; true motion, gyro availability and a common L/G/M finite-overlap contract must hold throughout. Input d includes upstream interface error, sensor error and model residual. This does not certify actual maps, the full lateral cascade or sampling.");
+                'scope',"Conditional continuous eight-state ISS: V(0)<level and ||d||_infinity<inputLimit; true speed must remain in the declared strictly positive interval; the other motion bounds, gyro availability and a common L/G/M finite-overlap contract must hold throughout. Zero-speed execution is defined but is outside this certificate. Input d includes upstream interface error, sensor error and model residual. This does not certify actual maps, the full lateral cascade or sampling.");
         end
     end
 end

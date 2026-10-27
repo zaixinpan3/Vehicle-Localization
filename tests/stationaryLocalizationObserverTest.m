@@ -27,6 +27,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyFalse(s.correctionApplied(1));
             testCase.verifyTrue(all(s.correctionApplied(2:end)));
             testCase.verifyEqual(r.internalState(1,:),f.cfg.initialState.',AbsTol=0);
+            testCase.verifyFalse(r.diagnostics.zeroSpeedCertified);
+            testCase.verifyFalse(any(r.diagnostics.observedSpeedWithinIssDomain));
+            testCase.verifyFalse(r.diagnostics.observedMotionEnvelopeSatisfied);
         end
         function gnssPositionAndGyroLeaveStationaryYawOffset(testCase)
             f=fixture();f.data=rmfield(f.data,'lidar');t=f.data.highRate.time;n=numel(t);
@@ -101,11 +104,18 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyLessThan(abs(r.headingUnwrapped(end)-(pi+.02)),1e-4);
         end
         function overlapConvergesAtStandstillWithoutLateralAiding(testCase)
-            f=overlapFixture();r=execute(f);
+            % Numerical settling example only; zero speed has no ISS claim.
+            % Re-synthesis changes the response time after speed substitution
+            % is removed, so retain the accuracy goal over a longer horizon.
+            f=overlapFixture(30);r=execute(f);
             testCase.verifyTrue(all(r.diagnostics.lidarOverlap.available));
             testCase.verifyLessThan(norm(r.position(end,:)),.01);
             testCase.verifyLessThan(abs(r.heading(end)),deg2rad(.05));
             testCase.verifyTrue(all(r.diagnostics.lidarPoseSupport.fullPoseSupported));
+            testCase.verifyTrue(all(isfinite(r.internalState),'all'));
+            testCase.verifyFalse(r.diagnostics.zeroSpeedCertified);
+            fprintf('STATIONARY OVERLAP t=30 position=%.12g headingDeg=%.12g\n', ...
+                norm(r.position(end,:)),abs(rad2deg(r.heading(end))));
         end
         function overlapReliabilityZeroEqualsMissingLidar(testCase)
             f=overlapFixture();f.data.lidarOverlap.frameReliability=zeros(size(f.lateral.time));a=execute(f);
@@ -167,8 +177,11 @@ function filter=informationFilter(normalized,cfg)
     filter=lidarInjectionSupport.filterLidarPoseInformation(D\normalized/D,cfg);
 end
 
-function f=fixture()
-    t=(0:.1:8).';n=numel(t);zero=zeros(n,1);
+function f=fixture(duration)
+    arguments
+        duration (1,1) double=8
+    end
+    t=(0:.1:duration).';n=numel(t);zero=zeros(n,1);
     h=struct('time',t,'longitudinalSpeed',zero,'longitudinalAcceleration',zero, ...
         'lateralAcceleration',zero,'yawRate',zero);
     lateral=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngle',nan(n,1), ...
@@ -185,8 +198,11 @@ end
 
 
 
-function f=overlapFixture()
-    f=fixture();f.data=rmfield(f.data,'lidar');
+function f=overlapFixture(duration)
+    arguments
+        duration (1,1) double=8
+    end
+    f=fixture(duration);f.data=rmfield(f.data,'lidar');
     means=[-6,-3;0,-3.2;6,-3;-2,4;3,4.5;7,2];
     covariance=cat(3,[2.5,0;0,.03],[2.5,0;0,.03],[2.5,0;0,.03], ...
         .04*eye(2),[.05,.01;.01,.04],[.2,.05;.05,.03]);

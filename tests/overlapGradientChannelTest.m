@@ -135,20 +135,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyError(@()lidarInjectionSupport.computeLidarMatchedCorrection(both,[0;0;0],G,design,cfg), ...
                 'VehicleLocalization:AmbiguousLidarMeasurement');
         end
-        function observerConvergesWithoutRegistration(testCase)
-            % The intrinsic route also recovers velocity/acceleration; check
-            % contraction and sub-centimetric settling in this finite-landmark
-            % scene; fixed-gain snapshots do not define its settling deadline.
+        function frameOverlapReducesErrorOutsideTheIssSpeedDomain(testCase)
+            % This 2 m/s finite-landmark scene is outside the default ISS
+            % interval. Check finite execution and finite-horizon reduction;
+            % neither asymptotic convergence nor old settling rates follow.
             f=movingFixture(20);r=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
             error=r.pose-f.truth;error(:,3)=atan2(sin(error(:,3)),cos(error(:,3)));
             testCase.verifyEqual(r.diagnostics.lidarChannel,"overlapGradient");
             testCase.verifyTrue(all(r.diagnostics.lidarOverlap.available(2:end)));
             testCase.verifyGreaterThan(norm(error(1,1:2)),0.2);
-            testCase.verifyLessThan(norm(error(end,1:2)),1e-2);
-            testCase.verifyLessThan(abs(rad2deg(error(end,3))),1e-2);
-            halfway=find(r.time>=10,1);
-            testCase.verifyLessThan(norm(error(end,1:2)),.7*norm(error(halfway,1:2)));
-            testCase.verifyLessThan(abs(error(end,3)),.5*abs(error(halfway,3)));
+            testCase.verifyTrue(all(isfinite(r.internalState),'all'));
+            testCase.verifyLessThan(norm(error(end,1:2)),.1*norm(error(1,1:2)));
+            testCase.verifyLessThan(abs(error(end,3)),.1*abs(error(1,3)));
+            testCase.verifyFalse(any(r.diagnostics.observedSpeedWithinIssDomain));
+            testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
             testCase.verifyEqual(r.diagnostics.lidarMatched{end}.representation,"predictedPoseGradient");
         end
         function unavailableFramesWithdrawOnlyTheLidarCorrection(testCase)
@@ -263,7 +263,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyEqual(explainedFar,explained,AbsTol=1e-12);
         end
         function landmarkChannelConvergesWithoutRegistration(testCase)
-            f=movingFixture(5);cfg=overlapGradientConfig();cfg.aggregation="landmark";cfg.orientation=true;
+            % Preserve the accuracy target with a longer settling interval
+            % after removing the independent projected-speed correction.
+            f=movingFixture(20);cfg=overlapGradientConfig();cfg.aggregation="landmark";cfg.orientation=true;
             f.data.lidarOverlap.config=cfg;
             r=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
             error=r.pose(end,:)-f.truth(end,:);

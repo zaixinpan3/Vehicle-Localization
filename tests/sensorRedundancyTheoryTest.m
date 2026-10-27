@@ -16,17 +16,18 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             testCase.verifyTrue(r.commonLmiVerified);
             testCase.verifyTrue(r.coversGnssAbsent);
             testCase.verifyTrue(r.coversZeroLidarInformation);
-            testCase.verifyEqual(r.lidarVertices,192);
+            testCase.verifyEqual(r.lidarVertices,48);
             testCase.verifyEqual(r.gnssBernsteinVertices,8640);
-            testCase.verifyTrue(r.coversComplementaryInformationAtRest);
-            testCase.verifyEqual(r.mixedVertices,4608);
+            testCase.verifyFalse(r.zeroSpeedCertified);
+            testCase.verifyEqual(r.speedInterval,[10,15],AbsTol=0);
+            testCase.verifyEqual(r.mixedVertices,1152);
             testCase.verifyLessThan(r.worstMixedEigenvalue,0);
             testCase.verifyLessThan(max(r.worstLidarEigenvalue,r.worstGnssEigenvalue),-.009);
         end
-        function zeroMotionCannotBeAdmittedAsFullStateGnssAdequacy(testCase)
-            r=testCase.TheoryReport;w=r.witness;w.domain.minimumGnssSpeed=0;
+        function zeroMotionCannotBeAdmittedToTheCommonIssDomain(testCase)
+            r=testCase.TheoryReport;w=r.witness;w.domain.minimumCourseSpeed=0;
             testCase.verifyError(@()verifySensorRedundancyTheory(Witness=w,Config=freshObserverTestConfig()), ...
-                'VehicleLocalization:UnobservableGnssHeading');
+                'VehicleLocalization:InvalidIssSpeedInterval');
         end
         function temporaryWitnessVerificationNeedsNoSdpSolver(testCase)
             c=freshObserverTestConfig();
@@ -74,7 +75,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
         function freshlySolvedGainsSatisfyTheNewCommonConditions(testCase)
             c=freshObserverTestConfig();v=invariantObserverSupport.verify(c.invariantDesign,c);
             testCase.verifyTrue(v.jointSensorLmiVerified);
-            testCase.verifyEqual(v.jointSensor.vertices,13440);
+            testCase.verifyEqual(v.jointSensor.vertices,9840);
             testCase.verifyTrue(v.jointSensor.mixedLidarCouplingRetained);
             testCase.verifyLessThan(v.jointSensor.worstMixedEigenvalue,0);
             testCase.verifyLessThan(v.jointSensor.worstLidarEigenvalue,0);
@@ -90,7 +91,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
                 'VehicleLocalization:InfeasibleInvariantDesign');
         end
         function changedCommonDomainCannotReuseTemporaryGains(testCase)
-            c=freshObserverTestConfig();c.invariantObserver.redundancy.minimumGnssSpeed=5;
+            c=freshObserverTestConfig();c.invariantObserver.redundancy.minimumCourseSpeed=5;
             testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
@@ -104,14 +105,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             v=invariantObserverSupport.verify(c.invariantDesign,c);
             testCase.verifyTrue(v.jointSensorLmiVerified);
             testCase.verifyFalse(v.jointSensor.gnssAdequacyEnabled);
-            testCase.verifyEqual(v.jointSensor.lidarVertices,96);
+            testCase.verifyEqual(v.jointSensor.lidarVertices,48);
             testCase.verifyEqual(v.jointSensor.gnssBernsteinVertices,0);
         end
         function zeroLeverRetainsFeasibilityWithOneWeightCorner(testCase)
             c=freshObserverTestConfig();c.gnss.outputPoint.bodyOffset=[0;0];h=c.invariantDesign;
             w=sensorRedundancySupport.witness(c,h.P,h.kappaL,h.kappaG,h.auxiliaryWeights, ...
-                h.gyroGainNormalized,h.speedGainNormalized);
-            v=sensorRedundancySupport.verify(w,true,true);
+                h.gyroGainNormalized);
+            v=sensorRedundancySupport.verify(w,true);
             testCase.verifyTrue(v.certified);
             testCase.verifyEqual(v.gnssBernsteinVertices,360);
         end

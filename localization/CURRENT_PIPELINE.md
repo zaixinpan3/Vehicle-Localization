@@ -27,7 +27,15 @@ dead-reckoning ablations remain available where declared by the entry point.
 
 The common L/G/M certificate retains translation-heading coupling and is
 checked against freshly synthesized gains. The continuous ISS result remains
-conditional on its stated sensor, motion and local-domain assumptions.
+conditional on its stated sensor, motion and local-domain assumptions. Every
+L/G/M claim uses the same strictly positive course-speed interval: [10,15] m/s
+in the ordinary configuration and [1,30] m/s in the small-offset scenario.
+All three families use the same coupled true-course dynamics enclosure.
+Squared speed is an active matched output; there is no projected-speed
+replacement. Its speed-dependent dissipation is retained jointly with the
+direction row in the G-family Bernstein enclosure. Zero-speed execution has no
+speed denominator, but is outside this ISS guarantee. See the
+[current derivation](../improved_observer_derivation.md#08a-current-squared-speed-feedback-and-positive-speed-iss-domain).
 Removing retired implementations does not establish actual-map or sampled
 stability certification.
 

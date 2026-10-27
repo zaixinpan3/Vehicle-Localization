@@ -46,7 +46,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             testCase.verifyFalse(r.observer.sampledSystemCertified);
         end
         function curbOnlyCannotCorrectLongitudinalError(testCase)
-            f=fixture();f.data=rmfield(f.data,'gnss');f.cfg.initialState(1)=2;
+            f=fixture(5);f.data=rmfield(f.data,'gnss');f.cfg.initialState(1)=2;
             f.cfg.initialState(4)=.2;
             f.data.lidar.information=repmat(diag([0,100,100]),1,1,numel(f.data.highRate.time));
             r=run(f);
@@ -76,7 +76,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             testCase.verifyEqual(a.z,b.z,AbsTol=0);
         end
         function runtimeResidualProviderUsesPostBaselinePrediction(testCase)
-            f=fixture();f.cfg.initialState(4)=.2;
+            f=fixture(5);f.cfg.initialState(4)=.2;
             f.data.lidar.evaluateResidual=@lineResidual;
             r=run(f);
             testCase.verifyEqual(r.diagnostics.lidarMatched{2}.representation,"predictedPoseResidual");
@@ -172,8 +172,11 @@ function f=turning(step)
     f.cfg.initialState=[0;v;0;0;0;v*r;0];
 end
 
-function f=fixture()
-    t=(0:.1:2).';z=zeros(size(t));n=numel(t);
+function f=fixture(duration)
+    arguments
+        duration (1,1) double=2
+    end
+    t=(0:.1:duration).';z=zeros(size(t));n=numel(t);
     h=struct('time',t,'longitudinalSpeed',8+z,'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z);
     lateral=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
     g=struct('time',t,'position',[8*t,z],'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);

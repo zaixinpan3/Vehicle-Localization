@@ -8,9 +8,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
     methods (Test)
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=invariantObserverSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,13440);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,9840);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,13440);
+            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,9840);
             testCase.verifyTrue(v.finiteInvariantSecantsCertified);
             testCase.verifyTrue(v.numericalInvariantRadiusCertified);
             testCase.verifyGreaterThan(v.regionalIss.normalizedRadius,0);
@@ -97,15 +97,21 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             corrected=invariantObserverSupport.correct(x,packet,.1,design,c);
             testCase.verifyTrue(all(isfinite(corrected)));
         end
-        function projectedSpeedCorrectionUsesTheSuppliedAngle(testCase)
+        function squaredSpeedGainIsActiveAndHasNoScalarReplacement(testCase)
             c=freshObserverTestConfig();design=invariantObserverSupport.runtime(c);
-            design.auxiliaryWeights(:)=0;
-            packet=invariantObserverSupport.measurements(8,0,0,0,0,.3,0,true,true,false,c);
-            x=[0;5;0;0;0;0;0;0];dt=.1;
-            corrected=invariantObserverSupport.correct(x,packet,dt,design,c);
-            direction=[cos(.3);sin(.3)];gain=design.theta*design.speedGainNormalized;
-            expected=x([2,5])+dt*gain/(1+dt*gain)*direction*(8-direction.'*x([2,5]));
-            testCase.verifyEqual(corrected([2,5]),expected,AbsTol=1e-12);
+            testCase.verifyGreaterThan(design.auxiliaryWeights(1),0);
+            testCase.verifyFalse(isfield(design,'speedGainNormalized'));
+            testCase.verifyFalse(isfield(c.invariantDesign,'speedDesign'));
+        end
+        function projectedSpeedCertificateCannotBeReused(testCase)
+            c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='intrinsic-vector-iss-v4';
+            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+                'VehicleLocalization:StaleInvariantDesign');
+        end
+        function disablingSquaredSpeedCannotReuseACertifiedClaim(testCase)
+            c=freshObserverTestConfig();c.invariantDesign.auxiliaryWeights(1)=0;
+            verification=invariantObserverSupport.verify(c.invariantDesign,c);
+            testCase.verifyFalse(verification.certified);
         end
         function temporaryDesignVerificationRequiresNoSdpSolver(testCase)
             c=freshObserverTestConfig();

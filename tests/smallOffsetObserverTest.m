@@ -29,11 +29,11 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
         end
         function commonCertificateCoversTheDeclaredMovingDomain(testCase)
             c=testCase.Config;v=c.invariantDesign.verification;
-            testCase.verifyEqual([c.invariantObserver.redundancy.minimumGnssSpeed,c.iss.maximumSpeed],[1,30]);
+            testCase.verifyEqual([c.invariantObserver.redundancy.minimumCourseSpeed,c.iss.maximumSpeed],[1,30]);
             testCase.verifyTrue(v.certified);
             testCase.verifyTrue(v.feedbackAuthority.verified);
             testCase.verifyTrue(v.regionalIss.certified);
-            testCase.verifyEqual(v.jointSensor.vertices,13440);
+            testCase.verifyEqual(v.jointSensor.vertices,9840);
             testCase.verifyLessThan(max([v.jointSensor.worstLidarEigenvalue, ...
                 v.jointSensor.worstGnssEigenvalue,v.jointSensor.worstMixedEigenvalue]),-.009);
         end

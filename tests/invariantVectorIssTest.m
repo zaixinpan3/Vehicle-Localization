@@ -13,12 +13,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         end
         function equalStatesRecoverTheJacobianIncludingZeroSpeed(testCase)
             c=mncavFullObserverConfig();x=zeros(8,1);
-            [F,H,S,G]=invariantIssSupport.secants(x,x,0,0,c);
+            [F,H,G]=invariantIssSupport.secants(x,x,0,0,c);
             [~,J]=invariantObserverSupport.outputs(x,0,0,c);
             testCase.verifyEqual(H,J,AbsTol=0);
-            testCase.verifyTrue(all(isfinite([F(:);H(:);S(:);G(:)])));
+            testCase.verifyTrue(all(isfinite([F(:);H(:);G(:)])));
             testCase.verifyEqual(H(6,[2,5]),[0,1],AbsTol=0);
-            testCase.verifyEqual(S([2,5]),[1,0],AbsTol=0);
         end
         function finiteSecantsTransformWithTheRotatingFrame(testCase)
             errors=rotationErrors(mncavFullObserverConfig());
@@ -56,18 +55,16 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
             ratios=regionalDissipation(freshObserverTestConfig());
             testCase.verifyLessThan(max(ratios),-.49);
         end
-        function mixedInformationCertifiesRestWithoutEitherSensorBeingSufficient(testCase)
-            c=freshObserverTestConfig();d=c.invariantDesign;
-            [both,gnss,lidar]=restOperators(c,d);
-            testCase.verifyLessThan(max(eig(both.'*d.P+d.P*both)),0);
-            testCase.verifyLessThan(max(real(eig(both))),0);
-            testCase.verifyLessThan(min(abs(eig(gnss))),1e-8);
-            testCase.verifyLessThan(min(abs(eig(lidar))),1e-8);
+        function zeroSpeedIsOutsideEveryCertifiedSensorFamily(testCase)
+            c=freshObserverTestConfig();v=c.invariantDesign.verification;
+            testCase.verifyFalse(v.zeroSpeedCertified);
+            testCase.verifyFalse(v.jointSensor.zeroSpeedCertified);
+            testCase.verifyEqual(v.regionalIss.speedInterval,[10,15],AbsTol=0);
         end
         function removingEitherMixedAnchorRejectsItsCertificate(testCase)
             c=freshObserverTestConfig();d=c.invariantDesign;
-            w=sensorRedundancySupport.witness(c,d.P,d.kappaL,0,d.auxiliaryWeights,d.gyroGainNormalized,d.speedGainNormalized);
-            v=sensorRedundancySupport.verify(w,true,true);
+            w=sensorRedundancySupport.witness(c,d.P,d.kappaL,0,d.auxiliaryWeights,d.gyroGainNormalized);
+            v=sensorRedundancySupport.verify(w,true);
             testCase.verifyFalse(v.certified);
             testCase.verifyGreaterThan(v.worstMixedEigenvalue,0);
         end
@@ -86,17 +83,16 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
 end
 
 function errors=finiteIdentityErrors(c)
-    stream=RandStream('mt19937ar','Seed',2301);errors=zeros(250,4);
+    stream=RandStream('mt19937ar','Seed',2301);errors=zeros(250,3);
     for k=1:size(errors,1)
         x=randn(stream,8,1);y=randn(stream,8,1);beta=.2;rate=-.04;
         x([2,5])=10*x([2,5]);y([2,5])=10*y([2,5]);
         if k==1,y(7)=x(7);elseif k==2,y(7)=x(7)+1e-12;end
-        [F,H,S,G]=invariantIssSupport.secants(x,y,beta,rate,c);e=x-y;
+        [F,H,G]=invariantIssSupport.secants(x,y,beta,rate,c);e=x-y;
         dh=invariantObserverSupport.outputs(x,beta,rate,c)-invariantObserverSupport.outputs(y,beta,rate,c);
-        ds=direction(x(7)+beta).'*x([2,5])-direction(y(7)+beta).'*y([2,5]);
         dg=antenna(x,c)-antenna(y,c);df=drift(x,rate)-drift(y,rate);
         errors(k,:)=[norm(F*e-df)/max(1,norm(df)),norm(H*e-dh)/max(1,norm(dh)), ...
-            norm(S*e-ds)/max(1,norm(ds)),norm(G*e-dg)/max(1,norm(dg))];
+            norm(G*e-dg)/max(1,norm(dg))];
     end
 end
 
@@ -105,9 +101,9 @@ function errors=rotationErrors(c)
     T([1,4],[1,4])=R;T([2,5],[2,5])=R;T([3,6],[3,6])=R;
     x=[2;12;.6;-1;.4;1.1;.3;.07];y=x+[.4;-.2;.1;-.3;.1;-.2;.1;-.02];
     xr=T*x;yr=T*y;xr(7)=xr(7)+angle;yr(7)=yr(7)+angle;
-    [F,H,S,G]=invariantIssSupport.secants(x,y,.1,.03,c);
-    [Fr,Hr,Sr,Gr]=invariantIssSupport.secants(xr,yr,.1,.03,c);
-    errors=[norm(Fr-T*F*T.'),norm(Hr*T-H),norm(Sr*T-S),norm(Gr*T-R*G)];
+    [F,H,G]=invariantIssSupport.secants(x,y,.1,.03,c);
+    [Fr,Hr,Gr]=invariantIssSupport.secants(xr,yr,.1,.03,c);
+    errors=[norm(Fr-T*F*T.'),norm(Hr*T-H),norm(Gr*T-R*G)];
 end
 
 function ratios=regionalDissipation(c)
@@ -117,8 +113,10 @@ function ratios=regionalDissipation(c)
     stream=RandStream('mt19937ar','Seed',2302);ratios=zeros(180,1);
     for k=1:numel(ratios)
         family=mod(k-1,3)+1;psi=6*rand(stream)-3;beta=.2;rate=.02;s=10+5*rand(stream);
-        if family==3,s=0;end
-        q=.05;u=.5;dc=direction(psi+beta);nc=[-dc(2);dc(1)];
+        qLimit=min(c.maximumTrackAngleRate,c.iss.maximumAcceleration/s);
+        q=qLimit*(2*rand(stream)-1);
+        u=sqrt(max(0,c.iss.maximumAcceleration^2-(s*q)^2))*(2*rand(stream)-1);
+        dc=direction(psi+beta);nc=[-dc(2);dc(1)];
         x=zeros(8,1);x(7:8)=[psi;q-rate];x([2,5])=s*dc;x([3,6])=u*dc+s*q*nc;
         eps=randn(stream,8,1);eps=.9*r.normalizedRadius*eps/norm(eps);hat=x-B*eps;
         WG=.5*eye(2);S=diag([.25,.25,.97]);valid=true(8,1);
@@ -142,22 +140,8 @@ function ratios=regionalDissipation(c)
         rhs=rhs-t*d.kappaL*(d.P\(C.'*W*C*eps));
         rhs=rhs-d.kappaG*(d.P\(Cp.'*WG*(antenna(x,c)-antenna(hat,c))));
         rhs=rhs-t*(d.P\((D*Hh*B).'*Ka*D*(hx-hh)));
-        if valid(1)
-            dh=direction(hat(7)+beta);
-            rhs=rhs-B\(E(:,[2,5])*(t*d.speedGainNormalized*dh*(s-dh.'*hat([2,5]))));
-        end
         ratios(k)=2*eps.'*d.P*rhs/(r.nominalDissipation*(eps.'*eps));
     end
-end
-
-function [both,gnss,lidar]=restOperators(c,d)
-    t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;E=eye(8);C=E([1,4,7],:);Cp=C(1:2,:);
-    B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);
-    [F,~,~,G]=invariantIssSupport.secants(zeros(8,1),zeros(8,1),0,0,c);
-    A=B\(F*B)-t*d.gyroGainNormalized*(E(:,8)*E(:,8).');
-    ag=-d.kappaG*(d.P\(Cp.'*(.5*eye(2))*G*B));
-    al=-t*d.kappaL*(d.P\(C.'*diag([0,0,.97])*C));
-    both=A+ag+al;gnss=A+ag;lidar=A+al;
 end
 
 function y=drift(x,b)

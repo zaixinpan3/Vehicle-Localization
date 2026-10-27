@@ -8,7 +8,7 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-intrinsic-vector-iss-v4",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-intrinsic-vector-iss-v5",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('gainInformationScale',16,'outputPoint', ...
@@ -32,10 +32,11 @@ function cfg=mncavFullObserverConfig(options)
     z.angularMetricDiagonal=true;
     z.noiseObjective="normalizedFullState";
     z.velocityAvailable=true;z.accelerationAvailable=true;
-    z.redundancy=struct('minimumGnssSpeed',10,'informativeLidarMismatch',.001, ...
+    z.redundancy=struct('minimumCourseSpeed',10,'informativeLidarMismatch',.001, ...
         'degradedLidarMismatch',.001,'speedPartitions',10,'coursePartitions',2, ...
-        'accelerationSplit',.5,'gnssSplit',.5,'lambda',1,'kinematicGnssEnclosure',true, ...
+        'accelerationSplit',.5,'gnssSplit',.5,'lambda',1, ...
         'exactGnssLeverEnclosure',true);
+    z.provenance.speedOutput="Squared speed is an active matched invariant output; no projected-speed replacement. All L/G/M ISS claims require minimumCourseSpeed <= true course speed <= maximumSpeed, with minimumCourseSpeed > 0; zero-speed runtime is division-free but uncertified";
     z.regionalRadiusCap=1; % Outer normalized error ball used for Hessian bounds.
     z.headingGainLimits=[8,8]; % kappaL/P77 and directionGain/P77.
     z.matchedGainLimits=[8,8,2]; % Position L/G and velocity-direction self-feedback.
@@ -45,8 +46,8 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.metric="Rotation-invariant translational blocks and a diagonal angular block; angular/translation balance is not a theorem condition and is withdrawn to permit fixed feedback-authority limits";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
     z.provenance.noiseObjective="All eight normalized errors at pose-anchored nominal points; shared primitive velocity/acceleration/gyro columns and separate upstream constraint-error budgets; this energy proxy is not an empirical covariance guarantee";
-    z.provenance.redundancy="Common L/G/M metric: sufficient LiDAR, moving GNSS with invariant outputs, or GNSS position plus PSD LiDAR with S33>=heading floor and bounded translation-heading coupling, including rest; Mixed LMIs retain coupling rather than infer a diagonal matrix floor; correlated course-rate Bernstein controls; finite overlap mismatch <=0.001 remains a geometric contract; G/M families are withdrawn when velocity/acceleration channels are configured unavailable";
-    z.provenance.feedback="Normalized matched self-feedback limits L-position 8, G-position 8, velocity-direction 2 and heading L/direction 8; constrained inside the solve, without runtime clipping; exact G kinematics and lever coupling reduce sufficient-condition conservatism";
+    z.provenance.redundancy="Common L/G/M metric: sufficient LiDAR, moving GNSS with invariant outputs, or GNSS position plus PSD LiDAR with S33>=heading floor and bounded translation-heading coupling, on the declared positive course-speed interval; Mixed LMIs retain coupling rather than infer a diagonal matrix floor; shared exact course-kinematic Jacobian and correlated course-rate Bernstein controls; finite overlap mismatch <=0.001 remains a geometric contract; G/M families are withdrawn when velocity/acceleration channels are configured unavailable";
+    z.provenance.feedback="Normalized matched self-feedback limits L-position 8, G-position 8, velocity-direction 2 and heading L/direction 8; constrained inside the solve, without runtime clipping; exact common course kinematics and GNSS lever coupling reduce sufficient-condition conservatism";
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];
     cfg.invariantObserver=z;cfg.gainSource="unsolved-invariant";

@@ -42,13 +42,15 @@ predictor has no IMU argument and no speed denominator. Public `.z` and
 `.onlineZ` keep their seven-column interface; `.internalState` and `.yawRate`
 expose the additional estimated rate.
 
-The scalar outputs include speed norm, velocity/acceleration dot and cross
+The scalar outputs include squared speed, velocity/acceleration dot and cross
 products, estimated rate, kinematic/course-direction constraints and acceleration
 projections onto estimated body directions. Each is invariant to a simultaneous
 rotation of the global states and heading. The two acceleration projections
 remain available without wheel speed and preserve acceleration direction.
-Gyro and projected-speed innovations have separate LMI-designed scalar gains.
-Gyro corrects the rate state; heading prediction uses the posterior state.
+Squared speed has a strictly positive matched-output weight synthesized with
+all other global gains. There is no projected-speed substitute or independent
+scalar speed gain. Gyro retains its separate LMI-designed scalar gain and
+corrects the rate state; heading prediction uses the posterior state.
 
 The global runtime consumes `LateralInputs.sideSlipAngle` and
 `LateralInputs.sideSlipAngleRate` together with lateral velocity. Synchronization
@@ -75,12 +77,13 @@ always re-solves, even when the supplied configuration already has gains; it
 reads/writes no gain file and has no persistent gain cache. The entry point
 solves missing gains before the first update. Gains may be shared within the
 current experiment, while a later experiment solves again. Solver failure is an
-error, with no old-gain fallback. Runtime independently verifies the 256
-retained intrinsic surrogate vertices, 128 L vertices, 5760 refined G controls,
-scalar LMIs and feedback-authority bounds without a solver. A zero GNSS lever
-needs only 240 G controls: the minimum GNSS weight dominates all larger weights
-and coincident lever vertices are omitted. A changed fixed
-high-gain scale, common domain or sensor/vehicle input rejects stale temporary gains.
+error, with no old-gain fallback. Runtime independently verifies the common
+L/G/M matrices, scalar gyro LMI and feedback-authority bounds without a solver.
+The ordinary geometry and partition settings give 48 L, 8640 G and 1152 Mixed
+controls (9840 total). A zero GNSS lever needs fewer G/M controls: the minimum
+GNSS weight dominates all larger weights and coincident lever vertices are
+omitted. A changed fixed high-gain scale, common domain, architecture or
+sensor/vehicle input rejects stale temporary gains.
 The nominal objective includes all eight normalized errors at four pose-anchored
 cases; it is a noise proxy, not measured covariance.
 
@@ -96,9 +99,10 @@ common design.
 `jointSensorLmiVerified` and `conditionalNonlinearGainConditionsVerified` mean
 that these common numerical gain conditions passed. The complete nonlinear
 regional ISS theorem still requires the declared actual-overlap geometry/bias,
-motion, auxiliary-error and local-region contracts. Actual map bounds and a
-numerical attraction radius are unverified, so physical full-state and sampled
-certificate flags remain false. See [Sections 0.6--0.8 of the existing theory](../improved_observer_derivation.md#08-active-gain-synthesis-with-tighter-gnss-enclosures).
+motion, auxiliary-error and local-region contracts. A conditional finite-error
+radius is computed from the synthesized gains, but actual map bounds and sampled
+stability remain unverified. Physical full-state and sampled certificate flags
+therefore remain false. See [the current speed-output and domain proof](../improved_observer_derivation.md#08a-current-squared-speed-feedback-and-positive-speed-iss-domain).
 
 ## Unified sensor-redundancy theory
 
@@ -110,8 +114,11 @@ observers. Informative LiDAR permits GNSS weight zero. Sufficient position-only
 GNSS permits LiDAR information of any rank, including zero, provided motion and
 the velocity-direction/body-acceleration auxiliary channels supply heading
 information. A parked vehicle with no LiDAR heading remains unobservable from
-position and gyro rate alone. Section 0.7 permits finite stops under an explicit
-recurring-information condition.
+position and gyro rate alone. Every current L/G/M certificate is restricted to
+`minimumCourseSpeed <= true course speed <= maximumSpeed`, with a strictly
+positive lower bound. The default interval is [10,15] m/s; the explicit
+small-offset scenario uses [1,30] m/s. Historical finite-stop extensions in
+Section 0.7 are not certified for the current revision.
 
 The proof bounds the actual overlap operator as `F*Hbar = S + Delta`, including
 its support projection, rather than substituting Gauss--Newton information for
@@ -121,8 +128,8 @@ GNSS guarantee; Bernstein controls certify its whole speed interval. Uniform
 higher-order bounds then close all nonlinear predictor and invariant innovations.
 
 Run `verifySensorRedundancyTheory` to solve and verify a separate temporary
-theoretical witness. It verifies 128 LiDAR vertices and 480 GNSS
-Bernstein controls on the declared 10--15 m/s GNSS motion domain. This is a
+theoretical witness. It uses the same L/G/M matrix construction and declared
+positive speed interval as production synthesis. This is a
 conservative sufficient domain, not a necessary physical speed threshold.
 This witness does not replace the runtime design or verify recorded-map
 geometry. A supplied `Witness` and freshly solved `Config` can be reverified
@@ -141,7 +148,12 @@ test/experiment setup; no saved lateral gains are loaded.
 The intrinsic predictor no longer divides by speed or speed squared: its
 estimated yaw-rate state remains defined when velocity is zero, including
 stopped rotation. This removes that model singularity and is covered by the
-stopped-rotation runtime test.
+stopped-rotation runtime test. Zero speed is outside every current L/G/M ISS
+claim, even with adequate LiDAR. All verification reports mark
+`zeroSpeedCertified=false`; numerical finite execution does not imply bounded
+error for an arbitrary stop duration. Runtime never clamps speed into the
+certified interval. `observedSpeedWithinIssDomain` reports only a measured-speed
+proxy, not verification of the true-speed assumption.
 
 The global auxiliary channel also no longer evaluates `atan2(vy,vx)`. It uses
 the upstream angle/rate interface, which remains defined through stops in the
@@ -152,6 +164,17 @@ LPV model and LMI remain restricted to the positive interval [1,30] m/s. Safe
 zero-speed execution is distinct from a unified zero-speed hybrid stability
 certificate; neither the current surrogate nor actual-overlap discussion claims
 that stronger result.
+
+
+Restoring squared-speed feedback changes the transient response. The low-speed
+sampled tests do not preserve the old projected-speed settling rates: curb and
+residual tests retain a 2 mm target at 5 s, and the landmark test retains its
+1 mm target at 20 s. The stationary overlap example retains its 1 cm target
+at 30 s instead of 8 s, without a zero-speed ISS claim. The 2 m/s frame-overlap
+test checks finite execution and
+90% initial-error reduction at 20 s only. Longer fixed-map stress cases still
+show drift; these checks do not establish actual-map or sampled ISS or an
+empirical accuracy improvement.
 
 ## Removed main-observer implementations
 
