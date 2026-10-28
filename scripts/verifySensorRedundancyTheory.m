@@ -91,7 +91,6 @@ function validateDomain(d,p)
     sensorRedundancySupport.courseControls(p.maximumCourseRate,d.coursePartitions);
     validateattributes(d.informativeLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
     validateattributes(d.degradedLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
-    validateattributes(d.nominalDecayRatePerSecond,{'double'},{'finite','positive','scalar'});
     assert(d.bilinearSplit>0 && d.bilinearSplit<1 && d.gnssSplit>0 && d.gnssSplit<1 && d.lambda>0, ...
         'VehicleLocalization:InvalidRedundancyDomain','Declare positive decay and Young splits strictly between zero and one.');
 end

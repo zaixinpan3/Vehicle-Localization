@@ -103,12 +103,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyFalse(isfield(design,'speedGainNormalized'));
             testCase.verifyFalse(isfield(c.invariantDesign,'speedDesign'));
         end
-        function matchedRatesAndMetricDecayMeetTheirDesignRequirements(testCase)
+        function responseAndDecayAreReportedWithoutPrescribedFloors(testCase)
             c=freshObserverTestConfig();v=c.invariantDesign.verification;
-            testCase.verifyGreaterThanOrEqual(v.feedbackAuthority.minimumDirectRatesPerSecond, ...
-                c.invariantObserver.minimumDirectRatesPerSecond*(1-1e-6));
-            testCase.verifyGreaterThanOrEqual(v.regionalIss.alpha, ...
-                c.invariantObserver.redundancy.nominalDecayRatePerSecond);
+            testCase.verifyFalse(isfield(c.invariantObserver,'minimumDirectRatesPerSecond'));
+            testCase.verifyFalse(isfield(c.invariantObserver.redundancy,'nominalDecayRatePerSecond'));
+            testCase.verifyFalse(isfield(v.feedbackAuthority,'requiredDirectRatesPerSecond'));
+            r=v.regionalIss;
+            testCase.verifyEqual(r.alpha,r.nominalDissipation/(8*r.maximumMetricEigenvalue),RelTol=1e-12);
             testCase.verifyTrue(v.allAuxiliaryOutputsRequired);
         end
         function eightOutputCertificateCannotBeReused(testCase)

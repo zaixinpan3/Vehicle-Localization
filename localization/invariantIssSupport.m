@@ -54,7 +54,7 @@ classdef invariantIssSupport
         % No actual-map, sampled-system or upstream LPV-domain assertion.
         % With B=diag(theta.^degrees./[1,...,1,ell,ell]), eps=B\(x-xhat),
         % true 0<s_min<=|v|<=V, |a|<=A, |r+betaRate|<=Q, and v=s*d(psi+beta):
-        % He(P*A0)<=-2*alpha0*P-mu*I. The exact nonlinear remainder obeys
+        % He(P*A0)<=-mu*I. The exact nonlinear remainder obeys
         % 2*eps'*P*remainder <= c1*|eps|^3+c2*|eps|^4 on |eps|<=outer.
         % For each normalized invariant row, |Htrue|<=h and |Hessian|<=L;
         % |Hhat-Htrue|<=L*|eps| and |Hsec-Htrue|<=L*|eps|/2.
@@ -67,7 +67,8 @@ classdef invariantIssSupport
         % S>=diag(0,0,hmin) is neither inferred nor required.
         % All five auxiliary outputs remain available in every family.
         % Reserving mu/2 for remainders and mu/4 for the additive input gives
-        % alpha=alpha0+mu/(8*pmax). A common P permits valid-family switching.
+        % alpha=mu/(8*pmax). This rate is computed after synthesis, not imposed.
+        % A common P permits valid-family switching.
             arguments
                 design (1,1) struct
                 cfg (1,1) struct
@@ -97,14 +98,13 @@ classdef invariantIssSupport
             radius=0;alpha=0;gamma=Inf;level=0;inputLimit=0;
             if valid
                 radius=min(outer,mu/(c1+sqrt(c1^2+2*c2*mu)));
-                alpha=z.redundancy.nominalDecayRatePerSecond+mu/(8*pmax);
+                alpha=mu/(8*pmax);
                 gamma=4*pmax^2/mu;level=pmin*radius^2;
                 inputLimit=sqrt(2*alpha*level/gamma);
             end
             c=struct('certified',valid && radius>0,'normalizedRadius',radius, ...
                 'speedInterval',[z.redundancy.minimumCourseSpeed,V],'zeroSpeedCertified',false, ...
                 'allAuxiliaryOutputsRequired',true, ...
-                'requestedNominalDecayRatePerSecond',z.redundancy.nominalDecayRatePerSecond, ...
                 'outerRadius',outer,'lyapunovLevel',level,'alpha',alpha,'gamma',gamma, ...
                 'normalizedAdditiveInputLimit',inputLimit,'nominalDissipation',mu, ...
                 'cubicRemainderBound',c1,'quarticRemainderBound',c2, ...

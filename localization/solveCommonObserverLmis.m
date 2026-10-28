@@ -14,7 +14,8 @@ function [result,audit]=solveCommonObserverLmis(base,cost,blocks,counts,witness,
     for iteration=1:size(iterationLog,1)
         cuts=cell(1,numel(active));
         for j=1:numel(active),cuts{j}=blocks{active(j)}<=-z.margin*eye(8);end
-        result=optimize([base,cuts{:}],cost,sdpsettings('solver',char(z.solver),'verbose',0));
+        result=optimize([base,cuts{:}],cost, ...
+            sdpsettings('solver',char(z.solver),'verbose',0,'savesolveroutput',1));
         assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleInvariantDesign', ...
             'Invariant synthesis failed: %s',result.info);
         candidate=witness;candidate.P=1.01*value(witness.P);
@@ -45,4 +46,10 @@ function [result,audit]=solveCommonObserverLmis(base,cost,blocks,counts,witness,
     audit=struct('iterations',iteration,'activeControls',numel(active), ...
         'verifiedControls',sum(counts),'fullFamilyVerified',true, ...
         'requiredWorstResidual',target,'trace',iterationLog(1:iteration,:));
+    % Residuals describe the unscaled final SDP solve. The full common
+    % verification above describes the returned homogeneously scaled gains.
+    audit.minimumBaseConstraintResidual=min(check(base));
+    if isfield(result.solveroutput,'info')
+        audit.solverDiagnostics=result.solveroutput.info;
+    end
 end

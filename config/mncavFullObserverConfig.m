@@ -8,7 +8,7 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-intrinsic-vector-iss-v7-matched-output",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-intrinsic-vector-iss-v8-no-rate-floor",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('gainInformationScale',16,'outputPoint', ...
@@ -32,12 +32,11 @@ function cfg=mncavFullObserverConfig(options)
     z.angularMetricDiagonal=true;
     z.noiseObjective="normalizedFullState";
     z.velocityAvailable=true;z.accelerationAvailable=true;
-    z.minimumDirectRatesPerSecond=[.1,.01]; % Radial speed and acceleration at the speed floor.
     z.redundancy=struct('minimumCourseSpeed',10,'informativeLidarMismatch',.001, ...
         'degradedLidarMismatch',.001,'speedPartitions',10,'coursePartitions',2, ...
-        'bilinearSplit',.5,'gnssSplit',.5,'lambda',1,'nominalDecayRatePerSecond',.1, ...
+        'bilinearSplit',.5,'gnssSplit',.5,'lambda',1, ...
         'exactGnssLeverEnclosure',true);
-    z.provenance.speedOutput="Physical output is v'*v. Fixed numerical normalization is separate from the output and matched weights. Direct speed/acceleration rate floors hold throughout the positive-speed interval; no instantaneous-speed division or replacement output";
+    z.provenance.speedOutput="Physical output is v'*v. Fixed numerical normalization is separate from the output and matched weights. No prescribed direct response or nominal decay floor; gains follow the noise objective and common stability conditions. No instantaneous-speed division or replacement output";
     z.regionalRadiusCap=1; % Outer normalized error ball used for Hessian bounds.
     z.headingGainLimits=[8,8]; % kappaL/P77 and directionGain/P77.
     z.matchedGainLimits=[8,8,2]; % Position L/G and velocity-direction self-feedback.

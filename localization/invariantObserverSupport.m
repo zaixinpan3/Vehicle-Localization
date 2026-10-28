@@ -64,7 +64,7 @@ classdef invariantObserverSupport
 
         function inputs=inputs(cfg)
             z=cfg.invariantObserver;if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-vector-iss-v7-matched-output", ...
+            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-vector-iss-v8-no-rate-floor", ...
                 'physicalOutputs',"squared-dot-cross-direction-rate", ...
                 'outputDegrees',[2,3,3,2,2], ...
                 'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
@@ -80,11 +80,6 @@ classdef invariantObserverSupport
             yalmip('clear');Pc=sdpvar(3,3);Ph=sdpvar(2,2);
             P=blkdiag(Pc,Pc,Ph);kL=sdpvar(1);kG=sdpvar(1);kI=sdpvar(3,1);
             constraints=[P>=eye(8),kL>=0,kG>=0,kI>=z.margin];
-            % inv(P)jj >= 1/Pjj: affine sufficient floors on the actual
-            % direct matched rates over the entire declared speed interval.
-            factor=cfg.iss.maximumSpeed^2/(z.theta*z.redundancy.minimumCourseSpeed^2);
-            constraints=[constraints,kI(1)>=factor*z.minimumDirectRatesPerSecond(1)*Pc(2,2), ...
-                kI(2)>=factor*z.minimumDirectRatesPerSecond(2)*Pc(3,3)];
             if z.angularMetricDiagonal
                 constraints=[constraints,Ph(1,2)==0];
             end
@@ -141,7 +136,7 @@ classdef invariantObserverSupport
             % Homogeneous normalization preserves all matched feedback ratios
             % while creating a clear margin in the lambda-normalized LMIs.
             Pv=1.01*Pv;weights=1.01*weights;
-            design=struct('architecture',"intrinsic-vector-iss-v7-matched-output",'sigma',z.sigma,'P',Pv, ...
+            design=struct('architecture',"intrinsic-vector-iss-v8-no-rate-floor",'sigma',z.sigma,'P',Pv, ...
                 'kappaL',1.01*value(kL),'kappaG',1.01*value(kG),'auxiliaryWeights',weights, ...
                 'gyroGainNormalized',m.gyroGainNormalized,'gyroDesign',m.gyroDesign, ...
                 'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem,'solverInfo',string(result.info));
@@ -237,8 +232,6 @@ function m=model(cfg,storedGyro)
         && r.lambda==z.lambda,'VehicleLocalization:InvalidRedundancyDomain','Require valid common theory bounds and Young splits.');
     m.motionAvailable=z.velocityAvailable && z.accelerationAvailable;
     m.gnssAdequacyEnabled=true;
-    validateattributes(z.minimumDirectRatesPerSecond,{'double'},{'real','finite','positive','numel',2});
-    validateattributes(r.nominalDecayRatePerSecond,{'double'},{'real','finite','positive','scalar'});
     if isfield(z,'headingGainLimits')
         validateattributes(z.headingGainLimits,{'double'},{'real','finite','positive','numel',2});
         assert(z.angularMetricDiagonal,'VehicleLocalization:FeedbackAuthorityMetric','Heading caps require the declared diagonal angular metric.');
@@ -317,10 +310,9 @@ function v=feedbackAuthority(d,cfg)
         'velocityDirection',d.auxiliaryWeights(3)*inverse(5,5), ...
         'headingL',d.kappaL*inverse(7,7),'headingDirection',d.auxiliaryWeights(3)*inverse(7,7));
     speedFactor=(z.redundancy.minimumCourseSpeed/cfg.iss.maximumSpeed)^2;
+    % Report the solved response; no minimum response is prescribed.
     v.minimumDirectRatesPerSecond=z.theta*speedFactor*d.auxiliaryWeights(1:2).'.*[inverse(2,2),inverse(3,3)];
-    v.requiredDirectRatesPerSecond=z.minimumDirectRatesPerSecond(:).';
     tolerance=1e-6;
-    v.verified=all(v.minimumDirectRatesPerSecond>=v.requiredDirectRatesPerSecond*(1-tolerance));
     if isfield(z,'matchedGainLimits')
         v.verified=v.verified && all([v.positionL,v.positionG,v.velocityDirection]<=z.matchedGainLimits*(1+tolerance));
     end
