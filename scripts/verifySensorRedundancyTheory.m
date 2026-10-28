@@ -31,13 +31,22 @@ function report=verifySensorRedundancyTheory(options)
         gains=sdpvar(5,1);witness=struct('inputs',inputs,'domain',domain,'P',P, ...
             'kappaL',gains(1),'kappaG',gains(2),'bilinearGain',gains(3),'directionGain',gains(4),'speedSquaredGain',gains(5));
         counts=sensorRedundancySupport.counts(witness);constraints=[P>=eye(8),P<=1e5*eye(8),gains>=1e-7];
+        [~,groups]=coupledMotionSupport.multiplierGroups(domain);witness.accelerationMultipliers=cell(3,groups);
+        for family=1:numel(witness.accelerationMultipliers)
+            if inputs.maximumAcceleration==0 || domain.accelerationMultiplierPartition=="zero"
+                witness.accelerationMultipliers{family}=zeros(8);
+            else
+                witness.accelerationMultipliers{family}=sdpvar(8,8);
+                constraints=[constraints,witness.accelerationMultipliers{family}>=0]; %#ok<AGROW>
+            end
+        end
         if cfg.invariantObserver.angularMetricDiagonal
             constraints=[constraints,Ph(1,2)==0];
         end
         if cfg.invariantObserver.balancedPoseMetric
             constraints=[constraints,Ph<=Pc(1:2,1:2)];
         end
-        [result,solveAudit]=solveCommonObserverLmis(constraints,sum(gains)+.01*trace(P), ...
+        [result,solveAudit,multipliers]=solveCommonObserverLmis(constraints,sum(gains)+.01*trace(P), ...
             counts,witness,cfg.invariantObserver);
         assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleRedundancyTheory', ...
             'The requested common theory domain is infeasible in this enclosure: %s',result.info);
@@ -47,6 +56,7 @@ function report=verifySensorRedundancyTheory(options)
         for name=["kappaL","kappaG","bilinearGain","directionGain","speedSquaredGain"]
             witness.(name)=1.01*value(witness.(name));
         end
+        witness.accelerationMultipliers=multipliers;
         witness.solverStatus=result.problem;witness.constraintGeneration=solveAudit;
     else
         witness=options.Witness;
@@ -64,15 +74,17 @@ function report=verifySensorRedundancyTheory(options)
     for name=["kappaL","kappaG","bilinearGain","directionGain","speedSquaredGain"]
         validateattributes(witness.(name),{'double'},{'real','finite','positive','scalar'});
     end
-    [L,G,M]=sensorRedundancySupport.blocks(witness);
-    worstL=worstEigenvalue(L);worstG=worstEigenvalue(G);worstM=worstEigenvalue(M);
-    verified=worstL<0 && worstG<0 && worstM<0;
+    verification=sensorRedundancySupport.verify(witness,true);
+    worstL=verification.worstLidarEigenvalue;worstG=verification.worstGnssEigenvalue;
+    worstM=verification.worstMixedEigenvalue;verified=verification.certified;
     assert(verified,'VehicleLocalization:UnverifiedRedundancyTheory', ...
         'The common theory inequalities failed: L %.6g, G %.6g, M %.6g.',worstL,worstG,worstM);
     report=struct('witness',witness,'commonLmiVerified',verified, ...
-        'lidarVertices',numel(L),'gnssBernsteinVertices',numel(G), ...
+        'lidarVertices',verification.lidarVertices,'gnssBernsteinVertices',verification.gnssBernsteinVertices, ...
         'worstLidarEigenvalue',worstL,'worstGnssEigenvalue',worstG, ...
-        'worstMixedEigenvalue',worstM,'mixedVertices',numel(M),'zeroSpeedCertified',false, ...
+        'worstMixedEigenvalue',worstM,'mixedVertices',verification.mixedVertices,'zeroSpeedCertified',false, ...
+        'physicalAccelerationConstraintRetained',verification.physicalAccelerationConstraintRetained, ...
+        'multiplierPsdVerified',verification.multiplierPsdVerified, ...
         'minimumMetricEigenvalue',min(eig(P)), ...
         'coversGnssAbsent',true,'coversZeroLidarInformation',true, ...
         'minimumCourseSpeed',witness.domain.minimumCourseSpeed, ...
@@ -96,12 +108,4 @@ function validateDomain(d,p)
     validateattributes(d.accelerationPartitions,{'double'},{'finite','integer','positive','scalar'});
     assert(d.gnssSplit>0 && d.gnssSplit<1 && d.lambda>0, ...
         'VehicleLocalization:InvalidRedundancyDomain','Declare a positive LMI margin and valid GNSS split.');
-end
-
-
-function value=worstEigenvalue(matrices)
-    value=-Inf;
-    for k=1:numel(matrices)
-        M=matrices{k};value=max(value,max(eig((M+M.')/2)));
-    end
 end

@@ -64,7 +64,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         end
         function removingEitherMixedAnchorRejectsItsCertificate(testCase)
             c=freshObserverTestConfig();d=c.invariantDesign;
-            w=sensorRedundancySupport.witness(c,d.P,d.kappaL,0,d.auxiliaryWeights,d.gyroGainNormalized);
+            w=sensorRedundancySupport.witness(c,d.P,d.kappaL,0,d.auxiliaryWeights,d.gyroGainNormalized,d.accelerationMultipliers);
             v=sensorRedundancySupport.verify(w,true);
             testCase.verifyFalse(v.certified);
             testCase.verifyGreaterThan(v.worstMixedEigenvalue,0);

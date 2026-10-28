@@ -8,7 +8,7 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-intrinsic-vector-iss-v9-coupled-gram",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-intrinsic-vector-iss-v10-physical-domain",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('gainInformationScale',16,'outputPoint', ...
@@ -35,7 +35,11 @@ function cfg=mncavFullObserverConfig(options)
     z.redundancy=struct('minimumCourseSpeed',10,'informativeLidarMismatch',.001, ...
         'degradedLidarMismatch',.001,'speedPartitions',10,'coursePartitions',2, ...
         'accelerationPartitions',2,'gnssSplit',.5,'lambda',1, ...
-        'exactGnssLeverEnclosure',true);
+        'exactGnssLeverEnclosure',true,'accelerationMultiplierPartition',"zero");
+    % The physical-domain global candidate lowers the noise objective but
+    % regresses an existing recovery test and the development replay.
+    % Retain the zero-multiplier member as default; global/sign/box are
+    % implemented, verified choices in this same synthesis framework.
     z.provenance.speedOutput="Physical output is v'*v. Fixed numerical normalization is separate from the output and matched weights. No prescribed direct response or nominal decay floor; gains follow the noise objective and common stability conditions. No instantaneous-speed division or replacement output";
     z.regionalRadiusCap=1; % Outer normalized error ball used for Hessian bounds.
     z.headingGainLimits=[8,8]; % kappaL*(P^-1)77 and directionGain*(P^-1)77.
@@ -46,7 +50,7 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.metric="Rotation-invariant translational blocks and the existing diagonal angular metric. A full angular block is supported by exact caps but is not the default: its lower noise objective regressed heading/recovery tests. Angular diagonality is a design restriction, not a consequence of rotational symmetry";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
     z.provenance.noiseObjective="All eight normalized errors at pose-anchored nominal points; shared primitive velocity/acceleration/gyro columns and one upstream direction-constraint error budget; this energy proxy is not an empirical covariance guarantee";
-    z.provenance.redundancy="All five auxiliary outputs are required throughout every L/G/M certificate. Joint speed, course-rate and tangential-acceleration Bernstein controls retain the exact dot/cross Gram and a_perp=s*q dynamics coupling. Full Mixed translation-heading coupling remains. Output withdrawal and zero speed have defined runtime but no current ISS guarantee";
+    z.provenance.redundancy="All five auxiliary outputs are required throughout every L/G/M certificate. Joint Bernstein controls retain the exact dot/cross Gram and a_perp=s*q dynamics. Physical-domain modes optimize PSD multipliers for b^2+s^2*q^2<=Amax^2; the regression-qualified default fixes them to zero. Full Mixed translation-heading coupling remains. Output withdrawal and zero speed have defined runtime but no current ISS guarantee";
     z.provenance.feedback="Normalized matched self-feedback limits L-position 8, G-position 8, velocity-direction 2 and heading L/direction 8; constrained inside the solve, without runtime clipping; exact common course kinematics and GNSS lever coupling reduce sufficient-condition conservatism";
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];

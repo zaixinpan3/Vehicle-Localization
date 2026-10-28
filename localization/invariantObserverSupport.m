@@ -64,7 +64,7 @@ classdef invariantObserverSupport
 
         function inputs=inputs(cfg)
             z=cfg.invariantObserver;if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-vector-iss-v9-coupled-gram", ...
+            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-vector-iss-v10-physical-domain", ...
                 'physicalOutputs',"squared-dot-cross-direction-rate", ...
                 'outputDegrees',[2,3,3,2,2], ...
                 'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
@@ -105,7 +105,16 @@ classdef invariantObserverSupport
                     P-kG/limits(2)*(m.e1*m.e1.')>=0, ...
                     P-kI(3)/limits(3)*(m.e5*m.e5.')>=0];
             end
-            witness=sensorRedundancySupport.witness(cfg,P,kL,kG,kI,m.gyroGainNormalized);
+            [~,groups]=coupledMotionSupport.multiplierGroups(z.redundancy);multipliers=cell(3,groups);
+            for family=1:numel(multipliers)
+                if cfg.iss.maximumAcceleration==0 || z.redundancy.accelerationMultiplierPartition=="zero"
+                    multipliers{family}=zeros(8);
+                else
+                    multipliers{family}=sdpvar(8,8);
+                    constraints=[constraints,multipliers{family}>=0]; %#ok<AGROW>
+                end
+            end
+            witness=sensorRedundancySupport.witness(cfg,P,kL,kG,kI,m.gyroGainNormalized,multipliers);
             counts=sensorRedundancySupport.counts(witness,m.gnssAdequacyEnabled);
             weights=[kI(1);kI(2);kI(2);kI(3);0];
             for j=1:numel(m.points)
@@ -135,16 +144,17 @@ classdef invariantObserverSupport
             [bound,blocks]=noiseEnergy(P*m.B*m.Dd,P);
             constraints=[constraints,blocks];cost=cost+bound;
             fprintf('Verifying %d common LMIs with %d noise operating points\n',sum(counts),numel(m.points));
-            [result,solveAudit]=solveCommonObserverLmis(constraints,cost,counts,witness,z);
+            [result,solveAudit,multipliers]=solveCommonObserverLmis(constraints,cost,counts,witness,z);
             Pv=value(P);Pv=(Pv+Pv.')/2;
             weights=value(kI);
             % Homogeneous normalization preserves all matched feedback ratios
             % while creating a clear margin in the lambda-normalized LMIs.
             Pv=1.01*Pv;weights=1.01*weights;
-            design=struct('architecture',"intrinsic-vector-iss-v9-coupled-gram",'sigma',z.sigma,'P',Pv, ...
+            design=struct('architecture',"intrinsic-vector-iss-v10-physical-domain",'sigma',z.sigma,'P',Pv, ...
                 'kappaL',1.01*value(kL),'kappaG',1.01*value(kG),'auxiliaryWeights',weights, ...
                 'gyroGainNormalized',m.gyroGainNormalized,'gyroDesign',m.gyroDesign, ...
-                'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem,'solverInfo',string(result.info));
+                'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem,'solverInfo',string(result.info), ...
+                'accelerationMultipliers',{multipliers});
             design.constraintGeneration=solveAudit;
             design.inputs=invariantObserverSupport.inputs(cfg);
             design.verification=invariantObserverSupport.verify(design,cfg);
@@ -170,7 +180,7 @@ classdef invariantObserverSupport
             diagonal=~cfg.invariantObserver.angularMetricDiagonal || abs(P(7,8))<=1e-8*max(1,norm(P,'fro'));
             authority=feedbackAuthority(design,cfg);
             witness=sensorRedundancySupport.witness(cfg,P,design.kappaL,design.kappaG, ...
-                design.auxiliaryWeights,design.gyroGainNormalized);
+                design.auxiliaryWeights,design.gyroGainNormalized,design.accelerationMultipliers);
             joint=sensorRedundancySupport.verify(witness,m.gnssAdequacyEnabled);
             worst=max([joint.worstLidarEigenvalue,joint.worstGnssEigenvalue,joint.worstMixedEigenvalue]);
             regional=invariantIssSupport.regionalCertificate(design,cfg,joint);

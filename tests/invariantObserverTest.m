@@ -6,6 +6,22 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
     end
     methods (Test)
+        function physicalDomainGainIsExecutableBeyondTheOldBoxCertificate(testCase)
+            c=mncavFullObserverConfig();c.invariantObserver.redundancy.accelerationMultiplierPartition="global";
+            c=freshObserverTestConfig(c);r=invariantObserverSupport.runtime(c);d=c.invariantDesign;
+            testCase.verifyTrue(r.continuousCertificate.verification.certified);
+            testCase.verifyTrue(r.continuousCertificate.verification.jointSensor.accelerationDomainMultiplierActive);
+            w=sensorRedundancySupport.witness(c,d.P,d.kappaL,d.kappaG,d.auxiliaryWeights,d.gyroGainNormalized);
+            previous=sensorRedundancySupport.verify(w,true);
+            testCase.verifyFalse(previous.certified);
+        end
+        function corruptedAccelerationMultiplierInvalidatesTheCertificate(testCase)
+            c=freshObserverTestConfig();d=c.invariantDesign;d.accelerationMultipliers{2,1}=-eye(8);
+            v=invariantObserverSupport.verify(d,c);
+            testCase.verifyFalse(v.certified);
+            testCase.verifyFalse(v.jointSensor.multiplierPsdVerified);
+            testCase.verifyFalse(v.regionalIss.certified);
+        end
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=invariantObserverSupport.runtime(cfg);v=d.continuousCertificate.verification;
             testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,133920);

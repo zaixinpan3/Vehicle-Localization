@@ -60,6 +60,36 @@ classdef coupledMotionSupport
             f=[q,q^2,b,s,s^2,b^2+s^2*q^2,s*b,s^2*q];
         end
 
+        function g=accelerationConstraint(p,features)
+        % Exact Bernstein coefficients (or point values) of the physical set.
+        % g>=0 iff b^2+s^2*q^2<=Amax^2. At physical points 0<=g<=1.
+        % Amax=0 produces degenerate q=b=0 boxes and needs no multiplier.
+            if p.maximumAcceleration==0
+                g=zeros(size(features,1),1);
+            else
+                g=1-features(:,6)/p.maximumAcceleration^2;
+            end
+        end
+
+        function [group,count]=multiplierGroups(d)
+        % A constant PSD multiplier on each covering box remains a convex
+        % sufficient condition. A shared multiplier is its nested subfamily.
+            boxes=d.speedPartitions*d.coursePartitions*d.accelerationPartitions;
+            switch d.accelerationMultiplierPartition
+                case {"zero","global"}
+                    group=ones(1,27*boxes);count=1;
+                case "sign"
+                    index=0:boxes-1;
+                    b=mod(index,d.accelerationPartitions);
+                    q=mod(floor(index/d.accelerationPartitions),d.coursePartitions);
+                    group=repelem(1+2*(q>=d.coursePartitions/2)+(b>=d.accelerationPartitions/2),27);count=4;
+                case "box"
+                    group=repelem(1:boxes,27);count=boxes;
+                otherwise
+                    error('VehicleLocalization:InvalidDomainMultiplier','Use zero, global, sign or box domain multipliers.');
+            end
+        end
+
         function [A,speed,pair,direction]=matrices(p,f)
         % At a physical point, pair is EXACTLY H_dot'*H_dot+H_cross'*H_cross.
         % A Bernstein control need not itself be a PSD Gram or a physical state.

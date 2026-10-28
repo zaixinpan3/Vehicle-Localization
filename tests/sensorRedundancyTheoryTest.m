@@ -111,7 +111,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
         function zeroLeverRetainsFeasibilityWithOneWeightCorner(testCase)
             c=freshObserverTestConfig();c.gnss.outputPoint.bodyOffset=[0;0];h=c.invariantDesign;
             w=sensorRedundancySupport.witness(c,h.P,h.kappaL,h.kappaG,h.auxiliaryWeights, ...
-                h.gyroGainNormalized);
+                h.gyroGainNormalized,h.accelerationMultipliers);
             v=sensorRedundancySupport.verify(w,true);
             testCase.verifyTrue(v.certified);
             testCase.verifyEqual(v.gnssBernsteinVertices,1080);

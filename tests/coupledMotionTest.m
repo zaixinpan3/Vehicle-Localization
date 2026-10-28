@@ -33,7 +33,7 @@ classdef coupledMotionTest < matlab.unittest.TestCase
         function oldPairRelaxationIsAbsentFromCurrentInputs(testCase)
             c=mncavFullObserverConfig();p=sensorRedundancySupport.inputs(c,1);
             testCase.verifyFalse(isfield(c.invariantObserver.redundancy,'bilinearSplit'));
-            testCase.verifyEqual(string(p.motionEnclosure),"joint-polynomial-gram-v1");
+            testCase.verifyEqual(string(p.motionEnclosure),"physical-acceleration-multiplier-v2");
         end
     end
 end
@@ -85,7 +85,8 @@ end
 
 function error=selectedErrors()
     c=mncavFullObserverConfig();c.invariantObserver.redundancy.speedPartitions=1;
-    w=sensorRedundancySupport.witness(c,diag(1:8),2,3,[4;5;6],1);
+    [~,groups]=coupledMotionSupport.multiplierGroups(c.invariantObserver.redundancy);
+    w=sensorRedundancySupport.witness(c,diag(1:8),2,3,[4;5;6],1,repmat({eye(8);diag(1:8);ones(8)},1,groups));
     [L,G,M]=sensorRedundancySupport.blocks(w);all=[L,G,M];
     ids=unique(round(linspace(1,numel(all),31)));
     [L,G,M]=sensorRedundancySupport.blocks(w,true,ids);selected=[L,G,M];error=0;

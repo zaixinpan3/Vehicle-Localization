@@ -58,7 +58,10 @@ function [actual,expected]=speedControlDifference()
     [~,withSpeed]=sensorRedundancySupport.blocks(w);
     w.speedSquaredGain=0;[~,withoutSpeed]=sensorRedundancySupport.blocks(w);
     u=.37;weights=[(1-u)^2,2*u*(1-u),u^2];actual=zeros(8);
-    for j=1:3,actual=actual+weights(j)*(withSpeed{j}-withoutSpeed{j});end
+    % Tensor ordering is speed, course rate, tangential acceleration; with
+    % one GNSS sensor control, fixed q/b use speed controls 1,10,19.
+    ids=[1,10,19];
+    for j=1:3,actual=actual+weights(j)*(withSpeed{ids(j)}-withoutSpeed{ids(j)});end
     speed=(1-u)*w.domain.minimumCourseSpeed+u*w.inputs.maximumSpeed;
     expected=zeros(8);expected(2,2)=-2*(speed/w.inputs.maximumSpeed)^2;
 end
