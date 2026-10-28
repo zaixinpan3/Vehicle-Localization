@@ -1,4 +1,4 @@
-function [result,audit]=solveCommonObserverLmis(base,cost,blocks,counts,witness,z)
+function [result,audit]=solveCommonObserverLmis(base,cost,counts,witness,z)
 % Finite constraint generation: every candidate is checked against ALL
 % controls. A subset solve is never accepted as a common certificate.
     offsets=[0,cumsum(counts)];active=[];
@@ -12,8 +12,9 @@ function [result,audit]=solveCommonObserverLmis(base,cost,blocks,counts,witness,
     % when a previously unchecked control is only weakly negative.
     target=-.009*witness.domain.lambda;
     for iteration=1:size(iterationLog,1)
+        [L,G,M]=sensorRedundancySupport.blocks(witness,true,active);blocks=[L,G,M];
         cuts=cell(1,numel(active));
-        for j=1:numel(active),cuts{j}=blocks{active(j)}<=-z.margin*eye(8);end
+        for j=1:numel(active),cuts{j}=blocks{j}<=-z.margin*eye(8);end
         result=optimize([base,cuts{:}],cost, ...
             sdpsettings('solver',char(z.solver),'verbose',0,'savesolveroutput',1));
         assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleInvariantDesign', ...

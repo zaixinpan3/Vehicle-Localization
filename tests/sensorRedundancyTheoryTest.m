@@ -16,11 +16,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             testCase.verifyTrue(r.commonLmiVerified);
             testCase.verifyTrue(r.coversGnssAbsent);
             testCase.verifyTrue(r.coversZeroLidarInformation);
-            testCase.verifyEqual(r.lidarVertices,1440);
-            testCase.verifyEqual(r.gnssBernsteinVertices,8640);
+            testCase.verifyEqual(r.lidarVertices,4320);
+            testCase.verifyEqual(r.gnssBernsteinVertices,25920);
             testCase.verifyFalse(r.zeroSpeedCertified);
             testCase.verifyEqual(r.speedInterval,[10,15],AbsTol=0);
-            testCase.verifyEqual(r.mixedVertices,34560);
+            testCase.verifyEqual(r.mixedVertices,103680);
             testCase.verifyLessThan(r.worstMixedEigenvalue,0);
             testCase.verifyLessThan(max(r.worstLidarEigenvalue,r.worstGnssEigenvalue),-.009);
         end
@@ -75,7 +75,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
         function freshlySolvedGainsSatisfyTheNewCommonConditions(testCase)
             c=freshObserverTestConfig();v=invariantObserverSupport.verify(c.invariantDesign,c);
             testCase.verifyTrue(v.jointSensorLmiVerified);
-            testCase.verifyEqual(v.jointSensor.vertices,44640);
+            testCase.verifyEqual(v.jointSensor.vertices,133920);
             testCase.verifyTrue(v.jointSensor.mixedLidarCouplingRetained);
             testCase.verifyLessThan(v.jointSensor.worstMixedEigenvalue,0);
             testCase.verifyLessThan(v.jointSensor.worstLidarEigenvalue,0);
@@ -114,7 +114,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
                 h.gyroGainNormalized);
             v=sensorRedundancySupport.verify(w,true);
             testCase.verifyTrue(v.certified);
-            testCase.verifyEqual(v.gnssBernsteinVertices,360);
+            testCase.verifyEqual(v.gnssBernsteinVertices,1080);
         end
     end
 end

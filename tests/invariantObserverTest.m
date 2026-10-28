@@ -8,9 +8,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
     methods (Test)
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=invariantObserverSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,44640);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,133920);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,44640);
+            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,133920);
             testCase.verifyTrue(v.finiteInvariantSecantsCertified);
             testCase.verifyTrue(v.numericalInvariantRadiusCertified);
             testCase.verifyGreaterThan(v.regionalIss.normalizedRadius,0);

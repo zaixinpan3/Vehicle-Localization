@@ -64,7 +64,7 @@ classdef invariantObserverSupport
 
         function inputs=inputs(cfg)
             z=cfg.invariantObserver;if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-vector-iss-v8-no-rate-floor", ...
+            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-vector-iss-v9-coupled-gram", ...
                 'physicalOutputs',"squared-dot-cross-direction-rate", ...
                 'outputDegrees',[2,3,3,2,2], ...
                 'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
@@ -87,8 +87,14 @@ classdef invariantObserverSupport
                 constraints=[constraints,Ph<=Pc(1:2,1:2)];
             end
             if isfield(z,'headingGainLimits')
-                constraints=[constraints,kL<=z.headingGainLimits(1)*Ph(1,1), ...
-                    kI(3)<=z.headingGainLimits(2)*Ph(1,1)];
+                if z.angularMetricDiagonal
+                    constraints=[constraints,kL<=z.headingGainLimits(1)*Ph(1,1), ...
+                        kI(3)<=z.headingGainLimits(2)*Ph(1,1)];
+                else
+                    % The scalar diagonal formula is not valid for a full Ph.
+                    constraints=[constraints,P-kL/z.headingGainLimits(1)*(m.e7*m.e7.')>=0, ...
+                        P-kI(3)/z.headingGainLimits(2)*(m.e7*m.e7.')>=0];
+                end
             end
             if isfield(z,'matchedGainLimits')
                 % For P>0, k*e'*inv(P)*e<=g is equivalent to
@@ -100,8 +106,7 @@ classdef invariantObserverSupport
                     P-kI(3)/limits(3)*(m.e5*m.e5.')>=0];
             end
             witness=sensorRedundancySupport.witness(cfg,P,kL,kG,kI,m.gyroGainNormalized);
-            [jointL,jointG,jointM]=sensorRedundancySupport.blocks(witness,m.gnssAdequacyEnabled);
-            commonBlocks=[jointL,jointG,jointM];counts=[numel(jointL),numel(jointG),numel(jointM)];
+            counts=sensorRedundancySupport.counts(witness,m.gnssAdequacyEnabled);
             weights=[kI(1);kI(2);kI(2);kI(3);0];
             for j=1:numel(m.points)
                 p=m.points(j);H=m.motion(p.motion).H;
@@ -130,13 +135,13 @@ classdef invariantObserverSupport
             [bound,blocks]=noiseEnergy(P*m.B*m.Dd,P);
             constraints=[constraints,blocks];cost=cost+bound;
             fprintf('Verifying %d common LMIs with %d noise operating points\n',sum(counts),numel(m.points));
-            [result,solveAudit]=solveCommonObserverLmis(constraints,cost,commonBlocks,counts,witness,z);
+            [result,solveAudit]=solveCommonObserverLmis(constraints,cost,counts,witness,z);
             Pv=value(P);Pv=(Pv+Pv.')/2;
             weights=value(kI);
             % Homogeneous normalization preserves all matched feedback ratios
             % while creating a clear margin in the lambda-normalized LMIs.
             Pv=1.01*Pv;weights=1.01*weights;
-            design=struct('architecture',"intrinsic-vector-iss-v8-no-rate-floor",'sigma',z.sigma,'P',Pv, ...
+            design=struct('architecture',"intrinsic-vector-iss-v9-coupled-gram",'sigma',z.sigma,'P',Pv, ...
                 'kappaL',1.01*value(kL),'kappaG',1.01*value(kG),'auxiliaryWeights',weights, ...
                 'gyroGainNormalized',m.gyroGainNormalized,'gyroDesign',m.gyroDesign, ...
                 'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem,'solverInfo',string(result.info));
@@ -228,13 +233,13 @@ function m=model(cfg,storedGyro)
     sensorRedundancySupport.courseControls(cfg.maximumTrackAngleRate,r.coursePartitions);
     validateattributes(z.regionalRadiusCap,{'double'},{'real','finite','positive','scalar'});
     validateattributes([r.informativeLidarMismatch,r.degradedLidarMismatch],{'double'},{'finite','nonnegative'});
-    assert(r.bilinearSplit>0 && r.bilinearSplit<1 && r.gnssSplit>0 && r.gnssSplit<1 ...
-        && r.lambda==z.lambda,'VehicleLocalization:InvalidRedundancyDomain','Require valid common theory bounds and Young splits.');
+    validateattributes(r.accelerationPartitions,{'double'},{'finite','integer','positive','scalar'});
+    assert(r.gnssSplit>0 && r.gnssSplit<1 && r.lambda==z.lambda, ...
+        'VehicleLocalization:InvalidRedundancyDomain','Require valid common theory bounds and GNSS split.');
     m.motionAvailable=z.velocityAvailable && z.accelerationAvailable;
     m.gnssAdequacyEnabled=true;
     if isfield(z,'headingGainLimits')
         validateattributes(z.headingGainLimits,{'double'},{'real','finite','positive','numel',2});
-        assert(z.angularMetricDiagonal,'VehicleLocalization:FeedbackAuthorityMetric','Heading caps require the declared diagonal angular metric.');
     end
     if isfield(z,'matchedGainLimits')
         validateattributes(z.matchedGainLimits,{'double'},{'real','finite','positive','numel',3});

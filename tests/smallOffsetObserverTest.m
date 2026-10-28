@@ -33,7 +33,7 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(v.certified);
             testCase.verifyTrue(v.feedbackAuthority.verified);
             testCase.verifyTrue(v.regionalIss.certified);
-            testCase.verifyEqual(v.jointSensor.vertices,44640);
+            testCase.verifyEqual(v.jointSensor.vertices,133920);
             testCase.verifyLessThan(max([v.jointSensor.worstLidarEigenvalue, ...
                 v.jointSensor.worstGnssEigenvalue,v.jointSensor.worstMixedEigenvalue]),-.009);
         end

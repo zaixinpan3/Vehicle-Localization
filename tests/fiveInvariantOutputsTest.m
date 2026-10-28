@@ -77,14 +77,6 @@ classdef fiveInvariantOutputsTest < matlab.unittest.TestCase
             testCase.verifyEqual(y(8),dt*d.gyroGainNormalized*.3/(1+dt*d.gyroGainNormalized),AbsTol=1e-14);
             testCase.verifyEqual(y(1:7),zeros(7,1),AbsTol=0);
         end
-        function pairedBilinearLowerBoundHoldsOnBothSpeedDomains(testCase)
-            minimum=pairBoundMinimum();
-            testCase.verifyGreaterThanOrEqual(minimum,-1e-12);
-        end
-        function gnssLmiUsesThePairedVelocityPenaltyAndSpeedDependentAcceleration(testCase)
-            [actual,expected]=bilinearControlDifference();
-            testCase.verifyEqual(actual,expected,AbsTol=2e-12);
-        end
         function everySensorFamilyCreditsSquaredSpeed(testCase)
             c=mncavFullObserverConfig();c.invariantObserver.redundancy.speedPartitions=1;
             c.invariantObserver.redundancy.exactGnssLeverEnclosure=false;
@@ -109,37 +101,4 @@ end
 function d=correctionDesign()
     d=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
         'auxiliaryWeights',ones(3,1),'gyroGainNormalized',2);
-end
-
-function minimum=pairBoundMinimum()
-    stream=RandStream('mt19937ar','Seed',2605);minimum=Inf;E=eye(8);
-    Da=E(:,[3,6])*E(:,[3,6]).';Dv=E(:,[2,5])*E(:,[2,5]).';
-    configs={mncavFullObserverConfig(),mncavSmallOffsetObserverConfig()};
-    for i=1:numel(configs)
-        c=configs{i};V=c.iss.maximumSpeed;A=c.iss.maximumAcceleration;t=c.invariantObserver.theta;
-        ell=c.invariantObserver.headingLengthM;eta=c.invariantObserver.redundancy.bilinearSplit;
-        B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);
-        for j=1:100
-            speed=c.invariantObserver.redundancy.minimumCourseSpeed+rand(stream)*(V-c.invariantObserver.redundancy.minimumCourseSpeed);
-            angle=2*pi*rand(stream);a=A*rand(stream)*[cos(angle);sin(angle)];
-            x=[0;speed;a(1);0;0;a(2);0;.03];[~,H]=invariantObserverSupport.outputs(x,0,c);
-            D=invariantObserverSupport.outputNormalization(c);pair=D(2:3,2:3)*H(2:3,:)*B;
-            lower=(1-eta)*(speed/V)^2*Da-(1/eta-1)*(A/(t*V))^2*Dv;
-            minimum=min(minimum,min(eig(pair.'*pair-lower)));
-        end
-    end
-end
-
-function [actual,expected]=bilinearControlDifference()
-    c=mncavFullObserverConfig();c.invariantObserver.redundancy.speedPartitions=1;
-    c.invariantObserver.redundancy.exactGnssLeverEnclosure=false;
-    w=sensorRedundancySupport.witness(c,eye(8),1,1,ones(3,1),1);
-    [~,withPair]=sensorRedundancySupport.blocks(w);
-    w.bilinearGain=0;[~,withoutPair]=sensorRedundancySupport.blocks(w);
-    u=.37;weights=[(1-u)^2,2*u*(1-u),u^2];actual=zeros(8);
-    for j=1:3,actual=actual+weights(j)*(withPair{j}-withoutPair{j});end
-    speed=(1-u)*w.domain.minimumCourseSpeed+u*w.inputs.maximumSpeed;
-    E=eye(8);eta=w.domain.bilinearSplit;
-    expected=-2*(1-eta)*(speed/w.inputs.maximumSpeed)^2*(E(:,[3,6])*E(:,[3,6]).') ...
-        +2*(1/eta-1)*(w.inputs.maximumAcceleration/(w.inputs.theta*w.inputs.maximumSpeed))^2*(E(:,[2,5])*E(:,[2,5]).');
 end

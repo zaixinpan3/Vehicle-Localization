@@ -76,13 +76,23 @@ output is active in matched feedback; the projected-speed replacement and
 scalar speed-gain synthesis have been removed. This architecture change
 invalidates earlier gains and requires a fresh solve.
 
-The current auxiliary architecture is `intrinsic-vector-iss-v6-five-output`.
+The current auxiliary architecture is `intrinsic-vector-iss-v9-coupled-gram`.
 The five-row packet is ordered as squared speed, dot product, cross product,
-course direction and scaled yaw rate. `auxiliaryWeights` contains three
+course direction and yaw rate, before numerical scaling. `auxiliaryWeights` contains three
 positive weights: squared speed, shared dot/cross, and direction. Gyro keeps
-its own scalar design. `redundancy.bilinearSplit` controls the Young bound
-for the retained dot/cross pair; the old projection-based `accelerationSplit`
-and the removed rate-constraint noise parameter are no longer used.
+its own scalar design. The dot/cross information matrix is retained exactly
+in a joint polynomial of speed, course rate and tangential acceleration.
+The physical relation `a_perp = speed * courseRate` is shared with the dynamics.
+Tensor Bernstein controls certify whole covering boxes; they are not sampled
+states. Geometric speed partitions resolve the low-speed end of a wide interval.
+`redundancy.accelerationPartitions` controls numerical enclosure resolution.
+The former paired-output Young split is removed. Increasing partition resolution
+changes the sufficient enclosure, not the declared physical operating interval.
+An optional full angular Lyapunov block can optimize the heading/rate cross
+term; diagonality is not required by planar rotational symmetry. Its heading
+gain caps use exact rank-one PSD inequalities. The default retains the prior
+diagonal block: the full-block experiment lowered the noise objective but
+regressed three recovery tests, so it was not adopted as the default.
 
 ## Temporary small-offset global design
 

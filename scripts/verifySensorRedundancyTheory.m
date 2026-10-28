@@ -30,13 +30,15 @@ function report=verifySensorRedundancyTheory(options)
         yalmip('clear');Pc=sdpvar(3,3);Ph=sdpvar(2,2);P=blkdiag(Pc,Pc,Ph);
         gains=sdpvar(5,1);witness=struct('inputs',inputs,'domain',domain,'P',P, ...
             'kappaL',gains(1),'kappaG',gains(2),'bilinearGain',gains(3),'directionGain',gains(4),'speedSquaredGain',gains(5));
-        [L,G,M]=sensorRedundancySupport.blocks(witness);constraints=[P>=eye(8),P<=1e5*eye(8), ...
-            Ph(1,2)==0,gains>=1e-7];
+        counts=sensorRedundancySupport.counts(witness);constraints=[P>=eye(8),P<=1e5*eye(8),gains>=1e-7];
+        if cfg.invariantObserver.angularMetricDiagonal
+            constraints=[constraints,Ph(1,2)==0];
+        end
         if cfg.invariantObserver.balancedPoseMetric
             constraints=[constraints,Ph<=Pc(1:2,1:2)];
         end
         [result,solveAudit]=solveCommonObserverLmis(constraints,sum(gains)+.01*trace(P), ...
-            [L,G,M],[numel(L),numel(G),numel(M)],witness,cfg.invariantObserver);
+            counts,witness,cfg.invariantObserver);
         assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleRedundancyTheory', ...
             'The requested common theory domain is infeasible in this enclosure: %s',result.info);
         % Homogeneous rescaling preserves all matched feedback ratios and
@@ -91,8 +93,9 @@ function validateDomain(d,p)
     sensorRedundancySupport.courseControls(p.maximumCourseRate,d.coursePartitions);
     validateattributes(d.informativeLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
     validateattributes(d.degradedLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
-    assert(d.bilinearSplit>0 && d.bilinearSplit<1 && d.gnssSplit>0 && d.gnssSplit<1 && d.lambda>0, ...
-        'VehicleLocalization:InvalidRedundancyDomain','Declare positive decay and Young splits strictly between zero and one.');
+    validateattributes(d.accelerationPartitions,{'double'},{'finite','integer','positive','scalar'});
+    assert(d.gnssSplit>0 && d.gnssSplit<1 && d.lambda>0, ...
+        'VehicleLocalization:InvalidRedundancyDomain','Declare a positive LMI margin and valid GNSS split.');
 end
 
 

@@ -16,6 +16,7 @@ classdef sensorRedundancySupport
                 'speedOutput',"raw-squared-speed-matched-v3", ...
                 'allAuxiliaryOutputsRequired',true, ...
                 'auxiliaryOutputs',"squared-dot-cross-direction-rate-v1", ...
+                'motionEnclosure',"joint-polynomial-gram-v1", ...
                 'minimumGnssWeight',z.minimumGnssWeight, ...
                 'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).', ...
                 'gyroGainNormalized',gyroGain);
@@ -46,21 +47,67 @@ classdef sensorRedundancySupport
             if isempty(M),v.worstMixedEigenvalue=[];end
         end
 
-        function [L,G,Mixed]=blocks(w,includeGnss)
-            arguments
-                w (1,1) struct
-                includeGnss (1,1) logical=true
-            end
-            p=w.inputs;d=w.domain;P=w.P;th=p.theta;ell=p.headingLengthM;
+        function counts=counts(w,includeGnss)
+            if nargin<2,includeGnss=true;end
+            sensor=sensorRedundancySupport.sensorBlocks(w,includeGnss);
+            d=w.domain;n=27*d.speedPartitions*d.coursePartitions*d.accelerationPartitions;
+            counts=n*cellfun(@numel,sensor);
+        end
+
+        function [L,G,Mixed]=blocks(w,includeGnss,selected)
+        % Optional global control IDs instantiate only the active SDP cuts.
+        % Numeric verification still evaluates the complete finite family.
+            if nargin<2,includeGnss=true;end
+            if nargin<3,selected=[];end
+            p=w.inputs;d=w.domain;
             validateattributes(d.minimumCourseSpeed,{'double'}, ...
                 {'real','finite','positive','scalar','<=',p.maximumSpeed});
-            E=eye(8);e2=E(:,2);e3=E(:,3);e5=E(:,5);e6=E(:,6);e7=E(:,7);e8=E(:,8);
-            C=E([1,4,7],:);Cp=C(1:2,:);Dacc=e3*e3.'+e6*e6.';Dvel=e2*e2.'+e5*e5.';
-            q=min(p.maximumCourseRate,p.maximumAcceleration/d.minimumCourseSpeed);
-            rho=norm(p.gnssBodyOffset)/ell;tau=d.gnssSplit;eta=d.bilinearSplit;
-            A0=zeros(8);A0(1,2)=1;A0(2,3)=1;A0(4,5)=1;A0(5,6)=1;A0(7,8)=1;
-            corners=[1,1;1,-1;-1,1;-1,-1];speeds=linspace(d.minimumCourseSpeed,p.maximumSpeed,d.speedPartitions+1);
+            controls=coupledMotionSupport.controls(p,d);
+            sensor=sensorRedundancySupport.sensorBlocks(w,includeGnss);
+            sizes=cellfun(@numel,sensor);counts=size(controls,1)*sizes;
+            offsets=[0,cumsum(counts)];requested=cell(1,3);needed=[];
+            for family=1:3
+                if isempty(selected)
+                    requested{family}=1:counts(family);
+                else
+                    requested{family}=selected(selected>offsets(family) & selected<=offsets(family+1))-offsets(family);
+                end
+                if sizes(family)>0
+                    needed=[needed,ceil(requested{family}/sizes(family))]; %#ok<AGROW>
+                end
+            end
+            common=cell(1,size(controls,1));
+            for j=unique(needed)
+                [A,speed,pair,direction]=coupledMotionSupport.matrices(p,controls(j,:));
+                M=w.P*A-w.speedSquaredGain*speed-w.bilinearGain*pair-w.directionGain*direction;
+                common{j}=M+M.'+d.lambda*eye(8);
+            end
+            result=cell(1,3);
+            for family=1:3
+                ids=requested{family};result{family}=cell(1,numel(ids));
+                for j=1:numel(ids)
+                    motion=ceil(ids(j)/sizes(family));pose=mod(ids(j)-1,sizes(family))+1;
+                    result{family}{j}=common{motion}+sensor{family}{pose};
+                end
+            end
+            L=result{1};G=result{2};Mixed=result{3};
+        end
+
+        function result=sensorBlocks(w,includeGnss)
+        % Preserve the coupled GNSS/LiDAR information contracts independently
+        % of the joint motion polynomial. The returned terms are affine gains.
+            p=w.inputs;d=w.domain;ell=p.headingLengthM;
+            E=eye(8);e7=E(:,7);C=E([1,4,7],:);Cp=C(1:2,:);
+            rho=norm(p.gnssBodyOffset)/ell;tau=d.gnssSplit;
+            corners=[1,1;1,-1;-1,1;-1,-1];
             L={};G={};Mixed={};
+            for j=1:4
+                c=p.maximumLidarCoupling*corners(j,:).';
+                S=[p.minimumLidarPositionStrength*eye(2),c;c.',p.minimumLidarHeadingStrength];
+                L{end+1}=-2*w.kappaL*C.'*S*C+w.kappaG*rho^2*(e7*e7.') ...
+                    +2*w.kappaL*d.informativeLidarMismatch*(C.'*C); %#ok<AGROW>
+            end
+            if ~includeGnss,result={L,G,Mixed};return;end
             exactLever=isfield(d,'exactGnssLeverEnclosure') && d.exactGnssLeverEnclosure;
             Wg={eye(2)};lever=zeros(2,1);
             if exactLever && rho>0
@@ -71,70 +118,25 @@ classdef sensorRedundancySupport
                 end
                 lever=rho*corners.';
             elseif exactLever
-                % With no lever arm, the G term is -kG*Cp'*W*Cp.
-                % Every W>=w0*I only adds dissipation, so its lower corner
-                % suffices. Do not send duplicated zero-lever vertices to SDP.
                 Wg={p.minimumGnssWeight*eye(2)};
             end
-            controls=sensorRedundancySupport.courseControls(q,d.coursePartitions);
             mixedLidar=sensorRedundancySupport.mixedLidarLowerControls(p);
-            for iQ=1:size(controls,1)
-                rate=controls(iQ,1);u=controls(iQ,2);
-                for tangentialSign=[-1,1]
-                    A=A0;A([3,6],[2,5])=u/th^2*eye(2);
-                    A([3,6],[3,6])=2*rate/th*[0,-1;1,0];
-                    % All three families now share the positive-speed domain.
-                    % In true course coordinates a_perp=s*q, hence
-                    % d(f_a)/d(r)=2*q*v+2*J*a=[0;2*a_parallel].
-                    % This cancellation is kinematic, not sensor-specific.
-                    % Upstream angle/rate discrepancies remain input errors.
-                    A([3,6],8)=[0;2*p.maximumAcceleration/(th^2*ell)*tangentialSign];
-                    % All five motion outputs are available in every family.
-                    % Use the SAME speed-correlated auxiliary lower bound in
-                    % L/G/M; gyro remains in the common intrinsic dynamics.
-                    for k=1:d.speedPartitions
-                        left=e5-speeds(k)/(th*ell)*e7;right=e5-speeds(k+1)/(th*ell)*e7;
-                        B=cat(3,left*left.',(left*right.'+right*left.')/2,right*right.');
-                        speedSquared=[speeds(k)^2,speeds(k)*speeds(k+1),speeds(k+1)^2]/p.maximumSpeed^2;
-                        for jB=1:3
-                            M=P*(A-p.gyroGainNormalized*(e8*e8.')) ...
-                                -w.speedSquaredGain*speedSquared(jB)*(e2*e2.') ...
-                                -w.directionGain*B(:,:,jB) ...
-                                -(1-eta)*w.bilinearGain*speedSquared(jB)*Dacc;
-                            common=M+M.' ...
-                                +2*w.bilinearGain*(1/eta-1)*(p.maximumAcceleration/(th*p.maximumSpeed))^2*Dvel ...
-                                +d.lambda*E;
-                            for iS=1:4
-                                c=p.maximumLidarCoupling*corners(iS,:).';
-                                S=[p.minimumLidarPositionStrength*eye(2),c;c.',p.minimumLidarHeadingStrength];
-                                L{end+1}=common-2*w.kappaL*C.'*S*C ...
-                                    +w.kappaG*rho^2*(e7*e7.') ...
-                                    +2*w.kappaL*d.informativeLidarMismatch*(C.'*C); %#ok<AGROW>
-                            end
-                            if ~includeGnss,continue;end
-                            for iW=1:numel(Wg)
-                                for iR=1:size(lever,2)
-                                    if exactLever
-                                        gnss=-w.kappaG*Cp.'*Wg{iW}*(Cp+lever(:,iR)*e7.');penalty=0;
-                                    else
-                                        gnss=-w.kappaG*(1-tau)*p.minimumGnssWeight*(Cp.'*Cp);penalty=w.kappaG*rho^2/tau;
-                                    end
-                                    paired=common+gnss+gnss.'+penalty*(e7*e7.');
-                                    G{end+1}=paired+2*w.kappaL*d.degradedLidarMismatch*(C.'*C); %#ok<AGROW>
-                                    for iS=1:numel(mixedLidar)
-                                        % Keep actual translation-heading coupling;
-                                        % PSD plus a heading diagonal is not a
-                                        % diagonal Loewner lower bound.
-                                        S=mixedLidar{iS};
-                                        Mixed{end+1}=paired-2*w.kappaL*C.'*S*C ...
-                                            +2*w.kappaL*d.informativeLidarMismatch*(C.'*C); %#ok<AGROW>
-                                    end
-                                end
-                            end
-                        end
+            for iW=1:numel(Wg)
+                for iR=1:size(lever,2)
+                    if exactLever
+                        gnss=-w.kappaG*Cp.'*Wg{iW}*(Cp+lever(:,iR)*e7.');penalty=0;
+                    else
+                        gnss=-w.kappaG*(1-tau)*p.minimumGnssWeight*(Cp.'*Cp);penalty=w.kappaG*rho^2/tau;
+                    end
+                    paired=gnss+gnss.'+penalty*(e7*e7.');
+                    G{end+1}=paired+2*w.kappaL*d.degradedLidarMismatch*(C.'*C); %#ok<AGROW>
+                    for iS=1:numel(mixedLidar)
+                        Mixed{end+1}=paired-2*w.kappaL*C.'*mixedLidar{iS}*C ...
+                            +2*w.kappaL*d.informativeLidarMismatch*(C.'*C); %#ok<AGROW>
                     end
                 end
             end
+            result={L,G,Mixed};
         end
 
         function controls=mixedLidarLowerControls(p)
