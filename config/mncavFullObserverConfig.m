@@ -31,6 +31,10 @@ function cfg=mncavFullObserverConfig(options)
     z.balancedPoseMetric=false;
     z.angularMetricDiagonal=true;
     z.noiseObjective="normalizedFullState";
+    % A physical performance target, not a prescribed output gain. A second
+    % convex solve minimizes noise at the fresh ISS metric subject to this
+    % longitudinal motion-only nominal contraction rate (no pose feedback).
+    z.motionResponse=struct('enabled',true,'timeConstantS',1);
     z.velocityAvailable=true;z.accelerationAvailable=true;
     z.redundancy=struct('minimumCourseSpeed',10,'informativeLidarMismatch',.001, ...
         'degradedLidarMismatch',.001,'speedPartitions',10,'coursePartitions',2, ...
@@ -40,7 +44,8 @@ function cfg=mncavFullObserverConfig(options)
     % regresses an existing recovery test and the development replay.
     % Retain the zero-multiplier member as default; global/sign/box are
     % implemented, verified choices in this same synthesis framework.
-    z.provenance.speedOutput="Physical output is v'*v. Fixed numerical normalization is separate from the output and matched weights. No prescribed direct response or nominal decay floor; gains follow the noise objective and common stability conditions. No instantaneous-speed division or replacement output";
+    z.provenance.speedOutput="Physical output is v'*v. Fixed numerical normalization is separate from the output and matched weights. Fresh common-ISS metric followed by noise-minimal nonnegative Gram augmentation satisfying a longitudinal motion-response LMI; bounded scheduling uses this existing squared-speed output with denominator s_min^2+s_measured^2. No inverse-speed model or replacement output";
+    z.provenance.motionResponse="One-second exponential time constant in the constant Schur-complement metric for the nominal straight-course velocity/acceleration subsystem, throughout the declared positive-speed and signed-acceleration intervals, with pose corrections absent. This is a design target, not a one-second full-pose settling claim. Final nonlinear ISS remainders use maximum scheduled weights";
     z.regionalRadiusCap=1; % Outer normalized error ball used for Hessian bounds.
     z.headingGainLimits=[8,8]; % kappaL*(P^-1)77 and directionGain*(P^-1)77.
     z.matchedGainLimits=[8,8,2]; % Position L/G and velocity-direction self-feedback.

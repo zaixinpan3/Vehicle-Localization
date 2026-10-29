@@ -110,7 +110,7 @@ end
 function ratios=regionalDissipation(c)
     d=c.invariantDesign;r=d.verification.regionalIss;t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;
     B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=invariantObserverSupport.outputNormalization(c);
-    E=eye(8);C=E([1,4,7],:);Cp=C(1:2,:);K=diag([d.auxiliaryWeights([1,2,2,3]);0]);
+    E=eye(8);C=E([1,4,7],:);Cp=C(1:2,:);
     stream=RandStream('mt19937ar','Seed',2302);ratios=zeros(180,1);
     for k=1:numel(ratios)
         family=mod(k-1,3)+1;psi=6*rand(stream)-3;beta=.2;rate=.02;s=10+5*rand(stream);
@@ -135,7 +135,8 @@ function ratios=regionalDissipation(c)
         W=S-mismatch*eye(3)+.01*[0,1,0;-1,0,0;0,0,0];
         [hx,~]=invariantObserverSupport.outputs(x,beta,c);
         [hh,Hh]=invariantObserverSupport.outputs(hat,beta,c);
-        Ka=K*diag(double(valid));Ka(5,5)=0;
+        weights=motionResponseSupport.weights(d,hx(1));
+        Ka=diag([weights([1,2,2,3]);0])*diag(double(valid));
         rhs=B\(drift(x,rate)-drift(hat,rate));
         rhs=rhs-t*d.gyroGainNormalized*E(:,8)*eps(8);
         rhs=rhs-t*d.kappaL*(d.P\(C.'*W*C*eps));

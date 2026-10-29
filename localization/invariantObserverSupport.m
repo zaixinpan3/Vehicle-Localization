@@ -45,7 +45,8 @@ classdef invariantObserverSupport
             [value,H]=invariantObserverSupport.outputs(state,packet.beta,cfg);
             D=invariantObserverSupport.outputNormalization(cfg,design.theta);
             C=D*H*design.toPhysical;
-            k=[design.auxiliaryWeights([1,2,2,3]);0].*double(packet.valid);
+            weights=motionResponseSupport.weights(design,packet.value(1));
+            k=[weights([1,2,2,3]);0].*double(packet.valid);
             residual=D*(packet.value-value);weighted=C.'*diag(k);
             Q=design.theta*weighted*C;rhs=dt*design.theta*(design.P\(weighted*residual));
             delta=(eye(8)+dt*(design.P\Q))\rhs;next=state+design.toPhysical*delta;
@@ -58,7 +59,7 @@ classdef invariantObserverSupport
             end
             audit=struct('innovation',packet.value-value,'valid',packet.valid, ...
                 'allAuxiliaryOutputsAvailable',all(packet.valid), ...
-                'predicted',value,'normalizedCorrection',delta, ...
+                'predicted',value,'normalizedCorrection',delta,'auxiliaryWeights',weights, ...
                 'frozenInvariantMetricNonexpansive',min(eig((Q+Q.')/2))>=-1e-10*max(1,norm(Q,2)));
         end
 
@@ -73,6 +74,16 @@ classdef invariantObserverSupport
         end
 
         function design=synthesize(cfg)
+            if cfg.invariantObserver.motionResponse.enabled
+                seedCfg=cfg;seedCfg.invariantObserver.motionResponse.enabled=false;
+                seed=invariantObserverSupport.synthesize(seedCfg);
+                design=motionResponseSupport.refine(seed,cfg);
+                design.inputs=invariantObserverSupport.inputs(cfg);
+                design.verification=invariantObserverSupport.verify(design,cfg);
+                assert(design.verification.certified,'VehicleLocalization:InfeasibleInvariantDesign', ...
+                    'The response-constrained design failed independent ISS/performance verification.');
+                return
+            end
             assert(exist('sdpvar','file')==2,'VehicleLocalization:MissingSolver','Add YALMIP and SeDuMi before synthesis.');
             m=model(cfg);z=cfg.invariantObserver;
             assert(m.motionAvailable,'VehicleLocalization:MotionOutputsRequired', ...
@@ -179,6 +190,10 @@ classdef invariantObserverSupport
                 max(eig(P(7:8,7:8)-P(1:2,1:2)))<=1e-8*max(1,norm(P,'fro'));
             diagonal=~cfg.invariantObserver.angularMetricDiagonal || abs(P(7,8))<=1e-8*max(1,norm(P,'fro'));
             authority=feedbackAuthority(design,cfg);
+            % Extra scheduled weights are nonnegative exact PSD Gram terms
+            % at this SAME P. The baseline finite enclosure stays valid;
+            % the nonlinear remainder uses maximum scheduled weights below.
+            response=motionResponseSupport.verify(design,cfg);
             witness=sensorRedundancySupport.witness(cfg,P,design.kappaL,design.kappaG, ...
                 design.auxiliaryWeights,design.gyroGainNormalized,design.accelerationMultipliers);
             joint=sensorRedundancySupport.verify(witness,m.gnssAdequacyEnabled);
@@ -186,6 +201,7 @@ classdef invariantObserverSupport
             regional=invariantIssSupport.regionalCertificate(design,cfg,joint);
             v=struct('certified',worst<0 && min(eig(P))>=1-1e-6 && design.kappaL>=0 && design.kappaG>=0 ...
                 && joint.certified && regional.certified && authority.verified && m.motionAvailable ...
+                && response.positiveGramAugmentationVerified && response.verified ...
                 && design.sigma==cfg.invariantObserver.sigma && design.lambda>0 ...
                 && design.lambda==cfg.invariantObserver.lambda ...
                 && norm(design.P-design.P.','fro')<=1e-10*max(1,norm(P,'fro')) ...
@@ -200,6 +216,8 @@ classdef invariantObserverSupport
                 'jointSensorLmiVerified',joint.certified,'jointSensor',joint, ...
                 'conditionalNonlinearGainConditionsVerified',joint.certified, ...
                 'feedbackAuthority',authority, ...
+                'positiveGramAugmentationVerified',response.positiveGramAugmentationVerified, ...
+                'motionResponse',response, ...
                 'gyroAvailabilityRequired',true, ...
                 'allAuxiliaryOutputsRequired',true,'motionAvailabilityConfigured',m.motionAvailable, ...
                 'scope',regional.scope);
@@ -230,6 +248,7 @@ classdef invariantObserverSupport
                 'jointSensorLmiVerified',v.jointSensorLmiVerified, ...
                 'designRoute',"Common L/G/M vector-increment LMIs with a computed conditional ISS region", ...
                 'baselineFullStateCertified',false,'actualOverlapCertified',false,'sampledSystemCertified',false,'scope',v.scope);
+            if isfield(h,'motionGainSchedule'),runtime.motionGainSchedule=h.motionGainSchedule;end
         end
     end
 end
@@ -325,8 +344,9 @@ function v=feedbackAuthority(d,cfg)
         'velocityDirection',d.auxiliaryWeights(3)*inverse(5,5), ...
         'headingL',d.kappaL*inverse(7,7),'headingDirection',d.auxiliaryWeights(3)*inverse(7,7));
     speedFactor=(z.redundancy.minimumCourseSpeed/cfg.iss.maximumSpeed)^2;
-    % Report the solved response; no minimum response is prescribed.
-    v.minimumDirectRatesPerSecond=z.theta*speedFactor*d.auxiliaryWeights(1:2).'.*[inverse(2,2),inverse(3,3)];
+    % Report individual contributions separately from the coupled response LMI.
+    k=motionResponseSupport.weights(d,z.redundancy.minimumCourseSpeed^2);
+    v.minimumDirectRatesPerSecond=z.theta*speedFactor*k(1:2).'.*[inverse(2,2),inverse(3,3)];
     tolerance=1e-6;
     if isfield(z,'matchedGainLimits')
         v.verified=v.verified && all([v.positionL,v.positionG,v.velocityDirection]<=z.matchedGainLimits*(1+tolerance));

@@ -83,7 +83,11 @@ classdef invariantIssSupport
             % their Hessians throughout the declared outer error ball.
             h=[1;hypot(A/(V*t),1);hypot(A/(V*t),1);hypot(1,V/(t*ell));1];
             L=[t^2/V;t^2/V;t^2/V;hp+vt/ell^2;0];
-            k=[design.auxiliaryWeights([1,2,2,3]);0];
+            % The scheduler is bounded for every nonnegative measured speed.
+            % Its nominal extra Grams only dissipate; bound the estimated-
+            % Jacobian/secant remainder using its largest possible weights.
+            maximum=motionResponseSupport.maximumWeights(design);
+            k=[maximum([1,2,2,3]);0];
             active=[z.velocityAvailable;z.velocityAvailable&&z.accelerationAvailable; ...
                 z.velocityAvailable&&z.accelerationAvailable;z.velocityAvailable;false];
             k=k.*active;E=eye(8);pa=norm(P*E(:,[3,6]),2);
