@@ -99,3 +99,8 @@ EKF prediction seeds NDT. No test-reference pose enters registration. NDT's
 positive Hessian eigenspace admits the corresponding pose update; unsupported
 measurements withdraw it. Its EKF process scale equals the robust overlap-EKF
 scale. These controls do not rank complete external localization systems.
+
+Dedicated raw-scan LiDAR--inertial controls are implemented separately in
+[fastlio/README.md](fastlio/README.md). They execute pinned official FAST-LIO2
+computational functions in native and frozen-prior-map modes, with explicit
+map/sensor/timing differences from the paired observer controls.
