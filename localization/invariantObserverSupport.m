@@ -64,6 +64,8 @@ classdef invariantObserverSupport
         end
 
         function inputs=inputs(cfg)
+            assert(~isfield(cfg.invariantObserver,'maximumMotionPositionNoiseRatio'), ...
+                'VehicleLocalization:ObsoleteCouplingConstraint','Remove the retired hard coupling budget; configure gainSelection instead.');
             z=cfg.invariantObserver;if isfield(z,'provenance'),z=rmfield(z,'provenance');end
             inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-vector-iss-v10-physical-domain", ...
                 'physicalOutputs',"squared-dot-cross-direction-rate", ...
@@ -74,9 +76,19 @@ classdef invariantObserverSupport
         end
 
         function design=synthesize(cfg)
+            if isfield(cfg,'gainSelection') && cfg.gainSelection.enabled
+                design=observerGainSelectionSupport.select(cfg);
+            else
+                design=invariantObserverSupport.synthesizeCandidate(cfg,0);
+            end
+        end
+
+        function design=synthesizeCandidate(cfg,penaltyWeight)
+        % Engineering objective only; every weight has the same feasible set.
+            validateattributes(penaltyWeight,{'double'},{'real','finite','nonnegative','scalar'});
             if cfg.invariantObserver.motionResponse.enabled
                 seedCfg=cfg;seedCfg.invariantObserver.motionResponse.enabled=false;
-                seed=invariantObserverSupport.synthesize(seedCfg);
+                seed=invariantObserverSupport.synthesizeCandidate(seedCfg,penaltyWeight);
                 design=motionResponseSupport.refine(seed,cfg);
                 design.inputs=invariantObserverSupport.inputs(cfg);
                 design.verification=invariantObserverSupport.verify(design,cfg);
@@ -91,9 +103,6 @@ classdef invariantObserverSupport
             yalmip('clear');Pc=sdpvar(3,3);Ph=sdpvar(2,2);
             P=blkdiag(Pc,Pc,Ph);kL=sdpvar(1);kG=sdpvar(1);kI=sdpvar(3,1);
             constraints=[P>=eye(8),kL>=0,kG>=0,kI>=z.margin];
-            if isfield(z,'maximumMotionPositionNoiseRatio')
-                constraints=[constraints,motionPositionCouplingSupport.lmi(Pc,cfg)>=0];
-            end
             if z.angularMetricDiagonal
                 constraints=[constraints,Ph(1,2)==0];
             end
@@ -158,7 +167,18 @@ classdef invariantObserverSupport
             [bound,blocks]=noiseEnergy(P*m.B*m.Dd,P);
             constraints=[constraints,blocks];cost=cost+bound;
             fprintf('Verifying %d common LMIs with %d noise operating points\n',sum(counts),numel(m.points));
-            [result,solveAudit,multipliers]=solveCommonObserverLmis(constraints,cost,counts,witness,z);
+            selectionCost=0;
+            if penaltyWeight>0
+                n=z.noise;
+                a=Pc(1,2:3).*[n.velocityMps/z.theta,n.accelerationMps2/z.theta^2]/n.lidarPositionM;
+                % Free epigraph variables encode sum(a.^2)/Pc11 in the
+                % objective. For EVERY Pc>0 they can be chosen large enough;
+                % projection onto the original design variables is unchanged.
+                [selectionCost,epigraph]=noiseEnergy(a,Pc(1,1));
+                constraints=[constraints,epigraph];
+            end
+            [result,solveAudit,multipliers]=solveCommonObserverLmis( ...
+                constraints,cost+penaltyWeight*selectionCost,counts,witness,z);
             Pv=value(P);Pv=(Pv+Pv.')/2;
             weights=value(kI);
             % Homogeneous normalization preserves all matched feedback ratios
@@ -169,6 +189,8 @@ classdef invariantObserverSupport
                 'gyroGainNormalized',m.gyroGainNormalized,'gyroDesign',m.gyroDesign, ...
                 'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem,'solverInfo',string(result.info), ...
                 'accelerationMultipliers',{multipliers});
+            design.selectionObjective=struct('penaltyWeight',penaltyWeight, ...
+                'couplingPenalty',1.01*value(selectionCost),'seedNoiseProxy',design.meanSquareBound);
             design.constraintGeneration=solveAudit;
             design.inputs=invariantObserverSupport.inputs(cfg);
             design.verification=invariantObserverSupport.verify(design,cfg);
@@ -193,7 +215,6 @@ classdef invariantObserverSupport
                 max(eig(P(7:8,7:8)-P(1:2,1:2)))<=1e-8*max(1,norm(P,'fro'));
             diagonal=~cfg.invariantObserver.angularMetricDiagonal || abs(P(7,8))<=1e-8*max(1,norm(P,'fro'));
             authority=feedbackAuthority(design,cfg);
-            positionCoupling=motionPositionCouplingSupport.verify(P,cfg);
             % Extra scheduled weights are nonnegative exact PSD Gram terms
             % at this SAME P. The baseline finite enclosure stays valid;
             % the nonlinear remainder uses maximum scheduled weights below.
@@ -204,7 +225,7 @@ classdef invariantObserverSupport
             worst=max([joint.worstLidarEigenvalue,joint.worstGnssEigenvalue,joint.worstMixedEigenvalue]);
             regional=invariantIssSupport.regionalCertificate(design,cfg,joint);
             v=struct('certified',worst<0 && min(eig(P))>=1-1e-6 && design.kappaL>=0 && design.kappaG>=0 ...
-                && joint.certified && regional.certified && authority.verified && positionCoupling.verified && m.motionAvailable ...
+                && joint.certified && regional.certified && authority.verified && m.motionAvailable ...
                 && response.positiveGramAugmentationVerified && response.verified ...
                 && design.sigma==cfg.invariantObserver.sigma && design.lambda>0 ...
                 && design.lambda==cfg.invariantObserver.lambda ...
@@ -220,7 +241,6 @@ classdef invariantObserverSupport
                 'jointSensorLmiVerified',joint.certified,'jointSensor',joint, ...
                 'conditionalNonlinearGainConditionsVerified',joint.certified, ...
                 'feedbackAuthority',authority, ...
-                'motionPositionCoupling',positionCoupling, ...
                 'positiveGramAugmentationVerified',response.positiveGramAugmentationVerified, ...
                 'motionResponse',response, ...
                 'gyroAvailabilityRequired',true, ...

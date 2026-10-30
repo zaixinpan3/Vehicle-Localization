@@ -21,11 +21,6 @@ function [design,cfg]=synthesizeMncavInvariantDesign(cfg)
             interval(1),interval(2),mat2str(low.',5),mat2str(high.',5),design.verification.motionResponse.timeConstantS);
     end
     joint=runtime.continuousCertificate.verification.jointSensor;
-    coupling=design.verification.motionPositionCoupling;
-    if coupling.required
-        fprintf('MOTION POSITION COUPLING: physical [v,a] %s; scaled %.8g / %.8g m\n', ...
-            mat2str(coupling.physicalCoupling,6),coupling.scaledCouplingM,coupling.maximumScaledCouplingM);
-    end
     fprintf('COMMON SENSOR DESIGN %d L + %d G + %d M controls; worst L %.9g G %s M %s\n', ...
         joint.lidarVertices,joint.gnssBernsteinVertices,joint.mixedVertices,joint.worstLidarEigenvalue, ...
         mat2str(joint.worstGnssEigenvalue,9),mat2str(joint.worstMixedEigenvalue,9));

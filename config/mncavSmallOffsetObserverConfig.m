@@ -4,7 +4,7 @@ function cfg=mncavSmallOffsetObserverConfig(options)
 % calibration. GNSS noise and alignment uncertainty retain the base priors.
 % The 1 m heading length also defines this scenario's LiDAR information
 % normalization. The L-position feedback cap is 16; other caps are retained.
-% An additional metric LMI limits direct motion-to-position correction coupling.
+% Engineering objective selection leaves the original certificate feasible set unchanged.
 % Solve gains after configuration with synthesizeMncavInvariantDesign(cfg).
     arguments
         options.GnssOffsetNormM (1,1) double {mustBeReal,mustBeFinite,mustBeNonnegative}=.01
@@ -17,9 +17,9 @@ function cfg=mncavSmallOffsetObserverConfig(options)
     cfg.invariantObserver.headingLengthM=1;
     cfg.lidar.poseScales=[1;1;1];
     cfg.invariantObserver.matchedGainLimits=[16,8,2];
-    % This budget is qualified for this geometry and [1,30] m/s domain.
-    % It is not automatically feasible for the measured-lever configuration.
-    cfg.invariantObserver.maximumMotionPositionNoiseRatio=2;
+    % Candidate objective weights are solver preferences, outside the theorem
+    % inputs. All returned gains must pass the unchanged certificate verifier.
+    cfg.gainSelection=struct('enabled',true,'penaltyWeights',[0,.001,.01,.1,1]);
     cfg.gnss.outputPoint=struct( ...
         'identifier',"mncav-hypothetical-small-gnss-offset-v1", ...
         'bodyOffset',options.GnssOffsetNormM*direction, ...
@@ -35,6 +35,6 @@ function cfg=mncavSmallOffsetObserverConfig(options)
         "Temporary 1 m heading length; information floors and coupling bounds are interpreted in this pose normalization";
     cfg.invariantObserver.provenance.feedback= ...
         "Small-offset design: L-position cap 16, G-position cap 8, velocity-direction cap 2; heading L/direction caps remain 8; no runtime gain clipping";
-    cfg.invariantObserver.provenance.motionPositionCoupling= ...
-        "Additional affine metric LMI limits norm([sigma_v*P12/(theta*P11),sigma_a*P13/(theta^2*P11)]) to twice the declared LiDAR position scale. The factor two preserves design freedom: the one-scale candidate had a larger final primitive-noise objective, while the half-scale candidate was solver-infeasible. These are design priors, not certified sensor errors or a covariance bound. No runtime clipping or truth-dependent gain selection";
+    cfg.invariantObserver.provenance.gainSelection= ...
+        "Engineering multi-objective candidate search over the original LMI feasible set; final primitive-noise proxy ranks independently verified candidates. No hard position-coupling bound, reference trajectory or persisted gains";
 end
