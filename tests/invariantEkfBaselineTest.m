@@ -10,7 +10,7 @@ function testStationaryAndWithdrawnMotion(testCase)
     verifyTrue(testCase,all(isfinite(e.z),'all'));verifyLessThan(testCase,max(abs(e.z),[],'all'),.02);
 end
 function testSharedPrimitiveCovariance(testCase)
-    v=[5;1];a=[.2;.4];N=invariantIssSupport.measurementSecant(v,a,v,a);R=N*N.';
+    v=[5;1];a=[.2;.4];N=localizationSupport.measurementSecant(v,a,v,a);R=N*N.';
     verifyGreaterThan(testCase,abs(R(1,2)),0);verifyGreaterThan(testCase,abs(R(1,3)),0);verifyEqual(testCase,min(eig(R)),0,'AbsTol',1e-12);
 end
 function testExternalPoseProviderWithoutMotion(testCase)

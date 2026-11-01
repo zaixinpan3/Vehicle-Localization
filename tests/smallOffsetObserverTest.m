@@ -40,11 +40,11 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
         function measuredOffsetCannotReuseThisTemporaryDesign(testCase)
             c=testCase.Config;original=mncavFullObserverConfig();
             c.gnss.outputPoint=original.gnss.outputPoint;
-            testCase.verifyError(@()invariantObserverSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
+            testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
         end
         function enlargedDomainCannotReuseThisTemporaryDesign(testCase)
             c=testCase.Config;c.iss.maximumSpeed=31;
-            testCase.verifyError(@()invariantObserverSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
+            testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
         end
         function movingPoseErrorDecreasesAtOneHundredMilliseconds(testCase,speed,sourceMode)
             [estimate,initialError,finalError]=runScenario(testCase.Config,speed,sourceMode);

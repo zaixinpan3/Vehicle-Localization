@@ -4,8 +4,8 @@ function measurement=mississippiNdtMeasurement(map,source,pose,cellSize,noise)
 % ignores semantic labels and component masses. It is an adapted front-end
 % control, not a raw-scan NDT or a complete external localization system.
     measurement=[];if source.components.numComponents==0,return;end
-    cfg=overlapGradientConfig();local=registrationSupport.selectLocalProbabilityCloud(map,pose.',cfg.localMapRadius);if local.components.numComponents==0,return;end
-    local=registrationSupport.conditionSemanticMapOnView(local,pose.');[f,m]=registrationSupport.prepareSemanticRegistration(local,source,cfg.geometry);
+    cfg=overlapGradientConfig();local=localizationSupport.selectLocalProbabilityCloud(map,pose.',cfg.localMapRadius);if local.components.numComponents==0,return;end
+    local=localizationSupport.conditionSemanticMapOnView(local,pose.');[f,m]=localizationSupport.prepareSemanticRegistration(local,source,cfg.geometry);
     fixed=points(f)-pose(1:2).';moving=points(m);if size(fixed,1)<6 || size(moving,1)<6,return;end
     [q,stats]=matchScans(lidarScan(moving),lidarScan(fixed),InitialPose=[0,0,pose(3)],CellSize=cellSize,MaxIterations=80);
     H=(stats.Hessian+stats.Hessian.')/2;[U,E]=eig(H);ev=diag(E);keep=ev>1e-10*max(1,max(abs(ev)));if ~any(keep) || any(~isfinite(q)),return;end

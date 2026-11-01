@@ -8,7 +8,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
     end
     methods (Test)
         function currentVehicleHasAnIntrinsicSurrogateCertificate(testCase)
-            d=fullObserverSupport.designFullObserverGains(freshObserverTestConfig());
+            d=localizationSupport.designFullObserverGains(freshObserverTestConfig());
             testCase.verifyEqual(d.framework,"invariant");
             testCase.verifyTrue(d.surrogateContinuousLmiVerified);
             testCase.verifyTrue(d.jointSensorLmiVerified);
@@ -17,34 +17,34 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             testCase.verifyFalse(d.baselineFullStateCertified);
         end
         function timingDoesNotSelectAnotherGainDesign(testCase)
-            c=freshObserverTestConfig();a=fullObserverSupport.designFullObserverGains(c);
-            b=fullObserverSupport.designFullObserverGains(rmfield(c,'timing'));
+            c=freshObserverTestConfig();a=localizationSupport.designFullObserverGains(c);
+            b=localizationSupport.designFullObserverGains(rmfield(c,'timing'));
             testCase.verifyEqual(a,b);
             c.timing="historical_transport";
-            testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:ObsoleteFullConfig');
+            testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:ObsoleteFullConfig');
         end
         function retiredConfigurationsCannotSelectAnAlternative(testCase)
             c=struct('kind',"old-seven-state",'gains',[4,4,12,4]);
-            testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
+            testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
             c=freshObserverTestConfig();c.hgo=struct();
-            testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
+            testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
         end
         function changedNoiseCannotReuseTemporaryGains(testCase)
             c=freshObserverTestConfig();c.invariantObserver.noise.gyroRadps=2*c.invariantObserver.noise.gyroRadps;
-            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+            testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
         function solverClaimCannotReplaceNumericVerification(testCase)
             c=freshObserverTestConfig();h=c.invariantDesign;h.kappaL=0;h.verification.certified=true;
-            v=invariantObserverSupport.verify(h,c);testCase.verifyFalse(v.certified);
+            v=localizationSupport.verifyInvariantDesign(h,c);testCase.verifyFalse(v.certified);
             testCase.verifyFalse(v.numericalInvariantRadiusCertified);
             testCase.verifyFalse(v.regionalIss.certified);
             c.invariantDesign=h;
-            testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:InfeasibleInvariantDesign');
+            testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:InfeasibleInvariantDesign');
         end
         function missingDomainCannotBypassVerification(testCase)
             c=rmfield(freshObserverTestConfig(),'iss');
-            testCase.verifyError(@()fullObserverSupport.designFullObserverGains(c),'VehicleLocalization:MissingFullIssDomain');
+            testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:MissingFullIssDomain');
         end
         function insufficientGeometryRemainsZeroInformation(testCase)
             c=freshObserverTestConfig();c.initialState=[.2;8;0;-.1;0;0;.02];t=[0;.1];z=zeros(2,1);

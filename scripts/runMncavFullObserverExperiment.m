@@ -35,7 +35,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     assert(all(isfield(sourceCache,{'tilt','initialPose','sourceMap','motionSegment','motionValidityPolicy'})) && ...
         sourceCache.motionValidityPolicy=="uninterrupted-valid-motion-v1", ...
         'VehicleLocalization:CoarseCacheMismatch','Regenerate the source cache with current provenance and initialization.');
-    lidarCalibrationSupport.assertSensorOnlyLidarTilt(sourceCache.tilt);
+    localizationSupport.assertSensorOnlyLidarTilt(sourceCache.tilt);
     assert(isequaln(sourceCache.cfg.sourceWindow,localizationSourceWindowConfig()) && ...
         string(sourceCache.clockModelId)==prepared.clockModelId, ...
         'VehicleLocalization:CoarseCacheMismatch','Coarse horizon configuration or clock is stale.');
@@ -55,7 +55,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     data=struct('highRate',h,'gnss',gnss,'lidarOverlap',struct('time',calls.timeSeconds, ...
         'map',sourceCache.fixed,'sources',{sourceCache.sources},'valid',true(n,1),'config',overlapConfig));
     [~,cfg]=synthesizeMncavInvariantDesign(mncavFullObserverConfig());
-    [data,lateral,synchronization]=fullObserverSupport.synchronizeLocalizationInputs(data,lateral,cfg);
+    [data,lateral,synchronization]=localizationSupport.synchronizeLocalizationInputs(data,lateral,cfg);
     h=data.highRate;t=h.time;n=numel(t);gnss=data.gnss;time=gnss.time;valid=gnss.valid;
     [covered,sourceIndex]=ismember(t,calls.timeSeconds);
     assert(all(covered),'VehicleLocalization:CoarseCacheMismatch','Source clocks must cover every aligned frame.');

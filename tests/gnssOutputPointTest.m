@@ -9,20 +9,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) gnssOutputPointTest < 
     methods (Test)
         function rotatedPointUsesForwardLeftSign(testCase)
             alignment=struct('bodyOffset',[2;.5],'bodyCovariance',zeros(2),'headingStdRad',0);
-            [p,I]=fullObserverSupport.correctGnssOutputPoint([9.5,22],eye(2),pi/2,alignment);
+            [p,I]=localizationSupport.correctGnssOutputPoint([9.5,22],eye(2),pi/2,alignment);
             testCase.verifyEqual(p,[10,20],AbsTol=1e-12);
             testCase.verifyEqual(I,eye(2),AbsTol=1e-12);
         end
         function calibrationAndHeadingUncertaintyReduceInformation(testCase)
             alignment=struct('bodyOffset',[2;0],'bodyCovariance',diag([.01,.04]),'headingStdRad',.1);
-            [p,I]=fullObserverSupport.correctGnssOutputPoint([0,2],100*eye(2),pi/2,alignment);
+            [p,I]=localizationSupport.correctGnssOutputPoint([0,2],100*eye(2),pi/2,alignment);
             testCase.verifyEqual(p,[0,0],AbsTol=1e-12);
             testCase.verifyEqual(I,diag([1/.09,1/.02]),AbsTol=1e-11);
             testCase.verifyLessThan(max(eig(I)),100);
         end
         function invalidCalibrationRejected(testCase)
             alignment=struct('bodyOffset',[2;0],'bodyCovariance',diag([-.01,.04]),'headingStdRad',.1);
-            testCase.verifyError(@()fullObserverSupport.correctGnssOutputPoint([0,2],eye(2),0,alignment), ...
+            testCase.verifyError(@()localizationSupport.correctGnssOutputPoint([0,2],eye(2),0,alignment), ...
                 'VehicleLocalization:InvalidGnssAlignment');
         end
         function absentGnssIgnoresPointUncertainty(testCase)
@@ -48,7 +48,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) gnssOutputPointTest < 
                 f.data.gnss.position(1,:)-([cos(.1),-sin(.1);sin(.1),cos(.1)]*f.cfg.gnss.outputPoint.bodyOffset(:)).',AbsTol=1e-12);
         end
         function independentPointConfigurationUsesTheSolvedGnssGain(testCase)
-            cfg=freshObserverTestConfig();design=fullObserverSupport.designFullObserverGains(cfg);
+            cfg=freshObserverTestConfig();design=localizationSupport.designFullObserverGains(cfg);
             temporary=cfg.invariantDesign;
             Cp=zeros(2,8);Cp(1,1)=1;Cp(2,4)=1;
             testCase.verifyEqual(design.LG,design.toPhysical*temporary.kappaG*(temporary.P\Cp.'),RelTol=1e-12);

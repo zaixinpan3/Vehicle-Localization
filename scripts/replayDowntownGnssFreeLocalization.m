@@ -21,7 +21,7 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     protocol=downtownReferenceReplayConfig();metadata=jsondecode(fileread(fullfile(datasetFolder,'metadata.json')));
     assert(metadata.measurementOnly && ~metadata.gnssExported && ~metadata.clock.referencePoseUsed);
     inputs=prepareDowntownMotionInputs(datasetFolder,lateralDesign);save(fullfile(outputFolder,'motion_inputs.mat'),'inputs','-v7.3');
-    source=load(mapFile,'cloud');map=registrationSupport.projectSemanticProbabilityCloud(source.cloud,2);
+    source=load(mapFile,'cloud');map=localizationSupport.projectSemanticProbabilityCloud(source.cloud,2);
     [ids,native,t]=downtownReplayFrameSchedule(datasetFolder,inputs);n=numel(t);
     assert(n>=2 && isempty(intersect(ids,source.cloud.trainingFrameIndices)),'VehicleLocalization:EvaluationLeakage','Query acquisitions must not enter the map.');
     h=struct('time',t);
@@ -48,7 +48,7 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     for k=1:n
         timerFrame=tic;frame=loadPointCloudFrame(fullfile(datasetFolder,'pointClouds.mat'),ids(k));[frame,deskewApplied(k)]=deskewDowntownMotionFrame(frame,inputs);
         current=perceiveCoarseProbabilityCloud(frame,matching.perception);
-        [sources{k},history]=updateLocalizationSourceWindow(current,t(k),motion(k,:),history,matching.sourceWindow,motionSegment(k));
+        [sources{k},history]=localizationSupport.updateLocalizationSourceWindow(current,t(k),motion(k,:),history,matching.sourceWindow,motionSegment(k));
         timings(k,1)=toc(timerFrame);
         if mod(k,25)==0 || k==n,fprintf('overlap sources %s %d/%d\n',datasetFolder,k,n);end
     end

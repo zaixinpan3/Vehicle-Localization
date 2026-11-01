@@ -12,20 +12,20 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
         function zeroMassComponentsPreserveScoreAndGradient(testCase,dimension)
             source=heightProbabilityCloudTest.spatialCloud();
             target=heightProbabilityCloudTest.transform(source,[1.2 -0.7 0.16],0);
-            moving=registrationSupport.projectSemanticProbabilityCloud(source,dimension);
-            fixed=registrationSupport.projectSemanticProbabilityCloud(target,dimension);
+            moving=localizationSupport.projectSemanticProbabilityCloud(source,dimension);
+            fixed=localizationSupport.projectSemanticProbabilityCloud(target,dimension);
             cfg=semanticGeometryConfig(); cfg.heightMode="auto"; cfg.heightTranslation=0;
             pose=[1.1 -0.6 0.12];
-            [expected,reference]=registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose,cfg);
-            [actual,details]=registrationSupport.scoreSemanticProbabilityCloudAlignment( ...
+            [expected,reference]=localizationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose,cfg);
+            [actual,details]=localizationSupport.scoreSemanticProbabilityCloudAlignment( ...
                 testCase.withZeroMassComponents(fixed),testCase.withZeroMassComponents(moving),pose,cfg);
             testCase.verifyEqual(actual,expected,'AbsTol',1e-12);
             testCase.verifyEqual(details.gradient,reference.gradient,'AbsTol',1e-12);
         end
         function energyIsIndependentOfRequestedGradient(testCase,dimension)
-            cloud=registrationSupport.projectSemanticProbabilityCloud(heightProbabilityCloudTest.spatialCloud(),dimension);
-            energy=registrationSupport.semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
-            [withGradient,gradient]=registrationSupport.semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
+            cloud=localizationSupport.projectSemanticProbabilityCloud(heightProbabilityCloudTest.spatialCloud(),dimension);
+            energy=localizationSupport.semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
+            [withGradient,gradient]=localizationSupport.semanticGaussianOverlap(cloud.components,cloud.components,[0.1 -0.2 0.03]);
             testCase.verifyEqual(energy,withGradient,'AbsTol',0);
             testCase.verifyTrue(all(isfinite(gradient)));
         end
@@ -33,12 +33,12 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             moving = distributionRegistrationTest.exampleCloud();
             fixed = distributionRegistrationTest.transform(moving,[1.2 -0.7 0.16]);
             pose = [1.1 -0.6 0.12];
-            [~,details] = registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose);
+            [~,details] = localizationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose);
             numerical = zeros(1,3);
             for k=1:3
                 step=zeros(1,3); step(k)=1e-6;
-                numerical(k)=(registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose+step)- ...
-                    registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose-step))/(2e-6);
+                numerical(k)=(localizationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose+step)- ...
+                    localizationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose-step))/(2e-6);
             end
             testCase.verifyEqual(details.gradient,numerical,'AbsTol',1e-7);
         end
@@ -46,10 +46,10 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             moving=distributionRegistrationTest.exampleCloud();
             fixed=distributionRegistrationTest.transform(moving,[1.2 -0.7 0.16]);
             pose=[1.0 -0.6 0.12];
-            before=registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose);
+            before=localizationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose);
             fixed.components.mixtureWeight(fixed.components.semanticName=="curb")=1e6;
             moving.components.mixtureWeight(moving.components.semanticName=="pole")=1e-6;
-            after=registrationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose);
+            after=localizationSupport.scoreSemanticProbabilityCloudAlignment(fixed,moving,pose);
             testCase.verifyEqual(after,before,'AbsTol',1e-12);
         end
         function supportsSingletonAndRejectsInvalidCovariance(testCase)
@@ -57,7 +57,7 @@ classdef distributionRegistrationTest < matlab.unittest.TestCase
             c=cloud.components;
             cloud.components=struct('mean',c.mean(1,:),'covariance',c.covariance(:,:,1), ...
                 'semanticName',c.semanticName(1),'mixtureWeight',1,'numComponents',1);
-            testCase.verifyEqual(registrationSupport.scoreSemanticProbabilityCloudAlignment(cloud,cloud,[0 0 0]),1,'AbsTol',1e-12);
+            testCase.verifyEqual(localizationSupport.scoreSemanticProbabilityCloudAlignment(cloud,cloud,[0 0 0]),1,'AbsTol',1e-12);
             cloud.components.covariance=[1 2;2 1];
             testCase.verifyError(@() mappingSupport.validateSemanticProbabilityCloud(cloud),'VehicleLocalization:InvalidCovariance');
         end

@@ -12,7 +12,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) observerGainSelectionT
     methods (Test)
         function selectedDesignPassesOriginalCertificateAndBeatsTheSeedObjective(testCase)
             [d,c]=selected();a=d.gainSelection;
-            v=invariantObserverSupport.verify(d,c);
+            v=localizationSupport.verifyInvariantDesign(d,c);
             testCase.verifyTrue(v.certified && v.motionResponse.verified);
             testCase.verifyEqual(v.jointSensor.vertices,133920);
             testCase.verifyFalse(isfield(v,'motionPositionCoupling'));
@@ -22,20 +22,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) observerGainSelectionT
         end
         function originalFeasibleDesignWithLargeCouplingIsStillAccepted(testCase)
             c=mncavSmallOffsetObserverConfig();c.gainSelection.enabled=false;
-            c=freshObserverTestConfig(c);v=invariantObserverSupport.verify(c.invariantDesign,c);
+            c=freshObserverTestConfig(c);v=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
             testCase.verifyTrue(v.certified);
-            testCase.verifyGreaterThan(observerGainSelectionSupport.couplingRatio(c.invariantDesign.P,c),2);
+            testCase.verifyGreaterThan(localizationSupport.couplingRatio(c.invariantDesign.P,c),2);
         end
         function engineeringPreferencesAreNotCertificateInputs(testCase)
-            [~,c]=selected();original=invariantObserverSupport.inputs(c);
+            [~,c]=selected();original=localizationSupport.invariantInputs(c);
             c.gainSelection.penaltyWeights=1e6;
-            testCase.verifyEqual(invariantObserverSupport.inputs(c),original);
-            r=invariantObserverSupport.runtime(c);
+            testCase.verifyEqual(localizationSupport.invariantInputs(c),original);
+            r=localizationSupport.runtime(c);
             testCase.verifyTrue(r.continuousCertificate.verification.certified);
         end
         function obsoleteHardBudgetIsRejectedExplicitly(testCase)
             c=mncavSmallOffsetObserverConfig();c.invariantObserver.maximumMotionPositionNoiseRatio=2;
-            testCase.verifyError(@()invariantObserverSupport.inputs(c),'VehicleLocalization:ObsoleteCouplingConstraint');
+            testCase.verifyError(@()localizationSupport.invariantInputs(c),'VehicleLocalization:ObsoleteCouplingConstraint');
         end
         function informativeLidarStillCorrectsAStationaryPose(testCase,dt)
             [data,lateral,c]=constantMotionFixture(0,dt);

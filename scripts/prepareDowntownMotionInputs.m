@@ -15,7 +15,7 @@ function inputs=prepareDowntownMotionInputs(datasetFolder,lateralDesign)
         correction=parameters.input_correction.(pair(1));h.(pair(1))=correction.sign*interp1(imu.native_time_sec-begin,imu.(pair(2)),t)+correction.offset;
     end
     input=h;input.wheels=struct('time',wh.native_time_sec-begin,'angularVelocity',wh{:,{'front_left','front_right','rear_left','rear_right'}});
-    wheel=estimateWheelLongitudinalSpeed(input,wheelSpeedObserverConfig());
+    wheel=localizationSupport.estimateWheelLongitudinalSpeed(input,wheelSpeedObserverConfig());
     assert(all(wheel.valid) && all(isfinite(wheel.longitudinalSpeed)),'VehicleLocalization:WheelSpeedCoverage','No speed fallback is allowed.');
     h.longitudinalSpeed=max(0,wheel.longitudinalSpeed);
     cfg=lateralObserverConfig();lateralObserverSupport.assertLateralVehicleMatches(lateralDesign,cfg);

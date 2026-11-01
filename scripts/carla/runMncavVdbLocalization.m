@@ -58,7 +58,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
         'velocityValid',inputs.lateral.velocityValid(idx));
     [motion,motionSegment]=integrateRecordedPlanarMotion(inputs.highRate.time, ...
         [inputs.highRate.longitudinalSpeed,inputs.lateral.lateralVelocity,inputs.highRate.yawRate],t,inputs.lateral.velocityValid);
-    source=load(mapFile,'cloud');map=registrationSupport.projectSemanticProbabilityCloud(source.cloud,2);
+    source=load(mapFile,'cloud');map=localizationSupport.projectSemanticProbabilityCloud(source.cloud,2);
     p=perceptionConfig("Carla");cal=jsondecode(fileread(fullfile(datasetFolder,'calibration.json')));
     physicalCalibration=validateLidarFrameCalibration(cal.calibration);
     p.frameCalibration=validateLidarFrameCalibration(map.frameCalibration);
@@ -121,7 +121,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
             frame=store.pointClouds(1,frames(k));frame=struct('x',frame.x,'y',frame.y,'z',frame.z);
             frame=reframeLidarForCalibration(frame,physicalCalibration,cfg.perception.frameCalibration);
             current=perceiveCoarseProbabilityCloud(frame,cfg.perception);
-            [clouds{k},window]=updateLocalizationSourceWindow(current,t(k),motion(k,:),window,cfg.sourceWindow,motionSegment(k));
+            [clouds{k},window]=localizationSupport.updateLocalizationSourceWindow(current,t(k),motion(k,:),window,cfg.sourceWindow,motionSegment(k));
             seconds(k)=toc(frameTimer);
             if mod(k,100)==0 || k==n,fprintf('overlap sources %d/%d\n',k,n);end
         end

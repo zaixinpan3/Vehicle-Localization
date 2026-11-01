@@ -11,8 +11,8 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
         function currentHeightDoesNotMixDifferentVerticalOrigins(testCase)
             [~,old,~]=scene();
             current=old;current.components.meanXYZ(:,3)=current.components.meanXYZ(:,3)+2;
-            [~,history]=updateLocalizationSourceWindow(old,0,[0 0 0],[]);
-            [pooled,~,~,confirmed]=updateLocalizationSourceWindow(current,.1,[0 0 0],history);
+            [~,history]=localizationSupport.updateLocalizationSourceWindow(old,0,[0 0 0],[]);
+            [pooled,~,~,confirmed]=localizationSupport.updateLocalizationSourceWindow(current,.1,[0 0 0],history);
             testCase.verifyEqual(pooled.components.mean,current.components.mean,AbsTol=1e-12);
             testCase.verifyEqual(pooled.heightEvidence.mean,current.components.meanXYZ,AbsTol=0);
             testCase.verifyEqual(confirmed.heightEvidence.mean,current.components.meanXYZ,AbsTol=0);
@@ -20,22 +20,22 @@ classdef relativeHeightAssociationTest < matlab.unittest.TestCase
         end
         function missingCurrentScanDoesNotReuseStaleHeight(testCase)
             [~,cloud,~]=scene();
-            [~,history]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
-            [~,history]=updateLocalizationSourceWindow(cloud,.1,[0 0 0],history);
+            [~,history]=localizationSupport.updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            [~,history]=localizationSupport.updateLocalizationSourceWindow(cloud,.1,[0 0 0],history);
             missing=localizationSourceWindowTest.empty(cloud);
-            [pooled,~]=updateLocalizationSourceWindow(missing,.2,[0 0 0],history);
+            [pooled,~]=localizationSupport.updateLocalizationSourceWindow(missing,.2,[0 0 0],history);
             testCase.verifyEqual(pooled.components.numComponents,6);
             testCase.verifyFalse(any(pooled.heightEvidence.available));
         end
         function reorderedCurrentObservationsKeepTrackHeightAligned(testCase)
             [~,cloud,~]=scene();current=subsetScene(cloud,6:-1:1);
-            [~,history]=updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
-            [pooled,~]=updateLocalizationSourceWindow(current,.1,[0 0 0],history);
+            [~,history]=localizationSupport.updateLocalizationSourceWindow(cloud,0,[0 0 0],[]);
+            [pooled,~]=localizationSupport.updateLocalizationSourceWindow(current,.1,[0 0 0],history);
             testCase.verifyEqual(pooled.heightEvidence.mean,cloud.components.meanXYZ,AbsTol=0);
         end
         function croppingKeepsHeightIndicesAligned(testCase)
             [fixed,~,~]=scene();
-            [local,ids]=registrationSupport.selectLocalProbabilityCloud(fixed,[2 3 0],.1);
+            [local,ids]=localizationSupport.selectLocalProbabilityCloud(fixed,[2 3 0],.1);
             testCase.verifyEqual(ids,8);
             testCase.verifyEqual(local.components.meanXYZ,fixed.components.meanXYZ(8,:),AbsTol=0);
             testCase.verifyEqual(local.components.covarianceXYZ,fixed.components.covarianceXYZ(:,:,8),AbsTol=0);

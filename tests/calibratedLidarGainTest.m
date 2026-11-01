@@ -9,38 +9,38 @@ classdef calibratedLidarGainTest < matlab.unittest.TestCase
     end
     methods (Test)
         function averageAccuracyGetsFullSupportedAuthority(testCase)
-            cfg=config();a=lidarInjectionSupport.filterLidarPoseInformation(diag([1,3,90]),cfg,1,ones(3,1),[.01;.001]);
+            cfg=config();a=localizationSupport.filterLidarPoseInformation(diag([1,3,90]),cfg,1,ones(3,1),[.01;.001]);
             testCase.verifyEqual(a.S,eye(3),AbsTol=1e-12);
             testCase.verifyTrue(a.calibrated);
         end
         function fourTimesErrorVarianceGetsQuarterAuthority(testCase)
-            cfg=config();a=lidarInjectionSupport.filterLidarPoseInformation(eye(3),cfg,1,ones(3,1),[.04;.004]);
+            cfg=config();a=localizationSupport.filterLidarPoseInformation(eye(3),cfg,1,ones(3,1),[.04;.004]);
             testCase.verifyEqual(a.S,.25*eye(3),AbsTol=1e-12);
         end
         function weakGlobalLossScaleDoesNotChangeCorrection(testCase)
             cfg=config();H=[2,.1,.4;.1,3,.5;.4,.5,8];g=[1;2;3];
-            a=lidarInjectionSupport.filterLidarPoseInformation(H,cfg,1,ones(3,1),[.02;.001]);
-            b=lidarInjectionSupport.filterLidarPoseInformation(1e-12*H,cfg,1,ones(3,1),[.02;.001]);
+            a=localizationSupport.filterLidarPoseInformation(H,cfg,1,ones(3,1),[.02;.001]);
+            b=localizationSupport.filterLidarPoseInformation(1e-12*H,cfg,1,ones(3,1),[.02;.001]);
             testCase.verifyEqual(a.S,b.S,AbsTol=1e-12);
             testCase.verifyEqual(a.F*g,b.F*(1e-12*g),AbsTol=1e-11);
         end
         function differentPositionAndYawWeightsPreserveAffineIdentity(testCase)
             cfg=config();H=[2,.1,.4;.1,3,.5;.4,.5,8];
-            a=lidarInjectionSupport.filterLidarPoseInformation(H,cfg,1,ones(3,1),[.04;.002]);
+            a=localizationSupport.filterLidarPoseInformation(H,cfg,1,ones(3,1),[.04;.002]);
             testCase.verifyEqual(a.F*H,a.S,AbsTol=1e-12);
             testCase.verifyGreaterThan(norm(a.F-a.F.'),1e-4);
         end
         function obliqueNullspaceIsPreserved(testCase)
             cfg=config();n=[0;-3;1];J=[1,0,0;0,1,3];H=J.'*J;
-            a=lidarInjectionSupport.filterLidarPoseInformation(H,cfg,1,ones(3,1),[.03;.001]);
+            a=localizationSupport.filterLidarPoseInformation(H,cfg,1,ones(3,1),[.03;.001]);
             testCase.verifyEqual(a.S*n,zeros(3,1),AbsTol=1e-12);
             testCase.verifyEqual(a.F*H,a.S,AbsTol=1e-12);
             testCase.verifyGreaterThanOrEqual(min(eig(a.S)),-1e-12);
             testCase.verifyLessThanOrEqual(max(eig(a.S)),1+1e-12);
         end
         function rejectedAndEmptyChannelsRemainZero(testCase)
-            cfg=config();a=lidarInjectionSupport.filterLidarPoseInformation(zeros(3),cfg);
-            b=lidarInjectionSupport.filterLidarPoseInformation(eye(3),cfg,0,ones(3,1),[.01;.001]);
+            cfg=config();a=localizationSupport.filterLidarPoseInformation(zeros(3),cfg);
+            b=localizationSupport.filterLidarPoseInformation(eye(3),cfg,0,ones(3,1),[.01;.001]);
             testCase.verifyEqual(a.S,zeros(3),AbsTol=0);
             testCase.verifyEqual(b.S,zeros(3),AbsTol=0);
         end
@@ -48,24 +48,24 @@ classdef calibratedLidarGainTest < matlab.unittest.TestCase
             cfg=config();d=struct('lidarMatched',struct('P',eye(7),'T',eye(7),'kappa',4));G=zeros(3,7);G(:,[1,4,7])=eye(3);
             m=struct('pose',zeros(3,1),'information',[2,.1,.4;.1,3,.5;.4,.5,8], ...
                 'poseErrorVariance',[.04;.002]);
-            [~,a]=lidarInjectionSupport.computeLidarMatchedCorrection(m,[1;2;.1],G,d.lidarMatched,cfg, ...
+            [~,a]=localizationSupport.computeLidarMatchedCorrection(m,[1;2;.1],G,d.lidarMatched,cfg, ...
                 StepSize=10,Discretization="implicit");
             testCase.verifyTrue(a.jumpNonexpansive);
             testCase.verifyFalse(a.filter.regularizer>0);
         end
         function sandwichPredictorIsInvariantToLossScale(testCase)
-            m=model();a=lidarInjectionSupport.lidarPoseErrorFeatures(m);m.rowInfluence=100*m.rowInfluence;
-            b=lidarInjectionSupport.lidarPoseErrorFeatures(m);
+            m=model();a=localizationSupport.lidarPoseErrorFeatures(m);m.rowInfluence=100*m.rowInfluence;
+            b=localizationSupport.lidarPoseErrorFeatures(m);
             testCase.verifyEqual(a,b,RelTol=1e-10,AbsTol=1e-14);
             testCase.verifyGreaterThan(a,zeros(2,1));
         end
         function empiricalFloorIncludesUnexplainedError(testCase)
-            cfg=config();a=lidarInjectionSupport.predictLidarPoseErrorVariance(zeros(2,1),cfg.lidar.errorCalibration);
+            cfg=config();a=localizationSupport.predictLidarPoseErrorVariance(zeros(2,1),cfg.lidar.errorCalibration);
             testCase.verifyEqual(a,[.01;.001],AbsTol=0);
         end
         function legacyScaleCannotSurviveInCalibratedConfiguration(testCase)
             cfg=config();cfg.lidar.gainInformationScale=16;
-            testCase.verifyError(@()lidarInjectionSupport.filterLidarPoseInformation(eye(3),cfg,1,ones(3,1),[.01;.001]),'VehicleLocalization:AmbiguousLidarCalibration');
+            testCase.verifyError(@()localizationSupport.filterLidarPoseInformation(eye(3),cfg,1,ones(3,1),[.01;.001]),'VehicleLocalization:AmbiguousLidarCalibration');
         end
     end
 end

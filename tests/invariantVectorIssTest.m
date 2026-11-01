@@ -13,8 +13,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         end
         function equalStatesRecoverTheJacobianIncludingZeroSpeed(testCase)
             c=mncavFullObserverConfig();x=zeros(8,1);
-            [F,H,G]=invariantIssSupport.secants(x,x,0,0,c);
-            [~,J]=invariantObserverSupport.outputs(x,0,c);
+            [F,H,G]=localizationSupport.secants(x,x,0,0,c);
+            [~,J]=localizationSupport.outputs(x,0,c);
             testCase.verifyEqual(H,J,AbsTol=0);
             testCase.verifyTrue(all(isfinite([F(:);H(:);G(:)])));
             testCase.verifyEqual(H(4,[2,5]),[0,1],AbsTol=0);
@@ -25,21 +25,21 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         end
         function sharedSensorVectorReconstructsEveryPacketIncrement(testCase)
             c=mncavFullObserverConfig();v=[12;.4];a=[.3;1.2];dv=[.2;-.1];da=[-.04;.08];dr=.003;
-            N=invariantIssSupport.measurementSecant(v,a,v+dv,a+da);
-            p=invariantObserverSupport.measurements(v(1),v(2),a(1),a(2),.1,0,true,true,true,c);
-            m=invariantObserverSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),.1+dr,0,true,true,true,c);
+            N=localizationSupport.measurementSecant(v,a,v+dv,a+da);
+            p=localizationSupport.measurements(v(1),v(2),a(1),a(2),.1,0,true,true,true,c);
+            m=localizationSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),.1+dr,0,true,true,true,c);
             testCase.verifyEqual(m.value-p.value,N*[dv;da;dr],AbsTol=3e-13);
             testCase.verifySize(N,[5,5]);
             testCase.verifyEqual(N(4,:),zeros(1,5),AbsTol=0);
             testCase.verifyGreaterThan(norm(N(2:3,3:4)),0);
         end
         function bernsteinControlsRepresentCoupledRatesThroughoutCells(testCase)
-            controls=sensorRedundancySupport.courseControls(.4,2);u=.37;
+            controls=localizationSupport.courseControls(.4,2);u=.37;
             rate=-.4+.4*u;weights=[(1-u)^2,2*u*(1-u),u^2];
             testCase.verifyEqual(weights*controls(1:3,:),[rate,rate^2],AbsTol=2e-16);
             testCase.verifyLessThanOrEqual(max(controls(:,2)),.4^2);
             testCase.verifyGreaterThanOrEqual(min(controls(:,2)),0);
-            testCase.verifyError(@()sensorRedundancySupport.courseControls(.4,3), ...
+            testCase.verifyError(@()localizationSupport.courseControls(.4,3), ...
                 'VehicleLocalization:InvalidRedundancyDomain');
         end
         function regionalBoundHasAStrictInvariantLevelAndInputBudget(testCase)
@@ -64,17 +64,17 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         end
         function removingEitherMixedAnchorRejectsItsCertificate(testCase)
             c=freshObserverTestConfig();d=c.invariantDesign;
-            w=sensorRedundancySupport.witness(c,d.P,d.kappaL,0,d.auxiliaryWeights,d.gyroGainNormalized,d.accelerationMultipliers);
-            v=sensorRedundancySupport.verify(w,true);
+            w=localizationSupport.witness(c,d.P,d.kappaL,0,d.auxiliaryWeights,d.gyroGainNormalized,d.accelerationMultipliers);
+            v=localizationSupport.verifySensorRedundancy(w,true);
             testCase.verifyFalse(v.certified);
             testCase.verifyGreaterThan(v.worstMixedEigenvalue,0);
         end
         function regionalDomainChangesInvalidateTemporaryGains(testCase)
             c=freshObserverTestConfig();c.invariantObserver.regionalRadiusCap=.5;
-            testCase.verifyError(@()invariantObserverSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
+            testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
         end
         function sampledAndActualGeometryClaimsRemainWithdrawn(testCase)
-            r=invariantObserverSupport.runtime(freshObserverTestConfig());
+            r=localizationSupport.runtime(freshObserverTestConfig());
             testCase.verifyTrue(r.continuousCertificate.verification.numericalInvariantRadiusCertified);
             testCase.verifyFalse(r.actualOverlapCertified);
             testCase.verifyFalse(r.sampledSystemCertified);
@@ -89,8 +89,8 @@ function errors=finiteIdentityErrors(c)
         x=randn(stream,8,1);y=randn(stream,8,1);beta=.2;rate=-.04;
         x([2,5])=10*x([2,5]);y([2,5])=10*y([2,5]);
         if k==1,y(7)=x(7);elseif k==2,y(7)=x(7)+1e-12;end
-        [F,H,G]=invariantIssSupport.secants(x,y,beta,rate,c);e=x-y;
-        dh=invariantObserverSupport.outputs(x,beta,c)-invariantObserverSupport.outputs(y,beta,c);
+        [F,H,G]=localizationSupport.secants(x,y,beta,rate,c);e=x-y;
+        dh=localizationSupport.outputs(x,beta,c)-localizationSupport.outputs(y,beta,c);
         dg=antenna(x,c)-antenna(y,c);df=drift(x,rate)-drift(y,rate);
         errors(k,:)=[norm(F*e-df)/max(1,norm(df)),norm(H*e-dh)/max(1,norm(dh)), ...
             norm(G*e-dg)/max(1,norm(dg))];
@@ -102,14 +102,14 @@ function errors=rotationErrors(c)
     T([1,4],[1,4])=R;T([2,5],[2,5])=R;T([3,6],[3,6])=R;
     x=[2;12;.6;-1;.4;1.1;.3;.07];y=x+[.4;-.2;.1;-.3;.1;-.2;.1;-.02];
     xr=T*x;yr=T*y;xr(7)=xr(7)+angle;yr(7)=yr(7)+angle;
-    [F,H,G]=invariantIssSupport.secants(x,y,.1,.03,c);
-    [Fr,Hr,Gr]=invariantIssSupport.secants(xr,yr,.1,.03,c);
+    [F,H,G]=localizationSupport.secants(x,y,.1,.03,c);
+    [Fr,Hr,Gr]=localizationSupport.secants(xr,yr,.1,.03,c);
     errors=[norm(Fr-T*F*T.'),norm(Hr*T-H),norm(Gr*T-R*G)];
 end
 
 function ratios=regionalDissipation(c)
     d=c.invariantDesign;r=d.verification.regionalIss;t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;
-    B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=invariantObserverSupport.outputNormalization(c);
+    B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=localizationSupport.outputNormalization(c);
     E=eye(8);C=E([1,4,7],:);Cp=C(1:2,:);
     stream=RandStream('mt19937ar','Seed',2302);ratios=zeros(180,1);
     for k=1:numel(ratios)
@@ -133,9 +133,9 @@ function ratios=regionalDissipation(c)
         end
         mismatch=c.invariantObserver.redundancy.informativeLidarMismatch;
         W=S-mismatch*eye(3)+.01*[0,1,0;-1,0,0;0,0,0];
-        [hx,~]=invariantObserverSupport.outputs(x,beta,c);
-        [hh,Hh]=invariantObserverSupport.outputs(hat,beta,c);
-        weights=motionResponseSupport.weights(d,hx(1));
+        [hx,~]=localizationSupport.outputs(x,beta,c);
+        [hh,Hh]=localizationSupport.outputs(hat,beta,c);
+        weights=localizationSupport.weights(d,hx(1));
         Ka=diag([weights([1,2,2,3]);0])*diag(double(valid));
         rhs=B\(drift(x,rate)-drift(hat,rate));
         rhs=rhs-t*d.gyroGainNormalized*E(:,8)*eps(8);

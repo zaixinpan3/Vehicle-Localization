@@ -267,7 +267,7 @@ temporary report is required for this closure.
 The default is now `mncavFullObserverConfig`, which returns parameters only.
 `synthesizeMncavInvariantDesign(cfg)` solves temporary gains immediately before
 each test/experiment, without reading or writing a gain file.
-`invariantObserverSupport.predict` accepts
+`localizationSupport.predict` accepts
 only the internal state, time step and estimated lateral sideslip derivative.
 No measured gyro or acceleration enters that function. Its eight physical
 states are
@@ -1353,10 +1353,10 @@ performance or an extension of the positive-speed theorem.
 The current synthesis retains the complete local information of the dot/cross
 pair and its dependence on the same motion variables as the vehicle dynamics.
 This section describes the base common ISS certificate implemented by
-`coupledMotionSupport` and `sensorRedundancySupport`. It retains the same five
+the sensor/motion methods of `localizationSupport`. It retains the same five
 physical outputs and sensor-information contracts. Current production also
-uses `motionResponseSupport` for a separate nominal motion-response design
-at the freshly solved metric. `observerGainSelectionSupport` selects an
+uses `localizationSupport` for a separate nominal motion-response design
+at the freshly solved metric. `localizationSupport` selects an
 engineering objective within the original certificate feasible set; the
 retired hard motion-to-position coupling constraint is not restored.
 

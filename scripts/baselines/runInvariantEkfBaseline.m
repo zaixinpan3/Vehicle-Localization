@@ -18,19 +18,19 @@ function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
     for k=1:n
         timer=tic;dt=0;if k>1,dt=t(k)-t(k-1);end
         valid=lateral.velocityValid(k);br=0;if valid,br=lateral.sideSlipAngleRate(k);end
-        old=x;x=invariantObserverSupport.predict(old,dt,br);
-        F=zeros(8);for j=1:8,d=1e-5*max(1,abs(old(j)));a=old;a(j)=a(j)+d;b=old;b(j)=b(j)-d;F(:,j)=(invariantObserverSupport.predict(a,dt,br)-invariantObserverSupport.predict(b,dt,br))/(2*d);end
+        old=x;x=localizationSupport.predict(old,dt,br);
+        F=zeros(8);for j=1:8,d=1e-5*max(1,abs(old(j)));a=old;a(j)=a(j)+d;b=old;b(j)=b(j)-d;F(:,j)=(localizationSupport.predict(a,dt,br)-localizationSupport.predict(b,dt,br))/(2*d);end
         Q=diag([1e-6,1e-4,noise.jerkMps3^2,1e-6,1e-4,noise.jerkMps3^2,1e-7,.03^2]);
         P=F*P*F.'+options.ProcessScale*dt*Q;
         if isfield(data,'gnss') && data.gnss.valid(k)
-            [z,I]=fullObserverSupport.correctGnssOutputPoint(data.gnss.position(k,:),data.gnss.information(:,:,k),x(7),cfg.gnss.outputPoint);
+            [z,I]=localizationSupport.correctGnssOutputPoint(data.gnss.position(k,:),data.gnss.information(:,:,k),x(7),cfg.gnss.outputPoint);
             H=zeros(2,8);H(:,[1,4])=eye(2);[x,P]=update(x,P,z.'-H*x,H,I\eye(2));
         end
         h=data.highRate;beta=0;vy=0;if valid,beta=lateral.sideSlipAngle(k);vy=lateral.lateralVelocity(k);end
         av=true;if isfield(h,'bodyAccelerationValid'),av=h.bodyAccelerationValid(k);end
-        packet=invariantObserverSupport.measurements(h.longitudinalSpeed(k),vy,h.longitudinalAcceleration(k),h.lateralAcceleration(k),h.yawRate(k),beta,valid,av,true,cfg);
-        [v,H]=invariantObserverSupport.outputs(x,beta,cfg);
-        B=invariantIssSupport.measurementSecant([h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)],[h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)]);
+        packet=localizationSupport.measurements(h.longitudinalSpeed(k),vy,h.longitudinalAcceleration(k),h.lateralAcceleration(k),h.yawRate(k),beta,valid,av,true,cfg);
+        [v,H]=localizationSupport.outputs(x,beta,cfg);
+        B=localizationSupport.measurementSecant([h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)],[h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)]);
         R=B*diag([noise.velocityMps^2*[1,1],noise.accelerationMps2^2*[1,1],noise.gyroRadps^2])*B.';
         R(4,4)=noise.velocityMps^2;R=R+1e-8*eye(5);ids=packet.valid;
         [x,P]=update(x,P,packet.value(ids)-v(ids),H(ids,:),R(ids,ids));
@@ -43,7 +43,7 @@ function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
         elseif isfield(data,'lidarOverlap') && data.lidarOverlap.valid(k) && dt>0
             prior=x;Pi=P\eye(8);current=x;measurement=[];
             for it=1:options.Iterations
-                measurement=lidarInjectionSupport.evaluateOverlapGradient(data.lidarOverlap.map,data.lidarOverlap.sources{k},current([1,4,7]),data.lidarOverlap.config);
+                measurement=localizationSupport.evaluateOverlapGradient(data.lidarOverlap.map,data.lidarOverlap.sources{k},current([1,4,7]),data.lidarOverlap.config);
                 if ~measurement.available,break;end
                 Hq=measurement.information/options.LidarTemperature;g=measurement.gradient/options.LidarTemperature;
                 next=current-(Pi+G.'*Hq*G)\(Pi*(current-prior)+G.'*g);

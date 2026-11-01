@@ -21,7 +21,7 @@ function runMississippiBaselines(outputFolder,options)
     v=[cos(reference(1,3)),-sin(reference(1,3));sin(reference(1,3)),cos(reference(1,3))]*[data.highRate.longitudinalSpeed(1);lateral.lateralVelocity(1)];
     cfg.initialState=[reference(1,1);v(1);0;reference(1,2);v(2);0;reference(1,3);0];
     meta.gnssPreprocessing="Measured-to-design lever correction using one initialized gyro-integrated heading; uncertainty remains a measurement disturbance";
-    meta.globalCertificate=invariantObserverSupport.verify(cfg.invariantDesign,cfg);meta.actualMapCertified=false;
+    meta.globalCertificate=localizationSupport.verifyInvariantDesign(cfg.invariantDesign,cfg);meta.actualMapCertified=false;
     meta.queryFrames=numel(t);meta.queryIntervalMedianS=median(diff(t));meta.evaluationDurationS=t(end)-t(1);
     meta.mapComponents=data.lidarOverlap.map.components.numComponents;meta.velocityValidFrames=nnz(lateral.velocityValid);
     meta.currentScanOnly=false;meta.referenceSource="Corrected receiver reference";if options.Drive==2,meta.referenceSource="Original INSPVA; post-40s evaluation";end
@@ -108,7 +108,7 @@ function [data,lateral,reference,meta]=inputs(drive,tmp,ld,lc,cfg)
         folder=fullfile(tmp,'drive2');frameTable=readtable(fullfile(folder,'frames.csv'));poses=readFramePoseTable(fullfile(folder,'poses.csv'),1:height(frameTable));t=poses.receiver_time_sec;
         clock=loadReceiverClock(fullfile(folder,'inspva.csv'));frames=readtable(fullfile(folder,'frames.csv'));start=receiverClockTime(clock,frames.stamp_sec(1));finish=receiverClockTime(clock,frames.stamp_sec(end));
         [h,~,meta]=prepareWheelMotionInputs(fullfile(folder,'sensors'),mncavReplayConfig(),clock,start,finish,InitialSpeed=0);l=runLateralVelocityObserver(h,ld,lc);
-        ref=zeros(height(poses),3);for j=1:height(poses),ref(j,:)=poseSupport.poseRowToPlanarPose(poses(j,:));end
+        ref=zeros(height(poses),3);for j=1:height(poses),ref(j,:)=localizationSupport.poseRowToPlanarPose(poses(j,:));end
         names=perceptionConfig("Mississippi","offline");mc=featureMapBuildConfig();mc.logEnabled=false;mc.frameIndices=1:height(poses);
         observations=struct('featureNames',names.featureNames,'frameIndices',1:height(poses),'frameCalibration',names.frameCalibration,'pointsByFeatureFrame',{cell(numel(names.featureNames),height(poses))});sources=cell(height(poses),1);
         chunks=dir(fullfile(folder,'features_*.mat'));
@@ -127,7 +127,7 @@ function [data,lateral,reference,meta]=inputs(drive,tmp,ld,lc,cfg)
     end
     n=height(cache.calls);I=nan(2,2,height(g));for k=find(logical(g.valid)).',I(:,:,k)=[g.informationXX(k),g.informationXY(k);g.informationXY(k),g.informationYY(k)];end
     data=struct('highRate',h,'gnss',struct('time',g.time,'position',[g.x,g.y],'information',I,'valid',logical(g.valid),'delay',0),'lidarOverlap',struct('time',cache.calls.timeSeconds,'map',cache.fixed,'sources',{cache.sources},'valid',true(n,1),'config',overlapGradientConfig()));
-    [data,lateral]=fullObserverSupport.synchronizeLocalizationInputs(data,l,cfg);[ok,ids]=ismember(data.highRate.time,cache.calls.timeSeconds);assert(all(ok));reference=ref(ids,:);
+    [data,lateral]=localizationSupport.synchronizeLocalizationInputs(data,l,cfg);[ok,ids]=ismember(data.highRate.time,cache.calls.timeSeconds);assert(all(ok));reference=ref(ids,:);
     save(rawPath,'data','lateral','reference','meta','-v7.3');
     if drive==2,[data,lateral,reference]=holdout(data,lateral,reference);end
     meta.mapQueryProtocol="All-frame same-pass reference map; localizes measured-motion sources; not independent survey accuracy";

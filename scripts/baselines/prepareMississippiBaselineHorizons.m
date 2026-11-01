@@ -9,7 +9,7 @@ function prepareMississippiBaselineHorizons(tmp)
     [motion,segment]=integrateRecordedPlanarMotion(t,[h.longitudinalSpeed,l.lateralVelocity,h.yawRate],t,l.velocityValid);
     history=[];sources=cell(size(b.data.lidarOverlap.sources));
     for k=1:numel(t)
-        [sources{k},history]=updateLocalizationSourceWindow(b.data.lidarOverlap.sources{k},t(k),motion(k,:),history,cfg,segment(k));
+        [sources{k},history]=localizationSupport.updateLocalizationSourceWindow(b.data.lidarOverlap.sources{k},t(k),motion(k,:),history,cfg,segment(k));
     end
     b.data.lidarOverlap.sources=sources;b.meta.sourceWindowConfiguration=cfg;
     b.meta.sourceMotionIntegration="Frame-aligned measured wheel/lateral/gyro motion; uninterrupted-valid segments; no map/reference pose";

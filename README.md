@@ -140,7 +140,7 @@ means/covariances, aggregated into whole-pillar XY output cells (1.2 m on the
 online 0.6 m lattice, 0.9 m on the offline 0.3 m lattice) with covariance safeguards.
 `components.meanXYZ`, `covarianceXYZ`, and `heightAvailable` retain height and
 its xz/yz coupling. Existing `mean` and `covariance` fields remain the exact XY
-marginal. `registrationSupport.projectSemanticProbabilityCloud(cloud,3)` returns
+marginal. `localizationSupport.projectSemanticProbabilityCloud(cloud,3)` returns
 standard XYZ component arrays; dimension 2 selects the marginal without changing
 weights.
 `semanticProbability` and `occupancyProbability` name
@@ -232,16 +232,17 @@ This replaces the former standalone validation helper.
 
 Dataset loading, frame/pose matching, global coordinate transforms, feature
 collection, and the `buildFeatureMap` offline workflow live in `scripts/`.
-Cloud registration, registration preparation, projection, scoring, and pitch
-calibration live in `localization/`, alongside `poseSupport.poseRowToPlanarPose`.
+Overlap preparation, projection, scoring, and pitch
+calibration live in `localization/`, alongside `localizationSupport.poseRowToPlanarPose`.
 Run `setupVehicleLocalization` to add all three modules. Existing map formats, configuration fields, numerical
 algorithms, and builder/query error identifiers are preserved.
 
 ### Localization (`localization/`)
 
-The module has 19 MATLAB files: entry points plus static `*Support` classes,
-called with the class prefix (for example
-`lidarInjectionSupport.filterLidarPoseInformation`). The complete file table
+The module has two top-level MATLAB files: `runFullLocalizationObserver.m`
+and the unified `localizationSupport.m` static class. The four files in
+`lateralObserver/` are unchanged. Shared methods use the class prefix, for
+example `localizationSupport.filterLidarPoseInformation`. The complete file table
 is in [the localization README](localization/README.md#support-files).
 
 Two estimator stages live here and form the current one-way cascade.
@@ -345,9 +346,9 @@ settings are explicit:
 | `featureMapBuildConfig` | `buildFeatureMap` |
 | `semanticNdtGridMapConfig` | `buildSemanticNdtGridMap` |
 | `lateralObserverConfig` | `designLateralObserverGains`, `runLateralVelocityObserver` (`.outputPoint` from `mncavMotionOutputPoint.json` for MnCAV) |
-| `wheelSpeedObserverConfig` | `estimateWheelLongitudinalSpeed`, `prepareWheelMotionInputs` |
-| `mncavFullObserverConfig` | `fullObserverSupport.designFullObserverGains`, `runFullLocalizationObserver` |
-| `overlapGradientConfig` | `lidarInjectionSupport.evaluateOverlapGradient`, `runFullLocalizationObserver` (`data.lidarOverlap.config`) |
+| `wheelSpeedObserverConfig` | `localizationSupport.estimateWheelLongitudinalSpeed`, `prepareWheelMotionInputs` |
+| `mncavFullObserverConfig` | `localizationSupport.designFullObserverGains`, `runFullLocalizationObserver` |
+| `overlapGradientConfig` | `localizationSupport.evaluateOverlapGradient`, `runFullLocalizationObserver` (`data.lidarOverlap.config`) |
 
 ## Quick start
 
@@ -396,7 +397,7 @@ fine = perceiveFrame(frame, perceptionConfig("Mississippi", "offline")); % 0.3 m
 nnz(fine.featureMasks.curb)                       % accepted offline curb points
 
 localCloud = perceiveCoarseProbabilityCloud(frame, perceptionConfig());
-selfScore = registrationSupport.scoreSemanticProbabilityCloudAlignment( ...
+selfScore = localizationSupport.scoreSemanticProbabilityCloudAlignment( ...
     localCloud, localCloud, [0, 0, 0]);           % semantic D2D-NDT score
 
 [probabilityCloudMap, featureData] = buildFeatureMap("data");   % offline map
@@ -423,7 +424,7 @@ Evaluate the current LiDAR information directly at a predicted pose:
 
 ```matlab
 mapCloud = temporalMapToProbabilityCloud(probabilityCloudMap);
-measurement = lidarInjectionSupport.evaluateOverlapGradient( ...
+measurement = localizationSupport.evaluateOverlapGradient( ...
     mapCloud, localCloud, predictedPoseXYTheta(:), overlapGradientConfig());
 ```
 
@@ -435,7 +436,7 @@ mapping. The map and source must use consistent calibration and coordinates.
 Optional `perceptionConfig().frameCalibration` and
 `featureMapBuildConfig().frameCalibration` specify the same rigid increment
 from stored points to the recorded body frame. Their default is identity.
-`lidarCalibrationSupport.fitLidarPitchCalibration` produces an **offline pitch-only candidate** from
+`localizationSupport.fitLidarPitchCalibration` produces an **offline pitch-only candidate** from
 static feature observations; it does not add a localization state or claim a
 complete sensor extrinsic calibration. Rebuild a map with the chosen transform
 before using it online. Missing or mismatched calibration provenance is rejected.

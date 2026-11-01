@@ -10,7 +10,7 @@ function cfg=freshObserverTestConfig(cfg)
         'Use freshObserverGainsFixture before requesting test gains.');
     selection=struct();if isfield(cfg,'gainSelection'),selection=cfg.gainSelection;end
     designs=getappdata(0,name);
-    key=jsonencode(struct('certificate',invariantObserverSupport.inputs(cfg),'selection',selection));
+    key=jsonencode(struct('certificate',localizationSupport.invariantInputs(cfg),'selection',selection));
     if ~isKey(designs,key)
         [design,~]=synthesizeMncavInvariantDesign(cfg);designs(key)=design;
     end

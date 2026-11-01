@@ -50,7 +50,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
         signals=synthesizeSignals(truth,settings,noise);
         timer=tic;lateral=runLateralVelocityObserver(signals.highRate,design,lateralCfg);lateralSeconds=toc(timer);
         data=struct('highRate',signals.highRate,'gnss',signals.gnss,'lidar',signals.lidar);
-        [aligned,alignedLateral,synchronization]=fullObserverSupport.synchronizeLocalizationInputs(data,lateral,cfg);
+        [aligned,alignedLateral,synchronization]=localizationSupport.synchronizeLocalizationInputs(data,lateral,cfg);
         t=aligned.highRate.time;frameTruth=truthAt(truth,t);
         current=aligned;
         if ~ismember("gnss",sources),current=rmfield(current,'gnss');end

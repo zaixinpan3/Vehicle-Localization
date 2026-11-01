@@ -36,7 +36,7 @@ classdef activeLocalizationChannelTest < matlab.unittest.TestCase
             high=struct('time',[0;.1;.2],'longitudinalSpeed',[2;2;2]);
             lateral=struct('time',high.time,'lateralVelocity',[0;0;0],'sideSlipAngle',[0;0;0],'sideSlipAngleRate',[0;0;0]);
             overlap=struct('time',[-.1;0;.1;.2;.3],'sources',{{1;2;3;4;5}},'valid',true(5,1));
-            [aligned,lat]=fullObserverSupport.synchronizeLocalizationInputs( ...
+            [aligned,lat]=localizationSupport.synchronizeLocalizationInputs( ...
                 struct('highRate',high,'lidarOverlap',overlap),lateral);
             test.verifyFalse(isfield(aligned,'lidar'));
             test.verifyEqual(aligned.lidarOverlap.sources,{2;3;4});

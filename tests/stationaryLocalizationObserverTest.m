@@ -49,7 +49,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
         function supportRespectsCouplingAndRawAdmission(testCase,supportCase)
             cfg=mncavFullObserverConfig();
             filter=informationFilter(supportCase.information,cfg);
-            s=fullObserverSupport.lidarPoseSupport(filter,cfg);
+            s=localizationSupport.lidarPoseSupport(filter,cfg);
             testCase.verifyEqual(s.rank,supportCase.rank);
             testCase.verifyEqual(s.fullPoseSupported,supportCase.rank==3);
             testCase.verifyEqual(s.headingSupported,supportCase.heading);
@@ -66,14 +66,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
         end
         function headingStrengthMatchesMarginalInformation(testCase)
             cfg=mncavFullObserverConfig();I=[8,2,3;2,7,-1;3,-1,6]*1e3;
-            filter=informationFilter(I,cfg);S=filter.S;s=fullObserverSupport.lidarPoseSupport(filter,cfg);
+            filter=informationFilter(I,cfg);S=filter.S;s=localizationSupport.lidarPoseSupport(filter,cfg);
             expected=S(3,3)-S(3,1:2)*(S(1:2,1:2)\S(1:2,3));
             testCase.verifyEqual(s.headingStrengthAfterPosition,expected,AbsTol=1e-12);
             testCase.verifyGreaterThan(s.minimumStrength,0);
         end
         function numericallyFullPoseCanFailConfiguredSector(testCase)
             cfg=mncavFullObserverConfig();filter=informationFilter(eye(3),cfg);
-            s=fullObserverSupport.lidarPoseSupport(filter,cfg);
+            s=localizationSupport.lidarPoseSupport(filter,cfg);
             testCase.verifyTrue(s.fullPoseSupported);
             testCase.verifyFalse(s.sectorQualified);
         end
@@ -156,7 +156,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
         end
         function synchronizationCropsRecordedQualityAndCalibration(testCase)
-            f=croppedFixture(false);[d,l]=fullObserverSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            f=croppedFixture(false);[d,l]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
             testCase.verifyEqual(d.lidar.frameReliability,[.2;.4;.6],AbsTol=0);
             testCase.verifyEqual(d.lidar.directionReliability,repmat([.2,.5,.9],3,1),AbsTol=0);
             testCase.verifyEqual(d.lidar.poseErrorVariance,[2,3;3,4;4,5],AbsTol=0);
@@ -165,7 +165,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
         end
         function synchronizationCropsOverlapQualityAndSources(testCase)
-            f=croppedFixture(true);[d,l]=fullObserverSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            f=croppedFixture(true);[d,l]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
             testCase.verifyEqual(d.lidarOverlap.frameReliability,[.2;.4;.6],AbsTol=0);
             testCase.verifyEqual(d.lidarOverlap.directionReliability,repmat([.2,.5,.9],3,1),AbsTol=0);
             testCase.verifyEqual(numel(d.lidarOverlap.sources),3);
@@ -178,7 +178,7 @@ end
 
 function filter=informationFilter(normalized,cfg)
     D=diag(cfg.lidar.poseScales);
-    filter=lidarInjectionSupport.filterLidarPoseInformation(D\normalized/D,cfg);
+    filter=localizationSupport.filterLidarPoseInformation(D\normalized/D,cfg);
 end
 
 function f=fixture(duration)

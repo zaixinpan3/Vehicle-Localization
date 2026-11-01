@@ -44,7 +44,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
 % (frame-aligned source clouds in current body axes), optional valid and
 % config. Each available frame injects the scale-ladder gradient of -log of the
 % balanced semanticGaussianOverlap at the post-baseline prediction, with its
-% Gauss-Newton metric as information (lidarInjectionSupport.evaluateOverlapGradient).
+% Gauss-Newton metric as information (localizationSupport.evaluateOverlapGradient).
 % Optional overlap frameReliability (n-by-1) and directionReliability (n-by-3)
 % weight the geometric filter; directions follow ascending normalized information
 % eigenvalues. Declared overlap time must match the frame clock and delay be zero.
@@ -92,7 +92,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     end
     alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
-    [continuous,cfg]=fullObserverSupport.designFullObserverGains(cfg);
+    [continuous,cfg]=localizationSupport.designFullObserverGains(cfg);
     lidarInjection=continuous.lidarMatched;
     lmiVerified=continuous.surrogateContinuousLmiVerified;
     stateCount=8;
@@ -125,10 +125,10 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         yaw=predYaw;
         Wg=zeros(2);
         if G.valid(k)
-            [gnssPosition(k,:),gnssInformation(:,:,k)]=fullObserverSupport.correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),yaw,alignment);
+            [gnssPosition(k,:),gnssInformation(:,:,k)]=localizationSupport.correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),yaw,alignment);
             I=gnssInformation(:,:,k);Wg=I/(I+cfg.gnss.gainInformationScale*eye(2));Wg=(Wg+Wg.')/2;
         end
-        x=invariantObserverSupport.predict(x,dt,lateral.sideSlipAngleRate(k));
+        x=localizationSupport.predict(x,dt,lateral.sideSlipAngleRate(k));
         intrinsicStates(k,:)=x.';
         gnssRate=zeros(2,1);
         if G.valid(k)
@@ -136,17 +136,17 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
             x=(eye(8)+dt*Kg*Cp)\(x+dt*Kg*gnssPosition(k,:).');
             gnssRate=Kg([1,4],:)*(gnssPosition(k,:).'-Cp*x);
         end
-        packet=invariantObserverSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
+        packet=localizationSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
             h.lateralAcceleration(k),h.yawRate(k),lateral.sideSlipAngle(k), ...
             velocityValid(k),accelerationValid(k),gyroValid(k),cfg);
         priorRate=x(8);
-        [x,invariantAudits{k}]=invariantObserverSupport.correct(x,packet,dt,continuous,cfg);
+        [x,invariantAudits{k}]=localizationSupport.correct(x,packet,dt,continuous,cfg);
         % Complete the implicit psi-dot = estimated-rate equation using
         % the posterior STATE. No gyro sample appears in this prediction.
         x(7)=x(7)+dt*(x(8)-priorRate);
         baselineStates(k,:)=x.';
         if L.valid(k) && overlapChannel
-            measurement=lidarInjectionSupport.evaluateOverlapGradient(overlap.map,overlap.sources{k},x([1,4,7]),overlap.config);
+            measurement=localizationSupport.evaluateOverlapGradient(overlap.map,overlap.sources{k},x([1,4,7]),overlap.config);
             overlapDiagnostics.evaluated(k)=true;overlapDiagnostics.available(k)=measurement.available;
             overlapDiagnostics.similarity(k)=measurement.similarity;overlapDiagnostics.seconds(k)=measurement.seconds;
             overlapDiagnostics.minimumInformation(k)=measurement.minimumInformation;
@@ -162,7 +162,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
                     assert(isfield(measurement,'residual'),'VehicleLocalization:InvalidLidarResidual', ...
                         'evaluateResidual must return a predicted-pose residual channel.');
                 elseif ~isempty(L.residualModels{k})
-                    measurement=lidarInjectionSupport.evaluateLidarRegistrationResidual(L.residualModels{k},x([1,4,7]));
+                    measurement=localizationSupport.evaluateLidarRegistrationResidual(L.residualModels{k},x([1,4,7]));
                 end
             end
             if all(isfinite(L.poseErrorVariance(k,:)))
@@ -172,21 +172,21 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
                 assert(~isfield(L,'evaluateResidual') && ~isempty(L.residualModels{k}), ...
                     'VehicleLocalization:MissingLidarErrorCalibration', ...
                     'Calibrated gains require a fitted residual model or an explicit pose error variance.');
-                features=lidarInjectionSupport.lidarPoseErrorFeatures(L.residualModels{k});
-                measurement.poseErrorVariance=lidarInjectionSupport.predictLidarPoseErrorVariance(features,cfg.lidar.errorCalibration);
+                features=localizationSupport.lidarPoseErrorFeatures(L.residualModels{k});
+                measurement.poseErrorVariance=localizationSupport.predictLidarPoseErrorVariance(features,cfg.lidar.errorCalibration);
             end
             if ~isfield(measurement,'frameReliability'),measurement.frameReliability=1;end
             if ~isfield(measurement,'directionReliability'),measurement.directionReliability=ones(3,1);end
             measurement.frameReliability=measurement.frameReliability*L.frameReliability(k);
             measurement.directionReliability=measurement.directionReliability(:).*L.directionReliability(k,:).';
-            [delta,audit]=lidarInjectionSupport.computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
+            [delta,audit]=localizationSupport.computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
                 lidarInjection,cfg,StepSize=dt,Discretization="implicit");
             assert(audit.jumpNonexpansive,'VehicleLocalization:LidarJumpCertificateFailed', ...
                 'The numerical LiDAR jump failed its fixed-metric energy check.');
             x=x+delta;lidarAudits{k}=audit;poseWeights(:,:,k)=audit.filter.S;
             S=audit.filter.S;
             informationBounds(k,:)=[min(eig(S(1:2,1:2))),S(3,3),norm(S(1:2,3))];
-            support=fullObserverSupport.lidarPoseSupport(audit.filter,cfg);
+            support=localizationSupport.lidarPoseSupport(audit.filter,cfg);
             for name=string(fieldnames(support)).'
                 lidarPoseSupport.(name)(k)=support.(name);
             end

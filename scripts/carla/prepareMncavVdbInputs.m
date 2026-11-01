@@ -30,7 +30,7 @@ function inputs=prepareMncavVdbInputs(datasetFolder,interfaceFile)
     h.wheels=struct('time',t,'angularVelocity',[s.omegaFL,s.omegaFR,s.omegaRL,s.omegaRR]);
     wc=nominalWheel;
     wc.lagCompensation=zeros(1,4);wc.rearCgDistance=0; % Synthetic IMU is at the CG.
-    wheel=estimateWheelLongitudinalSpeed(h,wc);
+    wheel=localizationSupport.estimateWheelLongitudinalSpeed(h,wc);
     assert(all(wheel.valid),'VehicleLocalization:MissingVdbWheel','Wheel input became unavailable.');
     h.longitudinalSpeed=wheel.longitudinalSpeed;
     lc=lateralObserverConfig();design=designLateralObserverGains(lc);

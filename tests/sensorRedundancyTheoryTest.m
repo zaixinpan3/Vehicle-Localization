@@ -58,10 +58,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             a=zeros(8,1);a([1,4])=-d;
             b=zeros(8,1);b([1,4])=-R*d;b(7)=psi;
             testCase.verifyEqual(a([1,4])+d,b([1,4])+R*d,AbsTol=1e-12);
-            testCase.verifyEqual(invariantObserverSupport.outputs(a,0,c), ...
-                invariantObserverSupport.outputs(b,0,c),AbsTol=1e-12);
-            testCase.verifyEqual(invariantObserverSupport.predict(a,.1,0),a,AbsTol=1e-12);
-            testCase.verifyEqual(invariantObserverSupport.predict(b,.1,0),b,AbsTol=1e-12);
+            testCase.verifyEqual(localizationSupport.outputs(a,0,c), ...
+                localizationSupport.outputs(b,0,c),AbsTol=1e-12);
+            testCase.verifyEqual(localizationSupport.predict(a,.1,0),a,AbsTol=1e-12);
+            testCase.verifyEqual(localizationSupport.predict(b,.1,0),b,AbsTol=1e-12);
             testCase.verifyGreaterThan(abs(a(7)-b(7)),.1);
         end
         function theoryWitnessDoesNotCertifyOrChangeTheRuntimeGains(testCase)
@@ -69,11 +69,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
             testCase.verifyEqual(after.invariantDesign,before.invariantDesign);
             testCase.verifyFalse(r.appliesToDefaultRuntimeGains);
             testCase.verifyGreaterThan(norm(r.witness.P-before.invariantDesign.P,'fro'),1);
-            runtime=invariantObserverSupport.runtime(after);
+            runtime=localizationSupport.runtime(after);
             testCase.verifyFalse(runtime.fullContinuousStateCertified);
         end
         function freshlySolvedGainsSatisfyTheNewCommonConditions(testCase)
-            c=freshObserverTestConfig();v=invariantObserverSupport.verify(c.invariantDesign,c);
+            c=freshObserverTestConfig();v=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
             testCase.verifyTrue(v.jointSensorLmiVerified);
             testCase.verifyEqual(v.jointSensor.vertices,133920);
             testCase.verifyTrue(v.jointSensor.mixedLidarCouplingRetained);
@@ -84,25 +84,25 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
         function inadequateDirectionGainCannotReuseASavedClaim(testCase)
             c=freshObserverTestConfig();c.invariantDesign.auxiliaryWeights(3)=1e-10;
             c.invariantDesign.verification.jointSensorLmiVerified=true;
-            v=invariantObserverSupport.verify(c.invariantDesign,c);
+            v=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
             testCase.verifyFalse(v.certified);
             testCase.verifyFalse(v.jointSensorLmiVerified);
-            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+            testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:InfeasibleInvariantDesign');
         end
         function changedCommonDomainCannotReuseTemporaryGains(testCase)
             c=freshObserverTestConfig();c.invariantObserver.redundancy.minimumCourseSpeed=5;
-            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+            testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
         function aDifferentHighGainScaleRequiresANewCertificate(testCase)
             c=freshObserverTestConfig();c.invariantObserver.theta=5;
-            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+            testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
         function absentVelocityWithdrawsTheWholeNormalSpeedCertificate(testCase)
             c=freshObserverTestConfig();c.invariantObserver.velocityAvailable=false;
-            v=invariantObserverSupport.verify(c.invariantDesign,c);
+            v=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
             testCase.verifyFalse(v.certified);
             testCase.verifyFalse(v.regionalIss.certified);
             testCase.verifyFalse(v.motionAvailabilityConfigured);
@@ -110,9 +110,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) sensorRedundancyTheory
         end
         function zeroLeverRetainsFeasibilityWithOneWeightCorner(testCase)
             c=freshObserverTestConfig();c.gnss.outputPoint.bodyOffset=[0;0];h=c.invariantDesign;
-            w=sensorRedundancySupport.witness(c,h.P,h.kappaL,h.kappaG,h.auxiliaryWeights, ...
+            w=localizationSupport.witness(c,h.P,h.kappaL,h.kappaG,h.auxiliaryWeights, ...
                 h.gyroGainNormalized,h.accelerationMultipliers);
-            v=sensorRedundancySupport.verify(w,true);
+            v=localizationSupport.verifySensorRedundancy(w,true);
             testCase.verifyTrue(v.certified);
             testCase.verifyEqual(v.gnssBernsteinVertices,1080);
         end

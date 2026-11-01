@@ -4,7 +4,7 @@ function cfg=overlapGradientConfig()
 % class-balanced semantic overlap of the source horizon and the map at every
 % bandwidth of the scale ladder, and injects the summed gradient of -log
 % overlap with the summed Gauss-Newton metric as information
-% (lidarInjectionSupport.evaluateOverlapGradient). No pose is optimized and no
+% (localizationSupport.evaluateOverlapGradient). No pose is optimized and no
 % correspondence is selected.
     cfg=struct();
     geometry=semanticGeometryConfig();
@@ -23,7 +23,7 @@ function cfg=overlapGradientConfig()
     % "frame": -log of the class-balanced overlap of the whole horizon.
     % "landmark": -sum_j v_j log(outlierDensity + sum_i u_i N_ij), the mixture
     % likelihood of every source landmark under the map with a uniform outlier
-    % floor (registrationSupport.semanticLandmarkLikelihood); evidence factors
+    % floor (localizationSupport.semanticLandmarkLikelihood); evidence factors
     % then apply after class normalization.
     cfg.aggregation="frame";
     cfg.outlierDensity=1e-4;                          % 1/m^2, landmark aggregation only

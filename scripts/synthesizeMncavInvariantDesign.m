@@ -7,16 +7,16 @@ function [design,cfg]=synthesizeMncavInvariantDesign(cfg)
     end
     root=setupVehicleLocalization();external=fullfile(fileparts(root),'RobustVehicleLocalization','external');
     addpath(genpath(fullfile(external,'YALMIP')));addpath(genpath(fullfile(external,'sedumi')));
-    design=invariantObserverSupport.synthesize(cfg);
+    design=localizationSupport.synthesize(cfg);
     cfg.invariantDesign=design;cfg.gainSource="fresh-lmi";
-    runtime=invariantObserverSupport.runtime(cfg);
+    runtime=localizationSupport.runtime(cfg);
     fprintf('INVARIANT DESIGN %d vertices, worst %.3g; kL %.6g kG %.6g auxiliary baseline %s\n', ...
         runtime.continuousCertificate.verification.vertices,design.verification.worstVertexEigenvalue, ...
         design.kappaL,design.kappaG,mat2str(design.auxiliaryWeights.',5));
     if isfield(design,'motionGainSchedule')
         interval=design.verification.motionResponse.speedInterval;
-        low=motionResponseSupport.weights(design,interval(1)^2);
-        high=motionResponseSupport.weights(design,interval(2)^2);
+        low=localizationSupport.weights(design,interval(1)^2);
+        high=localizationSupport.weights(design,interval(2)^2);
         fprintf('SCHEDULED AUXILIARY weights at %.3g/%.3g m/s: %s / %s; nominal motion time constant %.3g s\n', ...
             interval(1),interval(2),mat2str(low.',5),mat2str(high.',5),design.verification.motionResponse.timeConstantS);
     end

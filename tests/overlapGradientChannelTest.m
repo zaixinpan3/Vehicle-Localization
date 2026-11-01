@@ -10,16 +10,16 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
         function gradientIsTheDerivativeOfNegativeLogScore(testCase)
             [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0;
             pose=truth+[0.15,-0.10,deg2rad(1.5)];
-            m=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose(:),cfg);
+            m=localizationSupport.evaluateOverlapGradient(map,source,pose(:),cfg);
             steps=[1e-6,1e-6,1e-7];expected=zeros(3,1);
             for j=1:3
                 e=zeros(1,3);e(j)=steps(j);
-                plus=registrationSupport.scoreSemanticProbabilityCloudAlignment(map,source,pose+e,cfg.geometry);
-                minus=registrationSupport.scoreSemanticProbabilityCloudAlignment(map,source,pose-e,cfg.geometry);
+                plus=localizationSupport.scoreSemanticProbabilityCloudAlignment(map,source,pose+e,cfg.geometry);
+                minus=localizationSupport.scoreSemanticProbabilityCloudAlignment(map,source,pose-e,cfg.geometry);
                 expected(j)=-(log(plus)-log(minus))/(2*steps(j));
             end
             testCase.verifyTrue(m.available);
-            testCase.verifyEqual(m.similarity,registrationSupport.scoreSemanticProbabilityCloudAlignment( ...
+            testCase.verifyEqual(m.similarity,localizationSupport.scoreSemanticProbabilityCloudAlignment( ...
                 map,source,pose,cfg.geometry),RelTol=1e-12);
             testCase.verifyEqual(m.gradient,expected,RelTol=1e-5,AbsTol=1e-8);
             testCase.verifyEqual(m.linearizationPose,pose(:));
@@ -39,20 +39,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             offsets=[0.1 0;1 0;0 2;-3 1.5];
             for k=1:size(offsets,1)
                 pose=truth(:);pose(1:2)=pose(1:2)+offsets(k,:).';
-                m=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose);
+                m=localizationSupport.evaluateOverlapGradient(map,source,pose);
                 testCase.verifyTrue(m.available);
                 testCase.verifyEqual(m.information(1:2,1:2),precision,RelTol=1e-8);
                 step=-m.information(1:2,1:2)\m.gradient(1:2);
                 testCase.verifyEqual(pose(1:2)+step,truth(1:2).',AbsTol=1e-8);
                 testCase.verifyEqual(rank(m.information,1e-9*norm(m.information)),2);
             end
-            full=lidarInjectionSupport.evaluateOverlapGradient(map,source,(truth+[0.3,-0.2,deg2rad(3)]).');
+            full=localizationSupport.evaluateOverlapGradient(map,source,(truth+[0.3,-0.2,deg2rad(3)]).');
             testCase.verifyGreaterThanOrEqual(min(eig(full.information)),0);
             testCase.verifyEqual(full.information,full.information.',AbsTol=1e-12);
         end
         function exactAlignmentIsStationary(testCase)
             [map,source,truth]=scene();
-            m=lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:));
+            m=localizationSupport.evaluateOverlapGradient(map,source,truth(:));
             testCase.verifyLessThan(norm(m.gradient),1e-9);
             testCase.verifyGreaterThan(min(eig(m.information)),0);
             testCase.verifyEqual(m.similarity,1,AbsTol=1e-12);
@@ -60,38 +60,38 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
         function smoothedGradientIsTheDerivativeOfItsNegativeLogSimilarity(testCase)
             [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0.5;
             pose=(truth+[0.15,-0.10,deg2rad(1.5)]).';
-            m=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
+            m=localizationSupport.evaluateOverlapGradient(map,source,pose,cfg);
             steps=[1e-6;1e-6;1e-7];expected=zeros(3,1);
             for j=1:3
                 e=zeros(3,1);e(j)=steps(j);
-                plus=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose+e,cfg).similarity;
-                minus=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose-e,cfg).similarity;
+                plus=localizationSupport.evaluateOverlapGradient(map,source,pose+e,cfg).similarity;
+                minus=localizationSupport.evaluateOverlapGradient(map,source,pose-e,cfg).similarity;
                 expected(j)=-(log(plus)-log(minus))/(2*steps(j));
             end
             testCase.verifyEqual(m.gradient,expected,RelTol=1e-5,AbsTol=1e-8);
-            aligned=lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:),cfg);
+            aligned=localizationSupport.evaluateOverlapGradient(map,source,truth(:),cfg);
             sharp=cfg;sharp.scaleLadder=0;
-            exact=lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:),sharp);
+            exact=localizationSupport.evaluateOverlapGradient(map,source,truth(:),sharp);
             testCase.verifyLessThan(norm(aligned.gradient),1e-9);
             testCase.verifyEqual(aligned.similarity,1,AbsTol=1e-12);
             testCase.verifyLessThan(trace(aligned.information),trace(exact.information));
         end
         function mixtureMassScaleDoesNotChangeTheChannel(testCase)
             [map,source,truth]=scene();pose=(truth+[0.2,0.1,deg2rad(2)]).';
-            a=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose);
+            a=localizationSupport.evaluateOverlapGradient(map,source,pose);
             map.components.mixtureWeight=7*map.components.mixtureWeight;
             source.components.mixtureWeight=0.3*source.components.mixtureWeight;
-            b=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose);
+            b=localizationSupport.evaluateOverlapGradient(map,source,pose);
             testCase.verifyEqual(b.gradient,a.gradient,RelTol=1e-10,AbsTol=1e-12);
             testCase.verifyEqual(b.information,a.information,RelTol=1e-9,AbsTol=1e-9);
         end
         function missingOverlapIsUnavailableWithoutCorrection(testCase)
             [map,source,truth]=scene();
-            far=lidarInjectionSupport.evaluateOverlapGradient(map,source,(truth+[500,0,0]).');
+            far=localizationSupport.evaluateOverlapGradient(map,source,(truth+[500,0,0]).');
             testCase.verifyFalse(far.available);
             testCase.verifyEqual(far.gradient,zeros(3,1));testCase.verifyEqual(far.information,zeros(3));
             empty=source;empty.components=selectComponents(source.components,[]);
-            none=lidarInjectionSupport.evaluateOverlapGradient(map,empty,truth(:));
+            none=localizationSupport.evaluateOverlapGradient(map,empty,truth(:));
             testCase.verifyFalse(none.available);
         end
         function gradientModeMatchesResidualMode(testCase)
@@ -100,9 +100,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             residual=struct('residual',r,'jacobian',J,'weights',ones(9,1),'linearizationPose',pose);
             gradient=struct('gradient',J.'*r,'information',J.'*J,'linearizationPose',pose);
             G=zeros(3,7);G(1,1)=1;G(2,4)=1;G(3,7)=1;
-            [a,auditA]=lidarInjectionSupport.computeLidarMatchedCorrection(residual,pose,G,design,cfg, ...
+            [a,auditA]=localizationSupport.computeLidarMatchedCorrection(residual,pose,G,design,cfg, ...
                 StepSize=0.1,Discretization="implicit");
-            [b,auditB]=lidarInjectionSupport.computeLidarMatchedCorrection(gradient,pose,G,design,cfg, ...
+            [b,auditB]=localizationSupport.computeLidarMatchedCorrection(gradient,pose,G,design,cfg, ...
                 StepSize=0.1,Discretization="implicit");
             testCase.verifyEqual(b,a,AbsTol=1e-12);
             testCase.verifyEqual(auditB.filter.S,auditA.filter.S,AbsTol=1e-12);
@@ -113,26 +113,26 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             design=fullObserverDesign();cfg=filterConfig();G=zeros(3,7);G(1,1)=1;G(2,4)=1;G(3,7)=1;
             pose=[0;0;0];information=diag([5,0,40]);
             m=struct('gradient',[1;2;3],'information',information,'linearizationPose',pose);
-            [delta,audit]=lidarInjectionSupport.computeLidarMatchedCorrection(m,pose,G,design,cfg, ...
+            [delta,audit]=localizationSupport.computeLidarMatchedCorrection(m,pose,G,design,cfg, ...
                 StepSize=0.1,Discretization="implicit");
             testCase.verifyEqual(delta(4),0,AbsTol=1e-15);
             testCase.verifyLessThan(delta(1),0);testCase.verifyLessThan(delta(7),0);
             testCase.verifyEqual(audit.unsupportedGradientNorm,2,AbsTol=1e-12);
             projected=m;projected.gradient=[1;0;3];
-            [same,~]=lidarInjectionSupport.computeLidarMatchedCorrection(projected,pose,G,design,cfg, ...
+            [same,~]=localizationSupport.computeLidarMatchedCorrection(projected,pose,G,design,cfg, ...
                 StepSize=0.1,Discretization="implicit");
             testCase.verifyEqual(delta,same,AbsTol=1e-15);
         end
         function gradientModeRejectsStaleOrAmbiguousInput(testCase)
             design=fullObserverDesign();cfg=filterConfig();G=zeros(3,7);G(1,1)=1;G(2,4)=1;G(3,7)=1;
             stale=struct('gradient',[1;0;0],'information',eye(3),'linearizationPose',[0;0;0]);
-            testCase.verifyError(@()lidarInjectionSupport.computeLidarMatchedCorrection(stale,[1;0;0],G,design,cfg), ...
+            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(stale,[1;0;0],G,design,cfg), ...
                 'VehicleLocalization:StaleLidarLinearization');
             ambiguous=stale;ambiguous.pose=[0;0;0];
-            testCase.verifyError(@()lidarInjectionSupport.computeLidarMatchedCorrection(ambiguous,[0;0;0],G,design,cfg), ...
+            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(ambiguous,[0;0;0],G,design,cfg), ...
                 'VehicleLocalization:AmbiguousLidarMeasurement');
             both=stale;both.residual=0;both.jacobian=zeros(1,3);both.weights=1;
-            testCase.verifyError(@()lidarInjectionSupport.computeLidarMatchedCorrection(both,[0;0;0],G,design,cfg), ...
+            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(both,[0;0;0],G,design,cfg), ...
                 'VehicleLocalization:AmbiguousLidarMeasurement');
         end
         function frameOverlapReducesErrorOutsideTheIssSpeedDomain(testCase)
@@ -165,24 +165,24 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             % a uniform factor on a class does not (balancing removes it).
             off=overlapGradientConfig();off.evidenceWeights=false;
             source.components.temporalStability=ones(6,1);source.components.temporalStability(4)=0.5;
-            plain=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,off);
-            weighted=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose);
+            plain=localizationSupport.evaluateOverlapGradient(map,source,pose,off);
+            weighted=localizationSupport.evaluateOverlapGradient(map,source,pose);
             testCase.verifyGreaterThan(norm(weighted.gradient-plain.gradient),1e-6*norm(plain.gradient));
             uniform=source;uniform.components.temporalStability=0.5*ones(6,1);
-            same=lidarInjectionSupport.evaluateOverlapGradient(map,uniform,pose);
+            same=localizationSupport.evaluateOverlapGradient(map,uniform,pose);
             testCase.verifyEqual(same.gradient,plain.gradient,RelTol=1e-9,AbsTol=1e-12);
             zeroed=source;zeroed.components.temporalStability(4:5)=0;
-            noPoles=lidarInjectionSupport.evaluateOverlapGradient(map,zeroed,pose);
+            noPoles=localizationSupport.evaluateOverlapGradient(map,zeroed,pose);
             testCase.verifyFalse(ismember("pole",noPoles.sharedClasses));
         end
         function scaleLadderIsTheSumOfSingleScales(testCase)
             [map,source,truth]=scene();pose=(truth+[0.4,-0.2,deg2rad(2)]).';
             cfg=overlapGradientConfig();ladder=cfg.scaleLadder;
-            multi=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,cfg);
+            multi=localizationSupport.evaluateOverlapGradient(map,source,pose,cfg);
             gradient=zeros(3,1);information=zeros(3);
             for k=1:numel(ladder)
                 single=cfg;single.scaleLadder=ladder(k);
-                m=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,single);
+                m=localizationSupport.evaluateOverlapGradient(map,source,pose,single);
                 testCase.verifyEqual(multi.scaleSimilarity(k),m.similarity,RelTol=1e-12);
                 gradient=gradient+m.gradient;information=information+m.information;
             end
@@ -191,20 +191,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyEqual(multi.similarity,multi.scaleSimilarity(1));
             testCase.verifyEqual(multi.minimumInformation,min(eig(multi.information)),AbsTol=1e-12);
             invalid=cfg;invalid.scaleLadder=[0 -1];
-            testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,invalid), ...
+            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,pose,invalid), ...
                 'MATLAB:expectedNonnegative');
             invalid.scaleLadder=[];
-            testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,invalid), ...
+            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,pose,invalid), ...
                 'MATLAB:expectedNonempty');
         end
         function scaleLadderRestoresGradientBeyondTheExactBasin(testCase)
             [map,source,truth]=scene();offset=6*[-sin(truth(3)),cos(truth(3)),0];pose=(truth+offset).';
             exact=overlapGradientConfig();exact.scaleLadder=0;
-            a=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,exact);
-            b=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,overlapGradientConfig());
+            a=localizationSupport.evaluateOverlapGradient(map,source,pose,exact);
+            b=localizationSupport.evaluateOverlapGradient(map,source,pose,overlapGradientConfig());
             testCase.verifyTrue(b.available);
             wide=exact;wide.scaleLadder=overlapGradientConfig().scaleLadder(end);
-            coarse=lidarInjectionSupport.evaluateOverlapGradient(map,source,pose,wide);
+            coarse=localizationSupport.evaluateOverlapGradient(map,source,pose,wide);
             testCase.verifyTrue(coarse.available);
             testCase.verifyGreaterThan(coarse.gradient.'*offset.',0);
             testCase.verifyGreaterThan(norm(b.gradient-a.gradient),0);
@@ -214,11 +214,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             [map,source,truth]=scene();[f,m]=likelihoodInputs(map,source,truth);
             p=[0.15,-0.10,truth(3)+deg2rad(1.5)];h=[1e-6 1e-6 1e-7];
             for angular=[NaN deg2rad(1)]
-                [~,g,M]=registrationSupport.semanticLandmarkLikelihood(f,m,p,1e-4,angular);expected=zeros(3,1);
+                [~,g,M]=localizationSupport.semanticLandmarkLikelihood(f,m,p,1e-4,angular);expected=zeros(3,1);
                 for j=1:3
                     e=zeros(1,3);e(j)=h(j);
-                    expected(j)=(registrationSupport.semanticLandmarkLikelihood(f,m,p+e,1e-4,angular)- ...
-                        registrationSupport.semanticLandmarkLikelihood(f,m,p-e,1e-4,angular))/(2*h(j));
+                    expected(j)=(localizationSupport.semanticLandmarkLikelihood(f,m,p+e,1e-4,angular)- ...
+                        localizationSupport.semanticLandmarkLikelihood(f,m,p-e,1e-4,angular))/(2*h(j));
                 end
                 testCase.verifyEqual(g,expected,RelTol=1e-5,AbsTol=1e-8);
                 testCase.verifyEqual(M,M.',AbsTol=1e-12);
@@ -233,7 +233,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             [f,m]=likelihoodInputs(map,source,truth);
             for offset=[0.1 0;1 0;0 2;-3 1.5].'
                 p=[offset.',truth(3)];
-                [~,g,M]=registrationSupport.semanticLandmarkLikelihood(f,m,p,1e-4,NaN);
+                [~,g,M]=localizationSupport.semanticLandmarkLikelihood(f,m,p,1e-4,NaN);
                 testCase.verifyEqual(p(1:2)-(M(1:2,1:2)\g(1:2)).',[0 0],AbsTol=1e-8);
             end
         end
@@ -245,20 +245,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
                 'numComponents',1,'repeatability',1);
             cloud=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());
             [f,m]=likelihoodInputs(cloud,cloud,[0 0 0]);rotation=deg2rad(1);
-            [~,~,plain]=registrationSupport.semanticLandmarkLikelihood(f,m,[0 0 rotation],1e-4,NaN);
-            [~,g,M]=registrationSupport.semanticLandmarkLikelihood(f,m,[0 0 rotation],1e-4,deg2rad(1));
+            [~,~,plain]=localizationSupport.semanticLandmarkLikelihood(f,m,[0 0 rotation],1e-4,NaN);
+            [~,g,M]=localizationSupport.semanticLandmarkLikelihood(f,m,[0 0 rotation],1e-4,deg2rad(1));
             testCase.verifyEqual(plain(3,3),0);
             testCase.verifyEqual(rotation-g(3)/M(3,3),0,AbsTol=0.05*rotation);
         end
         function outlierFloorBoundsAnUnexplainedLandmark(testCase)
             [map,source,truth]=scene();[f,m]=likelihoodInputs(map,source,truth);
             p=[0.1,-0.05,truth(3)+deg2rad(0.5)];
-            [~,g,~,explained]=registrationSupport.semanticLandmarkLikelihood(f,m,p,1e-4,deg2rad(1));
+            [~,g,~,explained]=localizationSupport.semanticLandmarkLikelihood(f,m,p,1e-4,deg2rad(1));
             % A pole 30 m away with no map partner, appended without renormalizing the others.
             far=m;far.mean(end+1,:)=[30 30];far.covariance(:,:,end+1)=0.04*eye(2);far.semanticName(end+1)="pole";
             far.mixtureWeight(end+1)=0.1;far.supportTangent(end+1,:)=[1 0];far.axisConfidence(end+1)=0;
             far.angularVariance(end+1)=0;far.numComponents=far.numComponents+1;
-            [~,gFar,~,explainedFar]=registrationSupport.semanticLandmarkLikelihood(f,far,p,1e-4,deg2rad(1));
+            [~,gFar,~,explainedFar]=localizationSupport.semanticLandmarkLikelihood(f,far,p,1e-4,deg2rad(1));
             testCase.verifyEqual(gFar,g,RelTol=1e-9,AbsTol=1e-12);
             testCase.verifyEqual(explainedFar,explained,AbsTol=1e-12);
         end
@@ -273,19 +273,19 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyLessThan(norm(error(1:2)),1e-3);
             testCase.verifyLessThan(abs(rad2deg(atan2(sin(error(3)),cos(error(3))))),1e-2);
             [map,source,truth]=scene();
-            m=lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:),cfg);
+            m=localizationSupport.evaluateOverlapGradient(map,source,truth(:),cfg);
             testCase.verifyEqual(m.similarity,1,AbsTol=0.01); % the map explains the source
             invalid=overlapGradientConfig();invalid.orientation=true;
-            testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:),invalid), ...
+            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,truth(:),invalid), ...
                 'VehicleLocalization:InvalidOverlapAggregation');
             invalid=overlapGradientConfig();invalid.aggregation="pairs";
-            testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(map,source,truth(:),invalid), ...
+            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,truth(:),invalid), ...
                 'VehicleLocalization:InvalidOverlapAggregation');
         end
         function retiredSolverConfigurationCannotReachOverlap(testCase)
             cloud=distributionRegistrationTest.exampleCloud();cfg=overlapGradientConfig();
             cfg.registration=cfg.geometry;cfg=rmfield(cfg,'geometry');
-            testCase.verifyError(@()lidarInjectionSupport.evaluateOverlapGradient(cloud,cloud,zeros(3,1),cfg), ...
+            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(cloud,cloud,zeros(3,1),cfg), ...
                 'VehicleLocalization:ObsoleteOverlapConfig');
         end
         function overlapChannelIsExclusiveAndRejectsCalibratedWeights(testCase)
@@ -326,7 +326,7 @@ end
 
 function [f,m]=likelihoodInputs(map,source,origin)
 % Support geometry with masses normalized as the landmark channel does.
-    g=prepareSemanticOverlapGeometry(map,source,origin,semanticGeometryConfig());
+    g=localizationSupport.prepareSemanticOverlapGeometry(map,source,origin,semanticGeometryConfig());
     f=g.fixed;m=g.moving;f.mean=f.mean(:,1:2);m.mean=m.mean(:,1:2);
     f.covariance=f.planarCovariance;m.covariance=m.planarCovariance;names=unique(f.semanticName);
     for name=names.'

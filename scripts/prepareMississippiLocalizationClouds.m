@@ -37,7 +37,7 @@ function cache=prepareMississippiLocalizationClouds(matchingFolder,options)
     if ~isempty(fieldnames(options.FrameCalibration)),cfg.perception.frameCalibration=validateLidarFrameCalibration(options.FrameCalibration);end
     % Preserve the declared one-pose initialization, never later reference poses.
     firstPose=readFramePoseTable(posePath,calls.frame(1));
-    initialPose=poseSupport.poseRowToPlanarPose(firstPose(1,:))+[.5,-.4,deg2rad(2)];
+    initialPose=localizationSupport.poseRowToPlanarPose(firstPose(1,:))+[.5,-.4,deg2rad(2)];
     cfg.sourceWindow=localizationSourceWindowConfig();n=height(calls);sources=cell(n,1);
     currentSources=cell(n,1);
     mapCfg=featureMapBuildConfig();history=[];seconds=zeros(n,1);counts=zeros(n,1);
@@ -49,7 +49,7 @@ function cache=prepareMississippiLocalizationClouds(matchingFolder,options)
             timer=tic;
             cfg.perception.coarseProbabilityCloud.projectionRotation=tilt.rotation(:,:,k);
             raw=perceiveCoarseProbabilityCloud(block(k-first+1),cfg.perception);
-            [sources{k},history,~,currentSources{k}]=updateLocalizationSourceWindow(raw,calls.timeSeconds(k),motion(k,:),history,cfg.sourceWindow,motionSegment(k));
+            [sources{k},history,~,currentSources{k}]=localizationSupport.updateLocalizationSourceWindow(raw,calls.timeSeconds(k),motion(k,:),history,cfg.sourceWindow,motionSegment(k));
             seconds(k)=toc(timer);counts(k)=sources{k}.components.numComponents;
         end
         fprintf('Coarse source cache %d/%d\n',ids(end),n);

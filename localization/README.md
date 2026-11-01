@@ -21,9 +21,9 @@ and the manuscript, rather than in this runtime guide.
 | Lateral execution | `runLateralVelocityObserver` |
 | Global configuration | `mncavFullObserverConfig`, `mncavSmallOffsetObserverConfig` |
 | Fresh global gain synthesis | `synthesizeMncavInvariantDesign` |
-| Frame-clock alignment | `fullObserverSupport.synchronizeLocalizationInputs` |
+| Frame-clock alignment | `localizationSupport.synchronizeLocalizationInputs` |
 | Global execution | `runFullLocalizationObserver` |
-| Current LiDAR measurement | `lidarInjectionSupport.evaluateOverlapGradient` |
+| Current LiDAR measurement | `localizationSupport.evaluateOverlapGradient` |
 
 Current dataset runners are `runMncavFullObserverExperiment`,
 `replayDowntownGnssFreeLocalization`, `runNuscenesOverlapTrial`,
@@ -73,7 +73,7 @@ cfg = mncavSmallOffsetObserverConfig();
 lc = lateralObserverConfig();
 ld = designLateralObserverGains(lc);
 lateral = runLateralVelocityObserver(data.highRate, ld, lc);
-[data, lateral] = fullObserverSupport.synchronizeLocalizationInputs(data, lateral, cfg);
+[data, lateral] = localizationSupport.synchronizeLocalizationInputs(data, lateral, cfg);
 estimate = runFullLocalizationObserver(data, ld, cfg, LateralInputs=lateral);
 ```
 
@@ -121,7 +121,7 @@ orientation options are alternative measurements of this same observer,
 not alternate observer runtimes. Information availability, supported pose
 rank and independent heading strength are distinct diagnostics.
 
-`updateLocalizationSourceWindow` forms a causal five-scan feature horizon
+`localizationSupport.updateLocalizationSourceWindow` forms a causal five-scan feature horizon
 using uninterrupted valid wheel/lateral/gyro motion. When motion is
 unavailable it discards history transport and emits the current scan.
 Reference-built frozen maps and one declared initial reference pose are
@@ -131,29 +131,25 @@ scores do not establish independent survey accuracy.
 
 ## Support files
 
-| File | Current role |
-| --- | --- |
-| `invariantObserverSupport.m` | Intrinsic prediction, five outputs, correction and design verification |
-| `invariantIssSupport.m` | Local nonlinear remainder and conditional ISS analysis |
-| `sensorRedundancySupport.m` | Common L/G/M sensor certificate construction and verification |
-| `coupledMotionSupport.m` | Coupled physical-motion polynomial/Bernstein construction |
-| `solveCommonObserverLmis.m` | Common LMI solver |
-| `motionResponseSupport.m` | Bounded motion-gain schedule and nominal response design |
-| `observerGainSelectionSupport.m` | Engineering objective selection over verified designs |
-| `fullObserverSupport.m` | Synchronization, shared observer design and GNSS output-point handling |
-| `lidarInjectionSupport.m` | Overlap measurement, information filtering and matched correction |
-| `registrationSupport.m` | Shared mixture projection, map crop/view conditioning, overlap and residual algebra |
-| `prepareSemanticOverlapGeometry.m` | Support-axis and mixture geometry preparation |
-| `lidarCalibrationSupport.m` | Sensor-only tilt provenance and offline calibration |
-| `poseSupport.m` | Mapping/reference coordinate transforms |
-| `estimateWheelLongitudinalSpeed.m` | Wheel-derived longitudinal velocity |
-| `lateralObserver/` | LPV design, runtime, model helpers and scenario simulation |
+Only two MATLAB files live at this directory level:
 
-`registrationSupport` retains its historical name but is actively used by
-perception, mapping, source windows and overlap. Its residual algebra and the
-global observer's generic pose/residual interface also support current
-synthetic validation. They do not run the retired pose-registration solver.
-Removing them would break maintained callers.
+| File | Role |
+| --- | --- |
+| `runFullLocalizationObserver.m` | Public eight-state observer entry and synchronous runtime |
+| `localizationSupport.m` | Static methods for design, verification, sensor preparation, geometry, source windows and calibration |
+
+The support class groups methods by responsibility. Public method names remain
+unchanged where unambiguous; design-specific names distinguish the former
+`inputs`, `verify` and `blocks` methods. Examples include
+`localizationSupport.invariantInputs`, `verifyInvariantDesign`,
+`verifySensorRedundancy`, `verifyMotionResponse`, `redundancyBlocks` and
+`responseBlocks`. Previously standalone wheel, source-window, overlap-geometry
+and common-LMI helpers are static methods of this class too.
+
+The `lateralObserver/` files and their interfaces are unchanged. Shared geometry
+and generic pose/residual algebra remain available for mapping and synthetic
+validation; consolidation does not remove measurements, solver conditions,
+calibration methods or numerical integration choices.
 
 ## Validation
 

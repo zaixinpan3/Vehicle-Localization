@@ -29,8 +29,8 @@ classdef mixedLidarCouplingTest < matlab.unittest.TestCase
             c=[cfg.iss.maximumPositionHeadingCoupling;0];S=[c*c.'/h,c;c.',h];
             D=diag(cfg.lidar.poseScales);H=cfg.lidar.gainInformationScale*S/(eye(3)-S);
             information=D\((H+H.')/2)/D;
-            filter=lidarInjectionSupport.filterLidarPoseInformation(information,cfg);
-            support=fullObserverSupport.lidarPoseSupport(filter,cfg);
+            filter=localizationSupport.filterLidarPoseInformation(information,cfg);
+            support=localizationSupport.lidarPoseSupport(filter,cfg);
             testCase.verifyEqual(filter.S,S,AbsTol=5e-13);
             testCase.verifyEqual(filter.rank,1);
             testCase.verifyGreaterThan(filter.S(3,3),cfg.iss.minimumHeadingStrength);
@@ -39,7 +39,7 @@ classdef mixedLidarCouplingTest < matlab.unittest.TestCase
             testCase.verifyFalse(support.headingSupported);
         end
         function lowerControlsRetainCouplingWithoutPretendingToBePsd(testCase)
-            p=domain();controls=sensorRedundancySupport.mixedLidarLowerControls(p);
+            p=domain();controls=localizationSupport.mixedLidarLowerControls(p);
             testCase.verifyNumElements(controls,4);
             testCase.verifyEqual(controls{1}(1:2,3),p.maximumLidarCoupling*[1;1],AbsTol=0);
             testCase.verifyEqual(controls{1}(1:2,1:2),zeros(2),AbsTol=0);
@@ -47,7 +47,7 @@ classdef mixedLidarCouplingTest < matlab.unittest.TestCase
         end
         function zeroCouplingRecoversTheValidHeadingOnlyLimit(testCase)
             p=domain();p.maximumLidarCoupling=0;
-            controls=sensorRedundancySupport.mixedLidarLowerControls(p);
+            controls=localizationSupport.mixedLidarLowerControls(p);
             testCase.verifyNumElements(controls,1);
             testCase.verifyEqual(controls{1},diag([0,0,p.minimumLidarHeadingStrength]),AbsTol=0);
         end
@@ -59,7 +59,7 @@ classdef mixedLidarCouplingTest < matlab.unittest.TestCase
         end
         function couplingAndHeadingBoundsMustBeFiniteAndNonnegative(testCase)
             p=domain();p.maximumLidarCoupling=-.01;
-            testCase.verifyError(@()sensorRedundancySupport.mixedLidarLowerControls(p),'MATLAB:expectedNonnegative');
+            testCase.verifyError(@()localizationSupport.mixedLidarLowerControls(p),'MATLAB:expectedNonnegative');
         end
     end
 end
@@ -71,7 +71,7 @@ function p=domain()
 end
 
 function [minimumDifference,maximumReconstruction,minimumWeight]=enclosureErrors(p)
-    controls=sensorRedundancySupport.mixedLidarLowerControls(p);
+    controls=localizationSupport.mixedLidarLowerControls(p);
     coefficients=reshape(cat(3,controls{:}),9,[]);
     stream=RandStream('mt19937ar','Seed',2401);
     minimumDifference=Inf;maximumReconstruction=0;minimumWeight=1;

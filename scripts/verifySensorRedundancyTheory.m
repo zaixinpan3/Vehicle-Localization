@@ -14,8 +14,8 @@ function report=verifySensorRedundancyTheory(options)
     if ~isfield(cfg,'invariantDesign')
         external=fullfile(fileparts(root),'RobustVehicleLocalization','external');
         addpath(genpath(fullfile(external,'YALMIP')));addpath(genpath(fullfile(external,'sedumi')));
-        gyro=invariantObserverSupport.scalarGyroDesign(cfg);
-        inputs=sensorRedundancySupport.inputs(cfg,gyro.physicalGain/cfg.invariantObserver.sigma);
+        gyro=localizationSupport.scalarGyroDesign(cfg);
+        inputs=localizationSupport.redundancyInputs(cfg,gyro.physicalGain/cfg.invariantObserver.sigma);
     else
         inputs=theoryInputs(cfg);
     end
@@ -30,8 +30,8 @@ function report=verifySensorRedundancyTheory(options)
         yalmip('clear');Pc=sdpvar(3,3);Ph=sdpvar(2,2);P=blkdiag(Pc,Pc,Ph);
         gains=sdpvar(5,1);witness=struct('inputs',inputs,'domain',domain,'P',P, ...
             'kappaL',gains(1),'kappaG',gains(2),'bilinearGain',gains(3),'directionGain',gains(4),'speedSquaredGain',gains(5));
-        counts=sensorRedundancySupport.counts(witness);constraints=[P>=eye(8),P<=1e5*eye(8),gains>=1e-7];
-        [~,groups]=coupledMotionSupport.multiplierGroups(domain);witness.accelerationMultipliers=cell(3,groups);
+        counts=localizationSupport.counts(witness);constraints=[P>=eye(8),P<=1e5*eye(8),gains>=1e-7];
+        [~,groups]=localizationSupport.multiplierGroups(domain);witness.accelerationMultipliers=cell(3,groups);
         for family=1:numel(witness.accelerationMultipliers)
             if inputs.maximumAcceleration==0 || domain.accelerationMultiplierPartition=="zero"
                 witness.accelerationMultipliers{family}=zeros(8);
@@ -46,7 +46,7 @@ function report=verifySensorRedundancyTheory(options)
         if cfg.invariantObserver.balancedPoseMetric
             constraints=[constraints,Ph<=Pc(1:2,1:2)];
         end
-        [result,solveAudit,multipliers]=solveCommonObserverLmis(constraints,sum(gains)+.01*trace(P), ...
+        [result,solveAudit,multipliers]=localizationSupport.solveCommonObserverLmis(constraints,sum(gains)+.01*trace(P), ...
             counts,witness,cfg.invariantObserver);
         assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleRedundancyTheory', ...
             'The requested common theory domain is infeasible in this enclosure: %s',result.info);
@@ -74,7 +74,7 @@ function report=verifySensorRedundancyTheory(options)
     for name=["kappaL","kappaG","bilinearGain","directionGain","speedSquaredGain"]
         validateattributes(witness.(name),{'double'},{'real','finite','positive','scalar'});
     end
-    verification=sensorRedundancySupport.verify(witness,true);
+    verification=localizationSupport.verifySensorRedundancy(witness,true);
     worstL=verification.worstLidarEigenvalue;worstG=verification.worstGnssEigenvalue;
     worstM=verification.worstMixedEigenvalue;verified=verification.certified;
     assert(verified,'VehicleLocalization:UnverifiedRedundancyTheory', ...
@@ -95,14 +95,14 @@ function report=verifySensorRedundancyTheory(options)
 end
 
 function inputs=theoryInputs(cfg)
-    inputs=sensorRedundancySupport.inputs(cfg,cfg.invariantDesign.gyroGainNormalized);
+    inputs=localizationSupport.redundancyInputs(cfg,cfg.invariantDesign.gyroGainNormalized);
 end
 
 function validateDomain(d,p)
     assert(d.minimumCourseSpeed>0 && d.minimumCourseSpeed<=p.maximumSpeed, ...
         'VehicleLocalization:InvalidIssSpeedInterval','All sensor families require the declared strictly positive course-speed interval.');
     validateattributes(d.speedPartitions,{'double'},{'finite','integer','positive','scalar'});
-    sensorRedundancySupport.courseControls(p.maximumCourseRate,d.coursePartitions);
+    localizationSupport.courseControls(p.maximumCourseRate,d.coursePartitions);
     validateattributes(d.informativeLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
     validateattributes(d.degradedLidarMismatch,{'double'},{'finite','nonnegative','scalar'});
     validateattributes(d.accelerationPartitions,{'double'},{'finite','integer','positive','scalar'});

@@ -39,7 +39,7 @@ function [high,wheel,metadata]=prepareWheelMotionInputs(sensorFolder,parameters,
     end
     input=high;input.wheels=struct('time',wt,'angularVelocity',wh{:,fields});
     cfg=wheelSpeedObserverConfig();cfg.initialSpeed=options.InitialSpeed;
-    wheel=estimateWheelLongitudinalSpeed(input,cfg);
+    wheel=localizationSupport.estimateWheelLongitudinalSpeed(input,cfg);
     initializing=isfinite(options.InitialSpeed) & t<wt(1) & t<=cfg.maximumWheelAge;
     assert(all(wheel.valid | initializing),'VehicleLocalization:WheelSpeedCoverage', ...
         'Wheel aiding is unavailable beyond the declared startup/maximum-age limit.');

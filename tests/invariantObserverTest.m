@@ -8,22 +8,22 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
     methods (Test)
         function physicalDomainGainIsExecutableBeyondTheOldBoxCertificate(testCase)
             c=mncavFullObserverConfig();c.invariantObserver.redundancy.accelerationMultiplierPartition="global";
-            c=freshObserverTestConfig(c);r=invariantObserverSupport.runtime(c);d=c.invariantDesign;
+            c=freshObserverTestConfig(c);r=localizationSupport.runtime(c);d=c.invariantDesign;
             testCase.verifyTrue(r.continuousCertificate.verification.certified);
             testCase.verifyTrue(r.continuousCertificate.verification.jointSensor.accelerationDomainMultiplierActive);
-            w=sensorRedundancySupport.witness(c,d.P,d.kappaL,d.kappaG,d.auxiliaryWeights,d.gyroGainNormalized);
-            previous=sensorRedundancySupport.verify(w,true);
+            w=localizationSupport.witness(c,d.P,d.kappaL,d.kappaG,d.auxiliaryWeights,d.gyroGainNormalized);
+            previous=localizationSupport.verifySensorRedundancy(w,true);
             testCase.verifyFalse(previous.certified);
         end
         function corruptedAccelerationMultiplierInvalidatesTheCertificate(testCase)
             c=freshObserverTestConfig();d=c.invariantDesign;d.accelerationMultipliers{2,1}=-eye(8);
-            v=invariantObserverSupport.verify(d,c);
+            v=localizationSupport.verifyInvariantDesign(d,c);
             testCase.verifyFalse(v.certified);
             testCase.verifyFalse(v.jointSensor.multiplierPsdVerified);
             testCase.verifyFalse(v.regionalIss.certified);
         end
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
-            cfg=freshObserverTestConfig();d=invariantObserverSupport.runtime(cfg);v=d.continuousCertificate.verification;
+            cfg=freshObserverTestConfig();d=localizationSupport.runtime(cfg);v=d.continuousCertificate.verification;
             testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,133920);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
             testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,133920);
@@ -34,12 +34,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function staleArchitectureInputsCannotReuseTheGain(testCase)
             c=freshObserverTestConfig();c.invariantObserver.headingLengthM=20;
-            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+            testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
         function headingOnlyMixedCertificateCannotBeReused(testCase)
             c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='intrinsic-vector-iss-v3';
-            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+            testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
         function parameterFactoryHasNoSolvedGains(testCase)
@@ -54,7 +54,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyTrue(d.verification.jointSensorLmiVerified);
             testCase.verifyEqual(ready.invariantDesign,d);
             testCase.verifyEqual(ready.gainSource,"fresh-lmi");
-            testCase.verifyEqual(d.inputs,invariantObserverSupport.inputs(ready));
+            testCase.verifyEqual(d.inputs,localizationSupport.invariantInputs(ready));
         end
         function synchronizationWithdrawsAnInvalidBracketEndpoint(testCase)
             [d,l,c]=fixture();t=(.05:.1:.95).';n=numel(t);
@@ -63,7 +63,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             d.lidar=struct('time',t,'pose',zeros(n,3),'valid',true(n,1), ...
                 'information',repmat(eye(3),1,1,n),'delay',0);
             c.synchronization.motionMaximumBracket=.2;
-            [a,~,~]=fullObserverSupport.synchronizeLocalizationInputs(d,l,c);
+            [a,~,~]=localizationSupport.synchronizeLocalizationInputs(d,l,c);
             testCase.verifyEqual(a.highRate.bodyVelocityValid,[false;false;true(n-2,1)]);
             testCase.verifyTrue(all(a.highRate.bodyAccelerationValid));
             testCase.verifyTrue(all(a.highRate.yawRateValid));
@@ -74,7 +74,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             d.lidar=struct('time',t,'pose',zeros(n,3),'valid',true(n,1), ...
                 'information',repmat(eye(3),1,1,n),'delay',0);
             c.synchronization.motionMaximumBracket=.2;
-            [~,aligned]=fullObserverSupport.synchronizeLocalizationInputs(d,l,c);
+            [~,aligned]=localizationSupport.synchronizeLocalizationInputs(d,l,c);
             testCase.verifyEqual(aligned.sideSlipAngle,interp1(l.time,l.sideSlipAngle,t),AbsTol=1e-12);
             testCase.verifyEqual(aligned.sideSlipAngleRate,interp1(l.time,l.sideSlipAngleRate,t),AbsTol=1e-12);
         end
@@ -106,15 +106,15 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function stoppedPacketKeepsTheContinuousUpstreamAngle(testCase)
             c=freshObserverTestConfig();
-            packet=invariantObserverSupport.measurements(0,0,0,0,.2,.3,true,true,true,c);
+            packet=localizationSupport.measurements(0,0,0,0,.2,.3,true,true,true,c);
             testCase.verifyEqual(packet.beta,.3,AbsTol=1e-12);
             testCase.verifyFalse(isfield(packet,'betaRate'));
-            x=[0;.1;0;0;.2;0;0;0];design=invariantObserverSupport.runtime(c);
-            corrected=invariantObserverSupport.correct(x,packet,.1,design,c);
+            x=[0;.1;0;0;.2;0;0;0];design=localizationSupport.runtime(c);
+            corrected=localizationSupport.correct(x,packet,.1,design,c);
             testCase.verifyTrue(all(isfinite(corrected)));
         end
         function squaredSpeedGainIsActiveAndHasNoScalarReplacement(testCase)
-            c=freshObserverTestConfig();design=invariantObserverSupport.runtime(c);
+            c=freshObserverTestConfig();design=localizationSupport.runtime(c);
             testCase.verifyGreaterThan(design.auxiliaryWeights(1),0);
             testCase.verifyFalse(isfield(design,'speedGainNormalized'));
             testCase.verifyFalse(isfield(c.invariantDesign,'speedDesign'));
@@ -130,17 +130,17 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function eightOutputCertificateCannotBeReused(testCase)
             c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='intrinsic-vector-iss-v5';
-            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+            testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
         function projectedSpeedCertificateCannotBeReused(testCase)
             c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='intrinsic-vector-iss-v4';
-            testCase.verifyError(@()invariantObserverSupport.runtime(c), ...
+            testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
         function disablingSquaredSpeedCannotReuseACertifiedClaim(testCase)
             c=freshObserverTestConfig();c.invariantDesign.auxiliaryWeights(1)=0;
-            verification=invariantObserverSupport.verify(c.invariantDesign,c);
+            verification=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
             testCase.verifyFalse(verification.certified);
         end
         function temporaryDesignVerificationRequiresNoSdpSolver(testCase)
@@ -148,7 +148,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             originalPath=path;cleanup=onCleanup(@()path(originalPath));
             root=fileparts(fileparts(mfilename('fullpath')));restoredefaultpath;addpath(root);setupVehicleLocalization;
             testCase.verifyEqual(exist('sdpvar','file'),0);
-            v=invariantObserverSupport.verify(c.invariantDesign,c);
+            v=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
             testCase.verifyTrue(v.certified);
         end
         function imuCannotDrivePredictionWithAuxiliaryFeedbackWithdrawn(testCase)
@@ -199,15 +199,15 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             R=[cos(angle),-sin(angle);sin(angle),cos(angle)];rotated=x;
             for ids={[1,4],[2,5],[3,6]},i=ids{1};rotated(i)=R*x(i);end
             rotated(7)=x(7)+angle;
-            a=invariantObserverSupport.outputs(x,.03,c);b=invariantObserverSupport.outputs(rotated,.03,c);
+            a=localizationSupport.outputs(x,.03,c);b=localizationSupport.outputs(rotated,.03,c);
             testCase.verifyEqual(a,b,AbsTol=1e-12);
         end
         function invariantJacobianAgreesWithIndependentFiniteDifferences(testCase)
-            c=freshObserverTestConfig();x=[2;8;.2;-1;.4;1.3;.5;.12];[~,H]=invariantObserverSupport.outputs(x,.03,c);
+            c=freshObserverTestConfig();x=[2;8;.2;-1;.4;1.3;.5;.12];[~,H]=localizationSupport.outputs(x,.03,c);
             numerical=zeros(5,8);step=1e-5;
             for j=1:8
                 a=x;b=x;a(j)=a(j)+step;b(j)=b(j)-step;
-                numerical(:,j)=(invariantObserverSupport.outputs(a,.03,c)-invariantObserverSupport.outputs(b,.03,c))/(2*step);
+                numerical(:,j)=(localizationSupport.outputs(a,.03,c)-localizationSupport.outputs(b,.03,c))/(2*step);
             end
             testCase.verifyEqual(H,numerical,AbsTol=1e-8);
         end
@@ -215,8 +215,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             c=freshObserverTestConfig();v=[8;.4];a=[.2;1.3];psi=.7;betaRate=.015;
             R=[cos(psi),-sin(psi);sin(psi),cos(psi)];vg=R*v;ag=R*a;
             r=(v(1)*a(2)-v(2)*a(1))/(v.'*v)-betaRate;x=[0;vg(1);ag(1);0;vg(2);ag(2);psi;r];
-            packet=invariantObserverSupport.measurements(v(1),v(2),a(1),a(2),r,atan2(v(2),v(1)),true,true,true,c);
-            y=invariantObserverSupport.outputs(x,packet.beta,c);
+            packet=localizationSupport.measurements(v(1),v(2),a(1),a(2),r,atan2(v(2),v(1)),true,true,true,c);
+            y=localizationSupport.outputs(x,packet.beta,c);
             testCase.verifyEqual(y,packet.value,AbsTol=1e-12);
         end
     end
