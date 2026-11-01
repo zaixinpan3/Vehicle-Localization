@@ -5,5 +5,5 @@ function channel=activeLocalizationChannel(channel)
         channel (1,1) string="overlapGradient"
     end
     assert(channel=="overlapGradient",'VehicleLocalization:ArchivedRegistration', ...
-        'The registration localization branch is removed. Use overlapGradient; see localization/CURRENT_PIPELINE.md.');
+        'The registration localization branch is removed. Use overlapGradient; see localization/README.md.');
 end

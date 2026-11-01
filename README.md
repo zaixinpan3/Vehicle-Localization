@@ -7,7 +7,7 @@ offline mapping independently reconstructs detailed structural candidates and
 validates their individual points.
 Current dataset localization uses only the overlap-gradient LiDAR channel.
 The pose-registration localization branch is archived; see
-[the retirement and recovery record](localization/REGISTRATION_ARCHIVE.md).
+[the retirement and recovery record](localization/README.md#retired-implementations).
 Low-level historical diagnostics and shared geometry remain available.
 
 ## Pipeline
@@ -242,7 +242,7 @@ algorithms, and builder/query error identifiers are preserved.
 The module has 19 MATLAB files: entry points plus static `*Support` classes,
 called with the class prefix (for example
 `lidarInjectionSupport.filterLidarPoseInformation`). The complete file table
-is in [the localization README](localization/README.md#file-layout).
+is in [the localization README](localization/README.md#support-files).
 
 Two estimator stages live here and form the current one-way cascade.
 
@@ -313,7 +313,7 @@ division at rest, but rest is outside this guarantee.
 `synthesizeMncavInvariantDesign` solves fresh gains. The continuous ISS result
 is conditional on its sensor, dynamics and local-domain assumptions; it is
 not a certification of arbitrary map geometry or the full sampled runtime.
-See [the current pipeline](localization/CURRENT_PIPELINE.md) and
+See [the current pipeline](localization/README.md#entry-points) and
 [the observer design](localization/README.md).
 
 Current dataset entries supply `data.lidarOverlap`. Its analytic SE(2)
@@ -322,7 +322,7 @@ over the configured smoothing ladder. `overlapGradientConfig` selects frame
 or per-landmark aggregation and optional orientation information;
 `semanticGeometryConfig` supplies spatial support settings. The retired
 seven-state and pose-optimization implementations are recoverable from
-Git as described in [the retirement record](localization/REGISTRATION_ARCHIVE.md).
+Git as described in [the retirement record](localization/README.md#retired-implementations).
 
 ## Configuration (`config/`)
 
@@ -558,7 +558,7 @@ consistent with the mapped facades, so that tree canopies are not reported as
 facades. Without these fields, perception is unchanged.
 
 The maintained MnCAV VDB localization entry is `runMncavVdbLocalization`.
-See [the current pipeline](localization/CURRENT_PIPELINE.md). Historical
+See [the current pipeline](localization/README.md#entry-points). Historical
 registration comparisons remain in their dated studies and Git revisions.
 
 ## Verification
