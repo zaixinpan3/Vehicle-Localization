@@ -66,33 +66,33 @@ factories and saved measured-course gains were
 removed on 2026-10-13; retrieve their historical code from Git if needed.
 The lateral vehicle parameters and their synthesis workflow are unchanged.
 
-The global ISS speed domain is the true course-speed interval
-`[invariantObserver.redundancy.minimumCourseSpeed, iss.maximumSpeed]`, with a
-strictly positive lower bound, for every L/G/M sensor family. The ordinary
-configuration uses [10,15] m/s. This is separate from the lateral LPV
-longitudinal-speed interval. The main runtime has no speed denominator and can
-execute at rest, but reports no ISS certification there. Its speed-squared
-output is active in matched feedback; the projected-speed replacement and
-scalar speed-gain synthesis have been removed. This architecture change
-invalidates earlier gains and requires a fresh solve.
+The nominal global design uses the true course-speed interval
+`[invariantObserver.fusion.minimumCourseSpeed, iss.maximumSpeed]`, with a
+strictly positive lower bound. The ordinary configuration uses [10,15] m/s.
+This is separate from the lateral LPV longitudinal-speed interval. Execution
+at rest remains defined, with no theoretical guarantee there.
 
-The current auxiliary architecture is `intrinsic-vector-iss-v9-coupled-gram`.
-The five-row packet is ordered as squared speed, dot product, cross product,
-course direction and yaw rate, before numerical scaling. `auxiliaryWeights` contains three
-positive weights: squared speed, shared dot/cross, and direction. Gyro keeps
-its own scalar design. The dot/cross information matrix is retained exactly
-in a joint polynomial of speed, course rate and tangential acceleration.
-The physical relation `a_perp = speed * courseRate` is shared with the dynamics.
-Tensor Bernstein controls certify whole covering boxes; they are not sampled
-states. Geometric speed partitions resolve the low-speed end of a wide interval.
-`redundancy.accelerationPartitions` controls numerical enclosure resolution.
-The former paired-output Young split is removed. Increasing partition resolution
-changes the sufficient enclosure, not the declared physical operating interval.
-An optional full angular Lyapunov block can optimize the heading/rate cross
-term; diagonality is not required by planar rotational symmetry. Its heading
-gain caps use exact rank-one PSD inequalities. The default retains the prior
-diagonal block: the full-block experiment lowered the noise objective but
-regressed three recovery tests, so it was not adopted as the default.
+The architecture is `intrinsic-nominal-polytope-v11`. Five physical outputs
+remain: squared speed, dot product, cross product, course direction and yaw
+rate. The three `auxiliaryWeights` are now directly synthesized coefficients;
+the first two use the bounded factor `Vmax^2/(smin^2+sMeasured^2)`. There is no
+separate baseline/augmentation solve. The gyro gain is the analytic optimum
+of its scalar noise LMI, leaving exactly one SDP optimization call.
+
+One nominal fusion LMI is imposed at all analytic coefficient vertices.
+LiDAR and GNSS share a normalized pose gain; their information and noise
+scales remain separate. A fixed shear of each translation metric makes its
+motion Schur complement affine. Longitudinal motion response, direct pose/direction response, gain caps and
+primitive-noise cost are solved together. The default nominal motion time constant is 0.5 s.
+The L/G/M families, Bernstein partitions, acceleration multipliers,
+cutting-plane solver, penalty search and Hessian-radius computation are removed.
+See [the current design derivation](../localization/README.md#single-convex-design).
+
+Nonlinear use assumes a compact invariant operating set, following Bessafa
+Remark 3. Invariance, a numerical attraction radius, actual-map validity,
+arbitrary source outages and sampled-system stability are not certified.
+Changing any design input invalidates a temporary gain. Do not reuse old
+configurations containing `redundancy`, `regionalRadiusCap` or `gainSelection`.
 
 ## Temporary small-offset global design
 
@@ -115,8 +115,8 @@ cfg = mncavSmallOffsetObserverConfig();
 [design, cfg] = synthesizeMncavInvariantDesign(cfg);
 ```
 
-The result must pass all L, G and coupling-preserving Mixed constraints and
-the conditional regional ISS verification. Gains are returned in memory and
+The result must pass the nominal fusion vertices and simultaneous motion-response
+verification. The compact operating set is an assumption, not a computed certificate. Gains are returned in memory and
 must be solved again for the next experiment. Changing the offset or domain
 invalidates the temporary design. `GnssOffsetNormM` is an explicit geometry
 override, not a promise of feasibility at every requested value.

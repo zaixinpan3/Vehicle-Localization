@@ -77,17 +77,6 @@ classdef fiveInvariantOutputsTest < matlab.unittest.TestCase
             testCase.verifyEqual(y(8),dt*d.gyroGainNormalized*.3/(1+dt*d.gyroGainNormalized),AbsTol=1e-14);
             testCase.verifyEqual(y(1:7),zeros(7,1),AbsTol=0);
         end
-        function everySensorFamilyCreditsSquaredSpeed(testCase)
-            c=mncavFullObserverConfig();c.invariantObserver.redundancy.speedPartitions=1;
-            c.invariantObserver.redundancy.exactGnssLeverEnclosure=false;
-            w=localizationSupport.witness(c,eye(8),1,1,ones(3,1),1);
-            [a,b,d]=localizationSupport.redundancyBlocks(w);
-            w.speedSquaredGain=0;[a0,b0,d0]=localizationSupport.redundancyBlocks(w);
-            E=eye(8);expected=-2*(w.domain.minimumCourseSpeed/w.inputs.maximumSpeed)^2*(E(:,2)*E(:,2).');
-            for pair={{a,a0},{b,b0},{d,d0}}
-                p=pair{1};testCase.verifyEqual(p{1}{1}-p{2}{1},expected,AbsTol=2e-12);
-            end
-        end
         function numericalNormalizationPreservesThePhysicalOutputs(testCase)
             c=mncavFullObserverConfig();x=[0;3;1;0;4;-2;.2;.3];
             h=localizationSupport.outputs(x,.1,c);D=localizationSupport.outputNormalization(c,1);
@@ -100,5 +89,6 @@ end
 
 function d=correctionDesign()
     d=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
-        'auxiliaryWeights',ones(3,1),'gyroGainNormalized',2);
+        'auxiliaryWeights',ones(3,1),'gyroGainNormalized',2, ...
+        'motionGainSchedule',struct('minimumSpeedMps',10,'maximumSpeedMps',15));
 end

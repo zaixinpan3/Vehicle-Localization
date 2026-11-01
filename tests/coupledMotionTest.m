@@ -1,5 +1,5 @@
 classdef coupledMotionTest < matlab.unittest.TestCase
-% Independent Jacobian, domain-coverage and continuous-enclosure checks.
+% Analytic interval enclosure, affine convexity and independent Jacobians.
     methods (TestClassSetup)
         function paths(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
@@ -7,110 +7,74 @@ classdef coupledMotionTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function exactPolynomialMatchesTheOriginalObserverJacobians(testCase)
-            errors=jacobianErrors();
-            testCase.verifyLessThan(max(errors),2e-12);
+        function physicalJacobiansDominateTheEnclosedMatrices(testCase)
+            [errors,minimum]=jacobianErrors();
+            testCase.verifyLessThan(max(errors),2e-11);
+            testCase.verifyGreaterThanOrEqual(minimum,-2e-11);
         end
-        function tensorControlsReconstructEveryInteriorPolynomialValue(testCase)
-            [error,minimumWeight,weightError]=reconstructionErrors();
+        function everyPhysicalCoefficientHasConvexVertexWeights(testCase)
+            [error,minimumWeight]=containmentErrors();
             testCase.verifyLessThan(error,2e-11);
-            testCase.verifyGreaterThanOrEqual(minimumWeight,0);
-            testCase.verifyLessThan(weightError,1e-14);
+            testCase.verifyGreaterThanOrEqual(minimumWeight,-1e-14);
         end
-        function outerBoxesCoverThePhysicalCoupledMotionDomain(testCase)
-            [uncovered,relativeWidthSpread]=coverageErrors();
-            testCase.verifyEqual(uncovered,0);
-            testCase.verifyLessThan(relativeWidthSpread,1e-12);
+        function degenerateDomainsHaveNoDuplicateVertices(testCase)
+            c=mncavFullObserverConfig();c.iss.maximumAcceleration=0;
+            c.iss.maximumSpeed=c.invariantObserver.fusion.minimumCourseSpeed;
+            [v,b]=localizationSupport.fusionVertices(c);
+            testCase.verifySize(v,[1,8]);testCase.verifyEqual(v,b(:,1).');
         end
-        function activeCutConstructionAgreesWithFullVerification(testCase)
-            error=selectedErrors();
-            testCase.verifyLessThan(error,1e-12);
-        end
-        function subdivisionCannotIncreaseThePolynomialMatrixUpperBound(testCase)
-            difference=subdivisionDifference();
-            testCase.verifyLessThanOrEqual(difference,1e-10);
-        end
-        function oldPairRelaxationIsAbsentFromCurrentInputs(testCase)
-            c=mncavFullObserverConfig();p=localizationSupport.redundancyInputs(c,1);
-            testCase.verifyFalse(isfield(c.invariantObserver.redundancy,'bilinearSplit'));
-            testCase.verifyEqual(string(p.motionEnclosure),"physical-acceleration-multiplier-v2");
+        function affineVertexInterpolationPreservesTheWholeLmi(testCase)
+            testCase.verifyLessThan(affineError(),1e-10);
         end
     end
 end
 
-function errors=jacobianErrors()
-    stream=RandStream('mt19937ar','Seed',20261028);errors=zeros(1,4);
+function [errors,minimum]=jacobianErrors()
+    stream=RandStream('mt19937ar','Seed',20261031);errors=zeros(1,3);minimum=Inf;
     for cfg={mncavFullObserverConfig(),mncavSmallOffsetObserverConfig()}
-        c=cfg{1};t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;
-        B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);
-        D=localizationSupport.outputNormalization(c);p=localizationSupport.redundancyInputs(c,1);
-        for j=1:120
-            s=c.invariantObserver.redundancy.minimumCourseSpeed+rand(stream)*(c.iss.maximumSpeed-c.invariantObserver.redundancy.minimumCourseSpeed);
-            a=c.iss.maximumAcceleration*sqrt(rand(stream))*[cos(j);sin(j)];q=a(2)/s;
-            x=[0;s;a(1);0;0;a(2);0;q];
-            [F,H]=localizationSupport.secants(x,x,0,0,c);H=D*H*B;
-            [A,speed,pair,direction]=localizationSupport.matrices(p,localizationSupport.features(s,q,a(1)));
-            expected=B\F*B/t;expected(8,8)=-1;
-            errors=max(errors,[norm(A-expected,'fro'),norm(speed-H(1,:).'*H(1,:),'fro'), ...
-                norm(pair-H(2:3,:).'*H(2:3,:),'fro'),norm(direction-H(4,:).'*H(4,:),'fro')]);
+        c=cfg{1};t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;s0=c.invariantObserver.fusion.minimumCourseSpeed;
+        B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=localizationSupport.outputNormalization(c);
+        for j=1:200
+            s=s0+rand(stream)*(c.iss.maximumSpeed-s0);q=min(c.maximumTrackAngleRate,c.iss.maximumAcceleration/s)*(2*rand(stream)-1);
+            a=[sqrt(max(0,c.iss.maximumAcceleration^2-(s*q)^2))*(2*rand(stream)-1);s*q];
+            x=[0;s;a(1);0;0;a(2);0;q];[F,H]=localizationSupport.secants(x,x,0,0,c);H=D*H*B;
+            [A,speed,pair,direction]=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c),1);
+            expected=B\F*B/t;expected(8,8)=-1;factor=c.iss.maximumSpeed^2/(s0^2+s^2);
+            errors=max(errors,[norm(A-expected,'fro'),norm(speed-factor*H(1,:).'*H(1,:),'fro'), ...
+                norm(direction-H(4,:).'*H(4,:),'fro')]);
+            difference=factor*H(2:3,:).'*H(2:3,:)-pair;
+            minimum=min(minimum,min(eig((difference+difference.')/2)));
         end
     end
 end
 
-function [error,minimumWeight,weightError]=reconstructionErrors()
-    c=mncavSmallOffsetObserverConfig();p=localizationSupport.redundancyInputs(c,1);
-    [~,boxes]=localizationSupport.motionControls(p,c.invariantObserver.redundancy);
-    stream=RandStream('mt19937ar','Seed',2801);error=0;minimumWeight=1;weightError=0;
-    for j=1:size(boxes,1)
-        box=boxes(j,:);u=rand(stream,1,3);x=box([1,3,5])+u.*(box([2,4,6])-box([1,3,5]));
-        weights=kron(kron(bernstein(u(1)),bernstein(u(2))),bernstein(u(3)));
-        exact=localizationSupport.features(x(1),x(2),x(3));
-        error=max(error,norm(weights*localizationSupport.boxControls(box)-exact,Inf));
-        minimumWeight=min(minimumWeight,min(weights));weightError=max(weightError,abs(sum(weights)-1));
+function [error,minimumWeight]=containmentErrors()
+    stream=RandStream('mt19937ar','Seed',3110);error=0;minimumWeight=1;
+    for cfg={mncavFullObserverConfig(),mncavSmallOffsetObserverConfig()}
+        c=cfg{1};[vertices,b]=localizationSupport.fusionVertices(c);s0=c.invariantObserver.fusion.minimumCourseSpeed;
+        for j=1:500
+            s=s0+(c.iss.maximumSpeed-s0)*rand(stream);q=min(c.maximumTrackAngleRate,c.iss.maximumAcceleration/s)*(2*rand(stream)-1);
+            a=sqrt(max(0,c.iss.maximumAcceleration^2-(s*q)^2))*(2*rand(stream)-1);
+            f=localizationSupport.fusionFeatures(s,q,a,c);w=vertexWeights(f,b);
+            error=max(error,max([norm(w.'*vertices-f,Inf),abs(sum(w)-1)]));minimumWeight=min(minimumWeight,min(w));
+        end
     end
 end
 
-function [uncovered,widthSpread]=coverageErrors()
-    c=mncavSmallOffsetObserverConfig();p=localizationSupport.redundancyInputs(c,1);d=c.invariantObserver.redundancy;
-    [~,boxes]=localizationSupport.motionControls(p,d);stream=RandStream('mt19937ar','Seed',2802);uncovered=0;
-    for j=1:1000
-        s=d.minimumCourseSpeed+(p.maximumSpeed-d.minimumCourseSpeed)*rand(stream);
-        a=p.maximumAcceleration*sqrt(rand(stream))*[cos(j);sin(j)];q=a(2)/s;
-        if abs(q)>p.maximumCourseRate,continue;end
-        x=[s,q,a(1)];inside=all(x>=boxes(:,[1,3,5])-1e-13 & x<=boxes(:,[2,4,6])+1e-13,2);
-        uncovered=uncovered+~any(inside);
-    end
-    ratios=boxes(:,2)./boxes(:,1);widthSpread=max(ratios)-min(ratios);
-end
-
-function error=selectedErrors()
-    c=mncavFullObserverConfig();c.invariantObserver.redundancy.speedPartitions=1;
-    [~,groups]=localizationSupport.multiplierGroups(c.invariantObserver.redundancy);
-    w=localizationSupport.witness(c,diag(1:8),2,3,[4;5;6],1,repmat({eye(8);diag(1:8);ones(8)},1,groups));
-    [L,G,M]=localizationSupport.redundancyBlocks(w);all=[L,G,M];
-    ids=unique(round(linspace(1,numel(all),31)));
-    [L,G,M]=localizationSupport.redundancyBlocks(w,true,ids);selected=[L,G,M];error=0;
-    for j=1:numel(ids),error=max(error,norm(selected{j}-all{ids(j)},'fro'));end
-end
-
-function difference=subdivisionDifference()
-    c=mncavSmallOffsetObserverConfig();p=localizationSupport.redundancyInputs(c,1);box=[1,3,-.4,0,-2,0];
-    P=diag(1:8);parent=upperBound(p,P,box);children=-Inf;
-    for i=1:3
-        mid=mean(box(2*i-1:2*i));a=box;b=box;a(2*i)=mid;b(2*i-1)=mid;
-        children=max(children,max(upperBound(p,P,a),upperBound(p,P,b)));
-    end
-    difference=children-parent;
-end
-
-function bound=upperBound(p,P,box)
-    controls=localizationSupport.boxControls(box);bound=-Inf;
-    for j=1:27
-        [A,speed,pair,direction]=localizationSupport.matrices(p,controls(j,:));
-        M=P*A-2*speed-3*pair-4*direction;bound=max(bound,max(eig(M+M.')));
+function w=vertexWeights(f,b)
+    u=(f(:)-b(:,1))./(b(:,2)-b(:,1));w=ones(2^numel(u),1);
+    for j=1:numel(u)
+        high=bitget((0:numel(w)-1).',j);w=w.*(high*u(j)+(1-high)*(1-u(j)));
     end
 end
 
-function b=bernstein(u)
-    b=[(1-u)^2,2*u*(1-u),u^2];
+function error=affineError()
+    c=mncavFullObserverConfig();[vertices,b]=localizationSupport.fusionVertices(c);
+    f=(.37*b(:,1)+.63*b(:,2)).';w=vertexWeights(f,b);P=diag(1:8);combined=zeros(8);
+    for j=1:size(vertices,1)
+        [A,S,B,D]=localizationSupport.fusionMatrices(c,vertices(j,:),2);M=P*A-3*S-4*B-5*D;
+        combined=combined+w(j)*(M+M.');
+    end
+    [A,S,B,D]=localizationSupport.fusionMatrices(c,f,2);M=P*A-3*S-4*B-5*D;
+    error=norm(combined-M-M.','fro');
 end

@@ -1,5 +1,5 @@
-classdef (SharedTestFixtures={freshObserverGainsFixture}) observerGainSelectionTest < matlab.unittest.TestCase
-% Engineering preferences must not become theorem or runtime requirements.
+classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTest < matlab.unittest.TestCase
+% One nominal fusion solve and explicit limits of the certificate.
     properties (TestParameter)
         dt={.05,.1}
     end
@@ -10,32 +10,35 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) observerGainSelectionT
         end
     end
     methods (Test)
-        function selectedDesignPassesOriginalCertificateAndBeatsTheSeedObjective(testCase)
-            [d,c]=selected();a=d.gainSelection;
-            v=localizationSupport.verifyInvariantDesign(d,c);
+        function singleSolveReturnsIndependentlyVerifiedGains(testCase)
+            [d,c]=selected();v=localizationSupport.verifyInvariantDesign(d,c);
             testCase.verifyTrue(v.certified && v.motionResponse.verified);
-            testCase.verifyEqual(v.jointSensor.vertices,133920);
-            testCase.verifyFalse(isfield(v,'motionPositionCoupling'));
-            testCase.verifyFalse(a.certificateFeasibleSetChanged || a.referenceUsed);
-            testCase.verifyEqual(d.meanSquareBound,min([a.candidates.noiseProxy]),RelTol=1e-10);
-            testCase.verifyLessThan(d.meanSquareBound,a.candidates(1).noiseProxy);
+            testCase.verifyEqual(d.solveAudit.optimizationCalls,1);
+            testCase.verifyEqual(d.kappaG,d.kappaL,AbsTol=1e-9);
+            testCase.verifyEqual(v.vertices,256);
+            testCase.verifyFalse(isfield(d,'gainSelection'));
+            testCase.verifyFalse(isfield(d,'constraintGeneration'));
+            testCase.verifyFalse(isfield(d,'accelerationMultipliers'));
         end
-        function originalFeasibleDesignWithLargeCouplingIsStillAccepted(testCase)
-            c=mncavSmallOffsetObserverConfig();c.gainSelection.enabled=false;
-            c=freshObserverTestConfig(c);v=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
-            testCase.verifyTrue(v.certified);
-            testCase.verifyGreaterThan(localizationSupport.couplingRatio(c.invariantDesign.P,c),2);
+        function obsoleteSearchIsRejectedExplicitly(testCase)
+            c=mncavSmallOffsetObserverConfig();c.gainSelection=struct('enabled',true);
+            testCase.verifyError(@()localizationSupport.invariantInputs(c),'VehicleLocalization:ObsoleteFusionDesign');
         end
-        function engineeringPreferencesAreNotCertificateInputs(testCase)
-            [~,c]=selected();original=localizationSupport.invariantInputs(c);
-            c.gainSelection.penaltyWeights=1e6;
-            testCase.verifyEqual(localizationSupport.invariantInputs(c),original);
-            r=localizationSupport.runtime(c);
-            testCase.verifyTrue(r.continuousCertificate.verification.certified);
+        function operatingSetAssumptionIsNotAnInvariantSetCertificate(testCase)
+            [d,~]=selected();v=d.verification;
+            testCase.verifyTrue(v.operatingSet.assumedInvariant);
+            testCase.verifyFalse(v.operatingSet.invarianceVerified);
+            testCase.verifyFalse(v.numericalInvariantRadiusCertified);
+            testCase.verifyFalse(v.finiteInvariantSecantsCertified);
+            testCase.verifyFalse(v.nominalFusion.coversGnssAbsent);
+            testCase.verifyFalse(v.nominalFusion.coversZeroLidarInformation);
+            testCase.verifyFalse(isfield(v,'regionalIss'));
         end
-        function obsoleteHardBudgetIsRejectedExplicitly(testCase)
-            c=mncavSmallOffsetObserverConfig();c.invariantObserver.maximumMotionPositionNoiseRatio=2;
-            testCase.verifyError(@()localizationSupport.invariantInputs(c),'VehicleLocalization:ObsoleteCouplingConstraint');
+        function metricShearMakesMotionSchurComplementAffine(testCase)
+            [d,~]=selected();P=d.P;inverse=P\eye(8);
+            R=inverse(2:3,2:3)\eye(2);
+            testCase.verifyEqual(R,P(2:3,2:3)-P(1,1)*[1,-1;-1,1],AbsTol=1e-10);
+            testCase.verifyGreaterThan(abs(inverse(2,1)),0);
         end
         function informativeLidarStillCorrectsAStationaryPose(testCase,dt)
             [data,lateral,c]=constantMotionFixture(0,dt);
@@ -47,7 +50,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) observerGainSelectionT
             testCase.verifyLessThan(abs(e.heading(end)),.001);
             testCase.verifyFalse(e.diagnostics.allTheoremHypothesesVerified);
         end
-        function gnssOnlyStillCorrectsAnInDomainCruise(testCase,dt)
+        function gnssOnlyRetainsAccuracyWithoutAnOutageCertificate(testCase,dt)
             [data,lateral,c]=constantMotionFixture(5,dt);
             data=rmfield(data,'lidar');n=numel(lateral.time);
             data.gnss=struct('time',lateral.time, ...
@@ -57,7 +60,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) observerGainSelectionT
             e=runFullLocalizationObserver(data,struct(),c,LateralInputs=lateral);
             testCase.verifyTrue(all(isfinite(e.internalState),'all'));
             testCase.verifyLessThan(norm(e.position(end,:)-[5*lateral.time(end),0]),.02);
+            % Retain the historical behavioral target without an outage theorem.
+            fprintf('GNSS-ONLY 8 s: dt=%g, heading=%.9g rad (behavioral target .005)\n',dt,abs(e.heading(end)));
             testCase.verifyLessThan(abs(e.heading(end)),.005);
+            testCase.verifyTrue(e.diagnostics.nominalFusionLmiVerified);
+            testCase.verifyFalse(e.diagnostics.allTheoremHypothesesVerified);
         end
     end
 end

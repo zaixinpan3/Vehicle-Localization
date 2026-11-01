@@ -5,11 +5,10 @@ supplies motion outputs to the intrinsic eight-state global observer, whose
 LiDAR channel evaluates semantic overlap gradients. There is one production
 global-observer runtime, `runFullLocalizationObserver`.
 
-This is the module's only Markdown guide. Mathematical derivations belong in
-[the observer theory](../improved_observer_derivation.md), including
-[the coupled gain construction](../improved_observer_derivation.md#08b-coupled-invariant-output-gain-synthesis).
-Experiment protocols and results belong with their dataset/baseline entries
-and the manuscript, rather than in this runtime guide.
+This is the module's runtime and current gain-design guide. The nominal fusion
+construction below supersedes the L/G/M certificates, polynomial boxing,
+refinement and computed-region sections in the
+[historical observer derivation](../improved_observer_derivation.md).
 
 ## Entry points
 
@@ -77,33 +76,161 @@ lateral = runLateralVelocityObserver(data.highRate, ld, lc);
 estimate = runFullLocalizationObserver(data, ld, cfg, LateralInputs=lateral);
 ```
 
-Gain synthesis requires YALMIP and SeDuMi on the MATLAB path. Each test or
-experiment solves fresh global and vehicle-specific lateral gains; there is
-no saved-gain fallback. Fresh in-memory designs may be shared within one
-paired experiment. The runtime independently verifies its common L/G/M
-certificate and configured response/feedback conditions.
+Gain synthesis requires YALMIP and SeDuMi. Each experiment solves fresh gains;
+there is no saved-gain fallback. A single SDP selects a constant metric and
+matched feedback gains, including the nominal motion-response constraint and
+primitive sensor-noise objective. The scalar gyro LMI has a closed-form
+optimum and requires no separate optimization. Every returned fusion and
+response vertex is checked again numerically, including at runtime without
+an SDP solver. Old configurations and gains are rejected.
 
-The base certificate uses one metric across informative-LiDAR, adequate-GNSS
-and mixed sensor conditions. The current base factory declares [10,15] m/s;
-the explicit small-offset scenario declares [1,30] m/s and a hypothetical
-GNSS output-point offset. These are different geometry/configuration
-assumptions, not interchangeable defaults. The lateral interval and the
-global true-course interval must both hold for a cascade claim.
+The default domain is [10,15] m/s. The small-offset scenario explicitly uses
+[1,30] m/s and hypothetical GNSS geometry. The certificate covers nominal
+simultaneous LiDAR, GNSS and all five auxiliary outputs. It no longer certifies
+switching among L/G/M sensor-adequacy families. Dataset configurations with
+nominal GNSS weight zero use the same LMI for their declared LiDAR-only pose
+source. Runtime withdrawal of invalid packets remains available.
 
-Production gain design also uses the configured nominal motion-response
-construction. The small-offset factory uses engineering objective selection
-within the original LMI feasible set; it does not impose the removed hard
-motion-to-position coupling constraint. Read the configuration factories and
-[the coupled derivation](../improved_observer_derivation.md#08b-coupled-invariant-output-gain-synthesis)
-for the mathematical construction rather than historical solved numbers.
+### Single convex design
 
-The nonlinear ISS conclusion is conditional on the declared motion,
-auxiliary-error, actual-overlap information/bias and local-region contracts.
-It is not an actual-map, arbitrary-initial-error or sampled-system
-certificate. Prediction has no speed denominator at standstill, and LiDAR
-may still correct supported pose directions; zero speed and arbitrary LPV
-exit/re-entry remain outside the complete in-domain ISS claim. GNSS position
-and gyro rate alone do not uniformly determine heading at standstill.
+Let `t=theta=sigma`, `s0` be the minimum course speed, `V` the maximum speed,
+`A` the acceleration bound, `Q` the course-rate bound, and `ell` the heading
+length. The normalized state scaling remains
+`B=diag(t.^[1,2,3,1,2,3,1,2]./[1,1,1,1,1,1,ell,ell])`.
+The matched squared-speed and dot/cross weights are now synthesized directly
+as `c1,c2` and applied with the single bounded factor
+`V^2/(s0^2+sMeasured^2)`. Direction has the constant weight `c3`. This uses the
+existing squared-speed measurement and is finite at rest; there is no
+baseline gain plus a separately optimized augmentation.
+
+Use the metric
+
+\[
+P=\operatorname{diag}(P_c,P_c,P_h),\qquad
+P_c=U^T\operatorname{diag}(p,R)U,\qquad
+U=\begin{bmatrix}1&-1&1\\0&1&0\\0&0&1\end{bmatrix}.
+\]
+
+Then `(inv(P))(2:3,2:3)=inv(R)`. This fixed coordinate shear is an explicit
+structural restriction, not a claim that every unrestricted metric has this
+form. It makes the motion Schur metric `R` affine in the same solve while
+retaining pose-to-motion feedback. Including acceleration in this shear
+restores the weak-LiDAR standstill recovery test without another solve. LiDAR and GNSS share one normalized pose
+gain, `kappaL=kappaG`, so the nominal noise objective cannot switch off GNSS
+by driving its independent gain to zero. Sensor information weights and
+noise scales remain distinct. There is no penalty-weight search.
+
+At a course-aligned nominal state, write `v=[s,0]`, `a=[b,s*q]`, with
+`s0<=s<=V`, `abs(q)<=Q`, and `b^2+s^2*q^2<=A^2`. Set `d=s0^2+s^2`.
+The affine coefficient vector is
+
+\[
+f=(q,q^2,b,s^2/d,sb/d,s^2q/d,s,s^2).
+\]
+
+Its analytic intervals are
+
+| Coefficient | Interval |
+| --- | --- |
+| `q` | `[-Qe,Qe]`, `Qe=min(Q,A/s0)` |
+| `q^2` | `[0,Qe^2]` |
+| `b` | `[-A,A]` |
+| `s^2/d` | `[1/2,V^2/(s0^2+V^2)]` |
+| `sb/d` | `[-A/(2*s0),A/(2*s0)]` |
+| `s^2*q/d` | `[-min(Qe,A/(2*s0)),min(Qe,A/(2*s0))]` |
+| `s` | `[s0,V]` |
+| `s^2` | `[s0^2,V^2]` |
+
+The mixed bounds use `s/(s0^2+s^2)<=1/(2*s0)` and `abs(s*q)<=A`.
+The diagonal velocity term of the scheduled dot/cross Gram is nonnegative;
+omitting it gives a Loewner lower bound while retaining all cross terms.
+`fusionMatrices` is affine in these eight coefficients. Checking all 256
+Cartesian vertices therefore bounds every physical nominal matrix; degenerate
+intervals reduce the count. These are coefficient vertices, not sampled
+motion endpoints. No Bernstein controls, partitions, acceleration multipliers
+or cutting-plane iterations remain.
+
+The single fusion condition is
+
+\[
+\operatorname{He}(P A(f)-c_1 S(f)-c_2 B(f)-c_3 D(f))
++L_{\rm pose}+\lambda I\prec0
+\]
+
+at every vertex. Here `S,B,D` are the squared-speed, lower dot/cross and
+direction matrices. For pose selector `C`, translation selector `Cp`, and
+heading unit vector `e7`, the common pose term is
+
+\[
+L_{\rm pose}=-2\kappa C^T S_L C-\kappa w C_p^T C_p
++\kappa w\rho^2 e_7e_7^T,
+\quad \rho=\|\ell_{GNSS}\|/\ell.
+\]
+
+`S_L=diag(pmin,pmin,hmin)-(couplingBound+operatorMismatch)*I` is the
+informative-LiDAR lower bound. A fixed Young inequality bounds GNSS lever
+orientation for nominal **isotropic** information `w*I`. This does not certify
+arbitrary anisotropic GNSS weights or actual overlap operators.
+
+For the motion-only subsystem, the same solve imposes
+
+\[
+\operatorname{He}(R A_m)+2\alpha R
+-2t\left(c_1\begin{bmatrix}r&0\\0&0\end{bmatrix}
++c_2\begin{bmatrix}0&u/t\\u/t&r\end{bmatrix}\right)\prec0,
+\quad A_m=\begin{bmatrix}0&t\\0&0\end{bmatrix},
+\]
+
+at the four `(r,u)` interval vertices. The omitted acceleration-dependent
+velocity diagonal is again nonnegative. `alpha=1/timeConstantS`; the default
+0.5 s target preserves braking/restart response under this more conservative
+coefficient enclosure. It is a nominal straight-course velocity/acceleration
+contraction target with exact packets and no pose correction, not a nonlinear
+full-pose settling-time promise. It is imposed together with the existing
+self-feedback caps, `P>=I`, and the full primitive-column noise epigraphs.
+
+The same solve imposes three affine component-response bounds, with
+`pL=S_L(1,1)`, `hL=S_L(3,3)`, and `sbar=(s0+V)/2`:
+
+\[
+\kappa p_L\ge(\alpha/t)P_{11},\qquad
+\kappa h_L\ge(\alpha/t)P_{77},\qquad
+c_3(\bar s/(t\ell))^2\ge(\alpha/t)P_{77}.
+\]
+
+Since `(inv(P))(j,j)>=1/P(j,j)`, these give sufficient direct correction
+rates for LiDAR position, LiDAR heading and direction-heading at the nominal
+midpoint speed. They prevent the noise objective from suppressing useful
+pose response. They use the same configured time target, with no new tuning
+weights. They are component-authority constraints, not a full-pose settling
+theorem or another sensor-availability certificate.
+
+### Nonlinear scope and the source paper
+
+Bessafa et al., *Generalized multi-output high-gain observer with application
+to ego vehicle trajectory and orientation estimation*, Automatica 188 (2026),
+112915, Lemma 1 (p. 2), supplies the differential-mean-value representation
+and affine-polytope convexity principle. `secants` retains exact finite drift
+and output identities. The implemented vertex LMI bounds the **nominal
+zero-error Jacobian family** of our matched-gradient observer; it must not be
+mistaken for a bound on every finite product `Hhat'*Hsec`. The local compact-set
+assumption and strict nominal margin support a conditional sufficiently-small
+error/disturbance argument, not a certificate for arbitrary initial errors.
+
+Following Remark 3 (p. 5), nonlinear use assumes a compact invariant operating
+set where the relevant functions are Lipschitz. This assumption does not prove
+invariance. No Hessian remainder radius, Lyapunov sublevel or disturbance-budget
+radius is computed. `operatingSet.assumedInvariant=true`,
+`operatingSet.invarianceVerified=false`, and
+`numericalInvariantRadiusCertified=false` express this distinction. There is
+also no certificate for actual maps, arbitrary outages, the full lateral
+cascade or sampling. Zero speed has defined runtime behavior but remains
+outside the positive-speed theory. With every velocity output withdrawn,
+pose-only velocity recovery is slower: the regression keeps its 0.02 m
+position and 0.05 m/s velocity accuracy targets at 20 s instead of 12 s.
+The original braking, GNSS-only heading, standstill-overlap and moving-overlap
+accuracy checks remain. None of these sampled examples reinstates an outage
+theorem.
 
 ## LiDAR runtime
 
@@ -138,34 +265,7 @@ Only two MATLAB files live at this directory level:
 | `runFullLocalizationObserver.m` | Public eight-state observer entry and synchronous runtime |
 | `localizationSupport.m` | Static methods for design, verification, sensor preparation, geometry, source windows and calibration |
 
-The support class groups methods by responsibility. Public method names remain
-unchanged where unambiguous; design-specific names distinguish the former
-`inputs`, `verify` and `blocks` methods. Examples include
-`localizationSupport.invariantInputs`, `verifyInvariantDesign`,
-`verifySensorRedundancy`, `verifyMotionResponse`, `redundancyBlocks` and
-`responseBlocks`. Previously standalone wheel, source-window, overlap-geometry
-and common-LMI helpers are static methods of this class too.
-
-The `lateralObserver/` files and their interfaces are unchanged. Shared geometry
-and generic pose/residual algebra remain available for mapping and synthetic
-validation; consolidation does not remove measurements, solver conditions,
-calibration methods or numerical integration choices.
-
-## Validation
-
-`validateFullLocalizationObserver` covers the current MnCAV entry;
-`validateSyntheticLocalizationCascade` exercises synthetic measurements,
-availability and lateral-model mismatch. Tests under `tests/` cover fresh
-gains, outputs, coupling, source windows and overlap. In particular,
-`activeLocalizationChannelTest` checks that registration requests and matcher
-callbacks are rejected before input files or observer data are read.
-
-## Retired implementations
-
-The pose-registration route, direct-gyro seven-state observers, delayed-pose
-replay, experimental pose graph and persisted gain certificates were removed
-from the active tree. Their pre-cleanup source remains recoverable from Git
-revision `067df04`; reproduce historical experiments in a separate checkout.
-Historical study results are not alternative live algorithms. Old
-registration selection, matcher callbacks and historical timing modes are
-rejected rather than routed to a compatibility implementation.
+The support class groups methods by responsibility. Current design helpers
+include `invariantInputs`, `fusionVertices`, `fusionMatrices`, `fusionBlocks`,
+`verifyInvariantDesign`, and `verifyMotionResponse`. Removed solver machinery
+is recoverable from Git history.

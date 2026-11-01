@@ -1,5 +1,5 @@
 classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest < matlab.unittest.TestCase
-% Finite nonlinear identities, correlated inputs and regional dissipation.
+% Finite nonlinear identities, correlated inputs and rotational equivariance.
     methods (TestClassSetup)
         function paths(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
@@ -33,53 +33,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
             testCase.verifyEqual(N(4,:),zeros(1,5),AbsTol=0);
             testCase.verifyGreaterThan(norm(N(2:3,3:4)),0);
         end
-        function bernsteinControlsRepresentCoupledRatesThroughoutCells(testCase)
-            controls=localizationSupport.courseControls(.4,2);u=.37;
-            rate=-.4+.4*u;weights=[(1-u)^2,2*u*(1-u),u^2];
-            testCase.verifyEqual(weights*controls(1:3,:),[rate,rate^2],AbsTol=2e-16);
-            testCase.verifyLessThanOrEqual(max(controls(:,2)),.4^2);
-            testCase.verifyGreaterThanOrEqual(min(controls(:,2)),0);
-            testCase.verifyError(@()localizationSupport.courseControls(.4,3), ...
-                'VehicleLocalization:InvalidRedundancyDomain');
-        end
-        function regionalBoundHasAStrictInvariantLevelAndInputBudget(testCase)
-            c=freshObserverTestConfig();r=c.invariantDesign.verification.regionalIss;
-            testCase.verifyTrue(r.certified);
-            testCase.verifyGreaterThan(r.normalizedRadius,0);
-            testCase.verifyLessThanOrEqual(r.normalizedRadius,r.outerRadius);
-            testCase.verifyLessThanOrEqual(r.cubicRemainderBound*r.normalizedRadius ...
-                +r.quarticRemainderBound*r.normalizedRadius^2,.500001*r.nominalDissipation);
-            testCase.verifyEqual(r.lyapunovLevel,r.minimumMetricEigenvalue*r.normalizedRadius^2,RelTol=1e-12);
-            testCase.verifyEqual(r.gamma*r.normalizedAdditiveInputLimit^2,2*r.alpha*r.lyapunovLevel,RelTol=1e-12);
-        end
-        function nonlinearDissipationHoldsAcrossComplementaryFamilies(testCase)
-            ratios=regionalDissipation(freshObserverTestConfig());
-            testCase.verifyLessThan(max(ratios),-.49);
-        end
-        function zeroSpeedIsOutsideEveryCertifiedSensorFamily(testCase)
-            c=freshObserverTestConfig();v=c.invariantDesign.verification;
-            testCase.verifyFalse(v.zeroSpeedCertified);
-            testCase.verifyFalse(v.jointSensor.zeroSpeedCertified);
-            testCase.verifyEqual(v.regionalIss.speedInterval,[10,15],AbsTol=0);
-        end
-        function removingEitherMixedAnchorRejectsItsCertificate(testCase)
-            c=freshObserverTestConfig();d=c.invariantDesign;
-            w=localizationSupport.witness(c,d.P,d.kappaL,0,d.auxiliaryWeights,d.gyroGainNormalized,d.accelerationMultipliers);
-            v=localizationSupport.verifySensorRedundancy(w,true);
-            testCase.verifyFalse(v.certified);
-            testCase.verifyGreaterThan(v.worstMixedEigenvalue,0);
-        end
-        function regionalDomainChangesInvalidateTemporaryGains(testCase)
-            c=freshObserverTestConfig();c.invariantObserver.regionalRadiusCap=.5;
-            testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
-        end
-        function sampledAndActualGeometryClaimsRemainWithdrawn(testCase)
-            r=localizationSupport.runtime(freshObserverTestConfig());
-            testCase.verifyTrue(r.continuousCertificate.verification.numericalInvariantRadiusCertified);
-            testCase.verifyFalse(r.actualOverlapCertified);
-            testCase.verifyFalse(r.sampledSystemCertified);
-            testCase.verifyFalse(r.fullContinuousStateCertified);
-        end
     end
 end
 
@@ -105,45 +58,6 @@ function errors=rotationErrors(c)
     [F,H,G]=localizationSupport.secants(x,y,.1,.03,c);
     [Fr,Hr,Gr]=localizationSupport.secants(xr,yr,.1,.03,c);
     errors=[norm(Fr-T*F*T.'),norm(Hr*T-H),norm(Gr*T-R*G)];
-end
-
-function ratios=regionalDissipation(c)
-    d=c.invariantDesign;r=d.verification.regionalIss;t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;
-    B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=localizationSupport.outputNormalization(c);
-    E=eye(8);C=E([1,4,7],:);Cp=C(1:2,:);
-    stream=RandStream('mt19937ar','Seed',2302);ratios=zeros(180,1);
-    for k=1:numel(ratios)
-        family=mod(k-1,3)+1;psi=6*rand(stream)-3;beta=.2;rate=.02;s=10+5*rand(stream);
-        qLimit=min(c.maximumTrackAngleRate,c.iss.maximumAcceleration/s);
-        q=qLimit*(2*rand(stream)-1);
-        u=sqrt(max(0,c.iss.maximumAcceleration^2-(s*q)^2))*(2*rand(stream)-1);
-        dc=direction(psi+beta);nc=[-dc(2);dc(1)];
-        x=zeros(8,1);x(7:8)=[psi;q-rate];x([2,5])=s*dc;x([3,6])=u*dc+s*q*nc;
-        eps=randn(stream,8,1);eps=.9*r.normalizedRadius*eps/norm(eps);hat=x-B*eps;
-        WG=.5*eye(2);S=diag([.25,.25,.97]);valid=true(5,1);
-        if family==1
-            WG=zeros(2);
-        elseif family==2
-            S=zeros(3);
-        else
-            % Rank-one PSD LiDAR with cross coupling. It satisfies the scalar
-            % bounds but does not dominate the former diagonal heading floor.
-            coupling=c.iss.maximumPositionHeadingCoupling*[cos(k);sin(k)];h=c.iss.minimumHeadingStrength;
-            S=[coupling*coupling.'/h,coupling;coupling.',h];
-        end
-        mismatch=c.invariantObserver.redundancy.informativeLidarMismatch;
-        W=S-mismatch*eye(3)+.01*[0,1,0;-1,0,0;0,0,0];
-        [hx,~]=localizationSupport.outputs(x,beta,c);
-        [hh,Hh]=localizationSupport.outputs(hat,beta,c);
-        weights=localizationSupport.weights(d,hx(1));
-        Ka=diag([weights([1,2,2,3]);0])*diag(double(valid));
-        rhs=B\(drift(x,rate)-drift(hat,rate));
-        rhs=rhs-t*d.gyroGainNormalized*E(:,8)*eps(8);
-        rhs=rhs-t*d.kappaL*(d.P\(C.'*W*C*eps));
-        rhs=rhs-d.kappaG*(d.P\(Cp.'*WG*(antenna(x,c)-antenna(hat,c))));
-        rhs=rhs-t*(d.P\((D*Hh*B).'*Ka*D*(hx-hh)));
-        ratios(k)=2*eps.'*d.P*rhs/(r.nominalDissipation*(eps.'*eps));
-    end
 end
 
 function y=drift(x,b)

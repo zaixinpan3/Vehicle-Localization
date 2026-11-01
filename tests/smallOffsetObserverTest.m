@@ -23,19 +23,18 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(norm(original.gnss.outputPoint.bodyOffset),1);
             testCase.verifyEqual(c.gnss.outputPoint.bodyCovariance,original.gnss.outputPoint.bodyCovariance);
             testCase.verifyEqual(c.invariantObserver.noise,original.invariantObserver.noise);
-            testCase.verifyEqual(c.invariantObserver.redundancy.degradedLidarMismatch, ...
-                original.invariantObserver.redundancy.degradedLidarMismatch);
+            testCase.verifyEqual(c.invariantObserver.fusion.lidarOperatorMismatch, ...
+                original.invariantObserver.fusion.lidarOperatorMismatch);
             testCase.verifyFalse(isfield(c,'invariantDesign'));
         end
         function commonCertificateCoversTheDeclaredMovingDomain(testCase)
             c=testCase.Config;v=c.invariantDesign.verification;
-            testCase.verifyEqual([c.invariantObserver.redundancy.minimumCourseSpeed,c.iss.maximumSpeed],[1,30]);
+            testCase.verifyEqual([c.invariantObserver.fusion.minimumCourseSpeed,c.iss.maximumSpeed],[1,30]);
             testCase.verifyTrue(v.certified);
             testCase.verifyTrue(v.feedbackAuthority.verified);
-            testCase.verifyTrue(v.regionalIss.certified);
-            testCase.verifyEqual(v.jointSensor.vertices,133920);
-            testCase.verifyLessThan(max([v.jointSensor.worstLidarEigenvalue, ...
-                v.jointSensor.worstGnssEigenvalue,v.jointSensor.worstMixedEigenvalue]),-.009);
+            testCase.verifyTrue(v.operatingSet.assumedInvariant);
+            testCase.verifyEqual(v.nominalFusion.vertices,256);
+            testCase.verifyLessThan(v.worstVertexEigenvalue,-.009);
         end
         function measuredOffsetCannotReuseThisTemporaryDesign(testCase)
             c=testCase.Config;original=mncavFullObserverConfig();

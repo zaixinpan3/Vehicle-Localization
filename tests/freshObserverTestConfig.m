@@ -8,9 +8,8 @@ function cfg=freshObserverTestConfig(cfg)
     name='VehicleLocalizationFreshTestGains';
     assert(isappdata(0,name),'VehicleLocalization:TestGainScope', ...
         'Use freshObserverGainsFixture before requesting test gains.');
-    selection=struct();if isfield(cfg,'gainSelection'),selection=cfg.gainSelection;end
     designs=getappdata(0,name);
-    key=jsonencode(struct('certificate',localizationSupport.invariantInputs(cfg),'selection',selection));
+    key=jsonencode(localizationSupport.invariantInputs(cfg));
     if ~isKey(designs,key)
         [design,~]=synthesizeMncavInvariantDesign(cfg);designs(key)=design;
     end

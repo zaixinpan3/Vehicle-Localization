@@ -30,7 +30,7 @@ function trial=nuscenesTrialConfig(steeringRatio)
     lateral.synthesis.axleForceMismatchScale=.3*lateral.synthesis.linearLateralAccelerationScale* ...
         [vehicle.lr;vehicle.lf]/wheelbase;
     globalCfg=mncavFullObserverConfig();globalCfg.kind="nuscenes-overlap-development-trial";
-    globalCfg.invariantObserver.operatingPoints=["lidar","weakLidar"];
+    globalCfg.invariantObserver.nominalGnssWeight=0; % Declared GNSS-free nominal fusion.
     globalCfg.invariantObserver.balancedPoseMetric=true;
     globalCfg.invariantObserver=rmfield(globalCfg.invariantObserver,{'headingGainLimits','matchedGainLimits'});
     globalCfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2), ...
@@ -38,7 +38,6 @@ function trial=nuscenesTrialConfig(steeringRatio)
     globalCfg.invariantObserver.noise=struct('lidarPositionM',.1,'lidarHeadingRad',.01, ...
         'gnssPositionM',1,'velocityMps',.3,'accelerationMps2',.3,'gyroRadps',.01,'jerkMps3',1);
     globalCfg.invariantObserver.provenance.noise="Declared transfer scales; no nuScenes reference-error tuning";
-    globalCfg.invariantObserver.provenance.operatingPoints="LiDAR with wheel/lateral/IMU auxiliary outputs; no live GNSS or pose.vel";
     trial=struct('vehicle',vehicle,'provenance',provenance,'lateral',lateral, ...
         'global',globalCfg,'wheelRadiusM',.305,'steeringRatio',steeringRatio, ...
         'yawDerivativeTimeConstantS',.1,'maximumCanAgeS',.1);

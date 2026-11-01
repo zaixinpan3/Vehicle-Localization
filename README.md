@@ -299,21 +299,19 @@ The global stage is the intrinsic eight-state observer
 `[X,Vx,Ax,Y,Vy,Ay,psi,r]`. `runFullLocalizationObserver` combines GNSS
 position, wheel/lateral-velocity information, body acceleration, gyro and
 semantic LiDAR overlap gradients. Missing or invalid channels withdraw their
-own innovations. The rotation-invariant outputs and coupled L/G/M inequalities
-share one continuous Lyapunov design; translation-heading coupling remains
-in the Mixed GNSS-LiDAR constraints. Exactly five auxiliary outputs remain:
-squared speed, velocity-acceleration dot/cross, course-direction constraint
-and yaw rate. The cross-minus-rate constraint and both body-acceleration
-projections are removed. Dot/cross share one matched gain and retain their
-shared measurement errors. No projected-speed substitute is used. All L/G/M
-ISS claims require the declared strictly positive true course-speed interval ([10,15] m/s by default, [1,30]
-m/s for the explicit small-offset scenario). The main observer has no speed
-division at rest, but rest is outside this guarantee.
+own innovations. Exactly five auxiliary outputs remain: squared speed,
+velocity-acceleration dot/cross, course direction and yaw rate. One nominal
+multi-source fusion LMI uses analytic coefficient vertices; fusion, motion
+response and noise cost are synthesized in one solve. The L/G/M certificates,
+Bernstein boxing, cutting planes, refinement and penalty searches are retired.
 
 `mncavFullObserverConfig` provides current MnCAV parameters and
-`synthesizeMncavInvariantDesign` solves fresh gains. The continuous ISS result
-is conditional on its sensor, dynamics and local-domain assumptions; it is
-not a certification of arbitrary map geometry or the full sampled runtime.
+`synthesizeMncavInvariantDesign` solves fresh gains. Nonlinear use assumes a
+compact invariant operating set and a positive true course-speed interval
+([10,15] m/s by default, [1,30] m/s for the explicit small-offset scenario).
+Invariance and a numerical attraction radius are not certified. Execution at
+rest or during source withdrawal remains available, without a corresponding
+outage or sampled-system guarantee.
 See [the current pipeline](localization/README.md#entry-points) and
 [the observer design](localization/README.md).
 

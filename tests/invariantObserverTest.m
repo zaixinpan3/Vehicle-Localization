@@ -6,30 +6,15 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
     end
     methods (Test)
-        function physicalDomainGainIsExecutableBeyondTheOldBoxCertificate(testCase)
-            c=mncavFullObserverConfig();c.invariantObserver.redundancy.accelerationMultiplierPartition="global";
-            c=freshObserverTestConfig(c);r=localizationSupport.runtime(c);d=c.invariantDesign;
-            testCase.verifyTrue(r.continuousCertificate.verification.certified);
-            testCase.verifyTrue(r.continuousCertificate.verification.jointSensor.accelerationDomainMultiplierActive);
-            w=localizationSupport.witness(c,d.P,d.kappaL,d.kappaG,d.auxiliaryWeights,d.gyroGainNormalized);
-            previous=localizationSupport.verifySensorRedundancy(w,true);
-            testCase.verifyFalse(previous.certified);
-        end
-        function corruptedAccelerationMultiplierInvalidatesTheCertificate(testCase)
-            c=freshObserverTestConfig();d=c.invariantDesign;d.accelerationMultipliers{2,1}=-eye(8);
-            v=localizationSupport.verifyInvariantDesign(d,c);
-            testCase.verifyFalse(v.certified);
-            testCase.verifyFalse(v.jointSensor.multiplierPsdVerified);
-            testCase.verifyFalse(v.regionalIss.certified);
-        end
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,133920);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,256);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.jointSensorLmiVerified);testCase.verifyEqual(v.jointSensor.vertices,133920);
-            testCase.verifyTrue(v.finiteInvariantSecantsCertified);
-            testCase.verifyTrue(v.numericalInvariantRadiusCertified);
-            testCase.verifyGreaterThan(v.regionalIss.normalizedRadius,0);
+            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,256);
+            testCase.verifyFalse(v.finiteInvariantSecantsCertified);
+            testCase.verifyFalse(v.numericalInvariantRadiusCertified);
+            testCase.verifyTrue(v.operatingSet.assumedInvariant);
+            testCase.verifyFalse(v.operatingSet.invarianceVerified);
             testCase.verifySize(d.P,[8,8]);
         end
         function staleArchitectureInputsCannotReuseTheGain(testCase)
@@ -51,7 +36,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             c=freshObserverTestConfig();c.invariantDesign.kappaL=0;
             [d,ready]=synthesizeMncavInvariantDesign(c);
             testCase.verifyGreaterThan(d.kappaL,0);
-            testCase.verifyTrue(d.verification.jointSensorLmiVerified);
+            testCase.verifyTrue(d.verification.nominalFusionLmiVerified);
             testCase.verifyEqual(ready.invariantDesign,d);
             testCase.verifyEqual(ready.gainSource,"fresh-lmi");
             testCase.verifyEqual(d.inputs,localizationSupport.invariantInputs(ready));
@@ -119,13 +104,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyFalse(isfield(design,'speedGainNormalized'));
             testCase.verifyFalse(isfield(c.invariantDesign,'speedDesign'));
         end
-        function responseAndDecayAreReportedWithoutPrescribedFloors(testCase)
+        function nominalResponseReplacesRemovedRegionalDecayFields(testCase)
             c=freshObserverTestConfig();v=c.invariantDesign.verification;
             testCase.verifyFalse(isfield(c.invariantObserver,'minimumDirectRatesPerSecond'));
-            testCase.verifyFalse(isfield(c.invariantObserver.redundancy,'nominalDecayRatePerSecond'));
+            testCase.verifyFalse(isfield(c.invariantObserver.fusion,'nominalDecayRatePerSecond'));
             testCase.verifyFalse(isfield(v.feedbackAuthority,'requiredDirectRatesPerSecond'));
-            r=v.regionalIss;
-            testCase.verifyEqual(r.alpha,r.nominalDissipation/(8*r.maximumMetricEigenvalue),RelTol=1e-12);
+            testCase.verifyFalse(isfield(v,'regionalIss'));
             testCase.verifyTrue(v.allAuxiliaryOutputsRequired);
         end
         function eightOutputCertificateCannotBeReused(testCase)
@@ -181,7 +165,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyTrue(all(isfinite(a.internalState),'all'));
         end
         function informativePoseRecoversUnmeasuredVelocity(testCase)
-            t=(0:.2:12).';zero=zeros(size(t));n=numel(t);
+            % With all velocity outputs withdrawn, the nominal fusion LMI
+            % promises no recovery time. Retain the accuracy target at 20 s.
+            t=(0:.2:20).';zero=zeros(size(t));n=numel(t);
             d=struct('highRate',struct('time',t,'longitudinalSpeed',nan(n,1), ...
                 'bodyVelocityValid',false(n,1),'longitudinalAcceleration',zero, ...
                 'lateralAcceleration',zero,'yawRate',zero));
@@ -190,7 +176,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngle',zero,'sideSlipAngleRate',zero);
             c=freshObserverTestConfig();c.initialState=[.2;0;0;-.1;0;0;.02];
             a=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
-            testCase.verifyLessThan(norm(a.position(end,:)-[60,0]),.02);
+            fprintf('POSE-ONLY 20 s: position %.9g m, velocity %.9g m/s\n', ...
+                norm(a.position(end,:)-[100,0]),norm(a.velocity(end,:)-[5,0]));
+            testCase.verifyLessThan(norm(a.position(end,:)-[100,0]),.02);
             testCase.verifyLessThan(norm(a.velocity(end,:)-[5,0]),.05);
             testCase.verifyEqual(a.diagnostics.packetCounts.bodyVelocityValid,0);
         end

@@ -11,7 +11,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             d=localizationSupport.designFullObserverGains(freshObserverTestConfig());
             testCase.verifyEqual(d.framework,"invariant");
             testCase.verifyTrue(d.surrogateContinuousLmiVerified);
-            testCase.verifyTrue(d.jointSensorLmiVerified);
+            testCase.verifyTrue(d.nominalFusionLmiVerified);
             testCase.verifyFalse(d.fullContinuousStateCertified);
             testCase.verifyLessThan(d.continuousCertificate.verification.worstVertexEigenvalue,0);
             testCase.verifyFalse(d.baselineFullStateCertified);
@@ -38,7 +38,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             c=freshObserverTestConfig();h=c.invariantDesign;h.kappaL=0;h.verification.certified=true;
             v=localizationSupport.verifyInvariantDesign(h,c);testCase.verifyFalse(v.certified);
             testCase.verifyFalse(v.numericalInvariantRadiusCertified);
-            testCase.verifyFalse(v.regionalIss.certified);
+            testCase.verifyFalse(v.operatingSet.invarianceVerified);
             c.invariantDesign=h;
             testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:InfeasibleInvariantDesign');
         end

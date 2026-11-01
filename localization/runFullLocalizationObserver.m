@@ -207,7 +207,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'position',z(:,[1,4]),'velocity',z(:,[2,5]),'acceleration',z(:,[3,6]), ...
         'heading',wrap(z(:,7)),'headingUnwrapped',z(:,7),'lateral',reportedLateral,'observer',design);
     measuredSpeed=hypot(h.longitudinalSpeed(:),lateral.lateralVelocity(:));
-    speedInterval=[cfg.invariantObserver.redundancy.minimumCourseSpeed,cfg.iss.maximumSpeed];
+    speedInterval=[cfg.invariantObserver.fusion.minimumCourseSpeed,cfg.iss.maximumSpeed];
     speedInDomain=velocityValid & measuredSpeed>=speedInterval(1) & measuredSpeed<=speedInterval(2);
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition,'gnssInformationAtObserverPoint',gnssInformation, ...
@@ -239,7 +239,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
                 & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable, ...
             'yawRate',gyroValid), ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
-        'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. Continuous ISS is conditional on a strictly positive true-speed interval; zero-speed execution has no speed division but is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
+        'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. The nominal fusion design assumes simultaneous sources and a compact invariant operating set; zero-speed execution has no speed division but is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
     estimate.internalState=z;estimate.yawRate=z(:,8);
     estimate.diagnostics.intrinsicPrediction=intrinsicStates;
     estimate.diagnostics.baselineInternalState=baselineStates;
@@ -252,7 +252,8 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     estimate.diagnostics.finiteInvariantSecantsCertified=certificate.finiteInvariantSecantsCertified;
     estimate.diagnostics.conditionalInvariantLocalClosureEstablished=certificate.conditionalInvariantLocalClosureEstablished;
     estimate.diagnostics.numericalInvariantRadiusCertified=certificate.numericalInvariantRadiusCertified;
-    estimate.diagnostics.regionalIss=certificate.regionalIss;
+    estimate.diagnostics.operatingSet=certificate.operatingSet;
+    estimate.diagnostics.nominalFusionLmiVerified=certificate.nominalFusionLmiVerified;
     estimate.diagnostics.gyroOutputAvailabilitySatisfied=all(gyroValid);
     estimate.diagnostics.allAuxiliaryOutputsAvailable=velocityValid & accelerationValid & gyroValid ...
         & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable;

@@ -11,7 +11,8 @@ classdef squaredSpeedChannelTest < matlab.unittest.TestCase
         function isolatedSquaredSpeedCorrectionIsRadial(testCase)
             [cfg,design,packet,state]=fixture();dt=.1;s=cfg.iss.maximumSpeed;
             actual=localizationSupport.correct(state,packet,dt,design,cfg);
-            factor=1+dt*2*(64-25)/(2*s^2)/(1+dt*2*25/s^2);
+            k=2*15^2/(10^2+64);
+            factor=1+dt*k*(64-25)/(2*s^2)/(1+dt*k*25/s^2);
             expected=state;expected([2,5])=factor*state([2,5]);
             testCase.verifyEqual(actual,expected,AbsTol=1e-12);
             testCase.verifyGreaterThan(norm(actual([2,5])),5);
@@ -36,32 +37,14 @@ classdef squaredSpeedChannelTest < matlab.unittest.TestCase
             testCase.verifyTrue(all(isfinite(actual)));
             testCase.verifyEqual(actual,state,AbsTol=0);
         end
-        function bernsteinControlsRetainTheSquaredSpeedDissipation(testCase)
-            [actual,expected]=speedControlDifference();
-            testCase.verifyEqual(actual,expected,AbsTol=1e-12);
-        end
     end
 end
 
 function [cfg,design,packet,state]=fixture()
     cfg=mncavFullObserverConfig();
     design=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
-        'auxiliaryWeights',[2;0;0],'gyroGainNormalized',1);
+        'auxiliaryWeights',[2;0;0],'gyroGainNormalized',1, ...
+        'motionGainSchedule',struct('minimumSpeedMps',10,'maximumSpeedMps',15));
     packet=localizationSupport.measurements(8,0,0,0,0,.2,true,false,false,cfg);
     state=[0;3;0;0;4;0;.4;0];
-end
-
-function [actual,expected]=speedControlDifference()
-    cfg=mncavFullObserverConfig();cfg.invariantObserver.redundancy.speedPartitions=1;
-    cfg.invariantObserver.redundancy.exactGnssLeverEnclosure=false;
-    w=localizationSupport.witness(cfg,eye(8),1,1,ones(3,1),1);
-    [~,withSpeed]=localizationSupport.redundancyBlocks(w);
-    w.speedSquaredGain=0;[~,withoutSpeed]=localizationSupport.redundancyBlocks(w);
-    u=.37;weights=[(1-u)^2,2*u*(1-u),u^2];actual=zeros(8);
-    % Tensor ordering is speed, course rate, tangential acceleration; with
-    % one GNSS sensor control, fixed q/b use speed controls 1,10,19.
-    ids=[1,10,19];
-    for j=1:3,actual=actual+weights(j)*(withSpeed{ids(j)}-withoutSpeed{ids(j)});end
-    speed=(1-u)*w.domain.minimumCourseSpeed+u*w.inputs.maximumSpeed;
-    expected=zeros(8);expected(2,2)=-2*(speed/w.inputs.maximumSpeed)^2;
 end

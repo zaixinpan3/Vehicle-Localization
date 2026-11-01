@@ -1,13 +1,16 @@
 # Continuous observer theory: overlap closure and historical MO-HGO proofs
 
-**Current implementation:** [Section 0.8a](#08a-current-five-output-observer-and-positive-speed-iss-domain)
-(2026-10-26) implements five auxiliary outputs: squared speed, velocity-
-acceleration dot/cross, course direction and yaw rate. Its new paired-output
-G-family bound replaces the removed body-acceleration projection bound. Every
-L/G/M ISS claim remains restricted to the declared strictly positive speed
-interval. Earlier auxiliary-output and zero-speed claims are superseded.
+**Current implementation (2026-10-31):** the
+[nominal fusion design](localization/README.md#single-convex-design) supersedes
+the L/G/M certificates, Bernstein controls, acceleration multipliers,
+cutting-plane synthesis, two-stage refinement, penalty search and computed
+nonlinear-region claims below. It uses one coefficient-polytope SDP with
+simultaneous motion response. A compact invariant operating set is assumed
+following Bessafa Remark 3; invariance and a numerical radius are not certified.
+The five physical auxiliary outputs and finite secant identities remain.
+The affected earlier sections are retained as historical derivations.
 
-Current sensor-redundancy theorem: 2026-10-14. Overlap closure: 2026-10-12.
+Historical sensor-redundancy theorem: 2026-10-14. Overlap closure: 2026-10-12.
 Historical mode-specific derivation: 2026-09-13.
 
 Implementation revision, 2026-10-13: the default global observer now uses an
