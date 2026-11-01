@@ -40,22 +40,21 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     Rmotion=[cos(motion(1,3)),-sin(motion(1,3));sin(motion(1,3)),cos(motion(1,3))];
     relativeXY=(motion(:,1:2)-motion(1,1:2))*Rmotion;
     deadReckoning=[prior(1:2)+relativeXY*R.',atan2(sin(prior(3)+motion(:,3)-motion(1,3)),cos(prior(3)+motion(:,3)-motion(1,3)))];
-    data=struct('highRate',h);history=[];timings=zeros(n,3);accepted=false(n,1);directional=false(n,1);candidates=nan(n,3);
+    data=struct('highRate',h);history=[];timings=zeros(n,3);
     p=perceptionConfig("Downtown");p.featureNames=protocol.featureNames;
-    matching=struct('perception',p,'sourceWindow',protocol.sourceWindow);
-    sourcePreparationSeconds=0;
+    sourceSettings=struct('perception',p,'sourceWindow',protocol.sourceWindow);
     sources=cell(n,1);deskewApplied=false(n,1);
     for k=1:n
         timerFrame=tic;frame=loadPointCloudFrame(fullfile(datasetFolder,'pointClouds.mat'),ids(k));[frame,deskewApplied(k)]=deskewDowntownMotionFrame(frame,inputs);
-        current=perceiveCoarseProbabilityCloud(frame,matching.perception);
-        [sources{k},history]=localizationSupport.updateLocalizationSourceWindow(current,t(k),motion(k,:),history,matching.sourceWindow,motionSegment(k));
+        current=perceiveCoarseProbabilityCloud(frame,sourceSettings.perception);
+        [sources{k},history]=localizationSupport.updateLocalizationSourceWindow(current,t(k),motion(k,:),history,sourceSettings.sourceWindow,motionSegment(k));
         timings(k,1)=toc(timerFrame);
         if mod(k,25)==0 || k==n,fprintf('overlap sources %s %d/%d\n',datasetFolder,k,n);end
     end
     sourcePreparationSeconds=sum(timings(:,1));
     data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
     [~,cfg]=synthesizeMncavInvariantDesign(cfg);
-    timer=tic;estimate=runFullLocalizationObserver(data,lateralDesign,cfg,LateralInputs=lat);runtime=toc(timer);
+    timer=tic;estimate=runFullLocalizationObserver(data,cfg,LateralInputs=lat);runtime=toc(timer);
     accepted=estimate.diagnostics.lidarOverlap.available;overlapSeconds=estimate.diagnostics.lidarOverlap.seconds;overlapSeconds(~isfinite(overlapSeconds))=0;
     timings(:,2)=overlapSeconds;timings(:,3)=timings(:,1)+overlapSeconds;
     assert(estimate.diagnostics.packetCounts.gnssValid==0 && all(ismember(estimate.diagnostics.mode,[0,2])));
@@ -64,23 +63,22 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     estimate.diagnostics.referenceInitializationCount=1;
     estimate.diagnostics.referenceInitializationFrameIndex=ids(1);
     estimate.diagnostics.referenceUsedAfterInitialization=false;
-    trajectory=array2table([ids,native,t,estimate.pose,candidates,deadReckoning,accepted,directional,timings*1000], ...
-        'VariableNames',{'frame_index','native_time_sec','elapsed_sec','x_m','y_m','yaw_rad','match_x_m','match_y_m','match_yaw_rad','dead_reckoning_x_m','dead_reckoning_y_m','dead_reckoning_yaw_rad','accepted','directional_accepted','perception_ms','registration_ms','total_ms'});
+    trajectory=array2table([ids,native,t,estimate.pose,deadReckoning,accepted,timings*1000], ...
+        'VariableNames',{'frame_index','native_time_sec','elapsed_sec','x_m','y_m','yaw_rad','dead_reckoning_x_m','dead_reckoning_y_m','dead_reckoning_yaw_rad','accepted','perception_ms','overlap_ms','total_ms'});
     writetable(trajectory,fullfile(outputFolder,'trajectory.csv'));
-    if isfield(estimate,'matchingResults'),estimate=rmfield(estimate,'matchingResults');end
     report=struct('frames',n,'lidarChannel',options.LidarChannel,'sourcePreparationSeconds',sourcePreparationSeconds, ...
-        'durationSeconds',t(end)-t(1),'accepted',nnz(accepted),'directionalAccepted',nnz(directional), ...
+        'durationSeconds',t(end)-t(1),'accepted',nnz(accepted), ...
         'gnssValidPackets',estimate.diagnostics.packetCounts.gnssValid,'gnssInitializationUsed',false, ...
         'referenceUsedForInitialization',true,'referenceInitializationCount',1,'referenceUsedAfterInitialization',false, ...
         'initialPose',prior,'initialPosePacket',options.InitialPosePacket,'initializationMode',protocol.initializationMode, ...
         'initialization',"Exact first-query pseudo-reference pose once; velocities measured; no later reference or GNSS input", ...
         'featureNames',protocol.featureNames,'runtimeSeconds',runtime,'medianProcessingMs',median(timings(:,3))*1000, ...
-        'continuousLmiVerified',estimate.diagnostics.continuousLmiVerified,'sampledSystemCertified',false, ...
+        'nominalFusionLmiVerified',estimate.diagnostics.nominalFusionLmiVerified,'sampledSystemCertified',false, ...
         'mapFile',mapFile,'datasetFolder',datasetFolder,'trainingQueryOverlap',0,'evaluation',protocol.evaluation, ...
         'deskew',"Measured wheel/gyro/lateral planar motion within valid segments; otherwise acquired scan unchanged", ...
         'deskewAppliedFrames',nnz(deskewApplied),'currentScanOnlyFrames',nnz(motionSegment==0),'tiltMode',inputs.tiltMode, ...
         'motionReconstruction',inputs.reconstruction,'pointAlignment',inputs.pointAlignment, ...
-        'referencePoint',"front LiDAR origin; unsurveyed point transport",'informationQualifiedFrames',nnz(estimate.diagnostics.continuousInformationQualified));
+        'referencePoint',"front LiDAR origin; unsurveyed point transport",'informationQualifiedFrames',nnz(estimate.diagnostics.lidarPoseSupport.sectorQualified));
     save(fullfile(outputFolder,'estimate.mat'),'estimate','cfg','report','-v7.3');
     f=fopen(fullfile(outputFolder,'summary.json'),'w');fprintf(f,'%s\n',jsonencode(report,PrettyPrint=true));fclose(f);disp(report);
 end

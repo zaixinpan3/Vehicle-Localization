@@ -122,9 +122,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
         function currentDesignDoesNotInventBaselineYawCertificate(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.designFullObserverGains(cfg);
             testCase.verifySize(d.lidarMatched.T,[8,8]);
-            testCase.verifyTrue(d.surrogateContinuousLmiVerified);
-            testCase.verifyFalse(d.fullContinuousStateCertified);
-            testCase.verifyFalse(d.baselineFullStateCertified);
+            testCase.verifyTrue(d.nominalFusionLmiVerified);
         end
         function arbitraryPsdWeightingCanDestabilizeAFixedGain(testCase)
             v=[1;-1]/sqrt(2);N=[1,4;0,1];Q=v*v.';

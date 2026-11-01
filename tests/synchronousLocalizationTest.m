@@ -11,8 +11,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             f=fixture();r=run(f);
             testCase.verifyEqual(r.position,[8*r.time,zeros(size(r.time))],AbsTol=1e-10);
             testCase.verifyEqual(r.diagnostics.localizationUpdates,numel(r.time)-1);
-            testCase.verifyEqual(r.diagnostics.virtualPoseUpdates,0);
-            testCase.verifyEqual(r.diagnostics.integrationSubsteps,0);
         end
         function asynchronousSourceIsRejected(testCase)
             f=fixture();f.data.gnss.time(2)=.11;
@@ -97,7 +95,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
         function stateUsesOnlyOneLowRateSolve(testCase)
             f=fixture();r=run(f);
             testCase.verifyFalse(isfield(f.cfg,'maximumIntegrationStep'));
-            testCase.verifyEqual(r.diagnostics.integrationSubsteps,0);
             testCase.verifyEqual(r.diagnostics.localizationUpdates,numel(r.time)-1);
         end
         function delayedSourceRejected(testCase)
@@ -187,7 +184,7 @@ function f=fixture(duration)
 end
 
 function r=run(f)
-    r=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
+    r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
 end
 
 function f=unaligned()

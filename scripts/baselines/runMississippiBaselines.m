@@ -66,7 +66,7 @@ function runMississippiBaselines(outputFolder,options)
                 end
                 e=runInvariantEkfBaseline(dd,ll,cfg,LidarTemperature=chosen.temperature,ProcessScale=chosen.processScale,Iterations=its);
             else
-                e=runFullLocalizationObserver(dd,ld,cfg,LateralInputs=ll);
+                e=runFullLocalizationObserver(dd,cfg,LateralInputs=ll);
             end
             seconds=toc(timer);err=vecnorm(e.pose(:,1:2)-reference(:,1:2),2,2);ang=atan2(sin(e.pose(:,3)-reference(:,3)),cos(e.pose(:,3)-reference(:,3)));
             windows=["all","after_2s","middle_30pct","recovery"];

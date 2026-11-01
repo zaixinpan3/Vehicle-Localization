@@ -28,8 +28,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             [d,~]=selected();v=d.verification;
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
-            testCase.verifyFalse(v.numericalInvariantRadiusCertified);
-            testCase.verifyFalse(v.finiteInvariantSecantsCertified);
             testCase.verifyFalse(v.nominalFusion.coversGnssAbsent);
             testCase.verifyFalse(v.nominalFusion.coversZeroLidarInformation);
             testCase.verifyFalse(isfield(v,'regionalIss'));
@@ -44,7 +42,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             [data,lateral,c]=constantMotionFixture(0,dt);
             lateral.velocityValid=false(size(lateral.time));
             c.initialState=[.2;.05;0;-.1;-.03;0;.03];
-            e=runFullLocalizationObserver(data,struct(),c,LateralInputs=lateral);
+            e=runFullLocalizationObserver(data,c,LateralInputs=lateral);
             testCase.verifyTrue(all(isfinite(e.internalState),'all'));
             testCase.verifyLessThan(norm(e.position(end,:)),.02);
             testCase.verifyLessThan(abs(e.heading(end)),.001);
@@ -57,7 +55,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
                 'position',[5*lateral.time,zeros(n,1)]+c.gnss.outputPoint.bodyOffset(:).', ...
                 'information',repmat(1e6*eye(2),1,1,n),'valid',true(n,1),'delay',0);
             c.initialState=[.2;5;0;-.1;0;0;.03];
-            e=runFullLocalizationObserver(data,struct(),c,LateralInputs=lateral);
+            e=runFullLocalizationObserver(data,c,LateralInputs=lateral);
             testCase.verifyTrue(all(isfinite(e.internalState),'all'));
             testCase.verifyLessThan(norm(e.position(end,:)-[5*lateral.time(end),0]),.02);
             % Retain the historical behavioral target without an outage theorem.

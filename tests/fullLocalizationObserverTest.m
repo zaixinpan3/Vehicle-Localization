@@ -14,7 +14,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             f=fixture(4,sourceMode);r=run(f);
             testCase.verifyEqual(r.position,f.truth(:,1:2),AbsTol=1e-9);
             testCase.verifyEqual(r.heading,f.truth(:,3),AbsTol=1e-10);
-            testCase.verifyEqual(r.diagnostics.stateResets,0);
         end
         function bothPositionResidualsActOnTheSameState(testCase)
             f=fixture(1,"both");f.data.gnss.position(:,2)=1;f.data.lidar.pose(:,2)=-1;
@@ -52,9 +51,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             testCase.verifyEqual(r.heading,.2*ones(size(r.time)),AbsTol=1e-12);
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end
-        function publicEntryIsDeterministicAndIgnoresLateralDesign(testCase)
+        function publicEntryIsDeterministic(testCase)
             f=turnFixture(4);r=run(f);
-            direct=runFullLocalizationObserver(f.data,struct('unused',true),f.cfg,LateralInputs=f.lateral);
+            direct=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
             testCase.verifyEqual(r,direct);
         end
         function invalidGnssDoesNotEraseLidarHeading(testCase)
@@ -70,7 +69,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             testCase.verifyEqual(r.diagnostics.mode(outage),zeros(nnz(outage),1));
             testCase.verifyGreaterThan(max(abs(r.heading(outage))),1e-4);
             testCase.verifyLessThan(abs(r.heading(end)),1e-3*max(abs(r.heading(outage))));
-            testCase.verifyEqual(r.diagnostics.stateResets,0);
         end
         function delayedPacketsAreRejectedExplicitly(testCase)
             f=fixture(1,"both");f.data.gnss.delay=.1;
@@ -87,7 +85,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
         function missingTimingCannotActivateAHistoricalFallback(testCase)
             f=fixture(2,"both");a=run(f);f.cfg=rmfield(f.cfg,'timing');b=run(f);
             testCase.verifyEqual(a,b);
-            testCase.verifyTrue(b.diagnostics.continuousLmiVerified);
+            testCase.verifyTrue(b.diagnostics.nominalFusionLmiVerified);
         end
         function historicalRuntimeIsRejected(testCase)
             f=fixture(1,"both");f.cfg.timing="historical_transport";
@@ -124,7 +122,7 @@ function f=fixture(duration,mode)
 end
 
 function r=run(f)
-    r=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
+    r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
 end
 
 function s=trimSource(s,count)

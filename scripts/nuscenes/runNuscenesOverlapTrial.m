@@ -154,7 +154,7 @@ function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDes
     cfg.initialState=[initial.pose(1);v(1);0;initial.pose(2);v(2);0;initial.pose(3)];
     data=struct('highRate',h,'lidarOverlap',struct('map',map,'sources',{sources}, ...
         'valid',true(numel(query),1),'config',overlapGradientConfig()));
-    timer=tic;estimate=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=l);observerSeconds=toc(timer);
+    timer=tic;estimate=runFullLocalizationObserver(data,cfg,LateralInputs=l);observerSeconds=toc(timer);
     assert(all(isfinite(estimate.z),'all'),'VehicleLocalization:NuscenesDivergence','Nonfinite localization state.');
     errors=estimate.pose-scoreReference;errors(:,3)=atan2(sin(errors(:,3)),cos(errors(:,3)));
     distance=hypot(errors(:,1),errors(:,2));tracking=t>=2;

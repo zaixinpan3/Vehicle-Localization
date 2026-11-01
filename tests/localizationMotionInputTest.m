@@ -35,5 +35,5 @@ function f=fixture()
         'lateral',struct('time',t,'lateralVelocity',-.25+z,'sideSlipAngle',atan2(-.25,8.4)+z,'sideSlipAngleRate',z));
 end
 function r=run(f)
-    r=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
+    r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
 end

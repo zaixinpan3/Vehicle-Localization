@@ -2,7 +2,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
 % runMncavVdbLocalization Run a measurement-only sensor-to-pose cascade.
 % No reference pose, true velocity or semantic label is read by this runtime.
 % Use scoreMncavVdbLocalization in a separate step after saving estimates.
-% Every scenario starts fresh matching history and uses fused observer seeds.
+% Every scenario starts fresh source history and evaluates overlap at its observer prediction.
 % Logical acquisition-time replay is not a real-time latency experiment.
 % Prepare the dataset with prepareMncavVdbMeasurements.py followed by
 % buildMncavVdbMeasurementClouds. The default t=8 s start follows stationary
@@ -67,12 +67,12 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     base=mncavFullObserverConfig();base.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     [~,base]=synthesizeMncavInvariantDesign(base);
     initial=initializeMncavVdbFromGnss(inputs.sensorTable,inputs,t(1));base.initialState=initial.state;
-    s=inputs.sensorTable;timings=zeros(n,3);accepted=false(n,1);directional=accepted;
+    s=inputs.sensorTable;timings=zeros(n,3);accepted=false(n,1);
     summaries=cell(numel(options.Scenarios),1);
     sources={};sourceTimings=zeros(n,1);
     if any(~ismember(options.Scenarios,["dead_reckoning","gnss_only"])),[sources,sourceTimings]=buildSources();end
     for scenarioIndex=1:numel(options.Scenarios)
-        scenario=options.Scenarios(scenarioIndex);timings(:)=0;accepted(:)=false;directional(:)=false;
+        scenario=options.Scenarios(scenarioIndex);timings(:)=0;accepted(:)=false;
         data=struct('highRate',h);
         if ismember(scenario,["fused","gnss_outage","gnss_only"])
             valid=logical(s.gnssValid(idx));if scenario=="gnss_outage",valid(t>=35 & t<65)=false;end
@@ -84,25 +84,24 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
         if ~ismember(scenario,["dead_reckoning","gnss_only"])
             data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
         end
-        runTimer=tic;estimate=runFullLocalizationObserver(data,inputs.lateralDesign,base,LateralInputs=lateral);runtime=toc(runTimer);
+        runTimer=tic;estimate=runFullLocalizationObserver(data,base,LateralInputs=lateral);runtime=toc(runTimer);
         if ~ismember(scenario,["dead_reckoning","gnss_only"])
-            accepted=estimate.diagnostics.lidarOverlap.available;directional(:)=false;
+            accepted=estimate.diagnostics.lidarOverlap.available;
             timings=[sourceTimings,estimate.diagnostics.lidarOverlap.seconds,sourceTimings+estimate.diagnostics.lidarOverlap.seconds];
             timings(~isfinite(timings))=0;
         end
         row=struct('scenario',scenario,'lidarChannel',options.LidarChannel,'frames',n,'durationSeconds',t(end)-t(1), ...
             'referenceUsed',false, ...
-            'accepted',nnz(accepted),'directionalAccepted',nnz(directional), ...
-            'medianPerceptionMs',median(timings(:,1))*1000,'medianMatchingMs',median(timings(:,2))*1000, ...
+            'accepted',nnz(accepted), ...
+            'medianPerceptionMs',median(timings(:,1))*1000,'medianOverlapMs',median(timings(:,2))*1000, ...
             'medianFrameMs',median(timings(:,3))*1000,'runtimeSeconds',runtime, ...
             'summedFrameProcessingSeconds',sum(timings(:,3)),'sampledSystemCertified',false);
         row.sourcePreparationSeconds=sum(sourceTimings);
         summaries{scenarioIndex}=row;disp(row);
-        trajectory=array2table([frames,t,estimate.pose,accepted,directional,timings*1000], ...
-            'VariableNames',{'frame','time','x','y','yaw','accepted','directionalAccepted', ...
-            'perceptionMs','registrationMs','totalMs'});
+        trajectory=array2table([frames,t,estimate.pose,accepted,timings*1000], ...
+            'VariableNames',{'frame','time','x','y','yaw','accepted', ...
+            'perceptionMs','overlapMs','totalMs'});
         writetable(trajectory,fullfile(outputFolder,scenario+"_trajectory.csv"));
-        if isfield(estimate,'matchingResults'),estimate=rmfield(estimate,'matchingResults');end
         save(fullfile(outputFolder,scenario+"_estimate.mat"),'estimate','row','base','-v7.3');
         f=fopen(fullfile(outputFolder,scenario+"_summary.json"),'w');fprintf(f,'%s\n',jsonencode(row,PrettyPrint=true));fclose(f);
     end

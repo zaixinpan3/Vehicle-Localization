@@ -7,14 +7,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
         end
     end
     methods (Test)
-        function currentVehicleHasAnIntrinsicSurrogateCertificate(testCase)
+        function currentVehicleHasANominalFusionCertificate(testCase)
             d=localizationSupport.designFullObserverGains(freshObserverTestConfig());
-            testCase.verifyEqual(d.framework,"invariant");
-            testCase.verifyTrue(d.surrogateContinuousLmiVerified);
             testCase.verifyTrue(d.nominalFusionLmiVerified);
-            testCase.verifyFalse(d.fullContinuousStateCertified);
             testCase.verifyLessThan(d.continuousCertificate.verification.worstVertexEigenvalue,0);
-            testCase.verifyFalse(d.baselineFullStateCertified);
         end
         function timingDoesNotSelectAnotherGainDesign(testCase)
             c=freshObserverTestConfig();a=localizationSupport.designFullObserverGains(c);
@@ -37,7 +33,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
         function solverClaimCannotReplaceNumericVerification(testCase)
             c=freshObserverTestConfig();h=c.invariantDesign;h.kappaL=0;h.verification.certified=true;
             v=localizationSupport.verifyInvariantDesign(h,c);testCase.verifyFalse(v.certified);
-            testCase.verifyFalse(v.numericalInvariantRadiusCertified);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
             c.invariantDesign=h;
             testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:InfeasibleInvariantDesign');
@@ -53,9 +48,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             data.lidar=struct('time',t,'pose',zeros(2,3),'valid',true(2,1), ...
                 'information',zeros(3,3,2),'delay',0);
             lat=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
-            r=runFullLocalizationObserver(data,struct(),c,LateralInputs=lat);
-            testCase.verifyTrue(r.diagnostics.continuousLmiVerified);
-            testCase.verifyFalse(any(r.diagnostics.continuousInformationQualified));
+            r=runFullLocalizationObserver(data,c,LateralInputs=lat);
+            testCase.verifyTrue(r.diagnostics.nominalFusionLmiVerified);
+            testCase.verifyFalse(any(r.diagnostics.lidarPoseSupport.sectorQualified));
             testCase.verifyEqual(r.diagnostics.poseWeight,zeros(3,3,2));
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end

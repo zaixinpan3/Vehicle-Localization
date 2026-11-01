@@ -33,8 +33,8 @@ under [scripts/baselines](../scripts/baselines/README.md).
 
 ## State and sensor interfaces
 
-The internal global state is `[X,VX,AX,Y,VY,AY,psi,r]`. Public `.z` and
-`.onlineZ` retain seven columns for position, velocity, acceleration and
+The internal global state is `[X,VX,AX,Y,VY,AY,psi,r]`. Public `.z` retains
+seven columns for position, velocity, acceleration and
 heading; `.internalState` and `.yawRate` expose the estimated rate. The
 seven-column output is not a seven-state observer branch.
 
@@ -73,7 +73,7 @@ lc = lateralObserverConfig();
 ld = designLateralObserverGains(lc);
 lateral = runLateralVelocityObserver(data.highRate, ld, lc);
 [data, lateral] = localizationSupport.synchronizeLocalizationInputs(data, lateral, cfg);
-estimate = runFullLocalizationObserver(data, ld, cfg, LateralInputs=lateral);
+estimate = runFullLocalizationObserver(data, cfg, LateralInputs=lateral);
 ```
 
 Gain synthesis requires YALMIP and SeDuMi. Each experiment solves fresh gains;
@@ -221,8 +221,7 @@ Following Remark 3 (p. 5), nonlinear use assumes a compact invariant operating
 set where the relevant functions are Lipschitz. This assumption does not prove
 invariance. No Hessian remainder radius, Lyapunov sublevel or disturbance-budget
 radius is computed. `operatingSet.assumedInvariant=true`,
-`operatingSet.invarianceVerified=false`, and
-`numericalInvariantRadiusCertified=false` express this distinction. There is
+`operatingSet.invarianceVerified=false` express this distinction. There is
 also no certificate for actual maps, arbitrary outages, the full lateral
 cascade or sampling. Zero speed has defined runtime behavior but remains
 outside the positive-speed theory. With every velocity output withdrawn,
@@ -234,7 +233,17 @@ theorem.
 
 ## LiDAR runtime
 
-Current dataset inputs use `data.lidarOverlap`. The runner predicts and
+The entry takes `(data, cfg, LateralInputs=lateral)`. The former unused
+lateral-design argument is removed. `diagnostics.preLidarState` contains all
+eight states after motion/GNSS correction and before the LiDAR step.
+`nominalFusionLmiVerified`, `operatingSet`, and the explicit scope describe the
+current certificate; retired full-state/regional certificate aliases are removed.
+The duplicate `onlineZ` output and unused historical runtime counters are removed.
+
+Current dataset inputs use `data.lidarOverlap`. Synthetic pose measurements
+and a residual callback evaluated at the predicted pose remain available for
+channel verification. Frozen registration-model replay and its pose-error
+calibration are removed; stale inputs are rejected. The runner predicts and
 applies GNSS/invariant corrections, evaluates the overlap gradient once at
 that state, then applies an implicit Lyapunov-matched LiDAR correction.
 There is no online pose optimizer or registration callback. The current

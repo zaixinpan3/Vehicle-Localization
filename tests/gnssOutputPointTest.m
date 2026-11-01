@@ -54,8 +54,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) gnssOutputPointTest < 
             testCase.verifyEqual(design.LG,design.toPhysical*temporary.kappaG*(temporary.P\Cp.'),RelTol=1e-12);
             testCase.verifyEqual(temporary.inputs.gnssBodyOffset(:),cfg.gnss.outputPoint.bodyOffset(:),AbsTol=0);
             testCase.verifyFalse(cfg.gnss.outputPoint.evaluationDriveUsed);
-            testCase.verifyTrue(design.surrogateContinuousLmiVerified);
-            testCase.verifyFalse(design.fullContinuousStateCertified);
+            testCase.verifyTrue(design.nominalFusionLmiVerified);
         end
     end
 end
@@ -82,5 +81,5 @@ function f=offsetInput(f)
 end
 
 function r=run(f)
-    r=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
+    r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
 end

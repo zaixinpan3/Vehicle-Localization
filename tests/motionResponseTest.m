@@ -21,7 +21,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
         function scheduleIsBoundedIncludingZeroAndLargeSpeed(testCase)
             c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());d=c.invariantDesign;
             a=localizationSupport.weights(d,0);b=localizationSupport.weights(d,1e100);
-            testCase.verifyEqual(a,localizationSupport.maximumWeights(d),RelTol=1e-14);
+            testCase.verifyEqual(a(1:2),d.auxiliaryWeights(1:2)*30^2,RelTol=1e-14);
             testCase.verifyGreaterThanOrEqual(a,d.auxiliaryWeights);
             testCase.verifyLessThan(max(b(1:2)),1e-80);
             testCase.verifyEqual(b(3),d.auxiliaryWeights(3));

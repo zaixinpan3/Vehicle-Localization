@@ -80,18 +80,20 @@ classdef localizationSupport
                     end
                 end
             else
+                assert(~any(isfield(data.lidar,{'residualModels','poseErrorVariance'})), ...
+                    'VehicleLocalization:ArchivedRegistrationMeasurement', ...
+                    'Frozen registration models and pose-error calibration are no longer supported.');
                 aligned.lidar=data.lidar;aligned.lidar.time=t;
                 aligned.lidar.pose=data.lidar.pose(selected,:);
                 aligned.lidar.valid=data.lidar.valid(selected);
                 aligned.lidar.information=data.lidar.information(:,:,selected);
-                for name=["frameReliability","directionReliability","poseErrorVariance"]
+                for name=["frameReliability","directionReliability"]
                     if isfield(data.lidar,name),aligned.lidar.(name)=data.lidar.(name)(selected,:);end
                 end
                 if isfield(data.lidar,'evaluateResidual')
                     originalIndex=find(selected);provider=data.lidar.evaluateResidual;
                     aligned.lidar.evaluateResidual=@(k,pose)provider(originalIndex(k),pose);
                 end
-                if isfield(data.lidar,'residualModels'),aligned.lidar.residualModels=data.lidar.residualModels(selected);end
             end
             motionWait=h.time(right)-t;gnssWait=zeros(size(t));gnssBracket=zeros(size(t));
             if isfield(data,'gnss')
@@ -332,11 +334,6 @@ classdef localizationSupport
                 design.verification.worstVertexEigenvalue);
         end
 
-        function gyro=scalarGyroDesign(cfg)
-        % Closed-form minimizer of the scalar gyro noise LMI; no extra solve.
-            gyro=invariantGyroDesign(cfg.invariantObserver);
-        end
-
         function v=verifyInvariantDesign(design,cfg)
         % Recompute every vertex numerically; stored solver claims are ignored.
             validateattributes(design.P,{'double'},{'real','finite','size',[8,8]});
@@ -364,8 +361,7 @@ classdef localizationSupport
                 'worstVertexEigenvalue',worst,'vertices',numel(blocks), ...
                 'minimumEigenvalueP',min(eig(P)),'maximumEigenvalueP',max(eig(P)), ...
                 'intrinsicRateState',true,'zeroSpeedDivision',false,'zeroSpeedCertified',false, ...
-                'actualOverlapCertified',false,'finiteInvariantSecantsCertified',false, ...
-                'conditionalInvariantLocalClosureEstablished',false,'numericalInvariantRadiusCertified',false, ...
+                'actualOverlapCertified',false, ...
                 'operatingSet',struct('assumedInvariant',true,'invarianceVerified',false, ...
                     'speedInterval',[z.fusion.minimumCourseSpeed,cfg.iss.maximumSpeed], ...
                     'nonlinearConclusionConditional',true), ...
@@ -386,15 +382,14 @@ classdef localizationSupport
             toPhysical=diag(theta.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);
             C=zeros(3,8);C(1,1)=1;C(2,4)=1;C(3,7)=1;Cp=C(1:2,:);
             matched=struct('P',h.P,'T',toPhysical,'theta',theta,'scalingExponents',[1;2;3;1;2;3;1;2], ...
-                'kappa',h.kappaL/theta,'baselineFullStateCertified',false,'metricSource',"Nominal fusion polytope LMI");
-            runtime=struct('framework',"invariant",'kind',cfg.kind,'P',h.P,'theta',theta,'toPhysical',toPhysical, ...
+                'kappa',h.kappaL/theta,'metricSource',"Nominal fusion polytope LMI");
+            runtime=struct('kind',cfg.kind,'P',h.P,'theta',theta,'toPhysical',toPhysical, ...
                 'auxiliaryWeights',h.auxiliaryWeights(:),'gyroGainNormalized',h.gyroGainNormalized, ...
                 'motionGainSchedule',h.motionGainSchedule,'LG',toPhysical*h.kappaG*(h.P\Cp.'), ...
                 'lidarMatched',matched,'continuousCertificate',struct('design',h,'verification',v), ...
-                'fullContinuousStateCertified',false,'surrogateContinuousLmiVerified',v.certified, ...
                 'nominalFusionLmiVerified',v.nominalFusionLmiVerified, ...
                 'designRoute',"One nominal fusion polytope SDP with simultaneous motion response", ...
-                'baselineFullStateCertified',false,'actualOverlapCertified',false,'sampledSystemCertified',false,'scope',v.scope);
+                'actualOverlapCertified',false,'sampledSystemCertified',false,'scope',v.scope);
         end
 
         %% Finite nonlinear increment identities
@@ -558,12 +553,8 @@ classdef localizationSupport
             k(1:2)=k(1:2)*g.maximumSpeedMps^2/(g.minimumSpeedMps^2+speedSquared);
         end
 
-        function k=maximumWeights(d)
-            k=localizationSupport.weights(d,0);
-        end
-
         %% LiDAR measurement and correction
-        function filter = filterLidarPoseInformation(information,cfg,frameReliability,directionReliability,poseErrorVariance)
+        function filter = filterLidarPoseInformation(information,cfg,frameReliability,directionReliability)
         % filterLidarPoseInformation Bounded weighting of supported LiDAR directions.
         % INFORMATION is an unregularized physical [X,Y,psi] information surrogate.
         % Direction reliabilities refer to ascending normalized information eigenvalues.
@@ -571,31 +562,18 @@ classdef localizationSupport
         % dependence on the arbitrary eigenvector basis. No count or eigenvalue floor
         % is added to geometric information. PSD rank loss and complete rejection are
         % valid. Reliability must come from association/geometry checks upstream.
-        % A calibrated channel replaces the geometric regularizer with predicted
-        % pose-error second moments [horizontal per axis; heading], in m^2/rad^2.
-        % Its F need not be symmetric: F*H=S is the required affine identity.
             arguments
                 information (3,3) double {mustBeReal,mustBeFinite}
                 cfg (1,1) struct
                 frameReliability (1,1) double {mustBeReal,mustBeFinite} = 1
                 directionReliability (3,1) double {mustBeReal,mustBeFinite} = ones(3,1)
-                poseErrorVariance double = []
             end
-            scales=cfg.lidar.poseScales(:);calibrated=isfield(cfg.lidar,'errorCalibration');
+            assert(~isfield(cfg.lidar,'errorCalibration'),'VehicleLocalization:ArchivedRegistrationMeasurement', ...
+                'Use the geometric information filter; registration-error calibration is removed.');
+            scales=cfg.lidar.poseScales(:);
             validateattributes(scales,{'double'},{'real','finite','positive','numel',3});
-            if calibrated
-                assert(~isfield(cfg.lidar,'gainInformationScale'),'VehicleLocalization:AmbiguousLidarCalibration', ...
-                    'A calibrated channel has no geometric information-scale parameter.');
-                assert(isequal(scales,ones(3,1)),'VehicleLocalization:UnsupportedFullIssScaling', ...
-                    'The calibrated channel uses physical metres and radians.');
-                reference=cfg.lidar.errorCalibration.referenceVariance(:);
-                validateattributes(reference,{'double'},{'real','finite','positive','numel',2});
-                localizationSupport.predictLidarPoseErrorVariance(zeros(2,1),cfg.lidar.errorCalibration);
-                lambda=NaN;
-            else
-                lambda=cfg.lidar.gainInformationScale;
-                validateattributes(lambda,{'numeric'},{'real','finite','positive','scalar'});
-            end
+            lambda=cfg.lidar.gainInformationScale;
+            validateattributes(lambda,{'numeric'},{'real','finite','positive','scalar'});
             assert(frameReliability>=0 && frameReliability<=1 && ...
                 all(directionReliability>=0 & directionReliability<=1), ...
                 'VehicleLocalization:InvalidLidarReliability','Reliabilities must lie in [0,1].');
@@ -609,7 +587,6 @@ classdef localizationSupport
             assert(min(values)>=-tolerance,'VehicleLocalization:InvalidLidarInformation', ...
                 'Information must be positive semidefinite.');
             values=max(values,0); % Remove negative roundoff only; do not fill nullspaces.
-            if calibrated,tolerance=3*eps(max(values));end % Numerical rank, independent of loss units.
             first=1;
             while first<=3
                 last=first;
@@ -618,28 +595,8 @@ classdef localizationSupport
                 first=last+1;
             end
             rho=frameReliability*directionReliability;
-            if calibrated
-                active=values>tolerance;
-                if any(active)
-                    validateattributes(poseErrorVariance,{'double'},{'real','finite','positive','numel',2});
-                    authority=min(1,reference./poseErrorVariance(:));
-                    % Covariance is expressed per position axis and in yaw radians.
-                    % The empirical mean second moment is the unit of reliability.
-                    % Project both sides so no correction enters an unobserved mode.
-                    V=U(:,active);B=V*diag(sqrt(rho(active)))*V.';
-                    S=B*diag(authority([1,1,2]))*B;
-                    inverse=V*diag(1./values(active))*V.';F=S*inverse;
-                else
-                    S=zeros(3);F=zeros(3);
-                end
-                s=eig((S+S.')/2);
-                interpretation="Empirically calibrated conditional pose-error second moment; geometry supplies the admitted subspace";
-            else
-                f=rho./(values+lambda);s=rho.*(values./(values+lambda));
-                F=U*diag(f)*U.';S=U*diag(s)*U.';
-                F=(F+F.')/2;
-                interpretation="Weighted geometric surrogate; not calibrated covariance";
-            end
+            f=rho./(values+lambda);strengths=rho.*(values./(values+lambda));
+            F=U*diag(f)*U.';S=U*diag(strengths)*U.';F=(F+F.')/2;
             informationTrace=sum(values);dimension=0;condition=Inf;
             if values(end)>0
                 relative=values/values(end);
@@ -649,11 +606,10 @@ classdef localizationSupport
             filter=struct('F',F,'S',(S+S.')/2,'D',D, ...
                 'normalizedInformation',U*diag(values)*U.', ...
                 'eigenvectors',U,'eigenvalues',values,'reliability',rho, ...
-                'strengths',s,'rank',nnz(values>tolerance), ...
+                'strengths',strengths,'rank',nnz(values>tolerance), ...
                 'trace',informationTrace,'minimumEigenvalue',values(1), ...
                 'conditionNumber',condition,'effectiveDimension',dimension, ...
-                'regularizer',lambda,'informationInterpretation',interpretation, ...
-                'poseErrorVariance',poseErrorVariance,'calibrated',calibrated);
+                'regularizer',lambda,'informationInterpretation',"Weighted geometric surrogate; not calibrated covariance");
         end
 
         function [correction,audit] = computeLidarMatchedCorrection(measurement,pose,G,design,cfg,options)
@@ -736,9 +692,9 @@ classdef localizationSupport
             frame=1;direction=ones(3,1);
             if isfield(measurement,'frameReliability'),frame=measurement.frameReliability;end
             if isfield(measurement,'directionReliability'),direction=measurement.directionReliability(:);end
-            variance=[];
-            if isfield(measurement,'poseErrorVariance'),variance=measurement.poseErrorVariance;end
-            filter=localizationSupport.filterLidarPoseInformation(information,cfg,frame,direction,variance);
+            assert(~isfield(measurement,'poseErrorVariance'),'VehicleLocalization:ArchivedRegistrationMeasurement', ...
+                'Pose-error calibration no longer selects LiDAR weights.');
+            filter=localizationSupport.filterLidarPoseInformation(information,cfg,frame,direction);
             C=filter.D\(G*T);
             if residualMode
                 xi=-filter.F*filter.D.'*gradient;representation="predictedPoseResidual";
@@ -762,8 +718,7 @@ classdef localizationSupport
             eigenvalues=max(eig(Z),0);largest=max(eigenvalues);
             step=options.StepSize;v=kappa*(P\(C.'*xi));
             if options.Discretization=="continuous"
-                correction=T*v;transition=eye(n);gainBound=kappa*norm(filter.F,2);
-                if ~filter.calibrated,gainBound=kappa/filter.regularizer;end
+                correction=T*v;transition=eye(n);gainBound=kappa/filter.regularizer;
             else
                 if options.Discretization=="explicit" && largest>0,step=min(step,1.8/largest);end
                 if options.Discretization=="implicit"
@@ -785,63 +740,6 @@ classdef localizationSupport
                 'residualNoiseCoefficientBound',gainBound,'representation',representation, ...
                 'unsupportedGradientNorm',unsupportedGradient, ...
                 'scope',"Fixed-metric locally affine LiDAR channel only; no full-system or outage ISS claim");
-        end
-
-        function measurement=evaluateLidarRegistrationResidual(frozen,pose)
-        % evaluateLidarRegistrationResidual Reevaluate admitted scan geometry at prediction.
-        % FROZEN is the serializable lidarResidualModel exported by registration.
-        % Associations, robust influence, latent support covariance and admitted pose
-        % subspace stay fixed; residual and physical Jacobian are reevaluated together.
-        % A directional model evaluates anchor+projector*(pose-anchor), preserving its
-        % rejected directions in both innovation and information. Gaussian source
-        % scatter still rotates, using the same analytic residuals as registration.
-        % Between-hypothesis pose uncertainty is marginalized by a low-rank residual
-        % whitening. It only reduces information and applies to BOTH r and J. The
-        % resulting surrogate is conditional on associations and any position aiding.
-            arguments
-                frozen (1,1) struct
-                pose (3,1) double {mustBeReal,mustBeFinite}
-            end
-            assert(isfield(frozen,'kind') && string(frozen.kind)=="frozen-semantic-lidar-v1", ...
-                'VehicleLocalization:InvalidLidarResidualModel','Unknown frozen registration model.');
-            anchor=frozen.anchorPose(:);projector=frozen.poseProjector;
-            difference=pose-anchor;difference(3)=atan2(sin(difference(3)),cos(difference(3)));
-            effective=anchor+projector*difference;
-            local=[effective(1:2).'-frozen.origin(:).',effective(3)];
-            method=string(frozen.method);
-            switch method
-                case "supportD2D"
-                    [r,J]=localizationSupport.supportRegistrationResiduals(frozen.sourceMean,frozen.sourceCovariance, ...
-                        frozen.targetMean,frozen.targetCovariance,frozen.sourceAxis, ...
-                        frozen.targetNormal,frozen.directionScale,local,frozen.noiseStandardDeviation);
-                case "anisotropicD2D"
-                    [r,J]=localizationSupport.gaussianRegistrationResiduals(frozen.sourceMean,frozen.sourceCovariance, ...
-                        frozen.targetMean,frozen.targetCovariance,local,frozen.noiseStandardDeviation);
-                case "geometricD2D"
-                    [r,J]=injectionLineAndPointResiduals(frozen,local);
-                otherwise
-                    error('VehicleLocalization:InvalidLidarResidualModel','Unsupported frozen registration method.');
-            end
-            J=reshape(permute(J,[1,3,2]),[],3)*projector;
-            influence=repelem(frozen.rowInfluence(:),size(r,1),1);
-            assert(numel(influence)==numel(r) && isreal(influence) && all(isfinite(influence) & influence>=0), ...
-                'VehicleLocalization:InvalidLidarResidualModel','Frozen influence must be finite and nonnegative.');
-            root=sqrt(influence);r=root.*r(:);J=root.*J;
-            spread=frozen.poseSpread;
-            assert(isequal(size(spread),[3,3]) && isreal(spread) && all(isfinite(spread),'all') && ...
-                norm(spread-spread.','fro')<=1e-10*max(1,norm(spread,'fro')), ...
-                'VehicleLocalization:InvalidLidarResidualModel','Pose uncertainty must be symmetric PSD.');
-            [V,E]=eig((spread+spread.')/2);values=diag(E);
-            assert(min(values)>=-1e-10*max(1,norm(spread,2)), ...
-                'VehicleLocalization:InvalidLidarResidualModel','Pose uncertainty must be PSD.');
-            if any(values>0)
-                root=V*diag(sqrt(max(values,0)))*V.';
-                [U,S,~]=svd(J*root,'econ');attenuation=1-1./sqrt(1+diag(S).^2);
-                r=r-U*(attenuation.*(U.'*r));J=J-U*(attenuation.*(U.'*J));
-            end
-            measurement=struct('residual',r,'jacobian',J,'weights',ones(size(r)), ...
-                'linearizationPose',pose,'conditionedOnPositionAid',frozen.conditionedOnPositionAid, ...
-                'informationCalibrated',false,'geometrySource',"Frozen accepted semantic registration");
         end
 
         function measurement=evaluateOverlapGradient(fixedCloud,movingCloud,pose,cfg)
@@ -944,46 +842,6 @@ classdef localizationSupport
                 measurement.available=true;
             end
             measurement.seconds=toc(timer);
-        end
-
-        function features=lidarPoseErrorFeatures(model)
-        % lidarPoseErrorFeatures Conditional cluster-sandwich pose-error predictors.
-        % Evaluate at the fitted measurement, never at the observer prediction. Each
-        % matched distribution is one residual cluster. These predictors are NOT a
-        % calibrated covariance; a held-out empirical error calibration is required.
-        % Objective rescaling cancels between the normal inverse and cluster scores.
-            arguments
-                model (1,1) struct
-            end
-            m=localizationSupport.evaluateLidarRegistrationResidual(model,model.anchorPose(:));
-            J=m.jacobian;r=m.residual;H=J.'*J;inverse=pinv((H+H.')/2);
-            count=numel(model.rowInfluence);width=numel(r)/count;
-            assert(width==fix(width) && count>0,'VehicleLocalization:InvalidLidarResidualModel', ...
-                'Residual clusters must correspond to matched distributions.');
-            scores=zeros(3,count);
-            for k=1:count
-                ids=(k-1)*width+(1:width);scores(:,k)=J(ids,:).'*r(ids);
-            end
-            covariance=inverse*(scores*scores.')*inverse;
-            features=max([trace(covariance(1:2,1:2))/2;covariance(3,3)],0);
-        end
-
-        function variance=predictLidarPoseErrorVariance(features,calibration)
-        % predictLidarPoseErrorVariance Predict uncentered conditional pose error.
-        % Variances are per horizontal axis (m^2) and heading (rad^2). The nonnegative
-        % intercept retains common errors invisible to within-scan residual scatter.
-        % This does not subtract a fitted bias from the actual pose measurement.
-            arguments
-                features (2,1) double {mustBeReal,mustBeFinite,mustBeNonnegative}
-                calibration (1,1) struct
-            end
-            assert(string(calibration.kind)=="conditional-pose-second-moment-v1", ...
-                'VehicleLocalization:InvalidLidarCalibration','Unknown pose error calibration.');
-            coefficients=calibration.coefficients;
-            validateattributes(coefficients,{'double'},{'real','finite','nonnegative','size',[2,2]});
-            variance=coefficients(:,1)+coefficients(:,2).*features;
-            assert(all(variance>0),'VehicleLocalization:InvalidLidarCalibration', ...
-                'Calibrated error second moments must be strictly positive.');
         end
 
         function measurement = buildLidarLineMeasurement(points,mapPoints,normals,pose,weights)
@@ -1514,62 +1372,6 @@ classdef localizationSupport
                 'movingSelfEnergy',movingSelf,'squaredL2Distance',max(fixedSelf+movingSelf-2*crossEnergy,0), ...
                 'poseXYTheta',pose,'gradient',gradient);
             details.height=heightDetails;
-        end
-
-        function [residual,J,precision,shapeUsed]=gaussianRegistrationResiduals(sourceMean,sourceCov,targetMean,targetCov,pose,noiseStd)
-        % gaussianRegistrationResiduals Normalized Gaussian overlap in planar SE(2).
-        % Squared residual = delta'/(A+B)*delta + log(det(A+B)/(4*sqrt(det(A)*det(B)))).
-        % A and B each receive half the isotropic noise variance. Both covariance
-        % axes contribute continuously; isotropic shapes provide no rotation factor.
-        % J differentiates the rotated covariance as well as the transformed center.
-            n=size(sourceMean,1);r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
-            rotated=pagemtimes(pagemtimes(r,sourceCov),r.');
-            ax=reshape(rotated(1,1,:),[],1);bx=reshape(rotated(1,2,:),[],1);dx=reshape(rotated(2,2,:),[],1);
-            at=reshape(targetCov(1,1,:),[],1);bt=reshape(targetCov(1,2,:),[],1);dt=reshape(targetCov(2,2,:),[],1);
-            noise=noiseStd^2/2;
-            a=ax+at+2*noise;b=bx+bt;d=dx+dt+2*noise;detS=a.*d-b.^2;
-            delta=sourceMean*r.'+pose(1:2)-targetMean;
-            l11=sqrt(a);l21=b./l11;l22=sqrt(d-l21.^2);
-            rx=delta(:,1)./l11;ry=(delta(:,2)-l21.*rx)./l22;
-            detA=(ax+noise).*(dx+noise)-bx.^2;detB=(at+noise).*(dt+noise)-bt.^2;
-            shape=max(0,log(detS)-log(4)-.5*(log(detA)+log(detB)));
-            angle=.5*(atan2(2*bx,ax-dx)-atan2(2*bt,at-dt));
-            gapA=hypot(ax-dx,2*bx);gapB=hypot(at-dt,2*bt);
-            traceSum=a+d;alignedDet=(traceSum+gapA+gapB).*(traceSum-gapA-gapB)/4;
-            kappa=gapA.*gapB./alignedDet;u=kappa.*sin(angle).^2;orientationCost=log1p(u);
-            % Separate pose-invariant scale mismatch from smooth angular residuals.
-            % A single sqrt(total shape cost) loses Gauss-Newton curvature whenever
-            % unequal cloud scales leave a nonzero residual at aligned axes.
-            ratio=ones(n,1);active=u>1e-12;ratio(active)=orientationCost(active)./u(active);
-            orientation=sin(angle).*sqrt(kappa.*ratio);
-            residual=[rx,ry,orientation,sqrt(max(0,shape-orientationCost))].';
-            precision=zeros(2,2,n);precision(1,1,:)=1./l11;
-            precision(2,1,:)=-l21./l11./l22;precision(2,2,:)=1./l22;
-            J=zeros(4,3,n);J(1:2,1:2,:)=precision;
-            meanYaw=sourceMean*[r(:,2),-r(:,1)].';
-            ap=-2*bx;bp=ax-dx;dp=2*bx;
-            l11p=ap./(2*l11);l21p=bp./l11-l21.*l11p./l11;
-            l22p=(dp-2*l21.*l21p)./(2*l22);
-            rxp=meanYaw(:,1)./l11-rx.*l11p./l11;
-            ryp=(meanYaw(:,2)-l21p.*rx-l21.*rxp)./l22-ry.*l22p./l22;
-            J(1,3,:)=rxp;J(2,3,:)=ryp;
-            shapeYaw=sqrt(kappa).*cos(angle);active=orientationCost>1e-12;
-            shapeYaw(active)=sign(sin(angle(active))).*kappa(active).*sin(angle(active)).*cos(angle(active))./ ...
-                ((1+u(active)).*sqrt(orientationCost(active)));
-            J(3,3,:)=shapeYaw;
-            shapeUsed=gapA.*gapB>0;
-        end
-
-        function [residual,J,precision]=supportRegistrationResiduals(sourceMean,sourceCov,targetMean,targetCov,sourceAxis,targetNormal,directionScale,pose,noise)
-        % supportRegistrationResiduals Partial-support position and shape orientation.
-        % The latent sliding covariance is frozen in the map frame; source scatter
-        % rotates analytically. Angular information vanishes for round distributions.
-            [residual,J,precision]=localizationSupport.gaussianRegistrationResiduals(sourceMean,sourceCov,targetMean,targetCov,pose,noise);
-            residual=residual(1:3,:);J=J(1:3,:,:);
-            r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
-            residual(3,:)=(sum((sourceAxis*r.').*targetNormal,2).*directionScale).';
-            J(3,:,:)=0;
-            J(3,3,:)=sum((sourceAxis*[r(:,2),-r(:,1)].').*targetNormal,2).*directionScale;
         end
 
         %% Sensor tilt and extrinsic calibration
@@ -2124,10 +1926,9 @@ function m=invariantModel(cfg,storedGyro)
     assert(g>0 && min(eig(check))>=-1e-6*max(1,norm(check,2)), ...
         'VehicleLocalization:InvalidInvariantDesign','Stored scalar gyro LMI does not match current noise assumptions.');
     m.gyroDesign=storedGyro;m.gyroGainNormalized=g/z.sigma;
-    m.A=zeros(8);m.A(1,2)=1;m.A(2,3)=1;m.A(4,5)=1;m.A(5,6)=1;m.A(7,8)=1;
     m.C=zeros(3,8);m.C(1,1)=1;m.C(2,4)=1;m.C(3,7)=1;m.Cp=m.C(1:2,:);
     m.B=zeros(8,3);m.B(3,1)=1;m.B(6,2)=1;m.B(8,3)=1;m.e7=zeros(8,1);m.e7(7)=1;m.e8=zeros(8,1);m.e8(8)=1;
-    m.e1=zeros(8,1);m.e1(1)=1;m.e2=zeros(8,1);m.e2(2)=1;m.e5=zeros(8,1);m.e5(5)=1;
+    m.e1=zeros(8,1);m.e1(1)=1;m.e5=zeros(8,1);m.e5(5)=1;
     m.DL=diag([n.lidarPositionM,n.lidarPositionM,ell*n.lidarHeadingRad]);m.DG=n.gnssPositionM*eye(2);
     D=localizationSupport.outputNormalization(cfg,sigma);
     E=diag([ones(1,6),ell,ell]);T=diag(sigma.^[1,2,3,1,2,3,1,2]);
@@ -2199,19 +2000,6 @@ function value=sensorWorstEigenvalue(matrices)
 end
 
 % LiDAR measurement and correction: local helpers
-function [r,J]=injectionLineAndPointResiduals(f,pose)
-    R=[cos(pose(3)),-sin(pose(3));sin(pose(3)),cos(pose(3))];
-    dR=R*[0,-1;1,0];n=size(f.sourceMean,1);
-    delta=f.sourceMean*R.'+pose(1:2)-f.targetMean;
-    derivative=f.sourceMean*dR.';
-    r=zeros(3,n);J=zeros(3,3,n);B=f.precisionRoot;
-    r(1:2,:)=reshape(pagemtimes(B,reshape(delta.',2,1,n)),2,n);
-    J(1:2,1:2,:)=B;
-    J(1:2,3,:)=pagemtimes(B,reshape(derivative.',2,1,n));
-    r(3,:)=(sum((f.sourceAxis*R.').*f.targetNormal,2).*f.directionScale).';
-    J(3,3,:)=sum((f.sourceAxis*dR.').*f.targetNormal,2).*f.directionScale;
-end
-
 function measurement=injectionLandmarkLikelihoodGradient(local,movingCloud,pose,cfg,measurement)
 % Per-landmark mixture likelihood at every ladder scale (semanticLandmarkLikelihood).
 % Map masses form one density per class and source masses carry 1/C per class;

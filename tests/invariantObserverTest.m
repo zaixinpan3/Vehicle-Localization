@@ -11,8 +11,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,256);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
             testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,256);
-            testCase.verifyFalse(v.finiteInvariantSecantsCertified);
-            testCase.verifyFalse(v.numericalInvariantRadiusCertified);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
             testCase.verifySize(d.P,[8,8]);
@@ -64,9 +62,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyEqual(aligned.sideSlipAngleRate,interp1(l.time,l.sideSlipAngleRate,t),AbsTol=1e-12);
         end
         function auxiliaryDirectionUsesTheSuppliedAngle(testCase)
-            [d,l,c]=fixture();baseline=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+            [d,l,c]=fixture();baseline=runFullLocalizationObserver(d,c,LateralInputs=l);
             l.sideSlipAngle(:)=.2;
-            supplied=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+            supplied=runFullLocalizationObserver(d,c,LateralInputs=l);
             first=supplied.diagnostics.invariantOutputs{1};
             testCase.verifyEqual(first.predicted(4),-8*sin(c.initialState(7)+.2),AbsTol=1e-12);
             testCase.verifyGreaterThan(norm(supplied.internalState(end,:)-baseline.internalState(end,:)),1e-4);
@@ -74,19 +72,19 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function missingSideSlipAngleCannotBeReconstructed(testCase)
             [d,l,c]=fixture();l=rmfield(l,'sideSlipAngle');
-            testCase.verifyError(@()runFullLocalizationObserver(d,struct(),c,LateralInputs=l), ...
+            testCase.verifyError(@()runFullLocalizationObserver(d,c,LateralInputs=l), ...
                 'VehicleLocalization:AlignedLateralRequired');
         end
         function availableSideSlipAngleMustBeFinite(testCase)
             [d,l,c]=fixture();l.sideSlipAngle(2)=NaN;
-            testCase.verifyError(@()runFullLocalizationObserver(d,struct(),c,LateralInputs=l), ...
+            testCase.verifyError(@()runFullLocalizationObserver(d,c,LateralInputs=l), ...
                 'VehicleLocalization:InvalidFullInput');
         end
         function withdrawnAnglePayloadCannotAffectTheEstimate(testCase)
             [d,l,c]=fixture();d.highRate.bodyVelocityValid=false(size(l.time));
-            baseline=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+            baseline=runFullLocalizationObserver(d,c,LateralInputs=l);
             l.sideSlipAngle(:)=NaN;
-            poisoned=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+            poisoned=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(poisoned.internalState,baseline.internalState,AbsTol=1e-12);
         end
         function stoppedPacketKeepsTheContinuousUpstreamAngle(testCase)
@@ -140,9 +138,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             d.highRate.yawRateValid=false(size(l.time));
             d.highRate.bodyVelocityValid=false(size(l.time));
             d.highRate.bodyAccelerationValid=false(size(l.time));
-            a=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+            a=runFullLocalizationObserver(d,c,LateralInputs=l);
             d.highRate.yawRate(:)=-10;d.highRate.longitudinalAcceleration(:)=30;d.highRate.lateralAcceleration(:)=-40;
-            b=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+            b=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(a.internalState,b.internalState);
             testCase.verifyEqual(a.diagnostics.intrinsicPrediction(2,7),c.initialState(7)+.05*l.time(2),AbsTol=1e-12);
             testCase.verifyFalse(a.diagnostics.intrinsicPredictionUsesImu);
@@ -151,7 +149,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             [d,l,c]=fixture();c.initialState(:)=0;d.highRate.longitudinalSpeed(:)=NaN;l.lateralVelocity(:)=NaN;
             d.highRate.bodyVelocityValid=false(size(l.time));d.highRate.bodyAccelerationValid=false(size(l.time));
             d.highRate.yawRate(:)=.2;
-            a=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+            a=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(a.diagnostics.intrinsicPrediction(2,7:8),[0,0]);
             testCase.verifyGreaterThan(a.yawRate(2),0);testCase.verifyLessThan(a.yawRate(2),.2);
             testCase.verifyGreaterThan(a.headingUnwrapped(end),0);
@@ -160,7 +158,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function stoppedRotatingVehicleHasNoSpeedDivision(testCase)
             [d,l,c]=fixture();c.initialState(:)=0;d.highRate.longitudinalSpeed(:)=0;d.highRate.yawRate(:)=.2;
-            a=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+            a=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(a.position,zeros(numel(l.time),2),AbsTol=1e-12);
             testCase.verifyTrue(all(isfinite(a.internalState),'all'));
         end
@@ -175,7 +173,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
                 'information',repmat(1e6*eye(3),1,1,n),'delay',0);
             l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngle',zero,'sideSlipAngleRate',zero);
             c=freshObserverTestConfig();c.initialState=[.2;0;0;-.1;0;0;.02];
-            a=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+            a=runFullLocalizationObserver(d,c,LateralInputs=l);
             fprintf('POSE-ONLY 20 s: position %.9g m, velocity %.9g m/s\n', ...
                 norm(a.position(end,:)-[100,0]),norm(a.velocity(end,:)-[5,0]));
             testCase.verifyLessThan(norm(a.position(end,:)-[100,0]),.02);

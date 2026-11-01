@@ -88,10 +88,10 @@ function [report,estimate,trial]=runKittiOverlapTrial(datasetFolder,outputFolder
     cfg.initialState=[initial.pose(1);0;0;initial.pose(2);0;0;initial.pose(3)];
     data=struct('highRate',h,'lidarOverlap',struct('map',map,'sources',{sources}, ...
         'valid',true(numel(query),1),'config',overlapGradientConfig()));
-    timer=tic;estimate=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=l);observerSeconds=toc(timer);
+    timer=tic;estimate=runFullLocalizationObserver(data,cfg,LateralInputs=l);observerSeconds=toc(timer);
     trial=struct('data',data,'lateral',l,'config',cfg,'reference',reference(query,1:3));
     poisoned=data;poisoned.highRate.longitudinalSpeed(:)=1e8;poisonedLateral=l;poisonedLateral.lateralVelocity(:)=-1e8;
-    isolated=runFullLocalizationObserver(poisoned,struct(),cfg,LateralInputs=poisonedLateral);
+    isolated=runFullLocalizationObserver(poisoned,cfg,LateralInputs=poisonedLateral);
     velocityIsolationDifference=max(abs(isolated.z-estimate.z),[],'all');
     assert(velocityIsolationDifference==0,'VehicleLocalization:KittiVelocityLeakage','Withdrawn velocity payload changed a state.');
     errors=estimate.pose-reference(query,1:3);errors(:,3)=atan2(sin(errors(:,3)),cos(errors(:,3)));

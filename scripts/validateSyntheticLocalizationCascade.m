@@ -64,7 +64,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
             current.lidar.valid=current.lidar.valid & mod(floor(t),2)==1;
         end
         runCfg=cfg;runCfg.initialState=initialState(frameTruth,aligned.highRate,alignedLateral,settings,init);
-        timer=tic;estimate=runFullLocalizationObserver(current,struct(),runCfg,LateralInputs=alignedLateral);seconds=toc(timer);
+        timer=tic;estimate=runFullLocalizationObserver(current,runCfg,LateralInputs=alignedLateral);seconds=toc(timer);
         metrics=scoreRun(estimate,frameTruth,truth,lateral,current,settings,mask);
         runs{k}=struct('scenario',name,'truthModel',string(ifelse(truth.mismatch,"mismatch","nominal")), ...
             'noise',noise,'initialization',init,'sources',sources,'estimate',estimate,'metrics',metrics, ...

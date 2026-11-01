@@ -1,12 +1,11 @@
-function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
+function estimate=runFullLocalizationObserver(data,cfg,options)
 % runFullLocalizationObserver Run the current intrinsic global observer.
 % Default prediction uses an internal rate state; IMU is auxiliary output only.
 % All calls use the intrinsic eight-state design.
-% The common-clock runtime uses the continuous common-LMI-designed gains.
+% The common-clock runtime uses the nominal fusion LMI gains.
 % Pass this run's solved configuration to share gains within one experiment;
 % if absent, the entry solves them before the first observer update.
-% Supply aligned lateral estimates through LateralInputs. The lateralDesign
-% argument remains for caller compatibility; upstream synthesis is separate.
+% Supply aligned lateral estimates through LateralInputs; upstream synthesis is separate.
 % Missing/invalid measurements withdraw their own correction for that frame.
 % Optional highRate.bodyVelocityValid and bodyAccelerationValid masks also
 % withdraw unavailable motion-output feedback. Absent masks mean all valid.
@@ -18,36 +17,14 @@ function estimate=runFullLocalizationObserver(data,lateralDesign,cfg,options)
 % diagnostics.lidarPoseSupport reports local geometry, not alignment correctness.
     arguments
         data (1,1) struct
-        lateralDesign (1,1) struct %#ok<INUSA>
         cfg (1,1) struct=mncavFullObserverConfig()
         options.LateralInputs (1,1) struct=struct()
     end
     assert(~isfield(data,'lidarMatcher'),'VehicleLocalization:ArchivedRegistration', ...
         'Pose-registration callbacks are removed. Supply overlap-gradient sources.');
-    estimate=runSynchronousLocalizationObserver(data,cfg,options.LateralInputs);
-end
-
-function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
-% runSynchronousLocalizationObserver Discretize the continuous ISS-designed observer.
-% Inputs and real measurement reconstructions must share the same frame clock.
-% No pose anchor is propagated, no inter-frame pose is generated, and absent
-% measurements withdraw their own correction. An implicit baseline step is
-% followed by an implicit Lyapunov-matched LiDAR step. Only the locally affine
-% LiDAR jump is certified as nonexpansive; the full sampled system is not.
-% Wheel and lateral-observer velocities are used without LiDAR-derived bias.
-% GNSS corrects position only; the full LiDAR information corrects pose jointly.
-% Synthetic data.lidar.residualModels supply frozen geometry for finite-residual
-% validation. Pose inputs use the local information approximation.
-% Optional data.lidar.evaluateResidual(k,predictedPose) supplies residual-level
-% geometry at the post-baseline pose on each valid frame, overriding that model.
-% Optional data.lidarOverlap replaces registration: struct with map, sources
-% (frame-aligned source clouds in current body axes), optional valid and
-% config. Each available frame injects the scale-ladder gradient of -log of the
-% balanced semanticGaussianOverlap at the post-baseline prediction, with its
-% Gauss-Newton metric as information (localizationSupport.evaluateOverlapGradient).
-% Optional overlap frameReliability (n-by-1) and directionReliability (n-by-3)
-% weight the geometric filter; directions follow ascending normalized information
-% eigenvalues. Declared overlap time must match the frame clock and delay be zero.
+    assert(~isfield(cfg.lidar,'errorCalibration'),'VehicleLocalization:ArchivedRegistrationMeasurement', ...
+        'Use the geometric information filter; registration-error calibration is removed.');
+    lateral=options.LateralInputs;
     h=data.highRate;t=h.time(:);n=numel(t);
     assert(n>=2 && all(isfinite(t)) && all(diff(t)>0), ...
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
@@ -84,8 +61,6 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     if overlapChannel
         assert(~isfield(data,'lidar'),'VehicleLocalization:AmbiguousLidarInput', ...
             'Supply exactly one LiDAR channel: pose/residual measurements or overlap sources.');
-        assert(~isfield(cfg.lidar,'errorCalibration'),'VehicleLocalization:OverlapCalibrationUnavailable', ...
-            'The overlap-gradient channel uses the geometric information filter; calibrated error moments are fitted to registration features.');
         overlap=overlapSource(data.lidarOverlap,t);L.valid=overlap.valid;
         L.frameReliability=overlap.frameReliability;
         L.directionReliability=overlap.directionReliability;
@@ -94,13 +69,12 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     [continuous,cfg]=localizationSupport.designFullObserverGains(cfg);
     lidarInjection=continuous.lidarMatched;
-    lmiVerified=continuous.surrogateContinuousLmiVerified;
     stateCount=8;
     poseJacobian=zeros(3,stateCount);poseJacobian(1,1)=1;poseJacobian(2,4)=1;poseJacobian(3,7)=1;
-    design=struct('kind',"continuous-iss-implicit",'continuousDesign',continuous, ...
+    design=struct('kind',"nominal-fusion-implicit",'continuousDesign',continuous, ...
         'lidarMatched',lidarInjection,'lidarJumpCertificate',"Implicit locally affine fixed-metric contraction", ...
         'designRoute',continuous.designRoute, ...
-        'sampledSystemCertified',false,'gainsRetuned',isfield(cfg.gnss,'positionGainDesign'));
+        'sampledSystemCertified',false);
     x=cfg.initialState;
     assert(ismember(numel(x),[7,stateCount]) && all(isfinite(x)),'VehicleLocalization:FullInitializationRequired', ...
         'Supply an explicit common initial state.');x=x(:);
@@ -108,9 +82,9 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     z=zeros(n,stateCount);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
     yawCorrection=zeros(n,1);gnssPosition=nan(n,2);gnssInformation=nan(2,2,n);
     weights=nan(n,2);maximumRate=0;
-    lidarAudits=cell(n,1);poseWeights=zeros(3,3,n);baselineStates=zeros(n,stateCount);
+    lidarAudits=cell(n,1);poseWeights=zeros(3,3,n);preLidarStates=zeros(n,stateCount);
     intrinsicStates=zeros(n,stateCount);invariantAudits=cell(n,1);
-    informationBounds=nan(n,3);informationQualified=false(n,1);
+    informationBounds=nan(n,3);
     lidarPoseSupport=struct('rank',zeros(n,1),'minimumStrength',zeros(n,1), ...
         'fullPoseSupported',false(n,1),'headingStrengthAfterPosition',zeros(n,1), ...
         'headingSupported',false(n,1),'sectorQualified',false(n,1), ...
@@ -144,7 +118,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         % Complete the implicit psi-dot = estimated-rate equation using
         % the posterior STATE. No gyro sample appears in this prediction.
         x(7)=x(7)+dt*(x(8)-priorRate);
-        baselineStates(k,:)=x.';
+        preLidarStates(k,:)=x.';
         if L.valid(k) && overlapChannel
             measurement=localizationSupport.evaluateOverlapGradient(overlap.map,overlap.sources{k},x([1,4,7]),overlap.config);
             overlapDiagnostics.evaluated(k)=true;overlapDiagnostics.available(k)=measurement.available;
@@ -161,19 +135,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
                     measurement=L.evaluateResidual(k,x([1,4,7]));
                     assert(isfield(measurement,'residual'),'VehicleLocalization:InvalidLidarResidual', ...
                         'evaluateResidual must return a predicted-pose residual channel.');
-                elseif ~isempty(L.residualModels{k})
-                    measurement=localizationSupport.evaluateLidarRegistrationResidual(L.residualModels{k},x([1,4,7]));
                 end
-            end
-            if all(isfinite(L.poseErrorVariance(k,:)))
-                measurement.poseErrorVariance=L.poseErrorVariance(k,:).';
-            end
-            if isfield(cfg.lidar,'errorCalibration') && ~isfield(measurement,'poseErrorVariance')
-                assert(~isfield(L,'evaluateResidual') && ~isempty(L.residualModels{k}), ...
-                    'VehicleLocalization:MissingLidarErrorCalibration', ...
-                    'Calibrated gains require a fitted residual model or an explicit pose error variance.');
-                features=localizationSupport.lidarPoseErrorFeatures(L.residualModels{k});
-                measurement.poseErrorVariance=localizationSupport.predictLidarPoseErrorVariance(features,cfg.lidar.errorCalibration);
             end
             if ~isfield(measurement,'frameReliability'),measurement.frameReliability=1;end
             if ~isfield(measurement,'directionReliability'),measurement.directionReliability=ones(3,1);end
@@ -191,7 +153,6 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
                 lidarPoseSupport.(name)(k)=support.(name);
             end
             lidarPoseSupport.correctionApplied(k)=support.rank>0 && lidarInjection.kappa>0 && dt>0;
-            informationQualified(k)=support.sectorQualified;
             rateCorrection=audit.continuousCorrection;
             if dt>0,rateCorrection=delta/dt;end
             correction(k,3:4)=rateCorrection([1,4]).';yawCorrection(k)=rateCorrection(7);
@@ -203,7 +164,7 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));
     end
     lidarPoseSupport.sourceValid=L.valid;
-    estimate=struct('time',t,'z',z(:,1:7),'onlineZ',z(:,1:7),'pose',[z(:,[1,4]),wrap(z(:,7))], ...
+    estimate=struct('time',t,'z',z(:,1:7),'pose',[z(:,[1,4]),wrap(z(:,7))], ...
         'position',z(:,[1,4]),'velocity',z(:,[2,5]),'acceleration',z(:,[3,6]), ...
         'heading',wrap(z(:,7)),'headingUnwrapped',z(:,7),'lateral',reportedLateral,'observer',design);
     measuredSpeed=hypot(h.longitudinalSpeed(:),lateral.lateralVelocity(:));
@@ -212,11 +173,8 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition,'gnssInformationAtObserverPoint',gnssInformation, ...
         'yawCorrection',yawCorrection, ...
-        'lidarMatched',{lidarAudits},'poseWeight',poseWeights,'baselineState',baselineStates(:,1:7), ...
-        'baselineFullStateCertified',false, ...
-        'continuousLmiVerified',lmiVerified, ...
-        'continuousInformationBounds',informationBounds, ...
-        'continuousInformationQualified',informationQualified, ...
+        'lidarMatched',{lidarAudits},'poseWeight',poseWeights,'preLidarState',preLidarStates, ...
+        'lidarInformationBounds',informationBounds, ...
         'observedMotionEnvelopeSatisfied', ...
             all(velocityValid) && all(accelerationValid) ...
             && all(speedInDomain) ...
@@ -225,11 +183,11 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'issSpeedInterval',speedInterval,'observedSpeedWithinIssDomain',speedInDomain, ...
         'zeroSpeedCertified',false,'minimumWeights',weights, ...
         'maximumTrackAngleRate',maximumRate, ...
-        'rateEnvelopeSatisfied',maximumRate<=cfg.maximumTrackAngleRate,'stateResets',0, ...
+        'rateEnvelopeSatisfied',maximumRate<=cfg.maximumTrackAngleRate, ...
         'packetCounts',struct('gnssValid',nnz(G.valid),'gnssInvalid',nnz(~G.valid), ...
         'lidarValid',nnz(L.valid),'lidarInvalid',nnz(~L.valid), ...
         'bodyVelocityValid',nnz(velocityValid),'bodyAccelerationValid',nnz(accelerationValid)), ...
-        'localizationUpdates',n-1,'virtualPoseUpdates',0,'integrationSubsteps',0, ...
+        'localizationUpdates',n-1, ...
         'nominalOutputRateHz',1/median(diff(t)),'referenceUsed',false, ...
         'lidarChannel',channelName(overlapChannel,isfield(data,'lidar')), ...
         'lidarOverlap',overlapDiagnostics, ...
@@ -242,16 +200,12 @@ function estimate=runSynchronousLocalizationObserver(data,cfg,lateral)
         'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. The nominal fusion design assumes simultaneous sources and a compact invariant operating set; zero-speed execution has no speed division but is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
     estimate.internalState=z;estimate.yawRate=z(:,8);
     estimate.diagnostics.intrinsicPrediction=intrinsicStates;
-    estimate.diagnostics.baselineInternalState=baselineStates;
     estimate.diagnostics.invariantOutputs=invariantAudits;
     estimate.diagnostics.invariantOutputNames=["speedSquared","velocityAccelerationDot", ...
         "velocityAccelerationCross","courseDirection","yawRate"];
     estimate.diagnostics.intrinsicPredictionUsesImu=false;
     estimate.diagnostics.actualOverlapCertified=false;
     certificate=continuous.continuousCertificate.verification;
-    estimate.diagnostics.finiteInvariantSecantsCertified=certificate.finiteInvariantSecantsCertified;
-    estimate.diagnostics.conditionalInvariantLocalClosureEstablished=certificate.conditionalInvariantLocalClosureEstablished;
-    estimate.diagnostics.numericalInvariantRadiusCertified=certificate.numericalInvariantRadiusCertified;
     estimate.diagnostics.operatingSet=certificate.operatingSet;
     estimate.diagnostics.nominalFusionLmiVerified=certificate.nominalFusionLmiVerified;
     estimate.diagnostics.gyroOutputAvailabilitySatisfied=all(gyroValid);
@@ -273,10 +227,13 @@ end
 function s=source(data,name,t,width)
     n=numel(t);s=struct('valid',false(n,1),'values',nan(n,width),'information',nan(width,width,n), ...
         'frameReliability',ones(n,1),'directionReliability',ones(n,3));
-    s.poseErrorVariance=nan(n,2);
-    s.residualModels=cell(n,1);
     if ~isfield(data,name),return;end
     a=data.(name);field='pose';if width==2,field='position';end
+    if width==3
+        assert(~any(isfield(a,{'residualModels','poseErrorVariance'})), ...
+            'VehicleLocalization:ArchivedRegistrationMeasurement', ...
+            'Supply current pose/residual measurements or overlap sources.');
+    end
     assert(isfield(a,'delay') && isequal(a.delay,0),'VehicleLocalization:FullZeroDelayRequired','Declare zero perception delay.');
     assert(isequal(a.time(:),t),'VehicleLocalization:SynchronousInputsRequired','Source clocks must equal the localization clock.');
     assert(isequal(size(a.(field)),[n,width]) && numel(a.valid)==n && ...
@@ -284,18 +241,6 @@ function s=source(data,name,t,width)
         'VehicleLocalization:InvalidFullSource','Invalid synchronized source dimensions.');
     s.valid=logical(a.valid(:));s.values=a.(field);s.information=a.information;
     if width==3
-        if isfield(a,'poseErrorVariance')
-            v=a.poseErrorVariance;
-            assert(isequal(size(v),[n,2]) && isreal(v) && ...
-                all(isfinite(v(s.valid,:)) & v(s.valid,:)>0,'all'), ...
-                'VehicleLocalization:InvalidLidarCalibration','Align positive physical error variances with valid LiDAR frames.');
-            s.poseErrorVariance=v;
-        end
-        if isfield(a,'residualModels')
-            assert(iscell(a.residualModels) && numel(a.residualModels)==n, ...
-                'VehicleLocalization:InvalidLidarResidualModel','Align residual models with source frames.');
-            s.residualModels=a.residualModels(:);
-        end
         for name=["frameReliability","directionReliability"]
             if isfield(a,name)
                 assert(isequal(size(a.(name)),size(s.(name))) && isreal(a.(name)) && ...

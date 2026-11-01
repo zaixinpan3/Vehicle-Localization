@@ -29,7 +29,7 @@ classdef activeLocalizationChannelTest < matlab.unittest.TestCase
         end
         function retiredMatcherCannotReachTheObserver(test)
             data=struct('lidarMatcher',@(~,~,~)struct());
-            test.verifyError(@()runFullLocalizationObserver(data,struct()), ...
+            test.verifyError(@()runFullLocalizationObserver(data), ...
                 'VehicleLocalization:ArchivedRegistration');
         end
         function synchronizationPreservesCoveredOverlapSources(test)

@@ -49,7 +49,6 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
             [estimate,initialError,finalError]=runScenario(testCase.Config,speed,sourceMode);
             testCase.verifyTrue(all(isfinite(estimate.z),'all'));
             testCase.verifyLessThan(finalError,initialError);
-            testCase.verifyEqual(estimate.diagnostics.stateResets,0);
             testCase.verifyFalse(estimate.diagnostics.allTheoremHypothesesVerified);
         end
     end
@@ -76,7 +75,7 @@ function [estimate,initialError,finalError]=runScenario(cfg,speed,mode)
     end
     cfg.initialState=[.02;speed;0;-.015;0;0;.01;0];
     data=struct('highRate',high,'gnss',gnss,'lidar',lidar);
-    estimate=runFullLocalizationObserver(data,struct(),cfg,LateralInputs=lateral);
+    estimate=runFullLocalizationObserver(data,cfg,LateralInputs=lateral);
     % Use the same physical pose norm for every speed and availability case.
     initialError=norm([.02,-.015,.01]);
     finalError=norm([estimate.position(end,:)-truth(end,1:2),estimate.heading(end)]);

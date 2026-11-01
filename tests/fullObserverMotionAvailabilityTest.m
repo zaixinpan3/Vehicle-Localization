@@ -81,5 +81,5 @@ function [d,l,c]=fixture()
 end
 
 function r=execute(d,l,c)
-    r=runFullLocalizationObserver(d,struct(),c,LateralInputs=l);
+    r=runFullLocalizationObserver(d,c,LateralInputs=l);
 end

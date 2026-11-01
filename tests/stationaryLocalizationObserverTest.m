@@ -155,13 +155,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             f.data.lidarOverlap.delay=0;b=execute(f);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
         end
-        function synchronizationCropsRecordedQualityAndCalibration(testCase)
+        function synchronizationCropsRecordedQuality(testCase)
             f=croppedFixture(false);[d,l]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
             testCase.verifyEqual(d.lidar.frameReliability,[.2;.4;.6],AbsTol=0);
             testCase.verifyEqual(d.lidar.directionReliability,repmat([.2,.5,.9],3,1),AbsTol=0);
-            testCase.verifyEqual(d.lidar.poseErrorVariance,[2,3;3,4;4,5],AbsTol=0);
             testCase.verifyFalse(any(l.velocityValid));
-            r=runFullLocalizationObserver(d,struct(),f.cfg,LateralInputs=l);
+            r=runFullLocalizationObserver(d,f.cfg,LateralInputs=l);
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
         end
         function synchronizationCropsOverlapQualityAndSources(testCase)
@@ -170,7 +169,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyEqual(d.lidarOverlap.directionReliability,repmat([.2,.5,.9],3,1),AbsTol=0);
             testCase.verifyEqual(numel(d.lidarOverlap.sources),3);
             testCase.verifyEqual(d.lidarOverlap.time,[0;.1;.2],AbsTol=0);
-            r=runFullLocalizationObserver(d,struct(),f.cfg,LateralInputs=l);
+            r=runFullLocalizationObserver(d,f.cfg,LateralInputs=l);
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
         end
     end
@@ -197,7 +196,7 @@ function f=fixture(duration)
 end
 
 function r=execute(f)
-    r=runFullLocalizationObserver(f.data,struct(),f.cfg,LateralInputs=f.lateral);
+    r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
 end
 
 
@@ -233,6 +232,6 @@ function f=croppedFixture(overlap)
         channel=f.data.lidar;channel.time=time;channel.pose=channel.pose(1:5,:);
         channel.valid=channel.valid(1:5);channel.information=channel.information(:,:,1:5);
         channel.frameReliability=frame;channel.directionReliability=direction;
-        channel.poseErrorVariance=[1,2;2,3;3,4;4,5;5,6];f.data.lidar=channel;
+        f.data.lidar=channel;
     end
 end
