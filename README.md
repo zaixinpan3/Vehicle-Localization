@@ -7,7 +7,7 @@ offline mapping independently reconstructs detailed structural candidates and
 validates their individual points.
 Current dataset localization uses only the overlap-gradient LiDAR channel.
 The pose-registration localization branch is archived; see
-[the retirement and recovery record](localization/README.md#retired-implementations).
+[the retirement and recovery record](#historical-implementations).
 Low-level historical diagnostics and shared geometry remain available.
 
 ## Pipeline
@@ -243,7 +243,7 @@ The module has two top-level MATLAB files: `runFullLocalizationObserver.m`
 and the unified `localizationSupport.m` static class. The four files in
 `lateralObserver/` are unchanged. Shared methods use the class prefix, for
 example `localizationSupport.filterLidarPoseInformation`. The complete file table
-is in [the localization README](localization/README.md#support-files).
+appears in [the source layout below](#source-layout).
 
 Two estimator stages live here and form the current one-way cascade.
 
@@ -312,7 +312,7 @@ compact invariant operating set and a positive true course-speed interval
 Invariance and a numerical attraction radius are not certified. Execution at
 rest or during source withdrawal remains available, without a corresponding
 outage or sampled-system guarantee.
-See [the current pipeline](localization/README.md#entry-points) and
+See [the current pipeline](#runtime-entry-points) and
 [the observer design](localization/README.md).
 
 Current dataset entries supply `data.lidarOverlap`. Its analytic SE(2)
@@ -321,7 +321,110 @@ over the configured smoothing ladder. `overlapGradientConfig` selects frame
 or per-landmark aggregation and optional orientation information;
 `semanticGeometryConfig` supplies spatial support settings. The retired
 seven-state and pose-optimization implementations are recoverable from
-Git as described in [the retirement record](localization/README.md#retired-implementations).
+Git as described in [the retirement record](#historical-implementations).
+
+#### Runtime entry points
+
+| Stage | Entry point |
+| --- | --- |
+| Vehicle and replay parameters | `mncavVehicleConfig`, `mncavReplayConfig` |
+| Wheel/IMU/steering preparation | `prepareMncavMotionInputs` |
+| Lateral gain synthesis and execution | `designLateralObserverGains`, `runLateralVelocityObserver` |
+| Global configuration | `mncavFullObserverConfig`, `mncavSmallOffsetObserverConfig` |
+| Fresh global gain synthesis | `synthesizeMncavInvariantDesign` |
+| Frame-clock alignment | `localizationSupport.synchronizeLocalizationInputs` |
+| Global execution | `runFullLocalizationObserver` |
+| Current LiDAR measurement | `localizationSupport.evaluateOverlapGradient` |
+
+```matlab
+setupVehicleLocalization;
+cfg = mncavSmallOffsetObserverConfig();
+% Apply experiment-specific sensor, geometry and domain overrides before solving.
+[design, cfg] = synthesizeMncavInvariantDesign(cfg);
+lc = lateralObserverConfig();
+ld = designLateralObserverGains(lc);
+lateral = runLateralVelocityObserver(data.highRate, ld, lc);
+[data, lateral] = localizationSupport.synchronizeLocalizationInputs(data, lateral, cfg);
+estimate = runFullLocalizationObserver(data, cfg, LateralInputs=lateral);
+```
+
+Global synthesis requires YALMIP and SeDuMi and solves fresh gains for each
+experiment. There is no saved-gain fallback. Returned fusion and response
+vertices are independently checked, including at runtime without a solver;
+stale configurations and gains are rejected. The LPV speed interval is
+[1,30] m/s. Main-observer course-speed bounds are separate: [10,15] m/s in
+the default configuration and [1,30] m/s in the explicit small-offset
+scenario with hypothetical GNSS geometry. See the
+[mathematical design](localization/README.md) for the precise certificate
+and conditional local-cascade hypotheses.
+
+The global internal state is `[X,VX,AX,Y,VY,AY,psi,r]`. Public `.z` has seven
+columns; `.internalState` and `.yawRate` expose the rate state. The global
+entry reads the supplied sideslip angle directly. Invalid lateral velocity
+withdraws auxiliary rows 1--4 and the upstream sideslip-rate predictor term;
+missing acceleration withdraws rows 2--3. GNSS, LiDAR and gyro retain their
+own availability. Held lateral states are not valid low-speed estimates.
+Rebuild inputs whose vehicle, clock or calibration metadata is stale; use
+[the output-point conventions](config/MNCAV_CONFIGURATION.md).
+
+The runner applies intrinsic/GNSS/auxiliary updates, evaluates overlap once
+at that estimate, and applies an implicit Lyapunov-matched LiDAR correction.
+There is no online pose optimizer or registration callback.
+`diagnostics.preLidarState` contains the eight states before LiDAR correction.
+`nominalFusionLmiVerified` and `operatingSet` describe numerical verification
+and the assumed physical operating set; they do not certify actual-map
+geometry, the nonlinear attraction radius, or sensor outages. Synthetic pose
+measurements and residual callbacks remain available for channel checks.
+Frozen registration-model replay is rejected. All updates use the common
+localization clock; delayed registered-pose replay is not a current branch.
+
+`overlapGradientConfig` selects the ladder and aggregation; the default is
+class-balanced frame overlap at bandwidths `[0,0.5,1,2]` m.
+`semanticGeometryConfig` supplies spatial support. Per-landmark likelihood
+and orientation are measurement options of the same observer. Availability,
+supported pose rank and independent heading support are separate diagnostics.
+`localizationSupport.updateLocalizationSourceWindow` forms a causal five-scan
+feature horizon with uninterrupted valid wheel/lateral/gyro motion. Without
+that motion it discards transported history and emits the current scan.
+Reference-built frozen maps and one declared reference initialization pose
+are permitted inputs. Later reference states remain outside online motion
+preparation, prediction and corrections. Same-pass evaluation does not
+establish independent survey accuracy.
+
+Dataset entries include `runMncavFullObserverExperiment`,
+`replayDowntownGnssFreeLocalization`, `runNuscenesOverlapTrial`,
+`runKittiOverlapTrial`, and `runMncavVdbLocalization`; their sensor and
+map/reference protocols are experiment-specific. Covariance-filter,
+source-observer and FAST-LIO2 comparisons are documented in
+[scripts/baselines](scripts/baselines/README.md). Sampled regression scenarios
+exercise braking, standstill and moving overlap, GNSS-only heading ambiguity,
+and pose-only recovery. They do not extend the continuous-time theorem.
+
+#### Source layout
+
+| File | Role |
+| --- | --- |
+| `localization/runFullLocalizationObserver.m` | Public eight-state observer and synchronous runtime |
+| `localization/localizationSupport.m` | Static methods for synthesis, verification, motion preparation, overlap geometry, source windows and calibration |
+| `localization/lateralObserver/simulateLateralObserverScenario.m` | Lateral simulation entry |
+| `localization/lateralObserver/designLateralObserverGains.m` | Lateral gain synthesis |
+| `localization/lateralObserver/runLateralVelocityObserver.m` | Lateral runtime and angle interface |
+| `localization/lateralObserver/lateralObserverSupport.m` | Lateral scheduling and shared helpers |
+
+Run `setupVehicleLocalization` to add the modules. Design helpers include
+`invariantInputs`, `fusionVertices`, `fusionMatrices`, `fusionBlocks`,
+`verifyInvariantDesign`, and `verifyMotionResponse` on `localizationSupport`.
+The local README contains mathematical design only; entry-point usage and
+source organization are maintained here.
+
+#### Historical implementations
+
+The seven-state, registration-based and delayed registered-pose localization
+implementations, and retired L/G/M, polynomial-boxing and refinement solver
+machinery, are recoverable from Git history. Use `git log --all -- <path>` to
+locate a deleted file and `git show <revision>:<path>` to inspect its original
+bytes. Historical derivations and dated comparisons describe their recorded
+revisions, not the maintained observer.
 
 ## Configuration (`config/`)
 
@@ -557,7 +660,7 @@ consistent with the mapped facades, so that tree canopies are not reported as
 facades. Without these fields, perception is unchanged.
 
 The maintained MnCAV VDB localization entry is `runMncavVdbLocalization`.
-See [the current pipeline](localization/README.md#entry-points). Historical
+See [the current pipeline](#runtime-entry-points). Historical
 registration comparisons remain in their dated studies and Git revisions.
 
 ## Verification
