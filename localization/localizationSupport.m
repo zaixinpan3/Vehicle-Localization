@@ -64,6 +64,11 @@ classdef localizationSupport
             for name=["lateralVelocity","sideSlipAngle","sideSlipAngleRate"]
                 lateral.(name)=fullBlend(lateralInput.(name),left,right,fraction);
             end
+            % Algebraic atan2 outputs can straddle the branch cut. Interpolate
+            % the shortest angular increment instead of passing through zero.
+            beta=lateralInput.sideSlipAngle(:);
+            increment=atan2(sin(beta(right)-beta(left)),cos(beta(right)-beta(left)));
+            lateral.sideSlipAngle=beta(left)+fraction.*increment;
             if isfield(lateralInput,'velocityValid')
                 valid=lateralInput.velocityValid(:);
                 assert(numel(valid)==numel(h.time) && all(ismember(valid,[0,1])), ...

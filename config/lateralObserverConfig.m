@@ -6,8 +6,8 @@ function cfg = lateralObserverConfig(profile)
 % Lipschitz bound, the certified decay rate, the scales of the axle-force
 % mismatch and measurement-error channels, the Finsler multiplier scales,
 % and the LMI solver settings; the
-% observer group configures direct LPV integration; the sideSlip group defines
-% the angle/rate interface, which does not change the LPV velocity;
+% observer group configures direct LPV integration; sideslip angle and rate
+% are algebraic outputs without a separate filter or tuning parameters;
 % the simulation group defines the synthetic scenario used to exercise the
 % observer.
 %
@@ -20,7 +20,7 @@ function cfg = lateralObserverConfig(profile)
 %       Re-synthesize lateral gains after changing the vehicle configuration.
 %
 % Output:
-%   cfg: struct with vehicle, scheduling, synthesis, observer, and
+%   cfg: struct with vehicle, outputPoint, scheduling, synthesis, observer, and
 %       simulation groups
     arguments
         profile (1,1) string = "mncav"
@@ -78,19 +78,13 @@ function cfg = lateralObserverConfig(profile)
     % as a robustness margin against unmodeled lateral dynamics.
     cfg.observer = struct();
     % Exponentiate the stiff LPV part at each interval midpoint. The copied
-    % nonlinearity uses an explicit midpoint stage; the angle filter uses
-    % its exact constant-command flow. This is a numerical implementation,
+    % nonlinearity uses an explicit midpoint stage. This is a numerical implementation,
     % not an extension of the continuous ISS certificate to sampled data.
     cfg.observer.integrationMethod = "exponentialMidpoint";
     cfg.observer.nonlinearity = @(x) zeros(2, 1);
     cfg.observer.initialState = [0.0; 0.0];
     % Only the LPV [vy; r] state estimates velocity. Out-of-domain samples
     % hold that state and withdraw its exported velocity aiding.
-    % The angle filter is independent of velocity estimation.
-    cfg.sideSlip = struct();
-    cfg.sideSlip.naturalFrequency = 12.0;
-    cfg.sideSlip.dampingRatio = 1.0;
-    cfg.sideSlip.initialState = [];
 
     % Synthetic scenario: sinusoidal longitudinal acceleration so the
     % scheduling parameter and its rate are both exercised, with a

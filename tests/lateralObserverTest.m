@@ -25,20 +25,20 @@ classdef lateralObserverTest < matlab.unittest.TestCase
     end
 
     methods (Test)
-        function coordinateTransportPrecedesTheSameAngleFilter(testCase)
-            cfg=testCase.CurrentDesign.cfg;cfg.sideSlip.initialState=[0;0];
+        function coordinateTransportPrecedesAlgebraicSideslip(testCase)
+            cfg=testCase.CurrentDesign.cfg;
             measurements=testCase.constantSpeedMeasurements(1,10);
             nominal=runLateralVelocityObserver(measurements,testCase.CurrentDesign,cfg);
             transform=repmat([1,0,0,1,1,2],numel(measurements.time),1);
             actual=runLateralVelocityObserver(measurements,testCase.CurrentDesign,cfg,transform);
-            command=atan2(2,11);w=cfg.sideSlip.naturalFrequency;t=measurements.time;
+            angle=atan2(2,11);t=measurements.time;
             testCase.verifyEqual(actual.state,nominal.state,AbsTol=0);
             testCase.verifyEqual(actual.innovation,nominal.innovation,AbsTol=0);
             testCase.verifyEqual(actual.velocityValid,nominal.velocityValid);
             testCase.verifyEqual(actual.longitudinalSpeed,11*ones(size(t)));
             testCase.verifyEqual(actual.lateralVelocity,2*ones(size(t)));
-            testCase.verifyEqual(actual.sideSlipAngle,command*(1-(1+w*t).*exp(-w*t)),AbsTol=1e-6);
-            testCase.verifyEqual(actual.sideSlipAngleRate,command*w^2*t.*exp(-w*t),AbsTol=1e-5);
+            testCase.verifyEqual(actual.sideSlipAngle,angle*ones(size(t)),AbsTol=1e-12);
+            testCase.verifyEqual(actual.sideSlipAngleRate,zeros(size(t)),AbsTol=1e-12);
         end
         function identityOutputMapPreservesTheOriginalInterface(testCase)
             cfg=testCase.CurrentDesign.cfg;m=testCase.stopGoMeasurements();
@@ -263,12 +263,15 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         end
 
         function sideSlipRateIsConsistentWithTheSideSlipAngle(testCase)
-        % sideSlipRateIsConsistentWithTheSideSlipAngle: The persistent
-        % side-slip interface state's rate agrees with a finite difference of
+        % sideSlipRateIsConsistentWithTheSideSlipAngle: The algebraic
+        % sideslip derivative agrees approximately with a finite difference of
         % its reported angle. This is the signal the ego-state observer
         % consumes as part of the track-angle rate.
             design = testCase.CurrentDesign;
-            result = simulateLateralObserverScenario(design, design.cfg);
+            cfg = design.cfg;
+            cfg.simulation.lateralAccelerationNoiseStd = 0;
+            cfg.simulation.yawRateNoiseStd = 0;
+            result = simulateLateralObserverScenario(design, cfg);
             estimate = result.estimate;
 
             sampleTime = design.cfg.simulation.sampleTime;
@@ -289,7 +292,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             result = simulateLateralObserverScenario(design, design.cfg);
 
             expectedRate = result.measurements.longitudinalAcceleration + ...
-                (result.estimate.observerPointLateralVelocity .* result.measurements.yawRate);
+                (result.estimate.observerPointLateralVelocity .* result.estimate.yawRate);
             testCase.verifyEqual(result.estimate.longitudinalSpeedRate, expectedRate, AbsTol=1.0e-12);
             testCase.verifyGreaterThan(max(abs(result.estimate.longitudinalSpeedRate - ...
                 result.measurements.longitudinalAcceleration)), 0, ...
@@ -300,10 +303,11 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % outputPointTransportFollowsRigidBodyKinematics: The exported lateral
         % velocity is the LPV state transported to the declared output
         % point, vyOutput = vyObserver - forwardOffset*r, and the side-slip
-        % interface tracks the direction of that output-point velocity. A zero
+        % interface equals the direction of that output-point velocity. A zero
         % offset exports the observer point unchanged.
             design = testCase.CurrentDesign;
             cfg = design.cfg;
+            cfg.observer.initialState = [0;.20];
             measurements = lateralObserverTest.constantSpeedMeasurements(6.0, 12.0);
             measurements.yawRate(:) = 0.20;
             measurements.lateralAcceleration(:) = 12.0 .* 0.20;
@@ -316,11 +320,11 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             atOutput = runLateralVelocityObserver(measurements, design, cfg);
             testCase.verifyEqual(atOutput.observerPointLateralVelocity, atObserver.observerPointLateralVelocity, AbsTol=0);
             testCase.verifyEqual(atOutput.lateralVelocity, ...
-                atOutput.observerPointLateralVelocity - 2.5 .* measurements.yawRate, AbsTol=1.0e-12);
-            settled = measurements.time >= 4.0;
+                atOutput.observerPointLateralVelocity - 2.5 .* atOutput.yawRate, AbsTol=1.0e-12);
+            settled = true(size(measurements.time));
             expectedAngle = atan2(atOutput.lateralVelocity(settled), measurements.longitudinalSpeed(settled));
-            testCase.verifyEqual(atOutput.sideSlipAngle(settled), expectedAngle, AbsTol=2.0e-3);
-            testCase.verifyGreaterThan(min(abs(atOutput.sideSlipAngle(settled) - atObserver.sideSlipAngle(settled))), 0.03);
+            testCase.verifyEqual(atOutput.sideSlipAngle(settled), expectedAngle, AbsTol=1.0e-12);
+            testCase.verifyGreaterThan(abs(atOutput.sideSlipAngle(1) - atObserver.sideSlipAngle(1)), 0.03);
             testCase.verifyEqual(atOutput.outputPoint.forwardOffsetM, 2.5);
         end
 
@@ -334,8 +338,8 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 "VehicleLocalization:MissingOutputPointConfiguration");
         end
 
-        function unavailableLpvWithdrawsTheAngleCommand(testCase)
-        % Outside the LPV domain the angle filter tracks zero and the held
+        function unavailableLpvWithdrawsSideslip(testCase)
+        % Outside the LPV domain angle and rate are zero placeholders and the held
         % velocity is explicitly unavailable to the global observer.
             design = testCase.CurrentDesign;
             cfg = design.cfg;
@@ -350,7 +354,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
 
             estimate = runLateralVelocityObserver(measurements, design, cfg);
 
-            testCase.verifyTrue(all(~estimate.diagnostics.sideSlipCommandValid));
+            testCase.verifyTrue(all(~estimate.diagnostics.sideSlipValid));
             testCase.verifyEqual(estimate.sideSlipAngle, zeros(numSamples, 1), AbsTol=0);
             testCase.verifyEqual(estimate.sideSlipAngleRate, zeros(numSamples, 1), AbsTol=0);
             testCase.verifyTrue(all(isfinite(estimate.state(:))));
@@ -371,8 +375,9 @@ classdef lateralObserverTest < matlab.unittest.TestCase
 
             testCase.verifyFalse(any(estimate.diagnostics.dynamicModelEvaluated));
             testCase.verifyTrue(all(isfinite(estimate.state), "all"));
-            testCase.verifyEqual(estimate.lateralVelocity(1), 1.0, AbsTol=0.0);
-            testCase.verifyEqual(estimate.lateralVelocity, ones(size(estimate.time)), AbsTol=0.0);
+            testCase.verifyEqual(estimate.observerPointLateralVelocity(1), 1.0, AbsTol=0.0);
+            testCase.verifyEqual(estimate.lateralVelocity, ...
+                (1-cfg.outputPoint.forwardOffsetM*.2)*ones(size(estimate.time)), AbsTol=0.0);
             testCase.verifyEqual(estimate.sideSlipAngle, ...
                 zeros(size(estimate.sideSlipAngle)), AbsTol=0.0);
             testCase.verifyEqual(estimate.sideSlipAngleRate, ...
@@ -442,7 +447,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             measurements.lateralAcceleration(:) = 1.0;
             estimate = runLateralVelocityObserver(measurements, design, cfg);
             gain = lateralObserverSupport.scheduleLateralObserverGain(design, 10.0);
-            testCase.verifyEqual(estimate.lateralVelocity(2), 0.01*gain(1,1), AbsTol=1e-12);
+            testCase.verifyEqual(estimate.lateralVelocity(2), 0.01*(gain(1,1)-cfg.outputPoint.forwardOffsetM*gain(2,1)), AbsTol=1e-12);
             testCase.verifyEqual(estimate.state(:,1), estimate.observerPointLateralVelocity);
             testCase.verifyEqual(estimate.stateNames, ["lateralVelocity","yawRate"]);
         end

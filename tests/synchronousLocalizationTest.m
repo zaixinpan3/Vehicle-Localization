@@ -92,6 +92,15 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             testCase.verifyEqual(d.lidar.frameReliability,f.data.lidar.frameReliability,AbsTol=0);
             testCase.verifyEqual(d.lidar.directionReliability,f.data.lidar.directionReliability,AbsTol=0);
         end
+        function alignmentUsesTheShortSideslipArc(testCase)
+            f=unaligned();
+            f.data.lidar.time=f.data.lidar.time+.005;
+            f.data.lidar.time(end)=1.995;
+            f.lateral.sideSlipAngle(:)=pi-.01;
+            f.lateral.sideSlipAngle(2:2:end)=-pi+.01;
+            [~,l,~]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            testCase.verifyEqual(abs(l.sideSlipAngle),pi*ones(size(l.time)),AbsTol=1e-12);
+        end
         function stateUsesOnlyOneLowRateSolve(testCase)
             f=fixture();r=run(f);
             testCase.verifyFalse(isfield(f.cfg,'maximumIntegrationStep'));

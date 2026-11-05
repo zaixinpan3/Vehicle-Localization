@@ -6,12 +6,18 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % velocityValid is false. Holding is not a low-speed estimation guarantee.
 % There is no inertial master, bias estimate, correction filter or shadow model.
 %
-% The output-point transport is algebraic. A separate two-state angle filter
-% still exports beta and betaDot from this LPV velocity; it does not modify vy.
+% Output-point transport and sideslip are algebraic; there are no angle states.
+% betaDot uses the LPV derivative and the chain rule through the output map.
+% Longitudinal speed rate is reconstructed as ax + vyObserver*estimatedYawRate.
+% Point transport uses estimated yaw rate and its LPV derivative. Affine-map
+% derivatives use backward secants on the
+% received clock (zero at initialization). No future sample or angle difference
+% is used for the exported rate. These are derivative estimates, not a claim
+% of exact differentiation of noisy measurements.
 % Consumers must honor velocityValid for velocity, angle and angle-rate aiding.
 % The default exponential-midpoint implementation freezes LPV coefficients
 % at the interval midpoint and exponentiates that linear flow. A midpoint
-% stage handles the copied nonlinearity and the angle-filter command. Speed
+% stage handles the copied nonlinearity. Speed
 % boundary crossings split an interval; unavailable LPV flow remains held.
 % Inputs are linearly interpolated between the two received endpoints,
 % as for RK4. This is not exact integration of varying/nonlinear dynamics.
@@ -24,14 +30,14 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % Output:
 %   estimate: LPV state, output-point velocity, angle interface and validity.
 % Optional outputVelocityMap is n-by-6: [a11 a12 a21 a22 b1 b2], applying
-% vOutput=A*[vx;vyOutputPoint]+b before the existing angle filter. It changes
+% vOutput=A*[vx;vyOutputPoint]+b before computing angle and rate. It changes
 % only output coordinates, never the LPV dynamics, scheduling or innovation.
     if nargin < 3 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
-    assert(isfield(cfg,"sideSlip") && ~isfield(cfg,"hybrid"), ...
+    assert(~isfield(cfg,"sideSlip") && ~isfield(cfg,"hybrid"), ...
         "VehicleLocalization:ObsoleteLateralConfiguration", ...
-        "Use the current direct-LPV lateralObserverConfig.");
+        "Use the current algebraic-sideslip lateralObserverConfig; angle-filter settings are obsolete.");
     assert(isfield(cfg,"outputPoint") && isfield(cfg.outputPoint,"forwardOffsetM") && ...
         isscalar(cfg.outputPoint.forwardOffsetM) && isfinite(double(cfg.outputPoint.forwardOffsetM)), ...
         "VehicleLocalization:MissingOutputPointConfiguration", ...
@@ -46,28 +52,20 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     settings = validateRuntimeConfiguration(cfg, design);
     sampleCount = numel(measurements.time);
     state = double(cfg.observer.initialState(:));
-    firstSample = sampleAt(measurements, 1, 0.0);
-    angleState = double(cfg.sideSlip.initialState(:));
-    if isempty(angleState)
-        angleState = [sideSlipCommandAt(state, firstSample, cfg, settings); 0.0];
-    end
-    state = [state; angleState];
-    history = zeros(sampleCount, 4);
+    history = zeros(sampleCount, 2);
     innovationHistory = zeros(sampleCount, 2);
     gainNorm = zeros(sampleCount, 1);
-    lateralVelocityRate = zeros(sampleCount, 1);
-    sideSlipCommand = zeros(sampleCount, 1);
+    stateRate = zeros(sampleCount, 2);
     velocityValid = false(sampleCount, 1);
     integrationMethod = lower(strtrim(string(cfg.observer.integrationMethod)));
     for sampleIdx = 1:sampleCount
         sample = sampleAt(measurements, sampleIdx, 0.0);
-        [derivative, innovation, gain, command, valid] = ...
+        [derivative, innovation, gain, valid] = ...
             observerDerivative(state, sample, design, cfg, settings);
         history(sampleIdx, :) = state.';
         innovationHistory(sampleIdx, :) = innovation.';
         gainNorm(sampleIdx) = norm(gain);
-        lateralVelocityRate(sampleIdx) = derivative(1);
-        sideSlipCommand(sampleIdx) = command;
+        stateRate(sampleIdx,:) = derivative.';
         velocityValid(sampleIdx) = valid;
         if sampleIdx == sampleCount
             break;
@@ -88,42 +86,65 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
         end
         assert(all(isfinite(state)), "The lateral observer diverged in interval %d.", sampleIdx);
     end
+    % Differentiate the same point transport and affine map used for velocity.
+    observerValid = velocityValid;
+    r = history(:,2);
+    rDot = stateRate(:,2);
+    vx = measurements.longitudinalSpeed;
+    vy = history(:,1) - forwardOffset .* r;
+    vxDot = measurements.longitudinalAcceleration + history(:,1) .* r;
+    vyDot = stateRate(:,1) - forwardOffset .* rDot;
+    map = measurements.outputVelocityMap;
+    mapDot = backwardRate(map, measurements.time);
+    outputVx = map(:,1).*vx + map(:,2).*vy + map(:,5);
+    outputVy = map(:,3).*vx + map(:,4).*vy + map(:,6);
+    outputVxDot = map(:,1).*vxDot + map(:,2).*vyDot + ...
+        mapDot(:,1).*vx + mapDot(:,2).*vy + mapDot(:,5);
+    outputVyDot = map(:,3).*vxDot + map(:,4).*vyDot + ...
+        mapDot(:,3).*vx + mapDot(:,4).*vy + mapDot(:,6);
+    % A map can cancel an otherwise admissible velocity. Withdraw all aiding
+    % when its direction is poorly defined, without disabling the LPV flow.
+    outputSpeed = hypot(outputVx, outputVy);
+    velocityValid = observerValid & outputSpeed >= settings.speedRange(1);
+    beta = zeros(sampleCount,1);
+    betaDot = zeros(sampleCount,1);
+    beta(velocityValid) = atan2(outputVy(velocityValid),outputVx(velocityValid));
+    betaDot(velocityValid) = (outputVx(velocityValid).*outputVyDot(velocityValid) - ...
+        outputVy(velocityValid).*outputVxDot(velocityValid))./outputSpeed(velocityValid).^2;
     mode = repmat("unavailable", sampleCount, 1);
     mode(velocityValid) = "dynamic";
     modeChanged = [false; diff(velocityValid) ~= 0];
     estimate = struct();
     estimate.time = measurements.time;
-    estimate.state = history(:, 1:2);
+    estimate.state = history;
     estimate.stateNames = ["lateralVelocity", "yawRate"];
     estimate.observerPointLateralVelocity = history(:, 1);
-    vy=history(:,1)-forwardOffset.*measurements.yawRate;
-    map=measurements.outputVelocityMap;vx=measurements.longitudinalSpeed;
-    estimate.longitudinalSpeed=map(:,1).*vx+map(:,2).*vy+map(:,5);
-    estimate.lateralVelocity=map(:,3).*vx+map(:,4).*vy+map(:,6);
+    estimate.observerPointLateralVelocityRate = stateRate(:,1);
+    estimate.yawRateRate = stateRate(:,2);
+    estimate.longitudinalSpeed = outputVx;
+    estimate.lateralVelocity = outputVy;
     estimate.outputPoint = cfg.outputPoint;
     estimate.yawRate = history(:, 2);
-    estimate.lateralVelocityRate = lateralVelocityRate;
-    estimate.longitudinalSpeedRate = measurements.longitudinalAcceleration + ...
-        history(:, 1) .* measurements.yawRate;
-    estimate.sideSlipAngle = history(:, 3);
-    estimate.sideSlipAngleRate = history(:, 4);
-    estimate.sideSlipCommand = sideSlipCommand;
+    estimate.lateralVelocityRate = outputVyDot;
+    estimate.longitudinalSpeedRate = outputVxDot;
+    estimate.sideSlipAngle = beta;
+    estimate.sideSlipAngleRate = betaDot;
     estimate.velocityValid = velocityValid;
     estimate.innovation = innovationHistory;
     estimate.gainNorm = gainNorm;
     estimate.scheduledSpeed = measurements.longitudinalSpeed;
     estimate.mode = mode;
     estimate.modeChanged = modeChanged;
-    estimate.diagnostics = struct("dynamicModelEvaluated", velocityValid, ...
-        "sideSlipCommandValid", velocityValid, "modeChanged", modeChanged, ...
+    estimate.diagnostics = struct("dynamicModelEvaluated", observerValid, ...
+        "sideSlipValid", velocityValid, "modeChanged", modeChanged, ...
         "integrationMethod", integrationMethod);
     estimate.measurements = measurements;
 end
 
-function [derivative, innovation, gain, command, valid] = observerDerivative( ...
+function [derivative, innovation, gain, valid] = observerDerivative( ...
         state, sample, design, cfg, settings)
-% observerDerivative Integrate the LPV state and its separate angle interface.
-    [command, valid] = sideSlipCommandAt(state(1:2), sample, cfg, settings);
+% observerDerivative Evaluate only the two-state LPV observer.
+    valid = modelAvailable(sample, settings);
     if valid
         [lpvDerivative, innovation, gain] = ...
             dynamicObserverDerivative(state(1:2), sample, design, cfg.observer.nonlinearity);
@@ -132,11 +153,7 @@ function [derivative, innovation, gain, command, valid] = observerDerivative( ..
         innovation = zeros(2, 1);
         gain = zeros(2, 2);
     end
-    frequency = double(cfg.sideSlip.naturalFrequency);
-    damping = double(cfg.sideSlip.dampingRatio);
-    angleError = wrapAngleDifference(command - state(3));
-    derivative = [lpvDerivative; state(4); ...
-        frequency.^2 .* angleError - 2.0 .* damping .* frequency .* state(4)];
+    derivative = lpvDerivative;
 end
 
 function state = exponentialInterval(state, measurements, sampleIdx, dt, design, cfg, settings)
@@ -154,8 +171,7 @@ function state = exponentialInterval(state, measurements, sampleIdx, dt, design,
         right = fractions(segmentIdx+1);
         sample = sampleAt(measurements, sampleIdx, (left+right)/2);
         h = dt*(right-left);
-        [~, valid] = sideSlipCommandAt(state(1:2), sample, cfg, settings);
-        midpoint = state(1:2);
+        valid = modelAvailable(sample, settings);
         if valid
             rho = [sample.longitudinalSpeed; 1/sample.longitudinalSpeed];
             [A, C] = lateralObserverSupport.evaluateLateralModel(design.model, rho);
@@ -174,24 +190,18 @@ function state = exponentialInterval(state, measurements, sampleIdx, dt, design,
             state(1:2) = phi*(phi*state(1:2) + integral*midpointForcing) + ...
                 integral*midpointForcing;
         end
-        command = sideSlipCommandAt(midpoint, sample, cfg, settings);
-        % Unwrap the held target locally before applying the exact linear
-        % filter flow. This preserves the short angular innovation.
-        target = [state(3)+wrapAngleDifference(command-state(3)); 0];
-        state(3:4) = target + expm(h*settings.angleMatrix)*(state(3:4)-target);
     end
 end
 
-function [command, valid] = sideSlipCommandAt(state, sample, cfg, settings)
-% sideSlipCommandAt Admit the LPV domain before forming a velocity direction.
+function valid = modelAvailable(sample, settings)
+% modelAvailable Gate reciprocal-speed dynamics independently of output geometry.
     valid = sample.dynamicValid && sample.longitudinalSpeed >= settings.speedRange(1) && ...
         sample.longitudinalSpeed <= settings.speedRange(2);
-    command = 0.0;
-    if valid
-        vy = state(1) - double(cfg.outputPoint.forwardOffsetM) .* sample.yawRate;
-        map=sample.outputVelocityMap;vx=sample.longitudinalSpeed;
-        command = atan2(map(3)*vx+map(4)*vy+map(6),map(1)*vx+map(2)*vy+map(5));
-    end
+end
+
+function rate = backwardRate(series, time)
+% backwardRate Causal secants for exogenous inputs, with held-input startup.
+    rate = [zeros(1,size(series,2)); diff(series,1,1)./diff(time)];
 end
 
 function [derivative, innovation, gain] = dynamicObserverDerivative( ...
@@ -219,7 +229,7 @@ end
 function sample = sampleAt(measurements, sampleIdx, stepFraction)
 % sampleAt Interpolate physical measurements without flooring speed.
     numericFields = ["steeringAngle", "longitudinalSpeed", ...
-        "longitudinalAcceleration", "lateralAcceleration", "yawRate", "outputVelocityMap"];
+        "longitudinalAcceleration", "lateralAcceleration", "yawRate"];
     nextIdx = min(sampleIdx + 1, numel(measurements.time));
     sample = struct();
     for fieldName = numericFields
@@ -269,7 +279,7 @@ function measurements = normalizeMeasurements(measurements)
 end
 
 function settings = validateRuntimeConfiguration(cfg, design)
-% validateRuntimeConfiguration Check the LPV domain and angle-interface configuration.
+% validateRuntimeConfiguration Check the LPV domain and integration configuration.
     assert(isstruct(design) && isfield(design, "model") && isfield(design, "polytope") && ...
         isfield(design, "vertexGains") && isfield(design, "lyapunovBasis"), ...
         "design must come from designLateralObserverGains and include model, polytope, vertexGains, " + ...
@@ -284,15 +294,7 @@ function settings = validateRuntimeConfiguration(cfg, design)
     assert(isa(cfg.observer.nonlinearity, "function_handle"), ...
         "cfg.observer.nonlinearity must be a function handle.");
     assertFiniteVector(cfg.observer.initialState, 2, "cfg.observer.initialState");
-    if ~isempty(cfg.sideSlip.initialState)
-        assertFiniteVector(cfg.sideSlip.initialState, 2, "cfg.sideSlip.initialState");
-    end
-    assertPositiveScalar(cfg.sideSlip.naturalFrequency, "cfg.sideSlip.naturalFrequency");
-    assertPositiveScalar(cfg.sideSlip.dampingRatio, "cfg.sideSlip.dampingRatio");
-    frequency = double(cfg.sideSlip.naturalFrequency);
-    damping = double(cfg.sideSlip.dampingRatio);
-    settings = struct("speedRange", speedRange, ...
-        "angleMatrix", [0, 1; -frequency^2, -2*damping*frequency]);
+    settings = struct("speedRange", speedRange);
 end
 
 function assertFiniteVector(value, expectedLength, name)
@@ -300,16 +302,4 @@ function assertFiniteVector(value, expectedLength, name)
     vector = double(value(:));
     assert(numel(vector) == expectedLength && all(isfinite(vector)), ...
         "%s must be a finite [%d x 1] vector.", name, expectedLength);
-end
-
-function assertPositiveScalar(value, name)
-% assertPositiveScalar Check a positive finite scalar.
-    numericValue = double(value);
-    assert(isscalar(numericValue) && isfinite(numericValue) && numericValue > 0.0, ...
-        "%s must be a positive finite scalar.", name);
-end
-
-function wrapped = wrapAngleDifference(angle)
-% wrapAngleDifference Wrap an angular error to [-pi, pi).
-    wrapped = mod(angle + pi, 2.0 .* pi) - pi;
 end
