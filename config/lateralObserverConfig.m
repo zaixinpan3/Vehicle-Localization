@@ -1,15 +1,9 @@
 function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
-% The vehicle group defines the 2-DOF lateral bicycle model; the scheduling
-% group defines the continuous speed and speed-derivative certificate domain
-% used for synthesis; the synthesis group holds the
-% Lipschitz bound, the certified decay rate, the scales of the axle-force
-% mismatch and measurement-error channels, the Finsler multiplier scales,
-% and the LMI solver settings; the
-% observer group configures direct LPV integration; sideslip angle and rate
-% are algebraic outputs without a separate filter or tuning parameters;
-% the simulation group defines the synthetic scenario used to exercise the
-% observer.
+% Two-state bicycle dynamics with steering input and yaw-rate-only output.
+% The common Lyapunov ISS design uses three speed vertices, with no speed-rate
+% bound, acceleration measurement, Finsler slack or scalar candidate search.
+% Sideslip angle and rate remain algebraic outputs of the two-state observer.
 %
 % Default vehicle parameters come from config/mncavVehicleParameters.json.
 % MnCAV is the only supported vehicle profile.
@@ -40,31 +34,15 @@ function cfg = lateralObserverConfig(profile)
     cfg.outputPoint = jsondecode(fileread(fullfile(fileparts(mfilename("fullpath")), ...
         "mncavMotionOutputPoint.json")));
 
-    % Continuous certificate: three position vertices times four derivative
-    % vertices. longitudinalAccelerationRange bounds the actual dVx/dt;
-    % a body-axis accelerometer reading need not equal that derivative.
-    cfg.scheduling = struct();
-    cfg.scheduling.speedRange = [1.0, 30.0];
-    cfg.scheduling.longitudinalAccelerationRange = [-3.0, 3.0];
+    % Three position vertices cover the positive-speed scheduling arc.
+    cfg.scheduling = struct('speedRange', [1.0, 30.0]);
 
-    % ISS synthesis: Lipschitz bound of the copied nonlinearity, the
-    % certified decay rate kappa of Vdot <= -2 kappa V + gamma^2 d'd (the
-    % disturbance-free error decays at least as exp(-kappa t)), the fixed
-    % scalar tau of Young's inequality, and the scale epsilon of the Finsler
-    % multiplier [X; epsilon X; 0]. Both scalars are searched over
-    % candidates and the pair with the smallest ISS gain gamma is kept. The
-    % disturbance d stacks the axle-force model mismatch and the measurement
-    % error, each divided by its scale at the end of this file; their ratio
-    % is what trades model trust against measurement trust. The smallest
-    % gains whose ISS gain stays within issGainRelaxation of that optimum
-    % are the design, which fixes the gains at the speeds that do not set
-    % the worst case and keeps the error poles no faster than needed.
+    % Common P >= I; optimize the positive Young multiplier directly.
+    % Minimize normalized ISS gain, then gain norms at a relaxed ISS bound.
     cfg.synthesis = struct();
     cfg.synthesis.lipschitzConstant = 0.5;
     cfg.synthesis.decayRate = 2.0;
     cfg.synthesis.issGainRelaxation = 0.05;
-    cfg.synthesis.tauCandidates = [0.01, 0.03, 0.1, 0.3, 1.0];
-    cfg.synthesis.slackScaleCandidates = [0.001, 0.003, 0.01, 0.03, 0.1];
     cfg.synthesis.pCeiling = 1.0e6;
     % Minimizing the ISS gain pushes the solution onto the constraint
     % boundary; strictnessEpsilon specifies the requested LMI margin.
@@ -107,23 +85,19 @@ function cfg = lateralObserverConfig(profile)
     cfg.sensorParameterProvenance = sensors;
     % Effective white-noise priors on the reconstructed simulation grid;
     % neither OEM IMU specifications nor a measured native covariance.
-    cfg.simulation.lateralAccelerationNoiseStd = ...
-        sensors.lateralSimulation.lateralAccelerationNoiseStdMps2;
     cfg.simulation.yawRateNoiseStd = sensors.lateralSimulation.yawRateNoiseStdRadps;
 
     % Disturbance scales of the ISS synthesis. The axle-force mismatch is
     % the declared cornering-stiffness uncertainty acting on the static
     % share of each axle at the declared linear-model acceleration scale,
     % expressed as a specific force in m/s^2 for [front; rear]. The measurement error is the declared sensor bias
-    % stress plus one noise standard deviation for [ay; r].
+    % stress plus one noise standard deviation for yaw rate alone.
     stiffnessUncertainty = max(abs(double(parameters.sensitivityFactors(:)) - 1.0));
     axleShare = [cfg.vehicle.lr; cfg.vehicle.lf] ./ (cfg.vehicle.lf + cfg.vehicle.lr);
     cfg.synthesis.linearLateralAccelerationScale = 4.0;
     cfg.synthesis.axleForceMismatchScale = stiffnessUncertainty .* ...
         cfg.synthesis.linearLateralAccelerationScale .* axleShare;
-    cfg.synthesis.measurementErrorScale = [ ...
-        max(abs(double(sensors.lateralSimulation.lateralAccelerationBiasStressMps2(:)))) + ...
-        cfg.simulation.lateralAccelerationNoiseStd; ...
+    cfg.synthesis.measurementErrorScale = ...
         max(abs(double(sensors.lateralSimulation.yawRateBiasStressRadps(:)))) + ...
-        cfg.simulation.yawRateNoiseStd];
+        cfg.simulation.yawRateNoiseStd;
 end

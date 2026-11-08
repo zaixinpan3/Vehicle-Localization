@@ -20,7 +20,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             m.steeringAngle(:) = .01;
             m.lateralAcceleration(:) = .1;
             m.yawRate(:) = .01;
-            [M,b] = testCase.linearSystem(testCase.Design,1,.01,[.1;.01]);
+            [M,b] = testCase.linearSystem(testCase.Design,1,.01,.01);
             expected = testCase.exactAffine(M,b,cfg.observer.initialState,m.time);
             actual = runLateralVelocityObserver(m,testCase.Design,cfg);
             testCase.verifyEqual(actual.state,expected,AbsTol=1e-12);
@@ -29,7 +29,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
 
         function fastModeDecaysAt100ms(testCase)
             cfg = testCase.Design.cfg;
-            [M,~] = testCase.linearSystem(testCase.Design,1,0,[0;0]);
+            [M,~] = testCase.linearSystem(testCase.Design,1,0,0);
             [V,D] = eig(M);
             [~,idx] = min(real(diag(D)));
             cfg.observer.initialState = .01*real(V(:,idx))/norm(real(V(:,idx)));
@@ -54,7 +54,6 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
         function zeroSpeedHoldsStateAndWithdrawsSideslip(testCase)
             design = testCase.Design;
             design.model.A2(:) = NaN;
-            design.model.C2(:) = NaN;
             cfg = design.cfg;
             cfg.observer.initialState = [.4;.02];
             m = testCase.measurements((0:.1:1).',0);
@@ -120,7 +119,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             cfg.observer.initialState = [.05;.005];
             N = [.2,.1;-.1,.1];
             cfg.observer.nonlinearity = @(x) N*x;
-            [M,b] = testCase.linearSystem(testCase.Design,10,.01,[.1;.01]);
+            [M,b] = testCase.linearSystem(testCase.Design,10,.01,.01);
             coarse = testCase.measurements((0:.1:1).',10);
             coarse.steeringAngle(:) = .01;
             coarse.lateralAcceleration(:) = .1;
@@ -233,7 +232,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             [A,C] = lateralObserverSupport.evaluateLateralModel(design.model,[v;1/v]);
             L = lateralObserverSupport.scheduleLateralObserverGain(design,v);
             M = A-L*C;
-            b = (design.model.B-L*design.model.D)*delta+L*y;
+            b = design.model.B*delta+L*y;
         end
         function x = exactAffine(M,b,x0,t)
             equilibrium = -(M\b);

@@ -24,7 +24,63 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         end
     end
 
+    properties (TestParameter)
+        integrationMethod = struct('midpoint', "exponentialMidpoint", 'rk4', "rk4", 'euler', "euler")
+    end
+
     methods (Test)
+        function lateralAccelerationIsAbsentOrIgnored(testCase, integrationMethod)
+            design = testCase.CurrentDesign;
+            cfg = design.cfg;
+            cfg.observer.integrationMethod = integrationMethod;
+            measurements = rmfield(testCase.constantSpeedMeasurements(.2, 12), 'lateralAcceleration');
+            measurements.yawRate(:) = .03;
+            withoutAy = runLateralVelocityObserver(measurements, design, cfg);
+            measurements.lateralAcceleration = NaN; % Deliberately invalid and unaligned.
+            withAy = runLateralVelocityObserver(measurements, design, cfg);
+            testCase.verifyEqual(withAy.state, withoutAy.state, AbsTol=0);
+            testCase.verifyEqual(withAy.sideSlipAngleRate, withoutAy.sideSlipAngleRate, AbsTol=0);
+            testCase.verifySize(withoutAy.innovation, [numel(measurements.time), 1]);
+            testCase.verifyFalse(isfield(withoutAy.measurements, 'lateralAcceleration'));
+        end
+
+        function commonMetricCertifiesAllThreeVertices(testCase)
+            design = testCase.CurrentDesign;
+            testCase.verifySize(design.vertexGains, [2, 1, 3]);
+            testCase.verifySize(design.lyapunovMatrix, [2, 2]);
+            testCase.verifyGreaterThanOrEqual(min(eig(design.lyapunovMatrix)), 1);
+            testCase.verifyGreaterThan(design.tau, 0);
+            testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design), 0);
+            testCase.verifyEqual(design.certificateDomain.numVertices, 3);
+            testCase.verifyFalse(isfield(design.cfg.scheduling, 'longitudinalAccelerationRange'));
+            testCase.verifyFalse(isfield(design, 'slackMatrix'));
+            testCase.verifyFalse(isfield(design.cfg.synthesis, 'tauCandidates'));
+        end
+
+        function obsoleteTwoOutputGainsAreRejected(testCase)
+            design = testCase.CurrentDesign;
+            design.vertexGains = zeros(2, 2, 3);
+            testCase.verifyError(@() runLateralVelocityObserver( ...
+                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
+                'VehicleLocalization:ObsoleteLateralDesign');
+        end
+
+        function obsoleteTwoOutputNoiseScalesAreRejected(testCase)
+            cfg = testCase.CurrentDesign.cfg;
+            cfg.synthesis.measurementErrorScale = [.3; .02];
+            testCase.verifyError(@() designLateralObserverGains(cfg), ...
+                'VehicleLocalization:ObsoleteLateralConfiguration');
+        end
+
+        function linearModelNeedsNoYoungMultiplier(testCase)
+            cfg = testCase.CurrentDesign.cfg;
+            cfg.synthesis.lipschitzConstant = 0;
+            design = designLateralObserverGains(cfg);
+            testCase.verifyTrue(design.solverSolved);
+            testCase.verifyEqual(design.tau, 0, AbsTol=0);
+            testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design), 0);
+        end
+
         function coordinateTransportPrecedesAlgebraicSideslip(testCase)
             cfg=testCase.CurrentDesign.cfg;
             measurements=testCase.constantSpeedMeasurements(1,10);
@@ -48,9 +104,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         end
         function modelMatchesHandDerivedBicycleModel(testCase)
         % modelMatchesHandDerivedBicycleModel: The affine model reproduces the
-        % textbook 2-DOF lateral bicycle matrices, and the first row of A and C
-        % differ exactly by the centripetal term, which is the identity
-        % vydot = ay - Vx r.
+        % textbook 2-DOF lateral dynamics and constant yaw-rate output.
             cfg = lateralObserverConfig();
             vehicle = cfg.vehicle;
             model = lateralObserverSupport.lateralBicycleModel(vehicle);
@@ -68,16 +122,17 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 -stiffnessSecondMoment ./ (vehicle.yawInertia .* longitudinalSpeed)];
 
             testCase.verifyEqual(A, expectedA, AbsTol=1.0e-12);
-            testCase.verifyEqual(A(1, :), C(1, :) - [0.0, longitudinalSpeed], AbsTol=1.0e-12);
-            testCase.verifyEqual(C(2, :), [0.0, 1.0], AbsTol=1.0e-12);
-            testCase.verifyEqual(model.D(1), vehicle.frontCorneringStiffness ./ vehicle.mass, AbsTol=1.0e-12);
+            testCase.verifyEqual(C, [0.0, 1.0], AbsTol=1.0e-12);
+            testCase.verifyEqual(model.outputNames, "yawRate");
+            testCase.verifyFalse(isfield(model, 'F'));
+            testCase.verifyFalse(isfield(model, 'D'));
         end
 
         function mismatchChannelReproducesAStiffnessError(testCase)
         % mismatchChannelReproducesAStiffnessError: A vehicle with other
         % cornering stiffnesses differs from the nominal model exactly by
-        % the axle-force errors per unit mass entering through E and F,
-        % which is the disturbance the synthesis is designed against.
+        % the axle-force errors per unit mass entering through E.
+        % The yaw-rate measurement has no force-mismatch feedthrough.
             cfg = lateralObserverConfig();
             vehicle = cfg.vehicle;
             model = lateralObserverSupport.lateralBicycleModel(vehicle);
@@ -99,8 +154,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
 
             testCase.verifyEqual((trueA * state) + (trueModel.B .* steeringAngle), ...
                 (A * state) + (model.B .* steeringAngle) + (model.E * mismatch), AbsTol=1.0e-12);
-            testCase.verifyEqual((trueC * state) + (trueModel.D .* steeringAngle), ...
-                (C * state) + (model.D .* steeringAngle) + (model.F * mismatch), AbsTol=1.0e-12);
+            testCase.verifyEqual(trueC * state, C * state, AbsTol=1.0e-12);
         end
 
         function schedulingTriangleCoversTheSpeedRange(testCase)
@@ -127,7 +181,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             model = lateralObserverSupport.lateralBicycleModel(cfg.vehicle);
             polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
             vertexA = zeros(2, 2, 3);
-            vertexC = zeros(2, 2, 3);
+            vertexC = zeros(1, 2, 3);
             for vertexIdx = 1:3
                 [vertexA(:, :, vertexIdx), vertexC(:, :, vertexIdx)] = ...
                     lateralObserverSupport.evaluateLateralModel(model, polytope.vertices(:, vertexIdx));
@@ -141,24 +195,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 testCase.verifyEqual(blendedA, A, AbsTol=1.0e-10);
                 testCase.verifyEqual(blendedC, C, AbsTol=1.0e-10);
             end
-        end
-
-        function schedulingRateMatchesNumericalDerivative(testCase)
-        % schedulingRateMatchesNumericalDerivative: The analytic alphaRate used
-        % by the Pdot term agrees with a finite difference of alpha along a
-        % speed trajectory of the given longitudinal acceleration.
-            cfg = lateralObserverConfig();
-            polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
-            speed = 12.0;
-            acceleration = 2.5;
-            stepTime = 1.0e-6;
-
-            [~, alphaRate] = lateralObserverSupport.schedulingCoordinates(polytope, speed, acceleration);
-            alphaBefore = lateralObserverSupport.schedulingCoordinates(polytope, speed - (acceleration .* stepTime));
-            alphaAfter = lateralObserverSupport.schedulingCoordinates(polytope, speed + (acceleration .* stepTime));
-            numericalRate = (alphaAfter - alphaBefore) ./ (2.0 .* stepTime);
-
-            testCase.verifyEqual(alphaRate, numericalRate, AbsTol=1.0e-6);
         end
 
         function scheduledGainIsTheBarycentricBlendOfTheVertexGains(testCase)
@@ -181,8 +217,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 (alpha(3) .* vertexGains(:, :, 3));
             [interiorGain, interiorP] = lateralObserverSupport.scheduleLateralObserverGain(design, interiorSpeed);
             testCase.verifyEqual(interiorGain, expected, AbsTol=1.0e-12);
-            expectedP = (alpha(1) .* design.lyapunovBasis(:, :, 1)) + (alpha(2) .* design.lyapunovBasis(:, :, 2)) + ...
-                (alpha(3) .* design.lyapunovBasis(:, :, 3));
+            expectedP = design.lyapunovMatrix;
             testCase.verifyEqual(interiorP, expectedP, AbsTol=1.0e-12);
             testCase.verifyGreaterThan(min(alpha), 0, "The interior speed should use all three vertices.");
 
@@ -200,7 +235,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.CurrentDesign;
             speeds = linspace(design.polytope.speedRange(1), design.polytope.speedRange(2), 41);
             regressors = [ones(numel(speeds), 1), speeds(:), 1.0 ./ speeds(:)];
-            gains = zeros(numel(speeds), 4);
+            gains = zeros(numel(speeds), 2);
             for speedIdx = 1:numel(speeds)
                 L = lateralObserverSupport.scheduleLateralObserverGain(design, speeds(speedIdx));
                 gains(speedIdx, :) = L(:).';
@@ -252,7 +287,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             cfg.simulation.plantVehicle = cfg.vehicle;
             cfg.simulation.plantVehicle.rearCorneringStiffness = 0.7 .* cfg.vehicle.rearCorneringStiffness;
             openLoop = design;
-            openLoop.vertexGains = zeros(2, 2, 3);
+            openLoop.vertexGains = zeros(2, 1, 3);
 
             designed = simulateLateralObserverScenario(design, cfg);
             modelOnly = simulateLateralObserverScenario(openLoop, cfg);
@@ -269,7 +304,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % consumes as part of the track-angle rate.
             design = testCase.CurrentDesign;
             cfg = design.cfg;
-            cfg.simulation.lateralAccelerationNoiseStd = 0;
             cfg.simulation.yawRateNoiseStd = 0;
             result = simulateLateralObserverScenario(design, cfg);
             estimate = result.estimate;
@@ -366,7 +400,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % access them.
             design = testCase.CurrentDesign;
             design.model.A2(:) = NaN;
-            design.model.C2(:) = NaN;
             cfg = lateralObserverConfig();
             cfg.observer.initialState = [1.0; 0.2];
             measurements = testCase.zeroMotionMeasurements(2.0);
@@ -389,7 +422,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % velocity estimator or evaluate reciprocal-speed coefficients.
             design = testCase.CurrentDesign;
             design.model.A2(:) = NaN;
-            design.model.C2(:) = NaN;
             cfg = design.cfg;
             cfg.observer.initialState = [0.4; 0.0];
             for speed = [0.0, 0.5*cfg.scheduling.speedRange(1), cfg.scheduling.speedRange(2)+5.0]
@@ -444,7 +476,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             cfg.observer.integrationMethod = "euler";
             cfg.observer.initialState = [0.0; 0.0];
             measurements = testCase.constantSpeedMeasurements(0.01, 10.0);
-            measurements.lateralAcceleration(:) = 1.0;
+            measurements.yawRate(:) = 1.0;
             estimate = runLateralVelocityObserver(measurements, design, cfg);
             gain = lateralObserverSupport.scheduleLateralObserverGain(design, 10.0);
             testCase.verifyEqual(estimate.lateralVelocity(2), 0.01*(gain(1,1)-cfg.outputPoint.forwardOffsetM*gain(2,1)), AbsTol=1e-12);
@@ -460,8 +492,8 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.CurrentDesign;
             resolved = designLateralObserverGains(design.cfg);
 
-            testCase.verifyEqual(resolved.tau, design.tau);
-            testCase.verifyEqual(resolved.slackScale, design.slackScale);
+            testCase.verifyEqual(resolved.tau, design.tau, RelTol=1e-4);
+            testCase.verifyEqual(resolved.certificateMethod, "yaw-rate-common-lyapunov-v1");
             testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.solverSolved);
@@ -469,6 +501,27 @@ classdef lateralObserverTest < matlab.unittest.TestCase
     end
 
     methods (Static, Access = private)
+        function worst = maximumCertificateEigenvalue(design)
+            P = design.lyapunovMatrix;
+            worst = -Inf;
+            for idx = 1:3
+                L = design.vertexGains(:, :, idx);
+                A = design.certificateDomain.vertexA(:, :, idx);
+                R = P*(A - L*design.model.C);
+                S = P*[design.model.E*diag(design.axleForceMismatchScale), ...
+                    -L*design.measurementErrorScale];
+                Phi = R + R.' + 2*design.decayRate*P + ...
+                    design.tau*design.lipschitzConstant^2*eye(2);
+                if design.lipschitzConstant == 0
+                    block = [Phi, S; S.', -design.issGain^2*eye(3)];
+                else
+                    block = [Phi, S, P; S.', -design.issGain^2*eye(3), zeros(3, 2); ...
+                        P, zeros(2, 3), -design.tau*eye(2)];
+                end
+                worst = max(worst, max(eig((block + block.')/2)));
+            end
+        end
+
         function measurements = zeroMotionMeasurements(finalTime)
         % zeroMotionMeasurements Build a stationary public-interface input.
             time = (0:0.01:finalTime).';

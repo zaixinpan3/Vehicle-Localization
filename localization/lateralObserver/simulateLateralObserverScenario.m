@@ -1,9 +1,8 @@
 function result = simulateLateralObserverScenario(design, cfg)
 % simulateLateralObserverScenario: Exercise the LPV lateral observer on a
 % synthetic drive. The vehicle follows a raised-cosine steering profile
-% while the longitudinal speed varies sinusoidally, so both the scheduling
-% parameter and its rate are excited; the lateral accelerometer and the
-% gyroscope are corrupted by white noise; and the observer starts from a
+% while the longitudinal speed varies sinusoidally. The gyroscope has white
+% measurement noise, and the observer starts from a
 % deliberately wrong lateral velocity. The truth integrates the LPV model of
 % cfg.simulation.plantVehicle. Left empty, the plant is the observer's own
 % vehicle and the residual error measures the observer alone; a different
@@ -72,9 +71,8 @@ function truth = simulateTruth(cfg)
     lateralVelocityRate = zeros(numel(time), 1);
     yawRateRate = zeros(numel(time), 1);
     for sampleIdx = 1:numel(time)
-        [~, C] = lateralObserverSupport.evaluateLateralModel(model, [longitudinalSpeed(sampleIdx); 1.0 ./ longitudinalSpeed(sampleIdx)]);
-        lateralAcceleration(sampleIdx) = (C(1, :) * state(sampleIdx, :).') + (model.D(1) .* steeringAngle(sampleIdx));
         derivative = plantDerivative(state(sampleIdx, :).', sampleIdx, 0.0, longitudinalSpeed, steeringAngle, model, nonlinearity);
+        lateralAcceleration(sampleIdx) = derivative(1) + longitudinalSpeed(sampleIdx)*state(sampleIdx, 2);
         lateralVelocityRate(sampleIdx) = derivative(1);
         yawRateRate(sampleIdx) = derivative(2);
     end
@@ -196,8 +194,6 @@ function measurements = buildMeasurements(truth, cfg)
     measurements.steeringAngle = truth.steeringAngle;
     measurements.longitudinalSpeed = truth.longitudinalSpeed;
     measurements.longitudinalAcceleration = truth.longitudinalSpecificForce;
-    measurements.lateralAcceleration = truth.lateralAcceleration + ...
-        (double(cfg.simulation.lateralAccelerationNoiseStd) .* randn(numSamples, 1));
     measurements.yawRate = truth.yawRate + ...
         (double(cfg.simulation.yawRateNoiseStd) .* randn(numSamples, 1));
 end

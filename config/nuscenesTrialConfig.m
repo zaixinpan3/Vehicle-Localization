@@ -24,9 +24,8 @@ function trial=nuscenesTrialConfig(steeringRatio)
     lateral.outputPoint=struct('forwardOffsetM',vehicle.lr, ...
         'identifier',"assumed-CG-to-nuScenes-rear-axle");
     lateral.sensorParameterProvenance=struct('scope',"Declared transfer priors, not MnCAV calibration");
-    lateral.simulation.lateralAccelerationNoiseStd=.2;
     lateral.simulation.yawRateNoiseStd=.01;
-    lateral.synthesis.measurementErrorScale=[.3;.02];
+    lateral.synthesis.measurementErrorScale=.02;
     lateral.synthesis.axleForceMismatchScale=.3*lateral.synthesis.linearLateralAccelerationScale* ...
         [vehicle.lr;vehicle.lf]/wheelbase;
     globalCfg=mncavFullObserverConfig();globalCfg.kind="nuscenes-overlap-development-trial";

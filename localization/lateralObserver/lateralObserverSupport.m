@@ -7,28 +7,11 @@ classdef lateralObserverSupport
 
     methods (Static)
         function model = lateralBicycleModel(vehicle)
-        % lateralBicycleModel: Build the 2-DOF lateral bicycle model of the ego
-        % vehicle in the affine-in-scheduling form used by the LPV observer. With
-        % the state x = [vy; r], the input u = delta, and the output y = [ay; r],
-        % linear tire forces give
-        %
-        %   vydot = -(Cf+Cr)/(m Vx) vy + ((lr Cr - lf Cf)/(m Vx) - Vx) r + Cf/m delta
-        %   rdot  = (lr Cr - lf Cf)/(Iz Vx) vy - (lf^2 Cf + lr^2 Cr)/(Iz Vx) r + lf Cf/Iz delta
-        %   ay    = -(Cf+Cr)/(m Vx) vy + (lr Cr - lf Cf)/(m Vx) r + Cf/m delta
-        %
-        % Every speed-dependent entry is affine in the scheduling parameter
-        % rho = [Vx; 1/Vx], so A(rho) = A0 + rho(1) A1 + rho(2) A2 and
-        % C(rho) = C0 + rho(2) C2 with constant B and D. That affine structure is
-        % what makes the polytopic representation exact.
-        %
-        % Input:
-        %   vehicle: struct with mass, yawInertia, lf, lr, frontCorneringStiffness,
-        %       and rearCorneringStiffness
-        %
-        % Output:
-        %   model: struct with the affine basis matrices A0, A1, A2, C0, C2, the
-        %       constant B and D, the axle-force mismatch channel E and F, and the
-        %       source vehicle parameters
+        % lateralBicycleModel Build the two-state bicycle model with yaw output.
+        % State x = [vy; r], steering input delta and measured output y = r.
+        % A(rho) = A0 + Vx*A1 + (1/Vx)*A2, with constant C = [0,1].
+        % Axle-force mismatch w = [dFyf;dFyr]/m enters only the state
+        % equation through E. No lateral accelerometer is used.
             requiredFields = ["mass", "yawInertia", "lf", "lr", "frontCorneringStiffness", "rearCorneringStiffness"];
             for fieldName = requiredFields
                 assert(isfield(vehicle, fieldName) && isscalar(vehicle.(fieldName)) && ...
@@ -50,7 +33,7 @@ classdef lateralObserverSupport
             model = struct();
             model.vehicle = vehicle;
             model.stateNames = ["lateralVelocity", "yawRate"];
-            model.outputNames = ["lateralAcceleration", "yawRate"];
+            model.outputNames = "yawRate";
 
             % A(rho) = A0 + Vx A1 + (1/Vx) A2
             model.A0 = zeros(2, 2);
@@ -58,19 +41,9 @@ classdef lateralObserverSupport
             model.A2 = [-stiffnessSum ./ mass, stiffnessMoment ./ mass; ...
                 stiffnessMoment ./ yawInertia, -stiffnessSecondMoment ./ yawInertia];
 
-            % C(rho) = C0 + (1/Vx) C2; the yaw rate is measured directly
-            model.C0 = [0.0, 0.0; 0.0, 1.0];
-            model.C2 = [-stiffnessSum ./ mass, stiffnessMoment ./ mass; 0.0, 0.0];
-
+            model.C = [0.0, 1.0];
             model.B = [frontStiffness ./ mass; (lf .* frontStiffness) ./ yawInertia];
-            model.D = [frontStiffness ./ mass; 0.0];
-
-            % Axle-force mismatch channel. With w = [dFyf; dFyr] / m the error of the
-            % modeled front and rear axle lateral forces per unit vehicle mass, the
-            % true vehicle obeys xdot = A x + B delta + E w and y = C x + D delta +
-            % F w exactly, whatever makes the tire forces differ from the model
             model.E = [1.0, 1.0; (mass .* lf) ./ yawInertia, -(mass .* lr) ./ yawInertia];
-            model.F = [1.0, 1.0; 0.0, 0.0];
         end
 
         function [A, C] = evaluateLateralModel(model, rho)
@@ -85,43 +58,20 @@ classdef lateralObserverSupport
         %
         % Output:
         %   A: [2 x 2] state matrix at rho
-        %   C: [2 x 2] output matrix at rho
+        %   C: [1 x 2] constant yaw-rate output matrix
             rho = double(rho(:));
             assert(numel(rho) == 2 && all(isfinite(rho)), "rho must be a finite [2 x 1] scheduling point.");
             A = model.A0 + (rho(1) .* model.A1) + (rho(2) .* model.A2);
-            C = model.C0 + (rho(2) .* model.C2);
+            C = model.C;
         end
 
-        function [alpha, alphaRate] = schedulingCoordinates(polytope, longitudinalSpeed, longitudinalAcceleration)
-        % schedulingCoordinates: Express one scheduling point in the barycentric
-        % coordinates of the polytope, together with their time derivative. Solving
-        % S alpha = [rho; 1] gives coordinates that sum to one and reproduce rho,
-        % so any matrix affine in rho, including the observer gain, equals the same
-        % convex combination of its vertex values. Differentiating along the speed
-        % trajectory with rhodot = [ax; -ax/Vx^2] gives S alphaRate = [rhodot; 0],
-        % which is the Pdot term of the parameter-dependent Lyapunov function.
-        %
-        % Input:
-        %   polytope: struct from lateralObserverSupport.buildSchedulingPolytope
-        %   longitudinalSpeed: scalar Vx in meters per second, strictly positive
-        %   longitudinalAcceleration: optional scalar ax in meters per second
-        %       squared; defaults to zero when only alpha is needed
-        %
-        % Output:
-        %   alpha: [3 x 1] barycentric coordinates of rho(Vx) = [Vx; 1/Vx]
-        %   alphaRate: [3 x 1] time derivative of alpha at the given acceleration
-            if nargin < 3
-                longitudinalAcceleration = 0.0;
-            end
+        function alpha = schedulingCoordinates(polytope, longitudinalSpeed)
+        % schedulingCoordinates Barycentric coordinates of [Vx;1/Vx].
+        % A common Lyapunov matrix requires no scheduling derivative.
             longitudinalSpeed = double(longitudinalSpeed);
-            longitudinalAcceleration = double(longitudinalAcceleration);
             assert(isscalar(longitudinalSpeed) && isfinite(longitudinalSpeed) && longitudinalSpeed > 0, ...
                 "longitudinalSpeed must be a positive finite scalar.");
-            assert(isscalar(longitudinalAcceleration) && isfinite(longitudinalAcceleration), ...
-                "longitudinalAcceleration must be a finite scalar.");
-
             alpha = polytope.S \ [longitudinalSpeed; 1.0 ./ longitudinalSpeed; 1.0];
-            alphaRate = polytope.S \ (longitudinalAcceleration .* [1.0; -1.0 ./ (longitudinalSpeed.^2); 0.0]);
         end
 
         function polytope = buildSchedulingPolytope(speedRange)
@@ -168,61 +118,19 @@ classdef lateralObserverSupport
             polytope.vertexSpeeds = vertices(1, :);
         end
 
-        function domain = buildCertificateDomain(model, polytope, speedRateRange)
-        % buildCertificateDomain Position/rate vertices for continuous certification.
-        % speedRateRange bounds dVx/dt, not the body accelerometer reading.
-        % The four corners of (sigma,z), z in [1/b^2,1/a^2], enclose
-        % rhodot = [sigma;-sigma*z] by multi-affine interpolation. Taking
-        % their product with the position triangle is conservative but finite.
-            speedRateRange = double(speedRateRange(:).');
-            assert(numel(speedRateRange) == 2 && all(isfinite(speedRateRange)) && ...
-                speedRateRange(1) <= speedRateRange(2), ...
-                "VehicleLocalization:InvalidSpeedRateRange", ...
-                "The speed derivative range must be finite and ordered.");
-            a = polytope.speedRange(1);
-            b = polytope.speedRange(2);
-            domain = struct();
-            domain.speedRateRange = speedRateRange;
-            domain.speedSpan = b-a;
-            domain.reciprocalSpeedSquaredRange = [1/b^2, 1/a^2];
-            domain.rateVertices = zeros(3, 4);
-            domain.rhoRateVertices = zeros(2, 4);
-            idx = 0;
-            for sigma = speedRateRange
-                for z = domain.reciprocalSpeedSquaredRange
-                    idx = idx + 1;
-                    domain.rhoRateVertices(:, idx) = [sigma; -sigma*z];
-                    domain.rateVertices(:, idx) = polytope.S \ [sigma; -sigma*z; 0];
-                end
-            end
-            domain.vertexA = zeros(2, 2, 3);
-            domain.vertexC = zeros(2, 2, 3);
+        function domain = buildCertificateDomain(model, polytope)
+        % buildCertificateDomain Three speed-position vertices; no rate hull.
+            domain = struct('numVertices', 3, 'vertexA', zeros(2, 2, 3));
             for idx = 1:3
-                [domain.vertexA(:, :, idx), domain.vertexC(:, :, idx)] = ...
+                domain.vertexA(:, :, idx) = ...
                     lateralObserverSupport.evaluateLateralModel(model, polytope.vertices(:, idx));
             end
-            domain.extensionFactors = [0, 0, -(b-a)^2/(a+b)^2];
-            domain.firstColumnWeights = [b, a]/(a+b);
-            domain.numVertexPairs = 12;
         end
 
         function [L, P] = scheduleLateralObserverGain(design, longitudinalSpeed)
-        % scheduleLateralObserverGain: Evaluate the observer gain of one operating
-        % point as the barycentric blend of the three vertex gains. The gain and
-        % the Lyapunov matrix are affine in the barycentric coordinates alpha of
-        % rho = [Vx; 1/Vx] on the scheduling triangle, so L(rho) = sum_i alpha_i L_i
-        % and P(rho) = sum_i alpha_i P_i with the same alpha that reproduces rho. A
-        % speed outside the designed range is clamped to the nearer end, where
-        % alpha is a unit vector and the gain is that vertex gain itself.
-        %
-        % Input:
-        %   design: struct with polytope, vertexGains, and lyapunovBasis from
-        %       designLateralObserverGains
-        %   longitudinalSpeed: scalar Vx in meters per second
-        %
-        % Output:
-        %   L: [2 x 2] observer gain at the operating point
-        %   P: [2 x 2] Lyapunov matrix of the certificate at the same point
+        % scheduleLateralObserverGain Blend the three 2-by-1 gain columns.
+        % P is the common Lyapunov matrix at every speed. Gains clamp at
+        % the endpoints; the runtime withdraws aiding outside the interval.
             longitudinalSpeed = double(longitudinalSpeed);
             assert(isscalar(longitudinalSpeed) && isfinite(longitudinalSpeed), ...
                 "The scheduling speed must be a finite scalar.");
@@ -232,8 +140,7 @@ classdef lateralObserverSupport
 
             L = (alpha(1) .* design.vertexGains(:, :, 1)) + (alpha(2) .* design.vertexGains(:, :, 2)) + ...
                 (alpha(3) .* design.vertexGains(:, :, 3));
-            P = (alpha(1) .* design.lyapunovBasis(:, :, 1)) + (alpha(2) .* design.lyapunovBasis(:, :, 2)) + ...
-                (alpha(3) .* design.lyapunovBasis(:, :, 3));
+            P = design.lyapunovMatrix;
         end
 
         function assertLateralVehicleMatches(design,cfg)
