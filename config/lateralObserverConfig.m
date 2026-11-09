@@ -1,8 +1,7 @@
 function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
-% Two-state bicycle dynamics with steering input and yaw-rate-only output.
-% The common Lyapunov ISS design uses three speed vertices and structured
-% stiffness regressors, with no scheduling-speed derivative bound.
+% Two-state nominal bicycle dynamics with virtual output y = Vx*ay.
+% P and Y = P*L share three speed vertices; the certificate includes Pdot.
 % Sideslip angle and rate remain algebraic outputs of the two-state observer.
 %
 % Default vehicle parameters come from config/mncavVehicleParameters.json.
@@ -34,15 +33,21 @@ function cfg = lateralObserverConfig(profile)
     cfg.outputPoint = jsondecode(fileread(fullfile(fileparts(mfilename("fullpath")), ...
         "mncavMotionOutputPoint.json")));
 
-    % Three position vertices cover the positive-speed scheduling arc.
-    cfg.scheduling = struct('speedRange', [1.0, 30.0]);
+    % Speed-rate limits are certificate assumptions, not identified bounds.
+    % This is d(Vx)/dt, not longitudinal accelerometer specific force ax.
+    cfg.scheduling = struct('speedRange', [1.0, 30.0], ...
+        'speedRateRange', [-4.0, 4.0]);
 
-    % Common P >= I; the default linear model needs no Young multiplier.
-    % Minimize normalized ISS gain, then gain norms at a relaxed ISS bound.
+    % Scheduled P >= I; the default linear model needs no Young multiplier.
+    % Balance normalized ISS gain and initial-error energy, then minimize
+    % transformed gain norms within a relaxed first-stage objective.
     cfg.synthesis = struct();
     cfg.synthesis.lipschitzConstant = 0.0;
     cfg.synthesis.decayRate = 2.0;
     cfg.synthesis.issGainRelaxation = 0.05;
+    % Weight on the uniform initial-error energy bound in gamma^2 + w*pbar.
+    % Zero retains noise-only minimization, which may select L = 0.
+    cfg.synthesis.initialErrorWeight = 1.0;
     cfg.synthesis.pCeiling = 1.0e6;
     % Minimizing the ISS gain pushes the solution onto the constraint
     % boundary; strictnessEpsilon specifies the requested LMI margin.
@@ -53,7 +58,7 @@ function cfg = lateralObserverConfig(profile)
 
     % The optional nonlinearity is copied from the plant. If enabled, its
     % Lipschitz constant must be supplied to the synthesis. Both default to
-    % zero; stiffness uncertainty uses its separate physical channels.
+    % zero. The predicted virtual output includes Vx*f_1(xhat) if enabled.
     cfg.observer = struct();
     % Exponentiate the stiff LPV part at each interval midpoint. The copied
     % nonlinearity uses an explicit midpoint stage. This is a numerical implementation,
@@ -78,7 +83,7 @@ function cfg = lateralObserverConfig(profile)
     % tire regime the 2-DOF model assumes
     cfg.simulation.steeringWaypointDeg = [0.0, 2.0, -2.0, 1.8, -1.8, 2.0, -1.4, 1.6, 0.0];
     cfg.simulation.initialStateError = [0.5; 0.05];
-    % Vehicle of the simulated plant; empty means the observer's own vehicle
+    % Explicit sensitivity override only; no stiffness-mismatch certificate.
     cfg.simulation.plantVehicle = [];
     cfg.simulation.randomSeed = 2026;
     sensors = mncavSensorConfig();
@@ -86,14 +91,11 @@ function cfg = lateralObserverConfig(profile)
     % Effective white-noise priors on the reconstructed simulation grid;
     % neither OEM IMU specifications nor a measured native covariance.
     cfg.simulation.yawRateNoiseStd = sensors.lateralSimulation.yawRateNoiseStdRadps;
+    cfg.simulation.lateralAccelerationNoiseStd = sensors.lateralSimulation.lateralAccelerationNoiseStdMps2;
 
-    % Independent bounded relative stiffness deviations. The regressor scales
-    % normalize [eta_f*vy; eta_f*r; eta_f*delta; eta_r*vy; eta_r*r]
-    % in SI coordinates; they are reference units, not hard trajectory bounds.
-    stiffnessUncertainty = max(abs(double(parameters.sensitivityFactors(:)) - 1.0));
-    cfg.synthesis.stiffnessRelativeErrorBound = stiffnessUncertainty .* ones(2,1);
-    cfg.synthesis.stiffnessRegressorScale = ones(5,1);
+    % Normalize physical ay error before multiplication by speed. This scale
+    % is an engineering reference, not a hard bound on Gaussian noise.
     cfg.synthesis.measurementErrorScale = ...
-        max(abs(double(sensors.lateralSimulation.yawRateBiasStressRadps(:)))) + ...
-        cfg.simulation.yawRateNoiseStd;
+        max(abs(double(sensors.lateralSimulation.lateralAccelerationBiasStressMps2(:)))) + ...
+        cfg.simulation.lateralAccelerationNoiseStd;
 end

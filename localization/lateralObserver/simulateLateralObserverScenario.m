@@ -2,11 +2,12 @@ function result = simulateLateralObserverScenario(design, cfg)
 % simulateLateralObserverScenario: Exercise the LPV lateral observer on a
 % synthetic drive. The vehicle follows a raised-cosine steering profile
 % while the longitudinal speed varies sinusoidally. The gyroscope has white
-% measurement noise, and the observer starts from a
+% measurement noise; lateral accelerometer noise enters the virtual output.
+% The observer starts from a
 % deliberately wrong lateral velocity. The truth integrates the LPV model of
 % cfg.simulation.plantVehicle. Left empty, the plant is the observer's own
 % vehicle and the residual error measures the observer alone; a different
-% plant vehicle exercises the axle-force mismatch the synthesis rejects.
+% plant vehicle is an explicit sensitivity study outside the nominal certificate.
 %
 % Input:
 %   design: struct from designLateralObserverGains
@@ -194,6 +195,8 @@ function measurements = buildMeasurements(truth, cfg)
     measurements.steeringAngle = truth.steeringAngle;
     measurements.longitudinalSpeed = truth.longitudinalSpeed;
     measurements.longitudinalAcceleration = truth.longitudinalSpecificForce;
+    measurements.lateralAcceleration = truth.lateralAcceleration + ...
+        (double(cfg.simulation.lateralAccelerationNoiseStd).*randn(numSamples, 1));
     measurements.yawRate = truth.yawRate + ...
         (double(cfg.simulation.yawRateNoiseStd) .* randn(numSamples, 1));
 end

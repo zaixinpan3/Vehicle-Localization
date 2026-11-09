@@ -1,8 +1,8 @@
 function estimate = runLateralVelocityObserver(measurements, design, cfg, outputVelocityMap)
 % runLateralVelocityObserver Export the LPV lateral-velocity estimate directly.
 % The only velocity state is the certified bicycle observer [vy; yawRate].
-% Inside its positive-speed domain it uses only the yaw-rate innovation.
-% Lateral acceleration is neither required nor read, even if supplied.
+% Inside its positive-speed domain it uses y = Vx*ay and subtracts the
+% known steering feedthrough. Measured yaw rate is not an innovation.
 % Outside that domain, or when dynamicValid is false, its state is held and
 % velocityValid is false. Holding is not a low-speed estimation guarantee.
 % There is no inertial master, bias estimate, correction filter or shadow model.
@@ -25,7 +25,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 %
 % Input:
 %   measurements: aligned time, steeringAngle, longitudinalSpeed,
-%       longitudinalAcceleration, yawRate, and optional
+%       longitudinalAcceleration, lateralAcceleration, and optional
 %       dynamicValid series; design: current designLateralObserverGains result;
 %       cfg: current lateralObserverConfig (optional).
 % Output:
@@ -134,11 +134,18 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     estimate.innovation = innovationHistory;
     estimate.gainNorm = gainNorm;
     estimate.scheduledSpeed = measurements.longitudinalSpeed;
+    estimate.scheduledSpeedRate = backwardRate(measurements.longitudinalSpeed, measurements.time);
+    % Causal secants test the received interpolant, not the unknown physical
+    % derivative between samples. Startup has no measured prior interval.
+    rateKnown = [false; true(sampleCount - 1, 1)];
+    rateWithinBounds = rateKnown & estimate.scheduledSpeedRate >= settings.speedRateRange(1) & ...
+        estimate.scheduledSpeedRate <= settings.speedRateRange(2);
     estimate.mode = mode;
     estimate.modeChanged = modeChanged;
     estimate.diagnostics = struct("dynamicModelEvaluated", observerValid, ...
         "sideSlipValid", velocityValid, "modeChanged", modeChanged, ...
-        "integrationMethod", integrationMethod);
+        "integrationMethod", integrationMethod, ...
+        "schedulingRateKnown", rateKnown, "schedulingRateWithinBounds", rateWithinBounds);
     estimate.measurements = measurements;
 end
 
@@ -175,18 +182,20 @@ function state = exponentialInterval(state, measurements, sampleIdx, dt, design,
         valid = modelAvailable(sample, settings);
         if valid
             rho = [sample.longitudinalSpeed; 1/sample.longitudinalSpeed];
-            [A, C] = lateralObserverSupport.evaluateLateralModel(design.model, rho);
+            [A, C, D] = lateralObserverSupport.evaluateLateralModel(design.model, rho);
             gain = lateralObserverSupport.scheduleLateralObserverGain(design, sample.longitudinalSpeed);
             linear = A-gain*C;
-            forcing = design.model.B*sample.steeringAngle + gain*sample.yawRate;
+            forcing = design.model.B*sample.steeringAngle + ...
+                gain*(sample.longitudinalSpeed*sample.lateralAcceleration - D*sample.steeringAngle);
+            nonlinearMap = eye(2) - sample.longitudinalSpeed*gain*[1, 0];
             % The augmented exponential gives Phi and the input integral
             % without inverting linear, including a singular linear part.
             transition = expm((h/2)*[linear, eye(2); zeros(2,4)]);
             phi = transition(1:2,1:2);
             integral = transition(1:2,3:4);
             midpoint = phi*state(1:2) + integral*(forcing + ...
-                evaluateNonlinearity(cfg.observer.nonlinearity, state(1:2)));
-            midpointForcing = forcing + evaluateNonlinearity(cfg.observer.nonlinearity, midpoint);
+                nonlinearMap*evaluateNonlinearity(cfg.observer.nonlinearity, state(1:2)));
+            midpointForcing = forcing + nonlinearMap*evaluateNonlinearity(cfg.observer.nonlinearity, midpoint);
             state(1:2) = phi*(phi*state(1:2) + integral*midpointForcing) + ...
                 integral*midpointForcing;
         end
@@ -208,10 +217,11 @@ function [derivative, innovation, gain] = dynamicObserverDerivative( ...
         state, sample, design, nonlinearity)
 % dynamicObserverDerivative Evaluate the certified reciprocal-speed branch.
     rho = [sample.longitudinalSpeed; 1.0 ./ sample.longitudinalSpeed];
-    [A, C] = lateralObserverSupport.evaluateLateralModel(design.model, rho);
+    [A, C, D] = lateralObserverSupport.evaluateLateralModel(design.model, rho);
     gain = lateralObserverSupport.scheduleLateralObserverGain(design, sample.longitudinalSpeed);
-    innovation = sample.yawRate - C*state;
     nonlinearTerm = evaluateNonlinearity(nonlinearity, state);
+    innovation = sample.longitudinalSpeed*sample.lateralAcceleration - C*state - ...
+        D*sample.steeringAngle - sample.longitudinalSpeed*nonlinearTerm(1);
     derivative = (A * state) + (design.model.B .* sample.steeringAngle) + ...
         nonlinearTerm + (gain * innovation);
 end
@@ -227,7 +237,7 @@ end
 function sample = sampleAt(measurements, sampleIdx, stepFraction)
 % sampleAt Interpolate physical measurements without flooring speed.
     numericFields = ["steeringAngle", "longitudinalSpeed", ...
-        "longitudinalAcceleration", "yawRate"];
+        "longitudinalAcceleration", "lateralAcceleration"];
     nextIdx = min(sampleIdx + 1, numel(measurements.time));
     sample = struct();
     for fieldName = numericFields
@@ -248,10 +258,11 @@ end
 function measurements = normalizeMeasurements(measurements)
 % normalizeMeasurements Validate and align all measurement series.
     requiredFields = ["time", "steeringAngle", "longitudinalSpeed", ...
-        "longitudinalAcceleration", "yawRate"];
+        "longitudinalAcceleration", "lateralAcceleration"];
     assert(isstruct(measurements), "measurements must be a struct of measurement series.");
     for fieldName = requiredFields
         assert(isfield(measurements, fieldName), ...
+            "VehicleLocalization:MissingLateralMeasurement", ...
             "measurements is missing required series: %s.", fieldName);
     end
     sampleCount = numel(measurements.time);
@@ -278,15 +289,18 @@ end
 
 function settings = validateRuntimeConfiguration(cfg, design)
 % validateRuntimeConfiguration Check the LPV domain and integration configuration.
-    assert(isstruct(design) && isfield(design, "model") && isfield(design, "polytope") && ...
-        isfield(design, "vertexGains") && isfield(design, "lyapunovMatrix"), ...
-        "design must come from designLateralObserverGains and include model, polytope, vertexGains, " + ...
-        "and lyapunovMatrix.");
+    assert(isstruct(design) && isfield(design, "model") && isfield(design, "polytope"), ...
+        "design must come from designLateralObserverGains.");
     assert(isfield(design, "certificateMethod") && ...
-        string(design.certificateMethod) == "yaw-rate-stiffness-regressor-iss-v1" && ...
-        isequal(size(design.vertexGains), [2, 1, 3]) && isequal(design.model.C, [0, 1]), ...
+        string(design.certificateMethod) == "virtual-ay-scheduled-metric-iss-v1" && ...
+        isfield(design, "vertexLyapunovMatrices") && isfield(design, "vertexY") && ...
+        isfield(design, "vertexGains") && isfield(design, "certificateDomain") && ...
+        isfield(design.certificateDomain, "speedRateRange") && ...
+        isequal(size(design.vertexLyapunovMatrices), [2, 2, 3]) && ...
+        isequal(size(design.vertexY), [2, 1, 3]) && isequal(size(design.vertexGains), [2, 1, 3]) && ...
+        isfield(design.model, "D1") && design.model.outputNames == "speedTimesLateralAcceleration", ...
         "VehicleLocalization:ObsoleteLateralDesign", ...
-        "Re-synthesize the yaw-rate-only lateral design with the current stiffness certificate.");
+        "Re-synthesize the virtual-output lateral design with scheduled P, Y and the speed-rate domain.");
     speedRange = double(design.polytope.speedRange(:).');
     assert(numel(speedRange) == 2 && all(isfinite(speedRange)) && speedRange(1) > 0.0 && ...
         speedRange(2) > speedRange(1), ...
@@ -297,7 +311,7 @@ function settings = validateRuntimeConfiguration(cfg, design)
     assert(isa(cfg.observer.nonlinearity, "function_handle"), ...
         "cfg.observer.nonlinearity must be a function handle.");
     assertFiniteVector(cfg.observer.initialState, 2, "cfg.observer.initialState");
-    settings = struct("speedRange", speedRange);
+    settings = struct("speedRange", speedRange, "speedRateRange", design.certificateDomain.speedRateRange);
 end
 
 function assertFiniteVector(value, expectedLength, name)

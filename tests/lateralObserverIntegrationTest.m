@@ -20,7 +20,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             m.steeringAngle(:) = .01;
             m.lateralAcceleration(:) = .1;
             m.yawRate(:) = .01;
-            [M,b] = testCase.linearSystem(testCase.Design,1,.01,.01);
+            [M,b] = testCase.linearSystem(testCase.Design,1,.01,.1);
             expected = testCase.exactAffine(M,b,cfg.observer.initialState,m.time);
             actual = runLateralVelocityObserver(m,testCase.Design,cfg);
             testCase.verifyEqual(actual.state,expected,AbsTol=1e-12);
@@ -105,6 +105,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             design.model.A1(:) = 0;
             design.model.A2(:) = 0;
             design.vertexGains(:) = 0;
+            design.vertexY(:) = 0;
             cfg = design.cfg;
             cfg.observer.initialState = [.4;.02];
             m = testCase.measurements([0;.1;.2],2);
@@ -119,7 +120,9 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             cfg.observer.initialState = [.05;.005];
             N = [.2,.1;-.1,.1];
             cfg.observer.nonlinearity = @(x) N*x;
-            [M,b] = testCase.linearSystem(testCase.Design,10,.01,.01);
+            [M,b] = testCase.linearSystem(testCase.Design,10,.01,.1);
+            L = lateralObserverSupport.scheduleLateralObserverGain(testCase.Design, 10);
+            nonlinearMap = eye(2) - 10*L*[1,0];
             coarse = testCase.measurements((0:.1:1).',10);
             coarse.steeringAngle(:) = .01;
             coarse.lateralAcceleration(:) = .1;
@@ -130,7 +133,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             fine.yawRate(:) = .01;
             a = runLateralVelocityObserver(coarse,testCase.Design,cfg);
             z = runLateralVelocityObserver(fine,testCase.Design,cfg);
-            expected = testCase.exactAffine(M+N,b,cfg.observer.initialState,coarse.time);
+            expected = testCase.exactAffine(M+nonlinearMap*N,b,cfg.observer.initialState,coarse.time);
             coarseError = norm(a.state-expected,'fro');
             fineError = norm(z.state(1:2:end,:)-expected,'fro');
             testCase.verifyLessThan(fineError,.35*coarseError);
@@ -215,6 +218,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             design.model.A1(:) = 0;
             design.model.A2(:) = 0;
             design.vertexGains(:) = 0;
+            design.vertexY(:) = 0;
         end
         function m = prefix(m,n)
             names = fieldnames(m);
@@ -228,11 +232,11 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
                 'steeringAngle',zeros(n,1),'longitudinalAcceleration',zeros(n,1), ...
                 'lateralAcceleration',zeros(n,1),'yawRate',zeros(n,1));
         end
-        function [M,b] = linearSystem(design,v,delta,y)
-            [A,C] = lateralObserverSupport.evaluateLateralModel(design.model,[v;1/v]);
+        function [M,b] = linearSystem(design,v,delta,ay)
+            [A,C,D] = lateralObserverSupport.evaluateLateralModel(design.model,[v;1/v]);
             L = lateralObserverSupport.scheduleLateralObserverGain(design,v);
             M = A-L*C;
-            b = design.model.B*delta+L*y;
+            b = design.model.B*delta+L*(v*ay-D*delta);
         end
         function x = exactAffine(M,b,x0,t)
             equilibrium = -(M\b);
