@@ -37,10 +37,12 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             baseline = runLateralVelocityObserver(measurements, design, cfg);
             measurements.lateralAcceleration(:) = .1;
             actual = runLateralVelocityObserver(measurements, design, cfg);
-            measurements.yawRate(:) = NaN; % Gyro is not a lateral innovation.
-            ignoredGyro = runLateralVelocityObserver(measurements, design, cfg);
+            measurements.yawRate(:) = .03;
+            withGyro = runLateralVelocityObserver(measurements, design, cfg);
             testCase.verifyGreaterThan(norm(actual.state - baseline.state), 1e-6);
-            testCase.verifyEqual(ignoredGyro.state, actual.state, AbsTol=0);
+            testCase.verifyGreaterThan(norm(withGyro.state - actual.state), 1e-6);
+            testCase.verifyEqual(withGyro.innovation(1, :), [1.2, .03], AbsTol=1e-12);
+            testCase.verifySize(actual.innovation, [numel(measurements.time), 2]);
             testCase.verifyEqual(actual.innovation(1), 1.2, AbsTol=1e-12);
         end
 
@@ -51,9 +53,16 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 'VehicleLocalization:MissingLateralMeasurement');
         end
 
+        function missingYawRateIsRejected(testCase)
+            measurements = rmfield(testCase.constantSpeedMeasurements(.1, 12), 'yawRate');
+            testCase.verifyError(@() runLateralVelocityObserver( ...
+                measurements, testCase.CurrentDesign, testCase.CurrentDesign.cfg), ...
+                'VehicleLocalization:MissingLateralMeasurement');
+        end
+
         function scheduledMetricCertifiesPositionAndRateDomain(testCase)
             design = testCase.CurrentDesign;
-            testCase.verifySize(design.vertexY, [2, 1, 3]);
+            testCase.verifySize(design.vertexY, [2, 2, 3]);
             testCase.verifySize(design.vertexLyapunovMatrices, [2, 2, 3]);
             testCase.verifyEqual(design.tau, 0);
             testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design), 0);
@@ -64,9 +73,9 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyFalse(isfield(design.cfg.synthesis, 'stiffnessRelativeErrorBound'));
         end
 
-        function obsoleteTwoOutputGainsAreRejected(testCase)
+        function obsoleteSingleOutputGainsAreRejected(testCase)
             design = testCase.CurrentDesign;
-            design.vertexGains = zeros(2, 2, 3);
+            design.vertexGains = zeros(2, 1, 3);
             testCase.verifyError(@() runLateralVelocityObserver( ...
                 testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
                 'VehicleLocalization:ObsoleteLateralDesign');
@@ -74,7 +83,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
 
         function obsoleteNoiseScalesAreRejected(testCase)
             cfg = testCase.CurrentDesign.cfg;
-            cfg.synthesis.measurementErrorScale = [.3; .02];
+            cfg.synthesis.measurementErrorScale = .3;
             testCase.verifyError(@() designLateralObserverGains(cfg), ...
                 'VehicleLocalization:ObsoleteLateralConfiguration');
         end
@@ -121,13 +130,13 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             expectedA = [-total/(vehicle.mass*speed), moment/(vehicle.mass*speed) - speed; ...
                 moment/(vehicle.yawInertia*speed), -second/(vehicle.yawInertia*speed)];
             testCase.verifyEqual(A, expectedA, AbsTol=1e-12);
-            testCase.verifyEqual(C, [-total/vehicle.mass, moment/vehicle.mass], AbsTol=1e-12);
-            testCase.verifyEqual(D, speed*vehicle.frontCorneringStiffness/vehicle.mass, AbsTol=1e-12);
+            testCase.verifyEqual(C, [-total/vehicle.mass, moment/vehicle.mass; 0, 1], AbsTol=1e-12);
+            testCase.verifyEqual(D, [speed*vehicle.frontCorneringStiffness/vehicle.mass; 0], AbsTol=1e-12);
             state = [.4; -.12];
             steering = .03;
             derivative = A*state + model.B*steering;
             ay = derivative(1) + speed*state(2);
-            testCase.verifyEqual(speed*ay, C*state + D*steering, AbsTol=1e-12);
+            testCase.verifyEqual([speed*ay; state(2)], C*state + D*steering, AbsTol=1e-12);
         end
 
         function knownSteeringFeedthroughCancelsAtZeroState(testCase, integrationMethod)
@@ -162,16 +171,16 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 error = [.2*cos(2*idx); .03*sin(2*idx)];
                 estimate = state - error;
                 delta = .025*sin(.3*idx);
-                noise = .1*cos(.7*idx);
+                noise = [.1*cos(.7*idx); .003*sin(.7*idx)];
                 plantRate = A*state + design.model.B*delta;
-                measuredAy = plantRate(1) + speed*state(2) + noise;
+                measuredAy = plantRate(1) + speed*state(2) + noise(1);
                 for rate = design.certificateDomain.speedRateRange
                     [L, P, Pdot] = lateralObserverSupport.scheduleLateralObserverGain(design, speed, rate);
                     observerRate = A*estimate + design.model.B*delta + ...
-                        L*(speed*measuredAy - C*estimate - D*delta);
-                    xi = noise/design.measurementErrorScale;
+                        L*([speed*measuredAy; state(2) + noise(2)] - C*estimate - D*delta);
+                    xi = noise./design.measurementErrorScale;
                     residual = 2*error.'*P*(plantRate - observerRate) + error.'*Pdot*error + ...
-                        2*design.decayRate*(error.'*P*error) - design.issGainLimit^2*xi^2;
+                        2*design.decayRate*(error.'*P*error) - design.issGainLimit^2*(xi.'*xi);
                     worst = max(worst, residual);
                 end
             end
@@ -202,7 +211,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             model = lateralObserverSupport.lateralBicycleModel(cfg.vehicle);
             polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
             vertexA = zeros(2, 2, 3);
-            vertexC = zeros(1, 2, 3);
+            vertexC = zeros(2, 2, 3);
             for vertexIdx = 1:3
                 [vertexA(:, :, vertexIdx), vertexC(:, :, vertexIdx)] = ...
                     lateralObserverSupport.evaluateLateralModel(model, polytope.vertices(:, vertexIdx));
@@ -257,18 +266,18 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             state = [.4; -.12];
             estimate = [.3; -.1];
             error = state - estimate;
-            noise = .1;
+            noise = [.1; .003];
             model = design.model;
             A = lateralObserverSupport.evaluateLateralModel(model, [speed; 1/speed]);
             [Am, C, Dm] = lateralObserverSupport.evaluateLateralModel(model, [measuredSpeed; 1/measuredSpeed]);
             L = lateralObserverSupport.scheduleLateralObserverGain(design, measuredSpeed);
             plantRate = A*state + model.B*delta;
-            ay = plantRate(1) + speed*state(2) + noise;
+            ay = plantRate(1) + speed*state(2) + noise(1);
             observerRate = Am*estimate + model.B*measuredDelta + ...
-                L*(measuredSpeed*ay - C*estimate - Dm*measuredDelta);
+                L*([measuredSpeed*ay; state(2) + noise(2)] - C*estimate - Dm*measuredDelta);
             residual = (A - Am)*state + model.B*(delta - measuredDelta) - ...
-                L*((measuredSpeed/speed - 1)*C*state + measuredSpeed*model.B(1)*(delta - measuredDelta));
-            expected = (Am - L*C)*error - measuredSpeed*L*noise + residual;
+                L(:, 1)*((measuredSpeed/speed - 1)*C(1, :)*state + measuredSpeed*model.B(1)*(delta - measuredDelta));
+            expected = (Am - L*C)*error - L*diag([measuredSpeed; 1])*noise + residual;
             testCase.verifyEqual(plantRate - observerRate, expected, AbsTol=1e-12);
         end
 
@@ -319,8 +328,8 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             % An artificial schedule makes an incorrect gain blend detectable
             % independently of the optimizer's particular solution.
             design.vertexLyapunovMatrices = cat(3, eye(2), 2*eye(2), 3*eye(2));
-            design.vertexY = cat(3, [1;2], [-2;1], [3;-1]);
-            design.vertexGains = cat(3, [1;2], [-1;.5], [1;-1/3]);
+            design.vertexY = cat(3, [1, .5; 2, 1], [-2, 1; 1, 2], [3, -1; -1, 3]);
+            design.vertexGains = cat(3, [1, .5; 2, 1], [-1, .5; .5, 1], [1, -1/3; -1/3, 1]);
             alpha = lateralObserverSupport.schedulingCoordinates(design.polytope, 12.3);
             [L, P] = lateralObserverSupport.scheduleLateralObserverGain(design, 12.3);
             blendL = sum(design.vertexGains.*reshape(alpha, 1, 1, 3), 3);
@@ -526,7 +535,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             resolved = designLateralObserverGains(design.cfg);
 
             testCase.verifyEqual(resolved.tau, design.tau, RelTol=1e-4);
-            testCase.verifyEqual(resolved.certificateMethod, "virtual-ay-scheduled-metric-iss-v1");
+            testCase.verifyEqual(resolved.certificateMethod, "virtual-ay-yaw-scheduled-metric-iss-v2");
             testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.solverSolved);
@@ -542,15 +551,15 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 for rate = [design.certificateDomain.speedRateRange, 0]
                     [L, P, Pdot] = lateralObserverSupport.scheduleLateralObserverGain(design, speed, rate);
                     Ae = A - L*design.model.C;
-                    noise = -design.measurementErrorScale*speed*P*L;
+                    noise = -P*L*diag([speed; 1].*design.measurementErrorScale);
                     Phi = Pdot + P*Ae + Ae.'*P + 2*design.decayRate*P + ...
                         design.tau*design.lipschitzConstant^2*eye(2);
                     if design.lipschitzConstant == 0
-                        block = [Phi, noise; noise.', -design.issGain^2];
+                        block = [Phi, noise; noise.', -design.issGain^2*eye(2)];
                     else
-                        nonlinear = P*(eye(2) - speed*L*[1, 0]);
-                        block = [Phi, noise, nonlinear; noise.', -design.issGain^2, zeros(1, 2); ...
-                            nonlinear.', zeros(2, 1), -design.tau*eye(2)];
+                        nonlinear = P*(eye(2) - speed*L(:, 1)*[1, 0]);
+                        block = [Phi, noise, nonlinear; noise.', -design.issGain^2*eye(2), zeros(2); ...
+                            nonlinear.', zeros(2), -design.tau*eye(2)];
                     end
                     worst = max(worst, max(eig((block + block.')/2)));
                 end

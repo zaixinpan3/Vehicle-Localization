@@ -2,7 +2,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % runLateralVelocityObserver Export the LPV lateral-velocity estimate directly.
 % The only velocity state is the certified bicycle observer [vy; yawRate].
 % Inside its positive-speed domain it uses y = Vx*ay and subtracts the
-% known steering feedthrough. Measured yaw rate is not an innovation.
+% known steering feedthrough, together with the measured yaw-rate innovation.
 % Outside that domain, or when dynamicValid is false, its state is held and
 % velocityValid is false. Holding is not a low-speed estimation guarantee.
 % There is no inertial master, bias estimate, correction filter or shadow model.
@@ -25,7 +25,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 %
 % Input:
 %   measurements: aligned time, steeringAngle, longitudinalSpeed,
-%       longitudinalAcceleration, lateralAcceleration, and optional
+%       longitudinalAcceleration, lateralAcceleration, yawRate, and optional
 %       dynamicValid series; design: current designLateralObserverGains result;
 %       cfg: current lateralObserverConfig (optional).
 % Output:
@@ -54,7 +54,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     sampleCount = numel(measurements.time);
     state = double(cfg.observer.initialState(:));
     history = zeros(sampleCount, 2);
-    innovationHistory = zeros(sampleCount, 1);
+    innovationHistory = zeros(sampleCount, 2);
     gainNorm = zeros(sampleCount, 1);
     stateRate = zeros(sampleCount, 2);
     velocityValid = false(sampleCount, 1);
@@ -158,8 +158,8 @@ function [derivative, innovation, gain, valid] = observerDerivative( ...
             dynamicObserverDerivative(state(1:2), sample, design, cfg.observer.nonlinearity);
     else
         lpvDerivative = zeros(2, 1);
-        innovation = 0.0;
-        gain = zeros(2, 1);
+        innovation = zeros(2, 1);
+        gain = zeros(2);
     end
     derivative = lpvDerivative;
 end
@@ -186,8 +186,8 @@ function state = exponentialInterval(state, measurements, sampleIdx, dt, design,
             gain = lateralObserverSupport.scheduleLateralObserverGain(design, sample.longitudinalSpeed);
             linear = A-gain*C;
             forcing = design.model.B*sample.steeringAngle + ...
-                gain*(sample.longitudinalSpeed*sample.lateralAcceleration - D*sample.steeringAngle);
-            nonlinearMap = eye(2) - sample.longitudinalSpeed*gain*[1, 0];
+                gain*([sample.longitudinalSpeed*sample.lateralAcceleration; sample.yawRate] - D*sample.steeringAngle);
+            nonlinearMap = eye(2) - sample.longitudinalSpeed*gain(:, 1)*[1, 0];
             % The augmented exponential gives Phi and the input integral
             % without inverting linear, including a singular linear part.
             transition = expm((h/2)*[linear, eye(2); zeros(2,4)]);
@@ -220,8 +220,8 @@ function [derivative, innovation, gain] = dynamicObserverDerivative( ...
     [A, C, D] = lateralObserverSupport.evaluateLateralModel(design.model, rho);
     gain = lateralObserverSupport.scheduleLateralObserverGain(design, sample.longitudinalSpeed);
     nonlinearTerm = evaluateNonlinearity(nonlinearity, state);
-    innovation = sample.longitudinalSpeed*sample.lateralAcceleration - C*state - ...
-        D*sample.steeringAngle - sample.longitudinalSpeed*nonlinearTerm(1);
+    innovation = [sample.longitudinalSpeed*sample.lateralAcceleration; sample.yawRate] - C*state - ...
+        D*sample.steeringAngle - [sample.longitudinalSpeed*nonlinearTerm(1); 0];
     derivative = (A * state) + (design.model.B .* sample.steeringAngle) + ...
         nonlinearTerm + (gain * innovation);
 end
@@ -237,7 +237,7 @@ end
 function sample = sampleAt(measurements, sampleIdx, stepFraction)
 % sampleAt Interpolate physical measurements without flooring speed.
     numericFields = ["steeringAngle", "longitudinalSpeed", ...
-        "longitudinalAcceleration", "lateralAcceleration"];
+        "longitudinalAcceleration", "lateralAcceleration", "yawRate"];
     nextIdx = min(sampleIdx + 1, numel(measurements.time));
     sample = struct();
     for fieldName = numericFields
@@ -258,7 +258,7 @@ end
 function measurements = normalizeMeasurements(measurements)
 % normalizeMeasurements Validate and align all measurement series.
     requiredFields = ["time", "steeringAngle", "longitudinalSpeed", ...
-        "longitudinalAcceleration", "lateralAcceleration"];
+        "longitudinalAcceleration", "lateralAcceleration", "yawRate"];
     assert(isstruct(measurements), "measurements must be a struct of measurement series.");
     for fieldName = requiredFields
         assert(isfield(measurements, fieldName), ...
@@ -292,13 +292,13 @@ function settings = validateRuntimeConfiguration(cfg, design)
     assert(isstruct(design) && isfield(design, "model") && isfield(design, "polytope"), ...
         "design must come from designLateralObserverGains.");
     assert(isfield(design, "certificateMethod") && ...
-        string(design.certificateMethod) == "virtual-ay-scheduled-metric-iss-v1" && ...
+        string(design.certificateMethod) == "virtual-ay-yaw-scheduled-metric-iss-v2" && ...
         isfield(design, "vertexLyapunovMatrices") && isfield(design, "vertexY") && ...
         isfield(design, "vertexGains") && isfield(design, "certificateDomain") && ...
         isfield(design.certificateDomain, "speedRateRange") && ...
         isequal(size(design.vertexLyapunovMatrices), [2, 2, 3]) && ...
-        isequal(size(design.vertexY), [2, 1, 3]) && isequal(size(design.vertexGains), [2, 1, 3]) && ...
-        isfield(design.model, "D1") && design.model.outputNames == "speedTimesLateralAcceleration", ...
+        isequal(size(design.vertexY), [2, 2, 3]) && isequal(size(design.vertexGains), [2, 2, 3]) && ...
+        isfield(design.model, "D1") && isequal(design.model.outputNames, ["speedTimesLateralAcceleration", "yawRate"]), ...
         "VehicleLocalization:ObsoleteLateralDesign", ...
         "Re-synthesize the virtual-output lateral design with scheduled P, Y and the speed-rate domain.");
     speedRange = double(design.polytope.speedRange(:).');

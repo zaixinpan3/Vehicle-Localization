@@ -1,5 +1,5 @@
 % runLateralObserverDesign Synthesize and report the lateral LPV gains.
-% Solves 24 scheduled-metric ISS LMIs for the virtual output Vx*ay.
+% Solves 24 scheduled-metric ISS LMIs for the outputs [Vx*ay; r].
 % Verifies numerical LMI negativity; no automatic simulation is performed.
 % Requires YALMIP and an SDP solver on the MATLAB path.
 % Optional input: lateralObserverOverrideCfg. Output: design.

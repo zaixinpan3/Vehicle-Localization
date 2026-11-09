@@ -20,7 +20,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             m.steeringAngle(:) = .01;
             m.lateralAcceleration(:) = .1;
             m.yawRate(:) = .01;
-            [M,b] = testCase.linearSystem(testCase.Design,1,.01,.1);
+            [M,b] = testCase.linearSystem(testCase.Design,1,.01,.1,.01);
             expected = testCase.exactAffine(M,b,cfg.observer.initialState,m.time);
             actual = runLateralVelocityObserver(m,testCase.Design,cfg);
             testCase.verifyEqual(actual.state,expected,AbsTol=1e-12);
@@ -120,9 +120,9 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             cfg.observer.initialState = [.05;.005];
             N = [.2,.1;-.1,.1];
             cfg.observer.nonlinearity = @(x) N*x;
-            [M,b] = testCase.linearSystem(testCase.Design,10,.01,.1);
+            [M,b] = testCase.linearSystem(testCase.Design,10,.01,.1,.01);
             L = lateralObserverSupport.scheduleLateralObserverGain(testCase.Design, 10);
-            nonlinearMap = eye(2) - 10*L*[1,0];
+            nonlinearMap = eye(2) - 10*L(:,1)*[1,0];
             coarse = testCase.measurements((0:.1:1).',10);
             coarse.steeringAngle(:) = .01;
             coarse.lateralAcceleration(:) = .1;
@@ -232,11 +232,12 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
                 'steeringAngle',zeros(n,1),'longitudinalAcceleration',zeros(n,1), ...
                 'lateralAcceleration',zeros(n,1),'yawRate',zeros(n,1));
         end
-        function [M,b] = linearSystem(design,v,delta,ay)
+        function [M,b] = linearSystem(design,v,delta,ay,gyro)
+            if nargin < 5, gyro = 0; end
             [A,C,D] = lateralObserverSupport.evaluateLateralModel(design.model,[v;1/v]);
             L = lateralObserverSupport.scheduleLateralObserverGain(design,v);
             M = A-L*C;
-            b = design.model.B*delta+L*(v*ay-D*delta);
+            b = design.model.B*delta+L*([v*ay;gyro]-D*delta);
         end
         function x = exactAffine(M,b,x0,t)
             equilibrium = -(M\b);

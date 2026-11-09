@@ -1,6 +1,6 @@
 function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
-% Two-state nominal bicycle dynamics with virtual output y = Vx*ay.
+% Two-state nominal bicycle dynamics with outputs y = [Vx*ay; r].
 % P and Y = P*L share three speed vertices; the certificate includes Pdot.
 % Sideslip angle and rate remain algebraic outputs of the two-state observer.
 %
@@ -48,7 +48,9 @@ function cfg = lateralObserverConfig(profile)
     % Weight on the uniform initial-error energy bound in gamma^2 + w*pbar.
     % Zero retains noise-only minimization, which may select L = 0.
     cfg.synthesis.initialErrorWeight = 1.0;
-    cfg.synthesis.pCeiling = 1.0e6;
+    % A generous metric ceiling avoids poorly scaled SDP constraints. The
+    % balanced nominal optimum is near I; this is a numerical safeguard.
+    cfg.synthesis.pCeiling = 1.0e3;
     % Minimizing the ISS gain pushes the solution onto the constraint
     % boundary; strictnessEpsilon specifies the requested LMI margin.
     cfg.synthesis.strictnessEpsilon = 1.0e-6;
@@ -93,9 +95,11 @@ function cfg = lateralObserverConfig(profile)
     cfg.simulation.yawRateNoiseStd = sensors.lateralSimulation.yawRateNoiseStdRadps;
     cfg.simulation.lateralAccelerationNoiseStd = sensors.lateralSimulation.lateralAccelerationNoiseStdMps2;
 
-    % Normalize physical ay error before multiplication by speed. This scale
-    % is an engineering reference, not a hard bound on Gaussian noise.
+    % Normalize physical [ay; r] errors, scaling ay by speed in the model.
+    % These are engineering references, not hard Gaussian-noise bounds.
     cfg.synthesis.measurementErrorScale = ...
-        max(abs(double(sensors.lateralSimulation.lateralAccelerationBiasStressMps2(:)))) + ...
-        cfg.simulation.lateralAccelerationNoiseStd;
+        [max(abs(double(sensors.lateralSimulation.lateralAccelerationBiasStressMps2(:)))) + ...
+        cfg.simulation.lateralAccelerationNoiseStd; ...
+        max(abs(double(sensors.lateralSimulation.yawRateBiasStressRadps(:)))) + ...
+        cfg.simulation.yawRateNoiseStd];
 end

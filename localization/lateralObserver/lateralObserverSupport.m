@@ -1,14 +1,14 @@
 classdef lateralObserverSupport
 % lateralObserverSupport Bicycle model and gain scheduling of the lateral observer.
 % Static methods build the LPV bicycle matrices, evaluate the model, map speed
-% to scheduling coordinates and triangle vertices, blend vertex gains and
+% to scheduling coordinates and triangle vertices, schedule the metric and transformed gain, and
 % verify the vehicle parameters of a stored design.
 % Example: K = lateralObserverSupport.scheduleLateralObserverGain(design,speed).
 
     methods (Static)
         function model = lateralBicycleModel(vehicle)
-        % lateralBicycleModel Build the nominal bicycle model with virtual output Vx*ay.
-        % State x = [vy; r], steering delta, and y = Vx*ay = C*x + D*delta.
+        % lateralBicycleModel Build the nominal bicycle model with outputs [Vx*ay; r].
+        % State x = [vy; r], steering delta, and y = [Vx*ay; r] = C*x + D*delta.
         % A(rho) = A0 + Vx*A1 + (1/Vx)*A2; C is constant, D = Vx*D1.
         % An optional copied nonlinearity adds Vx*f_1(x) to this output.
             requiredFields = ["mass", "yawInertia", "lf", "lr", "frontCorneringStiffness", "rearCorneringStiffness"];
@@ -32,7 +32,7 @@ classdef lateralObserverSupport
             model = struct();
             model.vehicle = vehicle;
             model.stateNames = ["lateralVelocity", "yawRate"];
-            model.outputNames = "speedTimesLateralAcceleration";
+            model.outputNames = ["speedTimesLateralAcceleration", "yawRate"];
 
             % A(rho) = A0 + Vx A1 + (1/Vx) A2
             model.A0 = zeros(2, 2);
@@ -40,9 +40,9 @@ classdef lateralObserverSupport
             model.A2 = [-stiffnessSum ./ mass, stiffnessMoment ./ mass; ...
                 stiffnessMoment ./ yawInertia, -stiffnessSecondMoment ./ yawInertia];
 
-            model.C = model.A2(1, :);
+            model.C = [model.A2(1, :); 0, 1];
             model.B = [frontStiffness ./ mass; (lf .* frontStiffness) ./ yawInertia];
-            model.D1 = frontStiffness/mass;
+            model.D1 = [frontStiffness/mass; 0];
         end
 
         function [A, C, D] = evaluateLateralModel(model, rho)
@@ -57,8 +57,8 @@ classdef lateralObserverSupport
         %
         % Output:
         %   A: [2 x 2] state matrix at rho
-        %   C: [1 x 2] constant virtual-output matrix
-        %   D: scalar known steering feedthrough coefficient
+        %   C: [2 x 2] constant virtual-acceleration and yaw-rate output matrix
+        %   D: [2 x 1] known steering feedthrough coefficient
             rho = double(rho(:));
             assert(numel(rho) == 2 && all(isfinite(rho)), "rho must be a finite [2 x 1] scheduling point.");
             A = model.A0 + (rho(1) .* model.A1) + (rho(2) .* model.A2);

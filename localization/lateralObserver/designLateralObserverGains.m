@@ -1,9 +1,9 @@
 function design = designLateralObserverGains(cfg)
 % designLateralObserverGains Synthesize a scheduled virtual-acceleration observer.
-% Nominal bicycle model, y = Vx*ay. Schedule P and Y = P*L with the same
+% Nominal bicycle model, y = [Vx*ay; r]. Schedule P and Y = P*L with the same
 % triangle coordinates, and recover L = P\Y. Six symmetric position pairs
 % and four coordinate-rate vertices certify Pdot and all product terms.
-% The ISS input is physical lateral-acceleration error divided by its scale;
+% The ISS inputs are physical accelerometer and gyro errors divided by their scales;
 % speed amplification is retained explicitly. No stiffness mismatch is modeled.
     if nargin < 1 || isempty(cfg)
         cfg = lateralObserverConfig();
@@ -15,10 +15,10 @@ function design = designLateralObserverGains(cfg)
         ~isfield(cfg.synthesis, 'stiffnessRegressorScale'), ...
         'VehicleLocalization:ObsoleteLateralConfiguration', ...
         'Use the current virtual-output configuration with a scheduling speed-rate interval.');
-    sigma = double(cfg.synthesis.measurementErrorScale);
-    assert(isscalar(sigma) && isfinite(sigma) && sigma > 0, ...
+    sigma = double(cfg.synthesis.measurementErrorScale(:));
+    assert(numel(sigma) == 2 && all(isfinite(sigma)) && all(sigma > 0), ...
         'VehicleLocalization:ObsoleteLateralConfiguration', ...
-        'Require one positive physical lateral-acceleration error scale.');
+        'Require two positive physical error scales in [ay; r] order.');
     model = lateralObserverSupport.lateralBicycleModel(cfg.vehicle);
     polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
     domain = lateralObserverSupport.buildCertificateDomain(model, polytope, cfg.scheduling.speedRateRange);
@@ -51,7 +51,7 @@ function design = designLateralObserverGains(cfg)
     for idx = 1:3
         % P(v) >= I and convex Y(v) give ||L(v)|| <= max_i ||Y_i||.
         constraints = [constraints, ...
-            [bounds(idx)*eye(2), variables.Y{idx}; variables.Y{idx}.', bounds(idx)] >= 0]; %#ok<AGROW>
+            [bounds(idx)*eye(2), variables.Y{idx}; variables.Y{idx}.', bounds(idx)*eye(2)] >= 0]; %#ok<AGROW>
     end
     diagnostics = optimize(constraints, sum(bounds), options);
     assert(diagnostics.problem == 0, ...
@@ -65,10 +65,10 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "virtual-ay-scheduled-metric-iss-v1";
+    design.certificateMethod = "virtual-ay-yaw-scheduled-metric-iss-v2";
     design.vertexLyapunovMatrices = zeros(2, 2, 3);
-    design.vertexY = zeros(2, 1, 3);
-    design.vertexGains = zeros(2, 1, 3); % Endpoint/vertex reporting only.
+    design.vertexY = zeros(2, 2, 3);
+    design.vertexGains = zeros(2, 2, 3); % Endpoint/vertex reporting only.
     for idx = 1:3
         design.vertexLyapunovMatrices(:, :, idx) = value(variables.P{idx});
         design.vertexY(:, :, idx) = value(variables.Y{idx});
@@ -76,11 +76,11 @@ function design = designLateralObserverGains(cfg)
     end
     design.tau = value(variables.tau);
     design.decayRate = double(cfg.synthesis.decayRate);
-    design.normalizedInputSize = 1;
+    design.normalizedInputSize = 2;
     design.measurementErrorScale = sigma;
     design.vertexGainBounds = value(bounds);
     design.uniformGainNormBound = max(design.vertexGainBounds);
-    design.maxVertexGainNorm = max(vecnorm(reshape(design.vertexGains, 2, 3)));
+    design.maxVertexGainNorm = max(arrayfun(@(idx) norm(design.vertexGains(:, :, idx)), 1:3));
     design.maximumCertificateEigenvalue = maximumEigenvalue;
     design.metricUpperBound = max(arrayfun(@(idx) max(eig(design.vertexLyapunovMatrices(:, :, idx))), 1:3));
     design.optimalObjective = optimalObjective;
@@ -101,7 +101,7 @@ function variables = synthesisVariables(lipschitzConstant)
     variables = struct();
     variables.pUpper = sdpvar(1, 1);
     variables.P = {sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric')};
-    variables.Y = {sdpvar(2, 1, 'full'), sdpvar(2, 1, 'full'), sdpvar(2, 1, 'full')};
+    variables.Y = {sdpvar(2, 2, 'full'), sdpvar(2, 2, 'full'), sdpvar(2, 2, 'full')};
     if lipschitzConstant == 0
         variables.tau = 0;
     else
@@ -148,17 +148,17 @@ function [constraints, blocks] = certificateConstraints(variables, gainSquared, 
                 variables.P{right}*domain.vertexA(:, :, left))/2 - Y*model.C;
             speedY = (polytope.vertices(1, right)*variables.Y{left} + ...
                 polytope.vertices(1, left)*variables.Y{right})/2;
-            noise = -sigma*speedY;
-            nonlinear = P - speedY*[1, 0];
+            noise = [-sigma(1)*speedY(:, 1), -sigma(2)*Y(:, 2)];
+            nonlinear = P - speedY(:, 1)*[1, 0];
             for rateIdx = 1:domain.numRateVertices
                 rate = domain.coordinateRateVertices(:, rateIdx);
                 Pdot = rate(1)*variables.P{1} + rate(2)*variables.P{2} + rate(3)*variables.P{3};
                 Phi = Pdot + R + R.' + 2*kappa*P + tau*gammaF^2*eye(2);
                 if gammaF == 0
-                    block = [Phi, noise; noise.', -gainSquared];
+                    block = [Phi, noise; noise.', -gainSquared*eye(2)];
                 else
-                    block = [Phi, noise, nonlinear; noise.', -gainSquared, zeros(1, 2); ...
-                        nonlinear.', zeros(2, 1), -tau*eye(2)];
+                    block = [Phi, noise, nonlinear; noise.', -gainSquared*eye(2), zeros(2); ...
+                        nonlinear.', zeros(2), -tau*eye(2)];
                 end
                 constraints = [constraints, block <= -margin*eye(size(block, 1))]; %#ok<AGROW>
                 blockIdx = blockIdx + 1;
