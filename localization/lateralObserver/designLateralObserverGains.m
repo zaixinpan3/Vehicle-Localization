@@ -1,21 +1,11 @@
 function design = designLateralObserverGains(cfg)
-% designLateralObserverGains Synthesize a yaw-rate-only LPV lateral observer.
-% With x = [vy; r], y = r + nu and C = [0,1], the error satisfies
-%   edot = (A(rho)-L(rho)*C)*e + df + E*w - L(rho)*nu.
-% A and L are affine on the three-vertex scheduling triangle. A common
-% P >= I and Y_i = P*L_i give three ordinary convex ISS LMIs:
-%   [He(P*A_i-Y_i*C)+2*kappa*P+tau*gamma_f^2*I, S_i, P;
-%    S_i', -gamma^2*I, 0; P, 0, -tau*I] < 0,
-% where S_i = [P*E*Ww, -Y_i*sigma_r]. For gamma_f = 0 the last row and
-% column are omitted, giving 5-by-5 LMIs and no Young multiplier.
-% The positive Young multiplier tau
-% is optimized directly. No affine extension, slack matrix, scheduling-rate
-% bound, parameter search or parameter-dependent Lyapunov matrix is needed.
-% First minimize gamma^2, then minimize vertex-gain norm bounds within the
-% configured ISS relaxation. See localization/lateralObserver/README.md.
-% The certificate concerns continuous time inside the positive-speed domain;
-% it does not certify sampled integration or identify sensor bias.
-% Requires YALMIP and the configured SDP solver on the MATLAB path.
+% designLateralObserverGains Synthesize the two-state yaw-only ISS observer.
+% Structured stiffness deviations are represented exactly by the true-state
+% regressors [eta_f*vy; eta_f*r; eta_f*delta; eta_r*vy; eta_r*r]. The gyro
+% error is the sixth normalized input. This Zhou-inspired model retains the
+% existing common-metric ISS objective and does not reproduce an augmented
+% L1 observer. The bound is conditional on bounded physical motion; persistent
+% stiffness error can produce a nonzero estimation error.
     if nargin < 1 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
@@ -23,15 +13,17 @@ function design = designLateralObserverGains(cfg)
         "YALMIP must be on the MATLAB path before synthesizing the lateral observer gains.");
     scales = disturbanceScales(cfg.synthesis);
     model = lateralObserverSupport.lateralBicycleModel(cfg.vehicle);
+    uncertainty = lateralObserverSupport.stiffnessUncertainty(model, scales.relativeBound);
     polytope = lateralObserverSupport.buildSchedulingPolytope(cfg.scheduling.speedRange);
     domain = lateralObserverSupport.buildCertificateDomain(model, polytope);
+    domain.vertexReciprocalSpeed = polytope.vertices(2,:);
     relaxation = double(cfg.synthesis.issGainRelaxation);
     assert(isscalar(relaxation) && isfinite(relaxation) && relaxation > 0, ...
         "cfg.synthesis.issGainRelaxation must be a positive finite scalar.");
 
     variables = synthesisVariables(cfg.synthesis.lipschitzConstant);
     gainSquared = sdpvar(1, 1);
-    constraints = certificateConstraints(variables, gainSquared, domain, model, scales, cfg.synthesis);
+    constraints = certificateConstraints(variables, gainSquared, domain, model, scales, uncertainty, cfg.synthesis);
     options = sdpsettings('solver', char(string(cfg.synthesis.solver)), ...
         'verbose', double(cfg.synthesis.verbose), 'dualize', double(cfg.synthesis.dualize));
     diagnostics = optimize(constraints, gainSquared, options);
@@ -42,7 +34,7 @@ function design = designLateralObserverGains(cfg)
 
     variables = synthesisVariables(cfg.synthesis.lipschitzConstant);
     bounds = sdpvar(3, 1);
-    constraints = certificateConstraints(variables, gainLimit^2, domain, model, scales, cfg.synthesis);
+    constraints = certificateConstraints(variables, gainLimit^2, domain, model, scales, uncertainty, cfg.synthesis);
     for idx = 1:3
         % P >= I implies ||P\Y_i|| <= ||Y_i|| <= bounds(i).
         constraints = [constraints, ...
@@ -56,7 +48,7 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "yaw-rate-common-lyapunov-v1";
+    design.certificateMethod = "yaw-rate-stiffness-regressor-iss-v1";
     design.lyapunovMatrix = value(variables.P);
     design.vertexGains = zeros(2, 1, 3);
     for idx = 1:3
@@ -64,7 +56,9 @@ function design = designLateralObserverGains(cfg)
     end
     design.tau = value(variables.tau);
     design.decayRate = double(cfg.synthesis.decayRate);
-    design.axleForceMismatchScale = scales.mismatch;
+    design.stiffnessUncertainty = uncertainty;
+    design.stiffnessRegressorScale = scales.regressor;
+    design.normalizedInputSize = 6;
     design.measurementErrorScale = scales.measurement;
     design.vertexGainBounds = value(bounds);
     design.maxVertexGainNorm = max(vecnorm(reshape(design.vertexGains, 2, 3)));
@@ -79,14 +73,15 @@ function design = designLateralObserverGains(cfg)
 end
 
 function scales = disturbanceScales(cfg)
-% disturbanceScales Normalize axle-force errors and the scalar gyro error.
-    scales = struct('mismatch', double(cfg.axleForceMismatchScale(:)), ...
-        'measurement', double(cfg.measurementErrorScale));
-    assert(numel(scales.mismatch) == 2 && all(isfinite(scales.mismatch)) && all(scales.mismatch > 0), ...
-        "cfg.synthesis.axleForceMismatchScale must hold two positive finite scales [front; rear].");
-    assert(isscalar(scales.measurement) && isfinite(scales.measurement) && scales.measurement > 0, ...
-        "VehicleLocalization:ObsoleteLateralConfiguration", ...
-        "cfg.synthesis.measurementErrorScale must be one positive finite yaw-rate scale. Re-synthesize the yaw-rate-only design.");
+% disturbanceScales Normalize physical stiffness regressors and gyro error.
+    scales = struct('relativeBound',double(cfg.stiffnessRelativeErrorBound(:)), ...
+        'regressor',double(cfg.stiffnessRegressorScale(:)), ...
+        'measurement',double(cfg.measurementErrorScale));
+    assert(numel(scales.regressor)==5 && all(isfinite(scales.regressor)) && ...
+        all(scales.regressor>0), 'Require five positive stiffness regressor scales.');
+    assert(isscalar(scales.measurement) && isfinite(scales.measurement) && scales.measurement>0, ...
+        'VehicleLocalization:ObsoleteLateralConfiguration', ...
+        'Require one positive yaw-rate error scale.');
 end
 
 function variables = synthesisVariables(lipschitzConstant)
@@ -101,8 +96,8 @@ function variables = synthesisVariables(lipschitzConstant)
     end
 end
 
-function constraints = certificateConstraints(variables, gainSquared, domain, model, scales, cfg)
-% certificateConstraints Three 7-by-7 affine vertex LMIs with a common P.
+function constraints = certificateConstraints(variables, gainSquared, domain, model, scales, uncertainty, cfg)
+% certificateConstraints Three affine vertex LMIs with a common P.
     kappa = double(cfg.decayRate);
     gammaF = double(cfg.lipschitzConstant);
     margin = double(cfg.strictnessEpsilon);
@@ -127,13 +122,16 @@ function constraints = certificateConstraints(variables, gainSquared, domain, mo
     for idx = 1:3
         Y = variables.Y{idx};
         R = P*domain.vertexA(:, :, idx) - Y*model.C;
-        S = [P*model.E*diag(scales.mismatch), -Y*scales.measurement];
+        reciprocalSpeed = domain.vertexReciprocalSpeed(idx);
+        G = [reciprocalSpeed*uncertainty.frontState, uncertainty.frontSteering, ...
+            reciprocalSpeed*uncertainty.rearState]*diag(scales.regressor);
+        S = [P*G, -Y*scales.measurement];
         Phi = R + R.' + 2*kappa*P + tau*gammaF^2*eye(2);
         if gammaF == 0
-            block = [Phi, S; S.', -gainSquared*eye(3)];
+            block = [Phi, S; S.', -gainSquared*eye(6)];
         else
-            block = [Phi, S, P; S.', -gainSquared*eye(3), zeros(3, 2); ...
-                P, zeros(2, 3), -tau*eye(2)];
+            block = [Phi, S, P; S.', -gainSquared*eye(6), zeros(6, 2); ...
+                P, zeros(2, 6), -tau*eye(2)];
         end
         constraints = [constraints, block <= -margin*eye(size(block, 1))]; %#ok<AGROW>
     end

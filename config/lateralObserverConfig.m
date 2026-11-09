@@ -1,8 +1,8 @@
 function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
 % Two-state bicycle dynamics with steering input and yaw-rate-only output.
-% The common Lyapunov ISS design uses three speed vertices, with no speed-rate
-% bound, acceleration measurement, Finsler slack or scalar candidate search.
+% The common Lyapunov ISS design uses three speed vertices and structured
+% stiffness regressors, with no scheduling-speed derivative bound.
 % Sideslip angle and rate remain algebraic outputs of the two-state observer.
 %
 % Default vehicle parameters come from config/mncavVehicleParameters.json.
@@ -37,10 +37,10 @@ function cfg = lateralObserverConfig(profile)
     % Three position vertices cover the positive-speed scheduling arc.
     cfg.scheduling = struct('speedRange', [1.0, 30.0]);
 
-    % Common P >= I; optimize the positive Young multiplier directly.
+    % Common P >= I; the default linear model needs no Young multiplier.
     % Minimize normalized ISS gain, then gain norms at a relaxed ISS bound.
     cfg.synthesis = struct();
-    cfg.synthesis.lipschitzConstant = 0.5;
+    cfg.synthesis.lipschitzConstant = 0.0;
     cfg.synthesis.decayRate = 2.0;
     cfg.synthesis.issGainRelaxation = 0.05;
     cfg.synthesis.pCeiling = 1.0e6;
@@ -51,9 +51,9 @@ function cfg = lateralObserverConfig(profile)
     cfg.synthesis.verbose = 0;
     cfg.synthesis.dualize = 0;
 
-    % Online observer. The nonlinearity f(x) is the term the observer copies
-    % from the plant; the default is zero, so lipschitzConstant acts purely
-    % as a robustness margin against unmodeled lateral dynamics.
+    % The optional nonlinearity is copied from the plant. If enabled, its
+    % Lipschitz constant must be supplied to the synthesis. Both default to
+    % zero; stiffness uncertainty uses its separate physical channels.
     cfg.observer = struct();
     % Exponentiate the stiff LPV part at each interval midpoint. The copied
     % nonlinearity uses an explicit midpoint stage. This is a numerical implementation,
@@ -87,16 +87,12 @@ function cfg = lateralObserverConfig(profile)
     % neither OEM IMU specifications nor a measured native covariance.
     cfg.simulation.yawRateNoiseStd = sensors.lateralSimulation.yawRateNoiseStdRadps;
 
-    % Disturbance scales of the ISS synthesis. The axle-force mismatch is
-    % the declared cornering-stiffness uncertainty acting on the static
-    % share of each axle at the declared linear-model acceleration scale,
-    % expressed as a specific force in m/s^2 for [front; rear]. The measurement error is the declared sensor bias
-    % stress plus one noise standard deviation for yaw rate alone.
+    % Independent bounded relative stiffness deviations. The regressor scales
+    % normalize [eta_f*vy; eta_f*r; eta_f*delta; eta_r*vy; eta_r*r]
+    % in SI coordinates; they are reference units, not hard trajectory bounds.
     stiffnessUncertainty = max(abs(double(parameters.sensitivityFactors(:)) - 1.0));
-    axleShare = [cfg.vehicle.lr; cfg.vehicle.lf] ./ (cfg.vehicle.lf + cfg.vehicle.lr);
-    cfg.synthesis.linearLateralAccelerationScale = 4.0;
-    cfg.synthesis.axleForceMismatchScale = stiffnessUncertainty .* ...
-        cfg.synthesis.linearLateralAccelerationScale .* axleShare;
+    cfg.synthesis.stiffnessRelativeErrorBound = stiffnessUncertainty .* ones(2,1);
+    cfg.synthesis.stiffnessRegressorScale = ones(5,1);
     cfg.synthesis.measurementErrorScale = ...
         max(abs(double(sensors.lateralSimulation.yawRateBiasStressRadps(:)))) + ...
         cfg.simulation.yawRateNoiseStd;

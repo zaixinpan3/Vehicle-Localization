@@ -26,8 +26,7 @@ function trial=nuscenesTrialConfig(steeringRatio)
     lateral.sensorParameterProvenance=struct('scope',"Declared transfer priors, not MnCAV calibration");
     lateral.simulation.yawRateNoiseStd=.01;
     lateral.synthesis.measurementErrorScale=.02;
-    lateral.synthesis.axleForceMismatchScale=.3*lateral.synthesis.linearLateralAccelerationScale* ...
-        [vehicle.lr;vehicle.lf]/wheelbase;
+    lateral.synthesis.stiffnessRelativeErrorBound=.3*ones(2,1);
     globalCfg=mncavFullObserverConfig();globalCfg.kind="nuscenes-overlap-development-trial";
     globalCfg.invariantObserver.nominalGnssWeight=0; % Declared GNSS-free nominal fusion.
     globalCfg.invariantObserver.balancedPoseMetric=true;

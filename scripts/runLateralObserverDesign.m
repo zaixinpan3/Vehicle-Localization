@@ -1,5 +1,5 @@
 % runLateralObserverDesign Synthesize and report the lateral LPV gains.
-% Solves three common-Lyapunov yaw-rate-only vertex LMIs and returns the solver result.
+% Solves three common-metric ISS LMIs with explicit stiffness regressors.
 % No post-solve verification, sampling or automatic simulation is performed.
 % Requires YALMIP and an SDP solver on the MATLAB path.
 % Optional input: lateralObserverOverrideCfg. Output: design.
