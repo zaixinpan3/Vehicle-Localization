@@ -150,12 +150,21 @@ classdef lateralObserverSupport
                 end
             end
             domain.numRateVertices = 4;
-            domain.numVertexPairs = 6;
+            domain.numLmis = domain.numVertices*domain.numRateVertices;
+        end
+
+        function Y = evaluateLateralGainBasis(basis, rho)
+        % evaluateLateralGainBasis Independent affine acceleration/yaw columns.
+        % The lifted coordinates rho=[v;q] need not satisfy v*q=1 here.
+            rho = double(rho(:));
+            assert(numel(rho) == 2 && all(isfinite(rho)), "rho must contain two finite coordinates.");
+            Y = [basis.accelerationConstant + rho(2)*basis.accelerationReciprocal, ...
+                basis.yawConstant + rho(1)*basis.yawSpeed];
         end
 
         function [L, P, Pdot] = scheduleLateralObserverGain(design, longitudinalSpeed, speedRate)
-        % scheduleLateralObserverGain Schedule P and Y together, then solve P*L=Y.
-        % The gain is generally rational in rho, not a blend of vertex gains.
+        % scheduleLateralObserverGain Recover affine L=X\Y and independently schedule P.
+        % X is common; P(v) is the Lyapunov metric certified by expanded LMIs.
         % Endpoint clamping is for evaluation only; runtime withdraws aiding
         % outside the positive-speed interval. Pdot needs d(Vx)/dt, not ax.
             longitudinalSpeed = double(longitudinalSpeed);
@@ -163,10 +172,13 @@ classdef lateralObserverSupport
                 "The scheduling speed must be a finite scalar.");
             speedRange = design.polytope.speedRange;
             clampedSpeed = min(max(longitudinalSpeed, speedRange(1)), speedRange(2));
-            alpha = lateralObserverSupport.schedulingCoordinates(design.polytope, clampedSpeed);
-            P = sum(design.vertexLyapunovMatrices.*reshape(alpha, 1, 1, 3), 3);
-            Y = sum(design.vertexY.*reshape(alpha, 1, 1, 3), 3);
-            L = P\Y;
+            Y = lateralObserverSupport.evaluateLateralGainBasis( ...
+                design.gainBasis, [clampedSpeed; 1/clampedSpeed]);
+            L = design.gainRecoveryMatrix\Y;
+            if nargout > 1
+                alpha = lateralObserverSupport.schedulingCoordinates(design.polytope, clampedSpeed);
+                P = sum(design.vertexLyapunovMatrices.*reshape(alpha, 1, 1, 3), 3);
+            end
             if nargout > 2
                 assert(nargin >= 3, "Supply the scheduling speed derivative to evaluate Pdot.");
                 rates = lateralObserverSupport.schedulingCoordinateRates(design.polytope, clampedSpeed, speedRate);

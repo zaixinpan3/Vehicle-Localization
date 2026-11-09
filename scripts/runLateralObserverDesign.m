@@ -1,5 +1,5 @@
 % runLateralObserverDesign Synthesize and report the lateral LPV gains.
-% Solves 24 scheduled-metric ISS LMIs for the outputs [Vx*ay; r].
+% Solves twelve expanded scheduled-metric ISS LMIs for the outputs [Vx*ay; r].
 % Verifies numerical LMI negativity; no automatic simulation is performed.
 % Requires YALMIP and an SDP solver on the MATLAB path.
 % Optional input: lateralObserverOverrideCfg. Output: design.
@@ -19,4 +19,6 @@ fprintf("largest vertex gain norm = %.4g | error bound at unit disturbance = %.4
     design.maxVertexGainNorm, design.errorBound);
 fprintf("speed-rate domain: [%.3g, %.3g] m/s^2 | maximum LMI eigenvalue: %.4g\n", ...
     design.certificateDomain.speedRateRange, design.maximumCertificateEigenvalue);
+fprintf("dilation time scale: %.3g s | normalized noise-injection bound: %.4g\n", ...
+    design.dilationTimeScale, design.uniformNoiseGainNormBound);
 fprintf("solver: %s\n", design.solverInfo);

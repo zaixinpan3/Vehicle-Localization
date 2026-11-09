@@ -1,7 +1,8 @@
 function cfg = lateralObserverConfig(profile)
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
 % Two-state nominal bicycle dynamics with outputs y = [Vx*ay; r].
-% P and Y = P*L share three speed vertices; the certificate includes Pdot.
+% P uses three speed vertices; Y=X*L uses a common recovery matrix X.
+% Twelve expanded LMIs include Pdot and exact column-wise noise extensions.
 % Sideslip angle and rate remain algebraic outputs of the two-state observer.
 %
 % Default vehicle parameters come from config/mncavVehicleParameters.json.
@@ -40,7 +41,7 @@ function cfg = lateralObserverConfig(profile)
 
     % Scheduled P >= I; the default linear model needs no Young multiplier.
     % Balance normalized ISS gain and initial-error energy, then minimize
-    % transformed gain norms within a relaxed first-stage objective.
+    % physical noise-injection bounds within a relaxed first-stage objective.
     cfg.synthesis = struct();
     cfg.synthesis.lipschitzConstant = 0.0;
     cfg.synthesis.decayRate = 2.0;
@@ -48,6 +49,11 @@ function cfg = lateralObserverConfig(profile)
     % Weight on the uniform initial-error energy bound in gamma^2 + w*pbar.
     % Zero retains noise-only minimization, which may select L = 0.
     cfg.synthesis.initialErrorWeight = 1.0;
+    % Fixed within each SDP; epsilon=0.02 s was evaluated in the column-gain study.
+    cfg.synthesis.dilationTimeScale = 0.02;
+    % False gives L_a=gq/Vx exactly. True allows g0+gq/Vx explicitly.
+    % The yaw-rate column remains h0+Vx*hv in both cases.
+    cfg.synthesis.accelerationGainConstant = false;
     % A generous metric ceiling avoids poorly scaled SDP constraints. The
     % balanced nominal optimum is near I; this is a numerical safeguard.
     cfg.synthesis.pCeiling = 1.0e3;
