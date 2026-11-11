@@ -106,8 +106,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             design.model.A2(:) = 0;
             design.vertexGains(:) = 0;
             design.vertexY(:) = 0;
-            design.gainBasis = struct('accelerationConstant',zeros(2,1), ...
-                'accelerationReciprocal',zeros(2,1),'yawConstant',zeros(2,1),'yawSpeed',zeros(2,1));
+            design.gainBasis = struct('accelerationReciprocal',zeros(2,1),'yawConstant',zeros(2,1),'yawSpeed',zeros(2,1));
             cfg = design.cfg;
             cfg.observer.initialState = [.4;.02];
             m = testCase.measurements([0;.1;.2],2);
@@ -196,8 +195,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             design.model.A2(:) = 0;
             design.vertexGains(:) = 0;
             design.vertexY(:) = 0;
-            design.gainBasis = struct('accelerationConstant',zeros(2,1), ...
-                'accelerationReciprocal',zeros(2,1),'yawConstant',zeros(2,1),'yawSpeed',zeros(2,1));
+            design.gainBasis = struct('accelerationReciprocal',zeros(2,1),'yawConstant',zeros(2,1),'yawSpeed',zeros(2,1));
         end
         function m = prefix(m,n)
             names = fieldnames(m);

@@ -3,7 +3,7 @@ function design = designLateralObserverGains(cfg)
 % Measurements are [Vx*ay; r], with known steering feedthrough subtracted.
 % Schedule P(v) independently of Y(v) = X*L(v), with a common invertible X.
 % The acceleration column is affine in 1/v, the yaw column affine in v.
-% By default the acceleration constant is zero, so v*L_a(v) is constant.
+% The acceleration column is strictly reciprocal, so v*L_a(v) is constant.
 % Twelve expanded LMIs use v*(1/v)=1 only on the physical curve, including
 % the affine noise extension at auxiliary vertices and the derivative Pdot.
 % Each LMI is 6-by-6 for the nominal linear LPV model.
@@ -21,7 +21,7 @@ function design = designLateralObserverGains(cfg)
         'verbose', double(cfg.synthesis.verbose), 'dualize', double(cfg.synthesis.dualize));
     weight = double(cfg.synthesis.initialErrorWeight);
 
-    variables = synthesisVariables(cfg.synthesis);
+    variables = synthesisVariables();
     gainSquared = sdpvar(1, 1);
     constraints = certificateConstraints(variables, gainSquared, domain, model, polytope, sigma, cfg.synthesis);
     objective = gainSquared + weight*variables.pUpper;
@@ -32,7 +32,7 @@ function design = designLateralObserverGains(cfg)
     firstStageIssGain = sqrt(max(value(gainSquared), 0));
     objectiveLimit = (1 + double(cfg.synthesis.issGainRelaxation))^2*optimalObjective;
 
-    variables = synthesisVariables(cfg.synthesis);
+    variables = synthesisVariables();
     gainSquared = sdpvar(1, 1);
     bounds = sdpvar(3, 1);
     [constraints, blocks, noiseMatrices] = certificateConstraints( ...
@@ -57,10 +57,9 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "column-affine-expanded-iss-linear-v4";
+    design.certificateMethod = "column-affine-expanded-iss-reciprocal-v5";
     design.gainRecoveryMatrix = value(variables.X);
-    design.gainBasis = struct('accelerationConstant', value(variables.basis.accelerationConstant), ...
-        'accelerationReciprocal', value(variables.basis.accelerationReciprocal), ...
+    design.gainBasis = struct('accelerationReciprocal', value(variables.basis.accelerationReciprocal), ...
         'yawConstant', value(variables.basis.yawConstant), 'yawSpeed', value(variables.basis.yawSpeed));
     design.vertexLyapunovMatrices = zeros(2, 2, 3);
     design.vertexY = zeros(2, 2, 3);
@@ -100,11 +99,11 @@ function validateConfiguration(cfg)
         'VehicleLocalization:ObsoleteLateralConfiguration', ...
         'Use the current linear LPV configuration; nonlinear lateral dynamics are no longer supported.');
     assert(isfield(cfg.scheduling, 'speedRateRange') && ...
-        isfield(cfg.synthesis, 'dilationTimeScale') && isfield(cfg.synthesis, 'accelerationGainConstant') && ...
+        isfield(cfg.synthesis, 'dilationTimeScale') && ~isfield(cfg.synthesis, 'accelerationGainConstant') && ...
         ~isfield(cfg.synthesis, 'stiffnessRelativeErrorBound') && ...
         ~isfield(cfg.synthesis, 'stiffnessRegressorScale'), ...
         'VehicleLocalization:ObsoleteLateralConfiguration', ...
-        'Use the current column-affine configuration with speed-rate bounds and a fixed dilation time scale.');
+        'Use the current column-affine configuration with a strictly reciprocal acceleration gain, speed-rate bounds and a fixed dilation time scale.');
     sigma = double(cfg.synthesis.measurementErrorScale(:));
     assert(numel(sigma) == 2 && all(isfinite(sigma)) && all(sigma > 0), ...
         'VehicleLocalization:ObsoleteLateralConfiguration', ...
@@ -118,26 +117,18 @@ function validateConfiguration(cfg)
     weight = double(cfg.synthesis.initialErrorWeight);
     assert(isscalar(weight) && isfinite(weight) && weight >= 0, ...
         "cfg.synthesis.initialErrorWeight must be nonnegative and finite.");
-    assert(islogical(cfg.synthesis.accelerationGainConstant) && isscalar(cfg.synthesis.accelerationGainConstant), ...
-        "cfg.synthesis.accelerationGainConstant must be a logical scalar.");
     ceiling = double(cfg.synthesis.pCeiling);
     assert(isscalar(ceiling) && ceiling >= 1 + cfg.synthesis.strictnessEpsilon, ...
         "cfg.synthesis.pCeiling must allow the normalized Lyapunov matrices.");
 end
 
-function variables = synthesisVariables(cfg)
+function variables = synthesisVariables()
 % synthesisVariables Independent metric vertices, common X and affine columns.
     variables = struct();
     variables.pUpper = sdpvar(1, 1);
     variables.P = {sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric')};
     variables.X = sdpvar(2, 2, 'full');
-    if cfg.accelerationGainConstant
-        accelerationConstant = sdpvar(2, 1, 'full');
-    else
-        accelerationConstant = zeros(2, 1); % Exact cancellation, not an approximate equality constraint.
-    end
-    variables.basis = struct('accelerationConstant', accelerationConstant, ...
-        'accelerationReciprocal', sdpvar(2, 1, 'full'), ...
+    variables.basis = struct('accelerationReciprocal', sdpvar(2, 1, 'full'), ...
         'yawConstant', sdpvar(2, 1, 'full'), 'yawSpeed', sdpvar(2, 1, 'full'));
 end
 
@@ -146,7 +137,7 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
 % certificateConstraints Jointly affine expanded LMIs, three positions x four rates.
 % On the physical curve, R=X*(A-L*C) and S=X*Bd.
 % A null-space congruence recovers the original P-metric inequality. The
-% off-curve noise extension must use v*G0+Gq, not v*(G0+q*Gq).
+% off-curve noise extension must use Gq, not v*q*Gq.
     margin = double(cfg.strictnessEpsilon);
     epsilon = double(cfg.dilationTimeScale);
     X = variables.X;
@@ -158,7 +149,7 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         rho = polytope.vertices(:, idx);
         Y = lateralObserverSupport.evaluateLateralGainBasis(variables.basis, rho);
         R = X*domain.vertexA(:, :, idx) - Y*model.C;
-        speedColumn = rho(1)*variables.basis.accelerationConstant + variables.basis.accelerationReciprocal;
+        speedColumn = variables.basis.accelerationReciprocal;
         S = [-sigma(1)*speedColumn, -sigma(2)*Y(:, 2)];
         noiseMatrices{idx} = S;
         constraints = [constraints, P >= (1 + margin)*eye(2), P <= variables.pUpper*eye(2)]; %#ok<AGROW>

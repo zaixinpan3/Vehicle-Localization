@@ -67,7 +67,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design), 0);
             testCase.verifyLessThan(design.maximumCertificateEigenvalue, 0);
             testCase.verifyEqual(design.certificateDomain.numLmis, 12);
-            testCase.verifyEqual(design.gainBasis.accelerationConstant, zeros(2,1), AbsTol=0);
+            testCase.verifyFalse(isfield(design.gainBasis, 'accelerationConstant'));
             testCase.verifyEqual(design.certificateDomain.numRateVertices, 4);
             testCase.verifyFalse(isfield(design, 'stiffnessUncertainty'));
             testCase.verifyFalse(isfield(design.cfg.synthesis, 'stiffnessRelativeErrorBound'));
@@ -323,12 +323,11 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function affineGainIsIndependentOfTheScheduledMetric(testCase)
             design = testCase.CurrentDesign;
             design.gainRecoveryMatrix = [2,.3;-.2,1.5];
-            design.gainBasis = struct('accelerationConstant', [.1;.2], ...
-                'accelerationReciprocal', [1;2], 'yawConstant', [3;-1], 'yawSpeed', [-.2;.3]);
+            design.gainBasis = struct('accelerationReciprocal', [1;2], 'yawConstant', [3;-1], 'yawSpeed', [-.2;.3]);
             [L, P] = lateralObserverSupport.scheduleLateralObserverGain(design, 12.3);
             design.vertexLyapunovMatrices = cat(3, 2*eye(2), 5*eye(2), 3*eye(2));
             [sameL, differentP] = lateralObserverSupport.scheduleLateralObserverGain(design, 12.3);
-            expectedY = [[.1;.2]+[1;2]/12.3, [3;-1]+12.3*[-.2;.3]];
+            expectedY = [[1;2]/12.3, [3;-1]+12.3*[-.2;.3]];
             testCase.verifyEqual(sameL, L, AbsTol=0);
             testCase.verifyGreaterThan(norm(differentP - P), .1);
             testCase.verifyEqual(design.gainRecoveryMatrix*L, expectedY, AbsTol=1e-12);
@@ -352,18 +351,16 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function affineNoiseExtensionIsRequiredAtTheAuxiliaryVertex(testCase)
             design = testCase.CurrentDesign;
             design.gainRecoveryMatrix = [2,.3;-.2,1.5];
-            basis = struct('accelerationConstant',[.1;.2], ...
-                'accelerationReciprocal',[1;2],'yawConstant',[.3;-.5],'yawSpeed',[.02;.01]);
+            basis = struct('accelerationReciprocal',[1;2],'yawConstant',[.3;-.5],'yawSpeed',[.02;.01]);
             design.gainBasis = basis;
             sigma = design.measurementErrorScale;
             correct = zeros(2,2,3);
             naive = zeros(2,2,3);
             for idx = 1:3
                 rho = design.polytope.vertices(:,idx);
-                Y = [basis.accelerationConstant + rho(2)*basis.accelerationReciprocal, ...
+                Y = [rho(2)*basis.accelerationReciprocal, ...
                     basis.yawConstant + rho(1)*basis.yawSpeed];
-                correct(:,:,idx) = [-sigma(1)*(rho(1)*basis.accelerationConstant + ...
-                    basis.accelerationReciprocal), -sigma(2)*Y(:,2)];
+                correct(:,:,idx) = [-sigma(1)*basis.accelerationReciprocal, -sigma(2)*Y(:,2)];
                 naive(:,:,idx) = -Y*diag([rho(1);1].*sigma);
             end
             speed = 12.3;
@@ -376,13 +373,19 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(norm(wrongBlend-actual),1e-3);
         end
 
-        function generalAccelerationConstantRemainsAnExplicitOption(testCase)
+        function accelerationConstantOptionIsRejected(testCase)
             cfg = testCase.CurrentDesign.cfg;
             cfg.synthesis.accelerationGainConstant = true;
-            design = designLateralObserverGains(cfg);
-            testCase.verifyTrue(design.solverSolved);
-            testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design),0);
-            testCase.verifySize(design.gainBasis.accelerationConstant,[2,1]);
+            testCase.verifyError(@() designLateralObserverGains(cfg), ...
+                'VehicleLocalization:ObsoleteLateralConfiguration');
+        end
+
+        function optionalAccelerationDesignIsRejected(testCase)
+            design = testCase.CurrentDesign;
+            design.certificateMethod = "column-affine-expanded-iss-linear-v4";
+            testCase.verifyError(@() runLateralVelocityObserver( ...
+                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
+                'VehicleLocalization:ObsoleteLateralDesign');
         end
 
         function obsoleteMetricRecoveryDesignIsRejected(testCase)
@@ -589,7 +592,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.CurrentDesign;
             resolved = designLateralObserverGains(design.cfg);
 
-            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-linear-v4");
+            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-reciprocal-v5");
             testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.solverSolved);

@@ -157,7 +157,7 @@ classdef lateralObserverSupport
         % The lifted coordinates rho=[v;q] need not satisfy v*q=1 here.
             rho = double(rho(:));
             assert(numel(rho) == 2 && all(isfinite(rho)), "rho must contain two finite coordinates.");
-            Y = [basis.accelerationConstant + rho(2)*basis.accelerationReciprocal, ...
+            Y = [rho(2)*basis.accelerationReciprocal, ...
                 basis.yawConstant + rho(1)*basis.yawSpeed];
         end
 

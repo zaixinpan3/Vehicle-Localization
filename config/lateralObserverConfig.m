@@ -50,9 +50,7 @@ function cfg = lateralObserverConfig(profile)
     cfg.synthesis.initialErrorWeight = 1.0;
     % Fixed within each SDP; epsilon=0.02 s was evaluated in the column-gain study.
     cfg.synthesis.dilationTimeScale = 0.02;
-    % False gives L_a=gq/Vx exactly. True allows g0+gq/Vx explicitly.
-    % The yaw-rate column remains h0+Vx*hv in both cases.
-    cfg.synthesis.accelerationGainConstant = false;
+    % Acceleration gain is strictly reciprocal in speed; yaw gain is affine.
     % A generous metric ceiling avoids poorly scaled SDP constraints. The
     % balanced nominal optimum is near I; this is a numerical safeguard.
     cfg.synthesis.pCeiling = 1.0e3;
