@@ -40,22 +40,22 @@ function cfg = lateralObserverConfig(profile)
         'speedRateRange', [-4.0, 4.0]);
 
     % Scheduled P >= I for the nominal linear LPV model.
-    % Balance normalized ISS gain and initial-error energy in a single SDP.
+    % Minimize normalized disturbance gain in a single SDP.
     cfg.synthesis = struct();
     cfg.synthesis.decayRate = 2.0;
-    % Weight on the uniform initial-error energy bound in gamma^2 + w*pbar.
-    % Zero retains noise-only minimization, which may select L = 0.
-    cfg.synthesis.initialErrorWeight = 1.0;
+    % Reference units for [lateral-acceleration; yaw-acceleration] disturbances.
+    % Design normalization only, not claimed measured uncertainty bounds.
+    cfg.synthesis.processErrorScale = [1.0; 1.0];
     % Fixed within each SDP; epsilon=0.02 s was evaluated in the column-gain study.
     cfg.synthesis.dilationTimeScale = 0.02;
     % Acceleration gain is strictly reciprocal in speed; yaw gain is affine.
     % A generous metric ceiling avoids poorly scaled SDP constraints. The
-    % balanced nominal optimum is near I; this is a numerical safeguard.
+    % ceiling is a numerical safeguard, not an optimization objective.
     cfg.synthesis.pCeiling = 1.0e3;
     % Minimizing the ISS gain pushes the solution onto the constraint
     % boundary; strictnessEpsilon specifies the requested LMI margin.
     cfg.synthesis.strictnessEpsilon = 1.0e-6;
-    cfg.synthesis.solver = "sedumi";
+    cfg.synthesis.solver = "sdpt3";
     cfg.synthesis.verbose = 0;
     cfg.synthesis.dualize = 0;
 

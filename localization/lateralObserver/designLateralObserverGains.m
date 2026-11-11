@@ -6,7 +6,7 @@ function design = designLateralObserverGains(cfg)
 % The acceleration column is strictly reciprocal, so v*L_a(v) is constant.
 % Twelve expanded LMIs use v*(1/v)=1 only on the physical curve, including
 % the affine noise extension at auxiliary vertices and the derivative Pdot.
-% Each LMI is 6-by-6 for the nominal linear LPV model.
+% Each LMI is 8-by-8 for the linear LPV model with process disturbances.
     if nargin < 1 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
@@ -19,13 +19,12 @@ function design = designLateralObserverGains(cfg)
     domain = lateralObserverSupport.buildCertificateDomain(model, polytope, cfg.scheduling.speedRateRange);
     options = sdpsettings('solver', char(string(cfg.synthesis.solver)), ...
         'verbose', double(cfg.synthesis.verbose), 'dualize', double(cfg.synthesis.dualize));
-    weight = double(cfg.synthesis.initialErrorWeight);
 
     variables = synthesisVariables();
     gainSquared = sdpvar(1, 1);
     [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         variables, gainSquared, domain, model, polytope, sigma, cfg.synthesis);
-    objective = gainSquared + weight*variables.pUpper;
+    objective = gainSquared;
     diagnostics = optimize(constraints, objective, options);
     assert(diagnostics.problem == 0, ...
         "The column-affine expanded ISS synthesis failed: %s", diagnostics.info);
@@ -39,7 +38,7 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "column-affine-expanded-iss-single-v6";
+    design.certificateMethod = "column-affine-expanded-iss-process-v8";
     design.gainRecoveryMatrix = value(variables.X);
     design.gainBasis = struct('accelerationReciprocal', value(variables.basis.accelerationReciprocal), ...
         'yawConstant', value(variables.basis.yawConstant), 'yawSpeed', value(variables.basis.yawSpeed));
@@ -54,7 +53,8 @@ function design = designLateralObserverGains(cfg)
     end
     design.decayRate = double(cfg.synthesis.decayRate);
     design.dilationTimeScale = double(cfg.synthesis.dilationTimeScale);
-    design.normalizedInputSize = 2;
+    design.normalizedInputSize = 4;
+    design.processErrorScale = double(cfg.synthesis.processErrorScale(:));
     design.measurementErrorScale = sigma;
     % Diagnostics only: no second-stage noise optimization.
     design.vertexNoiseBounds = cellfun(@(S) norm(value(S), 2), noiseMatrices);
@@ -64,7 +64,6 @@ function design = designLateralObserverGains(cfg)
     design.maximumCertificateEigenvalue = maximumEigenvalue;
     design.metricUpperBound = max(arrayfun(@(idx) max(eig(design.vertexLyapunovMatrices(:, :, idx))), 1:3));
     design.optimalObjective = optimalObjective;
-    design.initialErrorWeight = weight;
     design.issGainLimit = sqrt(max(value(gainSquared), 0));
     design.issGain = design.issGainLimit;
     design.errorBound = design.issGain/sqrt(2*design.decayRate);
@@ -85,6 +84,13 @@ function validateConfiguration(cfg)
         ~isfield(cfg.synthesis, 'stiffnessRegressorScale'), ...
         'VehicleLocalization:ObsoleteLateralConfiguration', ...
         'Use the current column-affine configuration with a strictly reciprocal acceleration gain, speed-rate bounds and a fixed dilation time scale.');
+    assert(isfield(cfg.synthesis, 'processErrorScale'), ...
+        'VehicleLocalization:InvalidProcessScale', ...
+        'Specify two positive process reference scales before synthesis.');
+    processScale = double(cfg.synthesis.processErrorScale(:));
+    assert(numel(processScale) == 2 && all(isfinite(processScale)) && all(processScale > 0), ...
+        'VehicleLocalization:InvalidProcessScale', ...
+        'Require two positive process reference scales in [lateral acceleration; yaw acceleration] order.');
     sigma = double(cfg.synthesis.measurementErrorScale(:));
     assert(numel(sigma) == 2 && all(isfinite(sigma)) && all(sigma > 0), ...
         'VehicleLocalization:ObsoleteLateralConfiguration', ...
@@ -98,9 +104,9 @@ function validateConfiguration(cfg)
         assert(isscalar(scalar) && isfinite(scalar) && scalar > 0, ...
             "cfg.synthesis.%s must be positive and finite.", name);
     end
-    weight = double(cfg.synthesis.initialErrorWeight);
-    assert(isscalar(weight) && isfinite(weight) && weight >= 0, ...
-        "cfg.synthesis.initialErrorWeight must be nonnegative and finite.");
+    assert(~isfield(cfg.synthesis, 'initialErrorWeight'), ...
+        'VehicleLocalization:ObsoleteLateralConfiguration', ...
+        'Remove initialErrorWeight; the objective is solely the disturbance gain.');
     ceiling = double(cfg.synthesis.pCeiling);
     assert(isscalar(ceiling) && ceiling >= 1 + cfg.synthesis.strictnessEpsilon, ...
         "cfg.synthesis.pCeiling must allow the normalized Lyapunov matrices.");
@@ -109,7 +115,6 @@ end
 function variables = synthesisVariables()
 % synthesisVariables Independent metric vertices, common X and affine columns.
     variables = struct();
-    variables.pUpper = sdpvar(1, 1);
     variables.P = {sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric')};
     variables.X = sdpvar(2, 2, 'full');
     variables.basis = struct('accelerationReciprocal', sdpvar(2, 1, 'full'), ...
@@ -124,8 +129,9 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
 % off-curve noise extension must use Gq, not v*q*Gq.
     margin = double(cfg.strictnessEpsilon);
     epsilon = double(cfg.dilationTimeScale);
+    processScale = diag(double(cfg.processErrorScale(:)));
     X = variables.X;
-    constraints = [gainSquared >= 0, variables.pUpper >= 1, X + X.' >= 2*eye(2)];
+    constraints = [gainSquared >= 0, X + X.' >= 2*eye(2)];
     blocks = cell(domain.numLmis, 1);
     noiseMatrices = cell(3, 1);
     for idx = 1:3
@@ -136,7 +142,10 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         speedColumn = variables.basis.accelerationReciprocal;
         S = [-sigma(1)*speedColumn, -sigma(2)*Y(:, 2)];
         noiseMatrices{idx} = S;
-        constraints = [constraints, P >= (1 + margin)*eye(2), P <= variables.pUpper*eye(2)]; %#ok<AGROW>
+        % Process acceleration also enters the accelerometer output.
+        processInjection = (X - [speedColumn, zeros(2,1)])*processScale;
+        inputBlock = [processInjection, S];
+        constraints = [constraints, P >= (1 + margin)*eye(2)]; %#ok<AGROW>
         if isfinite(cfg.pCeiling)
             constraints = [constraints, P <= cfg.pCeiling*eye(2)]; %#ok<AGROW>
         end
@@ -144,9 +153,9 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
             rate = domain.coordinateRateVertices(:, rateIdx);
             Pdot = rate(1)*variables.P{1} + rate(2)*variables.P{2} + rate(3)*variables.P{3};
             Phi = Pdot + R + R.' + 2*cfg.decayRate*P;
-            block = [Phi, P - X + epsilon*R.', S; ...
-                P - X.' + epsilon*R, -epsilon*(X + X.'), epsilon*S; ...
-                S.', epsilon*S.', -gainSquared*eye(2)];
+            block = [Phi, P - X + epsilon*R.', inputBlock; ...
+                P - X.' + epsilon*R, -epsilon*(X + X.'), epsilon*inputBlock; ...
+                inputBlock.', epsilon*inputBlock.', -gainSquared*eye(4)];
             constraints = [constraints, block <= -margin*eye(size(block, 1))]; %#ok<AGROW>
             blocks{domain.numRateVertices*(idx - 1) + rateIdx} = block;
         end
