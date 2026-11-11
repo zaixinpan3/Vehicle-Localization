@@ -175,6 +175,35 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 'VehicleLocalization:ObsoleteLateralDesign');
         end
 
+        function secondStageConfigurationIsRejected(testCase)
+            cfg = testCase.CurrentDesign.cfg;
+            cfg.synthesis.issGainRelaxation = .05;
+            testCase.verifyError(@() designLateralObserverGains(cfg), ...
+                'VehicleLocalization:ObsoleteLateralConfiguration');
+        end
+
+        function twoStageDesignIsRejected(testCase)
+            design = testCase.CurrentDesign;
+            design.certificateMethod = "column-affine-expanded-iss-reciprocal-v5";
+            testCase.verifyError(@() runLateralVelocityObserver( ...
+                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
+                'VehicleLocalization:ObsoleteLateralDesign');
+        end
+
+        function singleStageSolutionRetainsTheObjectiveAndNoiseDiagnostics(testCase)
+            design = testCase.CurrentDesign;
+            testCase.verifyFalse(isfield(design, 'objectiveLimit'));
+            testCase.verifyFalse(isfield(design, 'firstStageIssGain'));
+            testCase.verifyLessThanOrEqual(design.issGain^2 + ...
+                design.initialErrorWeight*design.metricUpperBound, design.optimalObjective + 1e-6);
+            for speed = linspace(1, 30, 31)
+                L = lateralObserverSupport.scheduleLateralObserverGain(design, speed);
+                injection = L*diag([speed;1].*design.measurementErrorScale);
+                testCase.verifyLessThanOrEqual(norm(injection, 2), ...
+                    design.uniformNoiseGainNormBound + 1e-8);
+            end
+        end
+
         function physicalPlantMinusObserverSatisfiesDissipation(testCase)
             design = testCase.CurrentDesign;
             speeds = linspace(design.polytope.speedRange(1), design.polytope.speedRange(2), 31);
@@ -592,7 +621,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.CurrentDesign;
             resolved = designLateralObserverGains(design.cfg);
 
-            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-reciprocal-v5");
+            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-single-v6");
             testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.solverSolved);

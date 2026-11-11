@@ -40,11 +40,9 @@ function cfg = lateralObserverConfig(profile)
         'speedRateRange', [-4.0, 4.0]);
 
     % Scheduled P >= I for the nominal linear LPV model.
-    % Balance normalized ISS gain and initial-error energy, then minimize
-    % physical noise-injection bounds within a relaxed first-stage objective.
+    % Balance normalized ISS gain and initial-error energy in a single SDP.
     cfg.synthesis = struct();
     cfg.synthesis.decayRate = 2.0;
-    cfg.synthesis.issGainRelaxation = 0.05;
     % Weight on the uniform initial-error energy bound in gamma^2 + w*pbar.
     % Zero retains noise-only minimization, which may select L = 0.
     cfg.synthesis.initialErrorWeight = 1.0;

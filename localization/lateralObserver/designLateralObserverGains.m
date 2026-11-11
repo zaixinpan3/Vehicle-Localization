@@ -23,31 +23,13 @@ function design = designLateralObserverGains(cfg)
 
     variables = synthesisVariables();
     gainSquared = sdpvar(1, 1);
-    constraints = certificateConstraints(variables, gainSquared, domain, model, polytope, sigma, cfg.synthesis);
+    [constraints, blocks, noiseMatrices] = certificateConstraints( ...
+        variables, gainSquared, domain, model, polytope, sigma, cfg.synthesis);
     objective = gainSquared + weight*variables.pUpper;
     diagnostics = optimize(constraints, objective, options);
     assert(diagnostics.problem == 0, ...
         "The column-affine expanded ISS synthesis failed: %s", diagnostics.info);
     optimalObjective = value(objective);
-    firstStageIssGain = sqrt(max(value(gainSquared), 0));
-    objectiveLimit = (1 + double(cfg.synthesis.issGainRelaxation))^2*optimalObjective;
-
-    variables = synthesisVariables();
-    gainSquared = sdpvar(1, 1);
-    bounds = sdpvar(3, 1);
-    [constraints, blocks, noiseMatrices] = certificateConstraints( ...
-        variables, gainSquared, domain, model, polytope, sigma, cfg.synthesis);
-    constraints = [constraints, gainSquared + weight*variables.pUpper <= objectiveLimit];
-    for idx = 1:3
-        % Sym(X) >= I gives ||X^-1|| <= 1. These bound physical normalized
-        % noise injection, rather than raw gain columns with different units.
-        S = noiseMatrices{idx};
-        constraints = [constraints, ...
-            [bounds(idx)*eye(2), S; S.', bounds(idx)*eye(2)] >= 0]; %#ok<AGROW>
-    end
-    diagnostics = optimize(constraints, sum(bounds), options);
-    assert(diagnostics.problem == 0, ...
-        "The column-affine minimum-noise program failed: %s", diagnostics.info);
     maximumEigenvalue = max(cellfun(@(block) max(eig(value(block))), blocks));
     assert(isfinite(maximumEigenvalue) && maximumEigenvalue < 0, ...
         'VehicleLocalization:InvalidLateralCertificate', ...
@@ -57,7 +39,7 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "column-affine-expanded-iss-reciprocal-v5";
+    design.certificateMethod = "column-affine-expanded-iss-single-v6";
     design.gainRecoveryMatrix = value(variables.X);
     design.gainBasis = struct('accelerationReciprocal', value(variables.basis.accelerationReciprocal), ...
         'yawConstant', value(variables.basis.yawConstant), 'yawSpeed', value(variables.basis.yawSpeed));
@@ -74,15 +56,14 @@ function design = designLateralObserverGains(cfg)
     design.dilationTimeScale = double(cfg.synthesis.dilationTimeScale);
     design.normalizedInputSize = 2;
     design.measurementErrorScale = sigma;
-    design.vertexNoiseBounds = value(bounds);
+    % Diagnostics only: no second-stage noise optimization.
+    design.vertexNoiseBounds = cellfun(@(S) norm(value(S), 2), noiseMatrices);
     design.uniformNoiseGainNormBound = max(design.vertexNoiseBounds);
     design.maxVertexGainNorm = max(arrayfun(@(idx) norm(design.vertexGains(:, :, idx)), 1:3));
     design.uniformGainNormBound = design.maxVertexGainNorm;
     design.maximumCertificateEigenvalue = maximumEigenvalue;
     design.metricUpperBound = max(arrayfun(@(idx) max(eig(design.vertexLyapunovMatrices(:, :, idx))), 1:3));
     design.optimalObjective = optimalObjective;
-    design.objectiveLimit = objectiveLimit;
-    design.firstStageIssGain = firstStageIssGain;
     design.initialErrorWeight = weight;
     design.issGainLimit = sqrt(max(value(gainSquared), 0));
     design.issGain = design.issGainLimit;
@@ -108,7 +89,10 @@ function validateConfiguration(cfg)
     assert(numel(sigma) == 2 && all(isfinite(sigma)) && all(sigma > 0), ...
         'VehicleLocalization:ObsoleteLateralConfiguration', ...
         'Require two positive physical error scales in [ay; r] order.');
-    positive = ["decayRate", "strictnessEpsilon", "issGainRelaxation", "dilationTimeScale"];
+    assert(~isfield(cfg.synthesis, 'issGainRelaxation'), ...
+        'VehicleLocalization:ObsoleteLateralConfiguration', ...
+        'Remove issGainRelaxation; lateral gains are synthesized with a single SDP.');
+    positive = ["decayRate", "strictnessEpsilon", "dilationTimeScale"];
     for name = positive
         scalar = double(cfg.synthesis.(name));
         assert(isscalar(scalar) && isfinite(scalar) && scalar > 0, ...
