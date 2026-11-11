@@ -10,7 +10,6 @@ classdef lateralObserverSupport
         % lateralBicycleModel Build the nominal bicycle model with outputs [Vx*ay; r].
         % State x = [vy; r], steering delta, and y = [Vx*ay; r] = C*x + D*delta.
         % A(rho) = A0 + Vx*A1 + (1/Vx)*A2; C is constant, D = Vx*D1.
-        % An optional copied nonlinearity adds Vx*f_1(x) to this output.
             requiredFields = ["mass", "yawInertia", "lf", "lr", "frontCorneringStiffness", "rearCorneringStiffness"];
             for fieldName = requiredFields
                 assert(isfield(vehicle, fieldName) && isscalar(vehicle.(fieldName)) && ...

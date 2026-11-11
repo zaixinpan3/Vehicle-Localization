@@ -6,7 +6,7 @@ function design = designLateralObserverGains(cfg)
 % By default the acceleration constant is zero, so v*L_a(v) is constant.
 % Twelve expanded LMIs use v*(1/v)=1 only on the physical curve, including
 % the affine noise extension at auxiliary vertices and the derivative Pdot.
-% The linear model uses 6-by-6 LMIs; copied Lipschitz support uses 8-by-8.
+% Each LMI is 6-by-6 for the nominal linear LPV model.
     if nargin < 1 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
@@ -57,7 +57,7 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "column-affine-expanded-iss-v3";
+    design.certificateMethod = "column-affine-expanded-iss-linear-v4";
     design.gainRecoveryMatrix = value(variables.X);
     design.gainBasis = struct('accelerationConstant', value(variables.basis.accelerationConstant), ...
         'accelerationReciprocal', value(variables.basis.accelerationReciprocal), ...
@@ -71,7 +71,6 @@ function design = designLateralObserverGains(cfg)
             design.gainBasis, polytope.vertices(:, idx));
         design.vertexGains(:, :, idx) = design.gainRecoveryMatrix\design.vertexY(:, :, idx);
     end
-    design.tau = value(variables.tau);
     design.decayRate = double(cfg.synthesis.decayRate);
     design.dilationTimeScale = double(cfg.synthesis.dilationTimeScale);
     design.normalizedInputSize = 2;
@@ -89,7 +88,6 @@ function design = designLateralObserverGains(cfg)
     design.issGainLimit = sqrt(max(value(gainSquared), 0));
     design.issGain = design.issGainLimit;
     design.errorBound = design.issGain/sqrt(2*design.decayRate);
-    design.lipschitzConstant = double(cfg.synthesis.lipschitzConstant);
     design.cfg = cfg;
     design.solverSolved = diagnostics.problem == 0;
     design.solverInfo = string(diagnostics.info);
@@ -97,6 +95,10 @@ end
 
 function validateConfiguration(cfg)
 % validateConfiguration Reject stale or inconsistent synthesis assumptions.
+    assert(~isfield(cfg.synthesis, 'lipschitzConstant') && ...
+        ~isfield(cfg.observer, 'nonlinearity'), ...
+        'VehicleLocalization:ObsoleteLateralConfiguration', ...
+        'Use the current linear LPV configuration; nonlinear lateral dynamics are no longer supported.');
     assert(isfield(cfg.scheduling, 'speedRateRange') && ...
         isfield(cfg.synthesis, 'dilationTimeScale') && isfield(cfg.synthesis, 'accelerationGainConstant') && ...
         ~isfield(cfg.synthesis, 'stiffnessRelativeErrorBound') && ...
@@ -113,12 +115,9 @@ function validateConfiguration(cfg)
         assert(isscalar(scalar) && isfinite(scalar) && scalar > 0, ...
             "cfg.synthesis.%s must be positive and finite.", name);
     end
-    nonnegative = ["initialErrorWeight", "lipschitzConstant"];
-    for name = nonnegative
-        scalar = double(cfg.synthesis.(name));
-        assert(isscalar(scalar) && isfinite(scalar) && scalar >= 0, ...
-            "cfg.synthesis.%s must be nonnegative and finite.", name);
-    end
+    weight = double(cfg.synthesis.initialErrorWeight);
+    assert(isscalar(weight) && isfinite(weight) && weight >= 0, ...
+        "cfg.synthesis.initialErrorWeight must be nonnegative and finite.");
     assert(islogical(cfg.synthesis.accelerationGainConstant) && isscalar(cfg.synthesis.accelerationGainConstant), ...
         "cfg.synthesis.accelerationGainConstant must be a logical scalar.");
     ceiling = double(cfg.synthesis.pCeiling);
@@ -140,28 +139,18 @@ function variables = synthesisVariables(cfg)
     variables.basis = struct('accelerationConstant', accelerationConstant, ...
         'accelerationReciprocal', sdpvar(2, 1, 'full'), ...
         'yawConstant', sdpvar(2, 1, 'full'), 'yawSpeed', sdpvar(2, 1, 'full'));
-    if cfg.lipschitzConstant == 0
-        variables.tau = 0;
-    else
-        variables.tau = sdpvar(1, 1);
-    end
 end
 
 function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         variables, gainSquared, domain, model, polytope, sigma, cfg)
 % certificateConstraints Jointly affine expanded LMIs, three positions x four rates.
-% On the physical curve, R=X*(A-L*C), S=X*Bd and F=X*(I-v*L_a*e1').
+% On the physical curve, R=X*(A-L*C) and S=X*Bd.
 % A null-space congruence recovers the original P-metric inequality. The
 % off-curve noise extension must use v*G0+Gq, not v*(G0+q*Gq).
     margin = double(cfg.strictnessEpsilon);
     epsilon = double(cfg.dilationTimeScale);
-    gammaF = double(cfg.lipschitzConstant);
-    tau = variables.tau;
     X = variables.X;
     constraints = [gainSquared >= 0, variables.pUpper >= 1, X + X.' >= 2*eye(2)];
-    if gammaF > 0
-        constraints = [constraints, tau >= margin];
-    end
     blocks = cell(domain.numLmis, 1);
     noiseMatrices = cell(3, 1);
     for idx = 1:3
@@ -171,7 +160,6 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         R = X*domain.vertexA(:, :, idx) - Y*model.C;
         speedColumn = rho(1)*variables.basis.accelerationConstant + variables.basis.accelerationReciprocal;
         S = [-sigma(1)*speedColumn, -sigma(2)*Y(:, 2)];
-        F = X - speedColumn*[1, 0];
         noiseMatrices{idx} = S;
         constraints = [constraints, P >= (1 + margin)*eye(2), P <= variables.pUpper*eye(2)]; %#ok<AGROW>
         if isfinite(cfg.pCeiling)
@@ -180,17 +168,10 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         for rateIdx = 1:domain.numRateVertices
             rate = domain.coordinateRateVertices(:, rateIdx);
             Pdot = rate(1)*variables.P{1} + rate(2)*variables.P{2} + rate(3)*variables.P{3};
-            Phi = Pdot + R + R.' + 2*cfg.decayRate*P + tau*gammaF^2*eye(2);
-            if gammaF == 0
-                block = [Phi, P - X + epsilon*R.', S; ...
-                    P - X.' + epsilon*R, -epsilon*(X + X.'), epsilon*S; ...
-                    S.', epsilon*S.', -gainSquared*eye(2)];
-            else
-                block = [Phi, P - X + epsilon*R.', S, F; ...
-                    P - X.' + epsilon*R, -epsilon*(X + X.'), epsilon*S, epsilon*F; ...
-                    S.', epsilon*S.', -gainSquared*eye(2), zeros(2); ...
-                    F.', epsilon*F.', zeros(2), -tau*eye(2)];
-            end
+            Phi = Pdot + R + R.' + 2*cfg.decayRate*P;
+            block = [Phi, P - X + epsilon*R.', S; ...
+                P - X.' + epsilon*R, -epsilon*(X + X.'), epsilon*S; ...
+                S.', epsilon*S.', -gainSquared*eye(2)];
             constraints = [constraints, block <= -margin*eye(size(block, 1))]; %#ok<AGROW>
             blocks{domain.numRateVertices*(idx - 1) + rateIdx} = block;
         end

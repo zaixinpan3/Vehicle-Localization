@@ -64,7 +64,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.CurrentDesign;
             testCase.verifySize(design.vertexY, [2, 2, 3]);
             testCase.verifySize(design.vertexLyapunovMatrices, [2, 2, 3]);
-            testCase.verifyEqual(design.tau, 0);
             testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design), 0);
             testCase.verifyLessThan(design.maximumCertificateEigenvalue, 0);
             testCase.verifyEqual(design.certificateDomain.numLmis, 12);
@@ -89,13 +88,28 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 'VehicleLocalization:ObsoleteLateralConfiguration');
         end
 
-        function linearModelNeedsNoYoungMultiplier(testCase)
-            cfg = testCase.CurrentDesign.cfg;
-            cfg.synthesis.lipschitzConstant = 0;
-            design = designLateralObserverGains(cfg);
-            testCase.verifyTrue(design.solverSolved);
-            testCase.verifyEqual(design.tau, 0, AbsTol=0);
-            testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design), 0);
+        function obsoleteNonlinearConfigurationsAreRejected(testCase)
+            baseline = testCase.CurrentDesign.cfg;
+            cfgs = {baseline, baseline};
+            cfgs{1}.synthesis.lipschitzConstant = .5;
+            cfgs{2}.observer.nonlinearity = @(x) .1*x;
+            measurements = testCase.constantSpeedMeasurements(.1, 10);
+            for idx = 1:numel(cfgs)
+                cfg = cfgs{idx};
+                testCase.verifyError(@() designLateralObserverGains(cfg), ...
+                    'VehicleLocalization:ObsoleteLateralConfiguration');
+                testCase.verifyError(@() runLateralVelocityObserver( ...
+                    measurements, testCase.CurrentDesign, cfg), ...
+                    'VehicleLocalization:ObsoleteLateralConfiguration');
+            end
+        end
+
+        function obsoleteNonlinearDesignFormatIsRejected(testCase)
+            design = testCase.CurrentDesign;
+            design.certificateMethod = "column-affine-expanded-iss-v3";
+            testCase.verifyError(@() runLateralVelocityObserver( ...
+                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
+                'VehicleLocalization:ObsoleteLateralDesign');
         end
 
         function coordinateTransportPrecedesAlgebraicSideslip(testCase)
@@ -303,26 +317,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyLessThan(result.metrics.settledLateralVelocityRmse, ...
                 0.05 .* result.metrics.peakLateralVelocity);
             testCase.verifyLessThan(result.metrics.settledYawRateRmse, 0.01);
-            testCase.verifyTrue(all(isfinite(result.estimate.state(:))));
-        end
-
-        function observerToleratesLipschitzBoundedNonlinearity(testCase)
-        % observerToleratesLipschitzBoundedNonlinearity: With a nonlinearity
-        % whose Lipschitz constant respects the design bound, the observer still
-        % converges, which is what the Young-inequality term of the certificate
-        % is there to guarantee.
-            cfg = testCase.CurrentDesign.cfg;
-            cfg.synthesis.lipschitzConstant = 0.5;
-            design = designLateralObserverGains(cfg);
-            nonlinearGain = 0.3;
-            cfg.observer.nonlinearity = @(x) [nonlinearGain .* sin(x(2)); -0.2 .* sin(x(1))];
-            testCase.assertLessThanOrEqual(nonlinearGain, design.lipschitzConstant);
-            testCase.verifyGreaterThan(design.tau, 0);
-            testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design), 0);
-
-            result = simulateLateralObserverScenario(design, cfg);
-            testCase.verifyLessThan(result.metrics.settledLateralVelocityRmse, ...
-                0.05 .* result.metrics.peakLateralVelocity);
             testCase.verifyTrue(all(isfinite(result.estimate.state(:))));
         end
 
@@ -595,8 +589,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.CurrentDesign;
             resolved = designLateralObserverGains(design.cfg);
 
-            testCase.verifyEqual(resolved.tau, design.tau, RelTol=1e-4);
-            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-v3");
+            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-linear-v4");
             testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.solverSolved);
@@ -613,15 +606,8 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                     [L, P, Pdot] = lateralObserverSupport.scheduleLateralObserverGain(design, speed, rate);
                     Ae = A - L*design.model.C;
                     noise = -P*L*diag([speed; 1].*design.measurementErrorScale);
-                    Phi = Pdot + P*Ae + Ae.'*P + 2*design.decayRate*P + ...
-                        design.tau*design.lipschitzConstant^2*eye(2);
-                    if design.lipschitzConstant == 0
-                        block = [Phi, noise; noise.', -design.issGain^2*eye(2)];
-                    else
-                        nonlinear = P*(eye(2) - speed*L(:, 1)*[1, 0]);
-                        block = [Phi, noise, nonlinear; noise.', -design.issGain^2*eye(2), zeros(2); ...
-                            nonlinear.', zeros(2), -design.tau*eye(2)];
-                    end
+                    Phi = Pdot + P*Ae + Ae.'*P + 2*design.decayRate*P;
+                    block = [Phi, noise; noise.', -design.issGain^2*eye(2)];
                     worst = max(worst, max(eig((block + block.')/2)));
                 end
             end

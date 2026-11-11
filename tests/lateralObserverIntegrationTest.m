@@ -117,31 +117,6 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             testCase.verifyEqual(actual.state,expected,AbsTol=1e-12);
         end
 
-        function copiedNonlinearityRetainsSecondOrderConvergence(testCase)
-            cfg = testCase.Design.cfg;
-            cfg.observer.initialState = [.05;.005];
-            N = [.2,.1;-.1,.1];
-            cfg.observer.nonlinearity = @(x) N*x;
-            [M,b] = testCase.linearSystem(testCase.Design,10,.01,.1,.01);
-            L = lateralObserverSupport.scheduleLateralObserverGain(testCase.Design, 10);
-            nonlinearMap = eye(2) - 10*L(:,1)*[1,0];
-            coarse = testCase.measurements((0:.1:1).',10);
-            coarse.steeringAngle(:) = .01;
-            coarse.lateralAcceleration(:) = .1;
-            coarse.yawRate(:) = .01;
-            fine = testCase.measurements((0:.05:1).',10);
-            fine.steeringAngle(:) = .01;
-            fine.lateralAcceleration(:) = .1;
-            fine.yawRate(:) = .01;
-            a = runLateralVelocityObserver(coarse,testCase.Design,cfg);
-            z = runLateralVelocityObserver(fine,testCase.Design,cfg);
-            expected = testCase.exactAffine(M+nonlinearMap*N,b,cfg.observer.initialState,coarse.time);
-            coarseError = norm(a.state-expected,'fro');
-            fineError = norm(z.state(1:2:end,:)-expected,'fro');
-            testCase.verifyLessThan(fineError,.35*coarseError);
-            testCase.verifyLessThan(coarseError,1e-3);
-        end
-
         function branchCutDoesNotCreateAnAngularRateImpulse(testCase)
             cfg = testCase.Design.cfg;
             m = testCase.measurements([0;.1;.2],2);

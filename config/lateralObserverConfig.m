@@ -39,11 +39,10 @@ function cfg = lateralObserverConfig(profile)
     cfg.scheduling = struct('speedRange', [1.0, 30.0], ...
         'speedRateRange', [-4.0, 4.0]);
 
-    % Scheduled P >= I; the default linear model needs no Young multiplier.
+    % Scheduled P >= I for the nominal linear LPV model.
     % Balance normalized ISS gain and initial-error energy, then minimize
     % physical noise-injection bounds within a relaxed first-stage objective.
     cfg.synthesis = struct();
-    cfg.synthesis.lipschitzConstant = 0.0;
     cfg.synthesis.decayRate = 2.0;
     cfg.synthesis.issGainRelaxation = 0.05;
     % Weight on the uniform initial-error energy bound in gamma^2 + w*pbar.
@@ -64,15 +63,11 @@ function cfg = lateralObserverConfig(profile)
     cfg.synthesis.verbose = 0;
     cfg.synthesis.dualize = 0;
 
-    % The optional nonlinearity is copied from the plant. If enabled, its
-    % Lipschitz constant must be supplied to the synthesis. Both default to
-    % zero. The predicted virtual output includes Vx*f_1(xhat) if enabled.
     cfg.observer = struct();
-    % Exponentiate the stiff LPV part at each interval midpoint. The copied
-    % nonlinearity uses an explicit midpoint stage. This is a numerical implementation,
+    % Freeze LPV coefficients at each interval midpoint and exponentiate
+    % the resulting affine flow. This is a numerical implementation,
     % not an extension of the continuous ISS certificate to sampled data.
     cfg.observer.integrationMethod = "exponentialMidpoint";
-    cfg.observer.nonlinearity = @(x) zeros(2, 1);
     cfg.observer.initialState = [0.0; 0.0];
     % Only the LPV [vy; r] state estimates velocity. Out-of-domain samples
     % hold that state and withdraw its exported velocity aiding.

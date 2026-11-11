@@ -50,7 +50,6 @@ function truth = simulateTruth(cfg)
     time = (0:numSteps).' .* sampleTime;
     [longitudinalSpeed, longitudinalAcceleration] = speedProfile(time, cfg);
     steeringAngle = steeringProfile(time, cfg);
-    nonlinearity = cfg.observer.nonlinearity;
     plantVehicle = cfg.simulation.plantVehicle;
     if isempty(plantVehicle)
         plantVehicle = cfg.vehicle;
@@ -61,10 +60,10 @@ function truth = simulateTruth(cfg)
     for sampleIdx = 1:(numel(time) - 1)
         stepTime = time(sampleIdx + 1) - time(sampleIdx);
         current = state(sampleIdx, :).';
-        k1 = plantDerivative(current, sampleIdx, 0.0, longitudinalSpeed, steeringAngle, model, nonlinearity);
-        k2 = plantDerivative(current + (0.5 .* stepTime .* k1), sampleIdx, 0.5, longitudinalSpeed, steeringAngle, model, nonlinearity);
-        k3 = plantDerivative(current + (0.5 .* stepTime .* k2), sampleIdx, 0.5, longitudinalSpeed, steeringAngle, model, nonlinearity);
-        k4 = plantDerivative(current + (stepTime .* k3), sampleIdx, 1.0, longitudinalSpeed, steeringAngle, model, nonlinearity);
+        k1 = plantDerivative(current, sampleIdx, 0.0, longitudinalSpeed, steeringAngle, model);
+        k2 = plantDerivative(current + (0.5 .* stepTime .* k1), sampleIdx, 0.5, longitudinalSpeed, steeringAngle, model);
+        k3 = plantDerivative(current + (0.5 .* stepTime .* k2), sampleIdx, 0.5, longitudinalSpeed, steeringAngle, model);
+        k4 = plantDerivative(current + (stepTime .* k3), sampleIdx, 1.0, longitudinalSpeed, steeringAngle, model);
         state(sampleIdx + 1, :) = (current + ((stepTime ./ 6.0) .* (k1 + (2.0 .* k2) + (2.0 .* k3) + k4))).';
     end
 
@@ -72,7 +71,7 @@ function truth = simulateTruth(cfg)
     lateralVelocityRate = zeros(numel(time), 1);
     yawRateRate = zeros(numel(time), 1);
     for sampleIdx = 1:numel(time)
-        derivative = plantDerivative(state(sampleIdx, :).', sampleIdx, 0.0, longitudinalSpeed, steeringAngle, model, nonlinearity);
+        derivative = plantDerivative(state(sampleIdx, :).', sampleIdx, 0.0, longitudinalSpeed, steeringAngle, model);
         lateralAcceleration(sampleIdx) = derivative(1) + longitudinalSpeed(sampleIdx)*state(sampleIdx, 2);
         lateralVelocityRate(sampleIdx) = derivative(1);
         yawRateRate(sampleIdx) = derivative(2);
@@ -106,7 +105,7 @@ function truth = simulateTruth(cfg)
     truth.sideSlipAngleRate = sideSlipAngleRate;
 end
 
-function derivative = plantDerivative(state, sampleIdx, stepFraction, longitudinalSpeed, steeringAngle, model, nonlinearity)
+function derivative = plantDerivative(state, sampleIdx, stepFraction, longitudinalSpeed, steeringAngle, model)
 % plantDerivative: Evaluate the true lateral dynamics inside one step,
 % interpolating the scheduling speed and the steering input.
 %
@@ -116,7 +115,6 @@ function derivative = plantDerivative(state, sampleIdx, stepFraction, longitudin
 %   stepFraction: position inside the interval, in [0, 1]
 %   longitudinalSpeed, steeringAngle: input series
 %   model: struct from lateralObserverSupport.lateralBicycleModel
-%   nonlinearity: function handle f(x)
 %
 % Output:
 %   derivative: [2 x 1] true state derivative
@@ -124,8 +122,7 @@ function derivative = plantDerivative(state, sampleIdx, stepFraction, longitudin
     speed = ((1.0 - stepFraction) .* longitudinalSpeed(sampleIdx)) + (stepFraction .* longitudinalSpeed(nextIdx));
     steering = ((1.0 - stepFraction) .* steeringAngle(sampleIdx)) + (stepFraction .* steeringAngle(nextIdx));
     A = lateralObserverSupport.evaluateLateralModel(model, [speed; 1.0 ./ speed]);
-    nonlinearTerm = double(nonlinearity(state));
-    derivative = (A * state) + (model.B .* steering) + nonlinearTerm(:);
+    derivative = (A * state) + (model.B .* steering);
 end
 
 function [longitudinalSpeed, longitudinalAcceleration] = speedProfile(time, cfg)

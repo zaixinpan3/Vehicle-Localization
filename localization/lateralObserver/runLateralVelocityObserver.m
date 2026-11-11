@@ -17,11 +17,10 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % of exact differentiation of noisy measurements.
 % Consumers must honor velocityValid for velocity, angle and angle-rate aiding.
 % The default exponential-midpoint implementation freezes LPV coefficients
-% at the interval midpoint and exponentiates that linear flow. A midpoint
-% stage handles the copied nonlinearity. Speed
+% at the interval midpoint and exponentiates that affine flow. Speed-domain
 % boundary crossings split an interval; unavailable LPV flow remains held.
 % Inputs are linearly interpolated between the two received endpoints,
-% as for RK4. This is not exact integration of varying/nonlinear dynamics.
+% as for RK4. This is not exact integration of time-varying dynamics.
 %
 % Input:
 %   measurements: aligned time, steeringAngle, longitudinalSpeed,
@@ -62,7 +61,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     for sampleIdx = 1:sampleCount
         sample = sampleAt(measurements, sampleIdx, 0.0);
         [derivative, innovation, gain, valid] = ...
-            observerDerivative(state, sample, design, cfg, settings);
+            observerDerivative(state, sample, design, settings);
         history(sampleIdx, :) = state.';
         innovationHistory(sampleIdx, :) = innovation.';
         gainNorm(sampleIdx) = norm(gain);
@@ -73,16 +72,16 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
         end
         dt = measurements.time(sampleIdx + 1) - measurements.time(sampleIdx);
         if integrationMethod == "exponentialmidpoint"
-            state = exponentialInterval(state, measurements, sampleIdx, dt, design, cfg, settings);
+            state = exponentialInterval(state, measurements, sampleIdx, dt, design, settings);
         elseif integrationMethod == "euler"
             state = state + dt .* derivative;
         else
             midSample = sampleAt(measurements, sampleIdx, 0.5);
             nextSample = sampleAt(measurements, sampleIdx, 1.0);
             k1 = derivative;
-            k2 = observerDerivative(state + 0.5 .* dt .* k1, midSample, design, cfg, settings);
-            k3 = observerDerivative(state + 0.5 .* dt .* k2, midSample, design, cfg, settings);
-            k4 = observerDerivative(state + dt .* k3, nextSample, design, cfg, settings);
+            k2 = observerDerivative(state + 0.5 .* dt .* k1, midSample, design, settings);
+            k3 = observerDerivative(state + 0.5 .* dt .* k2, midSample, design, settings);
+            k4 = observerDerivative(state + dt .* k3, nextSample, design, settings);
             state = state + (dt ./ 6.0) .* (k1 + 2.0 .* k2 + 2.0 .* k3 + k4);
         end
         assert(all(isfinite(state)), "The lateral observer diverged in interval %d.", sampleIdx);
@@ -150,12 +149,12 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 end
 
 function [derivative, innovation, gain, valid] = observerDerivative( ...
-        state, sample, design, cfg, settings)
+        state, sample, design, settings)
 % observerDerivative Evaluate only the two-state LPV observer.
     valid = modelAvailable(sample, settings);
     if valid
         [lpvDerivative, innovation, gain] = ...
-            dynamicObserverDerivative(state(1:2), sample, design, cfg.observer.nonlinearity);
+            dynamicObserverDerivative(state(1:2), sample, design);
     else
         lpvDerivative = zeros(2, 1);
         innovation = zeros(2, 1);
@@ -164,7 +163,7 @@ function [derivative, innovation, gain, valid] = observerDerivative( ...
     derivative = lpvDerivative;
 end
 
-function state = exponentialInterval(state, measurements, sampleIdx, dt, design, cfg, settings)
+function state = exponentialInterval(state, measurements, sampleIdx, dt, design, settings)
 % exponentialInterval Resolve speed-domain boundaries before midpoint flow.
 % Boolean validity is conservative on the open interval: both endpoints
 % must be available. An isolated valid endpoint has zero integration time.
@@ -187,17 +186,11 @@ function state = exponentialInterval(state, measurements, sampleIdx, dt, design,
             linear = A-gain*C;
             forcing = design.model.B*sample.steeringAngle + ...
                 gain*([sample.longitudinalSpeed*sample.lateralAcceleration; sample.yawRate] - D*sample.steeringAngle);
-            nonlinearMap = eye(2) - sample.longitudinalSpeed*gain(:, 1)*[1, 0];
-            % The augmented exponential gives Phi and the input integral
+            % The augmented exponential gives the flow and input integral
             % without inverting linear, including a singular linear part.
-            transition = expm((h/2)*[linear, eye(2); zeros(2,4)]);
-            phi = transition(1:2,1:2);
-            integral = transition(1:2,3:4);
-            midpoint = phi*state(1:2) + integral*(forcing + ...
-                nonlinearMap*evaluateNonlinearity(cfg.observer.nonlinearity, state(1:2)));
-            midpointForcing = forcing + nonlinearMap*evaluateNonlinearity(cfg.observer.nonlinearity, midpoint);
-            state(1:2) = phi*(phi*state(1:2) + integral*midpointForcing) + ...
-                integral*midpointForcing;
+            transition = expm(h*[linear, eye(2); zeros(2,4)]);
+            state(1:2) = transition(1:2,1:2)*state(1:2) + ...
+                transition(1:2,3:4)*forcing;
         end
     end
 end
@@ -214,24 +207,15 @@ function rate = backwardRate(series, time)
 end
 
 function [derivative, innovation, gain] = dynamicObserverDerivative( ...
-        state, sample, design, nonlinearity)
+        state, sample, design)
 % dynamicObserverDerivative Evaluate the certified reciprocal-speed branch.
     rho = [sample.longitudinalSpeed; 1.0 ./ sample.longitudinalSpeed];
     [A, C, D] = lateralObserverSupport.evaluateLateralModel(design.model, rho);
     gain = lateralObserverSupport.scheduleLateralObserverGain(design, sample.longitudinalSpeed);
-    nonlinearTerm = evaluateNonlinearity(nonlinearity, state);
     innovation = [sample.longitudinalSpeed*sample.lateralAcceleration; sample.yawRate] - C*state - ...
-        D*sample.steeringAngle - [sample.longitudinalSpeed*nonlinearTerm(1); 0];
+        D*sample.steeringAngle;
     derivative = (A * state) + (design.model.B .* sample.steeringAngle) + ...
-        nonlinearTerm + (gain * innovation);
-end
-
-function value = evaluateNonlinearity(nonlinearity, state)
-% evaluateNonlinearity Validate every explicit nonlinear stage.
-    value = double(nonlinearity(state));
-    value = value(:);
-    assert(numel(value) == 2 && all(isfinite(value)), ...
-        "cfg.observer.nonlinearity must return a finite [2 x 1] vector.");
+        (gain * innovation);
 end
 
 function sample = sampleAt(measurements, sampleIdx, stepFraction)
@@ -292,7 +276,7 @@ function settings = validateRuntimeConfiguration(cfg, design)
     assert(isstruct(design) && isfield(design, "model") && isfield(design, "polytope"), ...
         "design must come from designLateralObserverGains.");
     assert(isfield(design, "certificateMethod") && ...
-        string(design.certificateMethod) == "column-affine-expanded-iss-v3" && ...
+        string(design.certificateMethod) == "column-affine-expanded-iss-linear-v4" && ...
         isfield(design, "vertexLyapunovMatrices") && isfield(design, "vertexY") && ...
         isfield(design, "vertexGains") && isfield(design, "certificateDomain") && ...
         isfield(design, "gainRecoveryMatrix") && isequal(size(design.gainRecoveryMatrix), [2, 2]) && ...
@@ -310,8 +294,10 @@ function settings = validateRuntimeConfiguration(cfg, design)
     integrationMethod = lower(strtrim(string(cfg.observer.integrationMethod)));
     assert(any(integrationMethod == ["exponentialmidpoint", "rk4", "euler"]), ...
         "cfg.observer.integrationMethod must be exponentialMidpoint, rk4 or euler.");
-    assert(isa(cfg.observer.nonlinearity, "function_handle"), ...
-        "cfg.observer.nonlinearity must be a function handle.");
+    assert(~isfield(cfg.observer, 'nonlinearity') && ...
+        ~isfield(cfg.synthesis, 'lipschitzConstant'), ...
+        'VehicleLocalization:ObsoleteLateralConfiguration', ...
+        'Use the current linear LPV configuration; nonlinear lateral dynamics are no longer supported.');
     assertFiniteVector(cfg.observer.initialState, 2, "cfg.observer.initialState");
     settings = struct("speedRange", speedRange, "speedRateRange", design.certificateDomain.speedRateRange);
 end
