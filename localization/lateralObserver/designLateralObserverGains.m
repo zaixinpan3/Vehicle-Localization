@@ -2,7 +2,7 @@ function design = designLateralObserverGains(cfg)
 % designLateralObserverGains Synthesize column-separated affine lateral gains.
 % Measurements are [Vx*ay; r], with known steering feedthrough subtracted.
 % Schedule P(v) independently of Y(v) = X*L(v), with a common invertible X.
-% The acceleration column is [1;0]/v, canceling the first process input.
+% The acceleration column is [1;0]/v, canceling the lateral component of E*d.
 % The yaw column remains affine in v and is synthesized jointly with P.
 % Twelve expanded LMIs use v*(1/v)=1 only on the physical curve, including
 % the affine noise extension at auxiliary vertices and the derivative Pdot.
@@ -38,7 +38,7 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "column-affine-expanded-iss-decoupled-v9";
+    design.certificateMethod = "column-affine-expanded-iss-distributed-v10";
     design.gainRecoveryMatrix = value(variables.X);
     design.gainBasis = struct('accelerationReciprocal', value(variables.basis.accelerationReciprocal), ...
         'yawConstant', value(variables.basis.yawConstant), 'yawSpeed', value(variables.basis.yawSpeed));
@@ -55,6 +55,7 @@ function design = designLateralObserverGains(cfg)
     design.dilationTimeScale = double(cfg.synthesis.dilationTimeScale);
     design.normalizedInputSize = 4;
     design.processErrorScale = double(cfg.synthesis.processErrorScale(:));
+    design.processDistribution = double(cfg.synthesis.processDistribution);
     design.measurementErrorScale = sigma;
     % Diagnostics only: no second-stage noise optimization.
     design.vertexNoiseBounds = cellfun(@(S) norm(value(S), 2), noiseMatrices);
@@ -87,6 +88,13 @@ function validateConfiguration(cfg)
     assert(isfield(cfg.synthesis, 'processErrorScale'), ...
         'VehicleLocalization:InvalidProcessScale', ...
         'Specify two positive process reference scales before synthesis.');
+    assert(isfield(cfg.synthesis, 'processDistribution') && ...
+        isnumeric(cfg.synthesis.processDistribution) && ...
+        isreal(cfg.synthesis.processDistribution) && ...
+        isequal(size(cfg.synthesis.processDistribution), [2,2]) && ...
+        all(isfinite(cfg.synthesis.processDistribution), 'all'), ...
+        'VehicleLocalization:InvalidProcessDistribution', ...
+        'Require a finite real 2-by-2 process distribution matrix E.');
     processScale = double(cfg.synthesis.processErrorScale(:));
     assert(numel(processScale) == 2 && all(isfinite(processScale)) && all(processScale > 0), ...
         'VehicleLocalization:InvalidProcessScale', ...
@@ -143,8 +151,8 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         speedColumn = variables.basis.accelerationReciprocal;
         S = [-sigma(1)*speedColumn, -sigma(2)*Y(:, 2)];
         noiseMatrices{idx} = S;
-        % Exact cancellation removes the first process input; yaw disturbance remains.
-        processInjection = [zeros(2,1), X(:,2)]*processScale;
+        % Exact cancellation removes only the lateral row of E*d.
+        processInjection = [zeros(2,1), X(:,2)]*double(cfg.processDistribution)*processScale;
         inputBlock = [processInjection, S];
         constraints = [constraints, P >= (1 + margin)*eye(2)]; %#ok<AGROW>
         if isfinite(cfg.pCeiling)

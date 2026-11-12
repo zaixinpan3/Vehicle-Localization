@@ -226,6 +226,33 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             end
         end
 
+        function invalidProcessDistributionIsRejected(testCase)
+            cfg = testCase.CurrentDesign.cfg;
+            cfg.synthesis.processDistribution = [1,0];
+            testCase.verifyError(@() designLateralObserverGains(cfg), ...
+                'VehicleLocalization:InvalidProcessDistribution');
+        end
+
+        function distributedDisturbancesRetainTheirYawComponent(testCase)
+            cfg = testCase.CurrentDesign.cfg;
+            cfg.synthesis.processDistribution = [1,.2;.3,1];
+            design = designLateralObserverGains(cfg);
+            testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design),0);
+            for speed = [1,12,30]
+                [A,C,D] = lateralObserverSupport.evaluateLateralModel(design.model,[speed;1/speed]);
+                L = lateralObserverSupport.scheduleLateralObserverGain(design,speed);
+                state = [.4;.1]; estimate = [.2;-.03]; delta = .02;
+                disturbance = [.3;-.07]; noise = [.01;.002];
+                Ed = design.processDistribution*disturbance;
+                plantRate = A*state+design.model.B*delta+Ed;
+                measured = [speed*(plantRate(1)+speed*state(2)+noise(1));state(2)+noise(2)];
+                observerRate = A*estimate+design.model.B*delta+L*(measured-C*estimate-D*delta);
+                expected = (A-L*C)*(state-estimate)+[0;Ed(2)]-L*diag([speed,1])*noise;
+                testCase.verifyEqual(plantRate-observerRate,expected,AbsTol=1e-10);
+                testCase.verifyGreaterThan(abs(design.processDistribution(2,1)),0);
+            end
+        end
+
         function weightedObjectiveConfigurationIsRejected(testCase)
             cfg = testCase.CurrentDesign.cfg;
             cfg.synthesis.initialErrorWeight = 1;
@@ -276,7 +303,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 delta = .025*sin(.3*idx);
                 noise = [.1*cos(.7*idx); .003*sin(.7*idx)];
                 disturbance = [.3*cos(.4*idx); .07*sin(.6*idx)];
-                plantRate = A*state + design.model.B*delta + disturbance;
+                plantRate = A*state + design.model.B*delta + design.processDistribution*disturbance;
                 measuredAy = plantRate(1) + speed*state(2) + noise(1);
                 for rate = design.certificateDomain.speedRateRange
                     [L, P, Pdot] = lateralObserverSupport.scheduleLateralObserverGain(design, speed, rate);
@@ -284,7 +311,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                         L*([speed*measuredAy; state(2) + noise(2)] - C*estimate - D*delta);
                     Dnu = L*diag([speed;1]);
                     predictedErrorRate = (A-L*C)*error + ...
-                        (eye(2)-Dnu*diag([1,0]))*disturbance - Dnu*noise;
+                        (eye(2)-Dnu*diag([1,0]))*design.processDistribution*disturbance - Dnu*noise;
                     testCase.verifyEqual(plantRate-observerRate, predictedErrorRate, AbsTol=1e-10);
                     xi = [disturbance./design.processErrorScale; noise./design.measurementErrorScale];
                     residual = 2*error.'*P*(plantRate - observerRate) + error.'*Pdot*error + ...
@@ -691,7 +718,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.CurrentDesign;
             resolved = designLateralObserverGains(design.cfg);
 
-            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-decoupled-v9");
+            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-distributed-v10");
             testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.solverSolved);
@@ -708,7 +735,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                     [L, P, Pdot] = lateralObserverSupport.scheduleLateralObserverGain(design, speed, rate);
                     Ae = A - L*design.model.C;
                     Dnu = L*diag([speed;1]);
-                    noise = P*[(eye(2)-Dnu*diag([1,0]))*diag(design.processErrorScale), ...
+                    noise = P*[(eye(2)-Dnu*diag([1,0]))*design.processDistribution*diag(design.processErrorScale), ...
                         -Dnu*diag(design.measurementErrorScale)];
                     Phi = Pdot + P*Ae + Ae.'*P + 2*design.decayRate*P;
                     block = [Phi, noise; noise.', -design.issGain^2*eye(4)];

@@ -46,6 +46,9 @@ function cfg = lateralObserverConfig(profile)
     % Reference units for [lateral-acceleration; yaw-acceleration] disturbances.
     % Design normalization only, not claimed measured uncertainty bounds.
     cfg.synthesis.processErrorScale = [1.0; 1.0];
+    % E maps disturbance coordinates to [dot(vy); dot(r)] residuals.
+    % Identity retains the existing acceleration-residual coordinates.
+    cfg.synthesis.processDistribution = eye(2);
     % Fixed within each SDP; epsilon=0.02 s was evaluated in the column-gain study.
     cfg.synthesis.dilationTimeScale = 0.02;
     % Acceleration gain is fixed to [1;0]/speed for exact disturbance cancellation.
