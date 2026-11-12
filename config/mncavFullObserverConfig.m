@@ -8,7 +8,7 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-intrinsic-nominal-polytope-v11",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-intrinsic-nominal-polytope-v12",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('gainInformationScale',16,'outputPoint', ...
@@ -39,13 +39,13 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.operatingSet="Bessafa et al. (2026), Remark 3: compact invariant operating set assumed; invariance and numerical attraction radius are not computed or certified";
     z.headingGainLimits=[8,8]; % kappaL*(P^-1)77 and directionGain*(P^-1)77.
     z.matchedGainLimits=[8,8,2]; % Position L/G and velocity-direction self-feedback.
-    z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]; predict uses internal r and estimated lateral sideslip rate; Five outputs: squared speed, velocity-acceleration dot/cross, course-direction constraint and yaw rate; no body-acceleration projections or cross-minus-rate constraint; IMU only in invariant innovations";
+    z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]; predict uses internal r and estimated lateral sideslip rate; Four additional outputs: squared speed, velocity-acceleration dot/cross and body-frame lateral velocity; gyro is a separate rate measurement; no body-acceleration projections or cross-minus-rate constraint; IMU only in invariant innovations";
     z.provenance.angularModel="Yaw-rate process scale maximumTrackAngleRate / 2 s; upstream sideslip-rate error remains a predictor disturbance, not a separate auxiliary measurement";
     z.provenance.operatingPoints="One nominal simultaneous-source noise objective; motion cases cover minimum/midpoint/maximum speed and zero, tangential and normal acceleration";
     z.provenance.metric="Rotation-invariant translational blocks and the existing diagonal angular metric. A full angular block is supported by exact caps but is not the default: its lower noise objective regressed heading/recovery tests. Angular diagonality is a design restriction, not a consequence of rotational symmetry";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
-    z.provenance.noiseObjective="All eight normalized errors at the nominal simultaneous-source pose point; shared primitive velocity/acceleration/gyro columns and one upstream direction-constraint error budget; this energy proxy is not an empirical covariance guarantee";
-    z.provenance.fusion="One nominal simultaneous LiDAR/GNSS/auxiliary certificate; independent analytic coefficient intervals enclose the affine nominal error matrix. No sensor-outage or finite nonlinear-error certificate";
+    z.provenance.noiseObjective="All eight normalized errors at the nominal simultaneous-source pose point; shared primitive velocity/acceleration columns including the measured lateral-velocity row, plus a separate gyro column; this energy proxy is not an empirical covariance guarantee";
+    z.provenance.fusion="One nominal simultaneous LiDAR/GNSS/auxiliary certificate; six analytic coefficient intervals enclose the nominal error bound, omitting the PSD body-lateral Gram uniformly over sideslip. No sensor-outage or finite nonlinear-error certificate";
     z.provenance.feedback="Shared normalized pose gain kappaL=kappaG. Fixed shear Pc=U'*diag(p,R)*U, U=[1 -1 1;0 1 0;0 0 1], makes the motion Schur metric R affine and retains pose-to-motion correction. Self-feedback caps stay inside the solve";
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];

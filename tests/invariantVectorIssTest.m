@@ -13,8 +13,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         end
         function equalStatesRecoverTheJacobianIncludingZeroSpeed(testCase)
             c=mncavFullObserverConfig();x=zeros(8,1);
-            [F,H,G]=localizationSupport.secants(x,x,0,0,c);
-            [~,J]=localizationSupport.outputs(x,0,c);
+            [F,H,G]=localizationSupport.secants(x,x,0,c);
+            [~,J]=localizationSupport.outputs(x,c);
             testCase.verifyEqual(H,J,AbsTol=0);
             testCase.verifyTrue(all(isfinite([F(:);H(:);G(:)])));
             testCase.verifyEqual(H(4,[2,5]),[0,1],AbsTol=0);
@@ -26,11 +26,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
         function sharedSensorVectorReconstructsEveryPacketIncrement(testCase)
             c=mncavFullObserverConfig();v=[12;.4];a=[.3;1.2];dv=[.2;-.1];da=[-.04;.08];dr=.003;
             N=localizationSupport.measurementSecant(v,a,v+dv,a+da);
-            p=localizationSupport.measurements(v(1),v(2),a(1),a(2),.1,0,true,true,true,c);
-            m=localizationSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),.1+dr,0,true,true,true,c);
-            testCase.verifyEqual(m.value-p.value,N*[dv;da;dr],AbsTol=3e-13);
-            testCase.verifySize(N,[5,5]);
-            testCase.verifyEqual(N(4,:),zeros(1,5),AbsTol=0);
+            p=localizationSupport.measurements(v(1),v(2),a(1),a(2),.1,true,true,true,c);
+            m=localizationSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),.1+dr,true,true,true,c);
+            testCase.verifyEqual(m.value-p.value,N*[dv;da],AbsTol=3e-13);
+            testCase.verifySize(N,[4,4]);
+            testCase.verifyEqual(N(4,:),[0,1,0,0],AbsTol=0);
             testCase.verifyGreaterThan(norm(N(2:3,3:4)),0);
         end
     end
@@ -39,11 +39,11 @@ end
 function errors=finiteIdentityErrors(c)
     stream=RandStream('mt19937ar','Seed',2301);errors=zeros(250,3);
     for k=1:size(errors,1)
-        x=randn(stream,8,1);y=randn(stream,8,1);beta=.2;rate=-.04;
+        x=randn(stream,8,1);y=randn(stream,8,1);rate=-.04;
         x([2,5])=10*x([2,5]);y([2,5])=10*y([2,5]);
         if k==1,y(7)=x(7);elseif k==2,y(7)=x(7)+1e-12;end
-        [F,H,G]=localizationSupport.secants(x,y,beta,rate,c);e=x-y;
-        dh=localizationSupport.outputs(x,beta,c)-localizationSupport.outputs(y,beta,c);
+        [F,H,G]=localizationSupport.secants(x,y,rate,c);e=x-y;
+        dh=localizationSupport.outputs(x,c)-localizationSupport.outputs(y,c);
         dg=antenna(x,c)-antenna(y,c);df=drift(x,rate)-drift(y,rate);
         errors(k,:)=[norm(F*e-df)/max(1,norm(df)),norm(H*e-dh)/max(1,norm(dh)), ...
             norm(G*e-dg)/max(1,norm(dg))];
@@ -55,8 +55,8 @@ function errors=rotationErrors(c)
     T([1,4],[1,4])=R;T([2,5],[2,5])=R;T([3,6],[3,6])=R;
     x=[2;12;.6;-1;.4;1.1;.3;.07];y=x+[.4;-.2;.1;-.3;.1;-.2;.1;-.02];
     xr=T*x;yr=T*y;xr(7)=xr(7)+angle;yr(7)=yr(7)+angle;
-    [F,H,G]=localizationSupport.secants(x,y,.1,.03,c);
-    [Fr,Hr,Gr]=localizationSupport.secants(xr,yr,.1,.03,c);
+    [F,H,G]=localizationSupport.secants(x,y,.03,c);
+    [Fr,Hr,Gr]=localizationSupport.secants(xr,yr,.03,c);
     errors=[norm(Fr-T*F*T.'),norm(Hr*T-H),norm(Gr*T-R*G)];
 end
 

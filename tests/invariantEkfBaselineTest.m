@@ -11,7 +11,7 @@ function testStationaryAndWithdrawnMotion(testCase)
 end
 function testSharedPrimitiveCovariance(testCase)
     v=[5;1];a=[.2;.4];N=localizationSupport.measurementSecant(v,a,v,a);R=N*N.';
-    verifyGreaterThan(testCase,abs(R(1,2)),0);verifyGreaterThan(testCase,abs(R(1,3)),0);verifyEqual(testCase,min(eig(R)),0,'AbsTol',1e-12);
+    verifyGreaterThan(testCase,abs(R(1,2)),0);verifyGreaterThan(testCase,abs(R(1,3)),0);verifyEqual(testCase,R(1,4),2,'AbsTol',1e-12);verifyGreaterThan(testCase,min(eig(R)),0);
 end
 function testExternalPoseProviderWithoutMotion(testCase)
     root=setupVehicleLocalization();addpath(fullfile(root,'scripts','baselines'));cfg=mncavSmallOffsetObserverConfig();cfg.initialState=[.3;0;0;-.2;0;0;.05;0];

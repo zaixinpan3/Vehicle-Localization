@@ -1,5 +1,5 @@
 function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
-% Same intrinsic state/predictor and five outputs, with covariance feedback.
+% Same intrinsic state/predictor and four additional outputs plus a gyro channel, with covariance feedback.
 % LiDAR is a local quadratic overlap likelihood, not a Gaussian pose sensor.
 % Its temperature is a tunable empirical likelihood scale. Shared primitive
 % noise columns preserve squared-speed/dot/cross correlations.
@@ -26,14 +26,18 @@ function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
             [z,I]=localizationSupport.correctGnssOutputPoint(data.gnss.position(k,:),data.gnss.information(:,:,k),x(7),cfg.gnss.outputPoint);
             H=zeros(2,8);H(:,[1,4])=eye(2);[x,P]=update(x,P,z.'-H*x,H,I\eye(2));
         end
-        h=data.highRate;beta=0;vy=0;if valid,beta=lateral.sideSlipAngle(k);vy=lateral.lateralVelocity(k);end
+        h=data.highRate;vy=0;if valid,vy=lateral.lateralVelocity(k);end
         av=true;if isfield(h,'bodyAccelerationValid'),av=h.bodyAccelerationValid(k);end
-        packet=localizationSupport.measurements(h.longitudinalSpeed(k),vy,h.longitudinalAcceleration(k),h.lateralAcceleration(k),h.yawRate(k),beta,valid,av,true,cfg);
-        [v,H]=localizationSupport.outputs(x,beta,cfg);
+        packet=localizationSupport.measurements(h.longitudinalSpeed(k),vy,h.longitudinalAcceleration(k),h.lateralAcceleration(k),h.yawRate(k),valid,av,true,cfg);
+        [v,H]=localizationSupport.outputs(x,cfg);
         B=localizationSupport.measurementSecant([h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)],[h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)]);
-        R=B*diag([noise.velocityMps^2*[1,1],noise.accelerationMps2^2*[1,1],noise.gyroRadps^2])*B.';
-        R(4,4)=noise.velocityMps^2;R=R+1e-8*eye(5);ids=packet.valid;
+        R=B*diag([noise.velocityMps^2*[1,1],noise.accelerationMps2^2*[1,1]])*B.';
+        R=R+1e-8*eye(4);ids=packet.valid;
         [x,P]=update(x,P,packet.value(ids)-v(ids),H(ids,:),R(ids,ids));
+        if packet.gyroValid
+            Hg=zeros(1,8);Hg(8)=1;
+            [x,P]=update(x,P,packet.gyro-x(8),Hg,noise.gyroRadps^2);
+        end
         if ~isempty(options.PoseProvider) && dt>0
             measurement=options.PoseProvider(k,x([1,4,7]));
             if ~isempty(measurement)

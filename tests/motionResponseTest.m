@@ -13,7 +13,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
         function oneSolveMeetsFusionAndMotionConstraints(testCase)
             c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());v=c.invariantDesign.verification;
             testCase.verifyTrue(v.certified && v.nominalFusionLmiVerified && v.motionResponse.verified);
-            testCase.verifyEqual(v.nominalFusion.vertices,256);
+            testCase.verifyEqual(v.nominalFusion.vertices,64);
             testCase.verifyFalse(v.motionResponse.longitudinalPoseFeedbackRequired);
             testCase.verifyFalse(v.motionResponse.fullNonlinearResponseCertified);
             testCase.verifyEqual(v.motionResponse.timeConstantS,.5,AbsTol=0);
@@ -82,7 +82,7 @@ function errors=braking(c,dt,noiseScale)
         now=time(j);
         if now<1,s=8;a=0;elseif now<4,s=8-2*(now-1);a=-2;elseif now<6,s=2;a=0;elseif now<8,s=2+(now-6);a=1;else,s=4;a=0;end
         sm=s+noiseScale*.256*randn(stream);am=a+noiseScale*.233*randn(stream);
-        packet=localizationSupport.measurements(sm,0,am,0,0,0,true,true,true,c);
+        packet=localizationSupport.measurements(sm,0,am,0,0,true,true,true,c);
         x=localizationSupport.predict(x,dt,0);
         x=localizationSupport.correct(x,packet,dt,r,c);
         errors(j,:)=[x(2)-s,x(3)-a];
@@ -96,8 +96,8 @@ function residual=physicalResponseResidual(c)
     D=localizationSupport.outputNormalization(c);
     for s=speeds
         for a=accels
-            x=[0;s;a;0;0;0;0;0];[~,H]=localizationSupport.outputs(x,0,c);
-            k=localizationSupport.weights(d,s^2);K=diag([k([1,2,2,3]);0]);
+            x=[0;s;a;0;0;0;0;0];[~,H]=localizationSupport.outputs(x,c);
+            k=localizationSupport.weights(d,s^2);K=diag(k([1,2,2,3]));
             B=diag(t.^[1,2,3,1,2,3,1,2]);C=D*H*B;
             feedback=t*B*(d.P\(C.'*K*D*H));F=[0,1;0,0]-feedback(2:3,2:3);
             W=Q*F+F.'*Q+2*rate*Q;index=index+1;residual(index)=max(eig((W+W.')/2))/norm(Q,2);

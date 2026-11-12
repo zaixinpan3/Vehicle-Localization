@@ -15,7 +15,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyTrue(v.certified && v.motionResponse.verified);
             testCase.verifyEqual(d.solveAudit.optimizationCalls,1);
             testCase.verifyEqual(d.kappaG,d.kappaL,AbsTol=1e-9);
-            testCase.verifyEqual(v.vertices,256);
+            testCase.verifyEqual(v.vertices,64);
             testCase.verifyFalse(isfield(d,'gainSelection'));
             testCase.verifyFalse(isfield(d,'constraintGeneration'));
             testCase.verifyFalse(isfield(d,'accelerationMultipliers'));

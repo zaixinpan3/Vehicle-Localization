@@ -33,7 +33,7 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(v.certified);
             testCase.verifyTrue(v.feedbackAuthority.verified);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
-            testCase.verifyEqual(v.nominalFusion.vertices,256);
+            testCase.verifyEqual(v.nominalFusion.vertices,64);
             testCase.verifyLessThan(v.worstVertexEigenvalue,-.009);
         end
         function measuredOffsetCannotReuseThisTemporaryDesign(testCase)

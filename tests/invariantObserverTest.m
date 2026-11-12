@@ -8,9 +8,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
     methods (Test)
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,256);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,64);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,256);
+            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,64);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
             testCase.verifySize(d.P,[8,8]);
@@ -61,13 +61,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyEqual(aligned.sideSlipAngle,interp1(l.time,l.sideSlipAngle,t),AbsTol=1e-12);
             testCase.verifyEqual(aligned.sideSlipAngleRate,interp1(l.time,l.sideSlipAngleRate,t),AbsTol=1e-12);
         end
-        function auxiliaryDirectionUsesTheSuppliedAngle(testCase)
+        function bodyLateralOutputDoesNotUseTheSuppliedAngle(testCase)
             [d,l,c]=fixture();baseline=runFullLocalizationObserver(d,c,LateralInputs=l);
             l.sideSlipAngle(:)=.2;
             supplied=runFullLocalizationObserver(d,c,LateralInputs=l);
             first=supplied.diagnostics.invariantOutputs{1};
-            testCase.verifyEqual(first.predicted(4),-8*sin(c.initialState(7)+.2),AbsTol=1e-12);
-            testCase.verifyGreaterThan(norm(supplied.internalState(end,:)-baseline.internalState(end,:)),1e-4);
+            testCase.verifyEqual(first.predicted(4),-8*sin(c.initialState(7)),AbsTol=1e-12);
+            testCase.verifyEqual(supplied.internalState,baseline.internalState,AbsTol=1e-12);
             testCase.verifyEqual(supplied.lateral.sideSlipAngle,l.sideSlipAngle,AbsTol=1e-12);
         end
         function missingSideSlipAngleCannotBeReconstructed(testCase)
@@ -87,10 +87,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             poisoned=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(poisoned.internalState,baseline.internalState,AbsTol=1e-12);
         end
-        function stoppedPacketKeepsTheContinuousUpstreamAngle(testCase)
+        function stoppedPacketHasFourOutputsAndSeparateGyro(testCase)
             c=freshObserverTestConfig();
-            packet=localizationSupport.measurements(0,0,0,0,.2,.3,true,true,true,c);
-            testCase.verifyEqual(packet.beta,.3,AbsTol=1e-12);
+            packet=localizationSupport.measurements(0,0,0,0,.2,true,true,true,c);
+            testCase.verifySize(packet.value,[4,1]);
+            testCase.verifyEqual(packet.gyro,.2,AbsTol=1e-12);
+            testCase.verifyFalse(isfield(packet,'beta'));
             testCase.verifyFalse(isfield(packet,'betaRate'));
             x=[0;.1;0;0;.2;0;0;0];design=localizationSupport.runtime(c);
             corrected=localizationSupport.correct(x,packet,.1,design,c);
@@ -185,15 +187,15 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             R=[cos(angle),-sin(angle);sin(angle),cos(angle)];rotated=x;
             for ids={[1,4],[2,5],[3,6]},i=ids{1};rotated(i)=R*x(i);end
             rotated(7)=x(7)+angle;
-            a=localizationSupport.outputs(x,.03,c);b=localizationSupport.outputs(rotated,.03,c);
+            a=localizationSupport.outputs(x,c);b=localizationSupport.outputs(rotated,c);
             testCase.verifyEqual(a,b,AbsTol=1e-12);
         end
         function invariantJacobianAgreesWithIndependentFiniteDifferences(testCase)
-            c=freshObserverTestConfig();x=[2;8;.2;-1;.4;1.3;.5;.12];[~,H]=localizationSupport.outputs(x,.03,c);
-            numerical=zeros(5,8);step=1e-5;
+            c=freshObserverTestConfig();x=[2;8;.2;-1;.4;1.3;.5;.12];[~,H]=localizationSupport.outputs(x,c);
+            numerical=zeros(4,8);step=1e-5;
             for j=1:8
                 a=x;b=x;a(j)=a(j)+step;b(j)=b(j)-step;
-                numerical(:,j)=(localizationSupport.outputs(a,.03,c)-localizationSupport.outputs(b,.03,c))/(2*step);
+                numerical(:,j)=(localizationSupport.outputs(a,c)-localizationSupport.outputs(b,c))/(2*step);
             end
             testCase.verifyEqual(H,numerical,AbsTol=1e-8);
         end
@@ -201,8 +203,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             c=freshObserverTestConfig();v=[8;.4];a=[.2;1.3];psi=.7;betaRate=.015;
             R=[cos(psi),-sin(psi);sin(psi),cos(psi)];vg=R*v;ag=R*a;
             r=(v(1)*a(2)-v(2)*a(1))/(v.'*v)-betaRate;x=[0;vg(1);ag(1);0;vg(2);ag(2);psi;r];
-            packet=localizationSupport.measurements(v(1),v(2),a(1),a(2),r,atan2(v(2),v(1)),true,true,true,c);
-            y=localizationSupport.outputs(x,packet.beta,c);
+            packet=localizationSupport.measurements(v(1),v(2),a(1),a(2),r,true,true,true,c);
+            y=localizationSupport.outputs(x,c);
             testCase.verifyEqual(y,packet.value,AbsTol=1e-12);
         end
     end

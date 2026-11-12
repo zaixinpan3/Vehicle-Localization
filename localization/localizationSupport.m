@@ -190,56 +190,57 @@ classdef localizationSupport
             next=(eye(8)-dt*A)\state;
         end
 
-        function [value,H]=outputs(state,beta,cfg)
+        function [value,H]=outputs(state,cfg)
             v=state([2,5]);a=state([3,6]);
-            cross=v(1)*a(2)-v(2)*a(1);angle=state(7)+beta;
+            cross=v(1)*a(2)-v(2)*a(1);angle=state(7);
             direction=[-sin(angle);cos(angle)];
             % Physical outputs; numerical scales belong to the feedback metric.
-            value=[v.'*v;v.'*a;cross;direction.'*v;state(8)];
+            value=[v.'*v;v.'*a;cross;direction.'*v];
             if nargout>1
-                [~,H]=localizationSupport.secants(state,state,beta,0,cfg);
+                [~,H]=localizationSupport.secants(state,state,0,cfg);
             end
         end
 
         function D=outputNormalization(cfg,theta)
         % Fixed, invertible numerical scaling; never divides by actual speed.
             if nargin<2,theta=cfg.invariantObserver.theta;end
-            V=cfg.iss.maximumSpeed;ell=cfg.invariantObserver.headingLengthM;
-            D=diag([1/(2*V),1/V,1/V,1,ell].*theta.^-[2,3,3,2,2]);
+            V=cfg.iss.maximumSpeed;
+            D=diag([1/(2*V),1/V,1/V,1].*theta.^-[2,3,3,2]);
         end
 
-        function packet=measurements(speed,vy,ax,ay,gyro,beta,velocityValid,accelerationValid,gyroValid,cfg)
-        % Five outputs only. Sideslip rate belongs to the predictor, not this packet.
+        function packet=measurements(speed,vy,ax,ay,gyro,velocityValid,accelerationValid,gyroValid,cfg)
+        % Four additional outputs; the gyro is a separate scalar measurement.
             velocityValid=velocityValid && cfg.invariantObserver.velocityAvailable;
             accelerationValid=accelerationValid && cfg.invariantObserver.accelerationAvailable;
-            value=zeros(5,1);valid=[velocityValid;velocityValid&&accelerationValid; ...
-                velocityValid&&accelerationValid;velocityValid;gyroValid];
+            value=zeros(4,1);valid=[velocityValid;velocityValid&&accelerationValid; ...
+                velocityValid&&accelerationValid;velocityValid];
             if valid(1),value(1)=speed^2+vy^2;end
             if valid(2),value(2)=speed*ax+vy*ay;value(3)=speed*ay-vy*ax;end
-            if gyroValid,value(5)=gyro;end
-            if ~velocityValid,beta=0;end
-            packet=struct('value',value,'valid',valid,'beta',beta);
+            if valid(4),value(4)=vy;end
+            if ~gyroValid,gyro=0;end
+            packet=struct('value',value,'valid',valid,'gyro',gyro,'gyroValid',gyroValid);
         end
 
         function [next,audit]=correct(state,packet,dt,design,cfg)
-            [value,H]=localizationSupport.outputs(state,packet.beta,cfg);
+            [value,H]=localizationSupport.outputs(state,cfg);
             D=localizationSupport.outputNormalization(cfg,design.theta);
             C=D*H*design.toPhysical;
             weights=localizationSupport.weights(design,packet.value(1));
-            k=[weights([1,2,2,3]);0].*double(packet.valid);
+            k=weights([1,2,2,3]).*double(packet.valid);
             residual=D*(packet.value-value);weighted=C.'*diag(k);
             Q=design.theta*weighted*C;rhs=dt*design.theta*(design.P\(weighted*residual));
             delta=(eye(8)+dt*(design.P\Q))\rhs;next=state+design.toPhysical*delta;
-            if packet.valid(5)
+            if packet.gyroValid
                 % The gyro innovation acts on its estimated rate state only.
                 % Its own scalar LMI supplies the gain; heading is untouched.
-                measuredRate=packet.value(5);
+                measuredRate=packet.gyro;
                 gain=design.theta*design.gyroGainNormalized;
                 next(8)=(next(8)+dt*gain*measuredRate)/(1+dt*gain);
             end
             audit=struct('innovation',packet.value-value,'valid',packet.valid, ...
                 'allAuxiliaryOutputsAvailable',all(packet.valid), ...
-                'predicted',value,'normalizedCorrection',delta,'auxiliaryWeights',weights, ...
+                'predicted',value,'gyroInnovation',packet.gyro-state(8),'gyroValid',packet.gyroValid, ...
+                'normalizedCorrection',delta,'auxiliaryWeights',weights, ...
                 'frozenInvariantMetricNonexpansive',min(eig((Q+Q.')/2))>=-1e-10*max(1,norm(Q,2)));
         end
 
@@ -251,8 +252,8 @@ classdef localizationSupport
                 'VehicleLocalization:ObsoleteFusionDesign', ...
                 'Regenerate the nominal fusion configuration; legacy searches and certificates are removed.');
             if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-nominal-polytope-v11", ...
-                'physicalOutputs',"squared-dot-cross-direction-rate", ...
+            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-nominal-polytope-v12", ...
+                'physicalOutputs',"squared-dot-cross-body-lateral", ...
                 'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
                 'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).','poseScales',cfg.lidar.poseScales(:).', ...
                 'informationScale',cfg.lidar.gainInformationScale)));
@@ -264,7 +265,7 @@ classdef localizationSupport
             assert(exist('sdpvar','file')==2,'VehicleLocalization:MissingSolver','Add YALMIP and SeDuMi before synthesis.');
             m=invariantModel(cfg);z=cfg.invariantObserver;
             assert(m.motionAvailable,'VehicleLocalization:MotionOutputsRequired', ...
-                'The nominal fusion design requires all five auxiliary outputs.');
+                'The nominal fusion design requires all four additional outputs and the gyro.');
             yalmip('clear');p=sdpvar(1);R=sdpvar(2,2);Ph=sdpvar(2,2);
             % A fixed coordinate shear makes the motion Schur complement R
             % affine while retaining a full motion metric. The acceleration
@@ -307,7 +308,7 @@ classdef localizationSupport
             [cost,blocks]=invariantNoiseEnergy(PG,P);constraints=[constraints,blocks];
             for motion=m.motion
                 weights=kI;weights(1:2)=motion.scheduleFactor*kI(1:2);
-                PG=-z.sigma*motion.H.'*diag([weights([1,2,2,3]);0])*motion.DI;
+                PG=-z.sigma*motion.H.'*diag(weights([1,2,2,3]))*motion.DI;
                 PG(:,5)=PG(:,5)-P*m.e8*(m.gyroGainNormalized*z.headingLengthM*z.noise.gyroRadps/z.sigma);
                 [bound,blocks]=invariantNoiseEnergy(PG,P);
                 constraints=[constraints,blocks];cost=cost+bound/numel(m.motion); %#ok<AGROW>
@@ -323,7 +324,7 @@ classdef localizationSupport
             % Homogeneous scaling preserves feedback ratios and creates a
             % visible margin for the independently checked lambda-I condition.
             Pv=1.01*value(P);Pv=(Pv+Pv.')/2;
-            design=struct('architecture',"intrinsic-nominal-polytope-v11",'sigma',z.sigma,'P',Pv, ...
+            design=struct('architecture',"intrinsic-nominal-polytope-v12",'sigma',z.sigma,'P',Pv, ...
                 'kappaL',1.01*value(kL),'kappaG',1.01*value(kG),'auxiliaryWeights',1.01*value(kI), ...
                 'gyroGainNormalized',m.gyroGainNormalized,'gyroDesign',m.gyroDesign, ...
                 'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem, ...
@@ -372,6 +373,7 @@ classdef localizationSupport
                     'nonlinearConclusionConditional',true), ...
                 'nominalFusion',struct('certified',worst<0,'vertices',numel(blocks), ...
                     'coversGnssAbsent',z.nominalGnssWeight==0,'coversZeroLidarInformation',false), ...
+                'additionalOutputCount',4,'bodyLateralGramOmittedFromBound',true, ...
                 'feedbackAuthority',authority,'motionResponse',response, ...
                 'gyroAvailabilityRequired',true,'allAuxiliaryOutputsRequired',true, ...
                 'motionAvailabilityConfigured',m.motionAvailable,'scope',scope);
@@ -398,13 +400,12 @@ classdef localizationSupport
         end
 
         %% Finite nonlinear increment identities
-        function [F,H,Hgnss]=secants(x,xhat,beta,betaRate,cfg)
+        function [F,H,Hgnss]=secants(x,xhat,betaRate,cfg)
         % f(x)-f(xhat)=F*(x-xhat), likewise for all nonlinear outputs.
         % These identities are finite differences, including at equal states.
             arguments
                 x (8,1) double {mustBeReal,mustBeFinite}
                 xhat (8,1) double {mustBeReal,mustBeFinite}
-                beta (1,1) double {mustBeReal,mustBeFinite}
                 betaRate (1,1) double {mustBeReal,mustBeFinite}
                 cfg (1,1) struct
             end
@@ -412,22 +413,20 @@ classdef localizationSupport
             J=[0,-1;1,0];q=m(8)+betaRate;half=e(7)/2;
             cardinal=1;if half~=0,cardinal=sin(half)/half;end
             c=cos(half);d=[cos(m(7));sin(m(7))];n=J*d;
-            dc=[cos(m(7)+beta);sin(m(7)+beta)];nc=J*dc;
             F=zeros(8);F(1,2)=1;F(2,3)=1;F(4,5)=1;F(5,6)=1;F(7,8)=1;
             F([3,6],[2,5])=(q^2+e(8)^2/4)*eye(2);
             F([3,6],[3,6])=2*q*J;F([3,6],8)=2*q*v+2*J*a;
-            H=zeros(5,8);H(1,[2,5])=2*v.';
+            H=zeros(4,8);H(1,[2,5])=2*v.';
             H(2,[2,5])=a.';H(2,[3,6])=v.';
             H(3,[2,5])=(-J*a).';H(3,[3,6])=(J*v).';
-            H(4,[2,5])=c*nc.';H(4,7)=-cardinal*dc.'*v;
-            H(5,8)=1;
+            H(4,[2,5])=c*n.';H(4,7)=-cardinal*d.'*v;
             Hgnss=zeros(2,8);Hgnss(:,[1,4])=eye(2);
             Hgnss(:,7)=cardinal*[d,n]*J*cfg.gnss.outputPoint.bodyOffset(:);
         end
 
         function N=measurementSecant(v,a,vm,am)
-        % Packet increment from ONE primitive [dv(2); da(2); dgyro] vector.
-        % The zero-valued kinematic outputs have no independent sensor noise.
+        % Exact packet increment from ONE primitive [dv(2); da(2)] vector.
+        % The lateral velocity error is shared with the quadratic outputs.
             arguments
                 v (2,1) double {mustBeReal,mustBeFinite}
                 a (2,1) double {mustBeReal,mustBeFinite}
@@ -435,10 +434,10 @@ classdef localizationSupport
                 am (2,1) double {mustBeReal,mustBeFinite}
             end
             v=(v+vm)/2;a=(a+am)/2;J=[0,-1;1,0];
-            N=zeros(5,5);N(1,1:2)=2*v.';
+            N=zeros(4,4);N(1,1:2)=2*v.';
             N(2,1:2)=a.';N(2,3:4)=v.';
             N(3,1:2)=(-J*a).';N(3,3:4)=(J*v).';
-            N(5,5)=1;
+            N(4,2)=1;
         end
 
         %% Nominal fusion coefficient polytope
@@ -453,7 +452,7 @@ classdef localizationSupport
             A=cfg.iss.maximumAcceleration;Q=min(cfg.maximumTrackAngleRate,A/s0);
             crossBound=min(Q,A/(2*s0));
             bounds=[-Q,Q;0,Q^2;-A,A;.5,V^2/(s0^2+V^2); ...
-                -A/(2*s0),A/(2*s0);-crossBound,crossBound;s0,V;s0^2,V^2];
+                -A/(2*s0),A/(2*s0);-crossBound,crossBound];
             vertices=localizationSupport.intervalVertices(bounds);
         end
 
@@ -471,21 +470,20 @@ classdef localizationSupport
         % Coefficients at a physical nominal point, useful for independent checks.
             denominator=cfg.invariantObserver.fusion.minimumCourseSpeed^2+speed^2;
             f=[courseRate,courseRate^2,tangentialAcceleration,speed^2/denominator, ...
-                speed*tangentialAcceleration/denominator,speed^2*courseRate/denominator,speed,speed^2];
+                speed*tangentialAcceleration/denominator,speed^2*courseRate/denominator];
         end
 
-        function [A,speed,pair,direction]=fusionMatrices(cfg,f,gyroGain)
+        function [A,speed,pair]=fusionMatrices(cfg,f,gyroGain)
         % The omitted velocity diagonal (|a|^2/denominator) of the pair Gram
         % is PSD. Dropping it is a global Loewner lower bound, with no split
         % parameter or acceleration-domain multiplier. All other terms remain.
             t=cfg.invariantObserver.theta;ell=cfg.invariantObserver.headingLengthM;
-            E=eye(8);e2=E(:,2);e3=E(:,3);e5=E(:,5);e6=E(:,6);e7=E(:,7);
+            E=eye(8);e2=E(:,2);e3=E(:,3);e5=E(:,5);e6=E(:,6);
             A=zeros(8);A(1,2)=1;A(2,3)=1;A(4,5)=1;A(5,6)=1;A(7,8)=1;
             A([3,6],[2,5])=f(2)/t^2*eye(2);A([3,6],[3,6])=2*f(1)/t*[0,-1;1,0];
             A(6,8)=2*f(3)/(t^2*ell);A(8,8)=-gyroGain;
             speed=f(4)*(e2*e2.');T=e2*e3.'-e5*e6.';N=e2*e6.'+e5*e3.';
             pair=f(4)*(e3*e3.'+e6*e6.')+f(5)/t*(T+T.')+f(6)/t*(N+N.');
-            direction=e5*e5.'-f(7)/(t*ell)*(e5*e7.'+e7*e5.')+f(8)/(t*ell)^2*(e7*e7.');
         end
 
         function blocks=fusionBlocks(d,cfg)
@@ -501,8 +499,11 @@ classdef localizationSupport
                 +d.kappaG*z.nominalGnssWeight*rho^2*(E(:,7)*E(:,7).');
             vertices=localizationSupport.fusionVertices(cfg);blocks=cell(1,size(vertices,1));
             for j=1:numel(blocks)
-                [A,speed,pair,direction]=localizationSupport.fusionMatrices(cfg,vertices(j,:),d.gyroGainNormalized);
-                M=d.P*A-d.auxiliaryWeights(1)*speed-d.auxiliaryWeights(2)*pair-d.auxiliaryWeights(3)*direction;
+                [A,speed,pair]=localizationSupport.fusionMatrices(cfg,vertices(j,:),d.gyroGainNormalized);
+                % The body-lateral Gram is PSD for every sideslip angle.
+                % Omit its damping to certify all orientations without using
+                % the retired zero course-direction constraint.
+                M=d.P*A-d.auxiliaryWeights(1)*speed-d.auxiliaryWeights(2)*pair;
                 blocks{j}=M+M.'+sensor+z.lambda*eye(8);
             end
         end
@@ -1944,10 +1945,10 @@ function m=invariantModel(cfg,storedGyro)
         for j=1:size(accelerationPoints,2)
             a=accelerationPoints(:,j);nominal=zeros(8,1);nominal(2)=speed;nominal([3,6])=a;
             N=localizationSupport.measurementSecant([speed;0],a,[speed;0],a);
-            N=N*diag([n.velocityMps,n.velocityMps,n.accelerationMps2,n.accelerationMps2,n.gyroRadps]);
+            N=N*diag([n.velocityMps,n.velocityMps,n.accelerationMps2,n.accelerationMps2]);
             % One primitive sample remains one correlated input column.
-            N(:,6)=0;N(4,6)=n.velocityMps;
-            [~,H]=localizationSupport.outputs(nominal,0,cfg);
+            N(:,5)=0; % Separate gyro column, injected on the rate state below.
+            [~,H]=localizationSupport.outputs(nominal,cfg);
             m.motion(end+1)=struct('H',D*H*(E\T),'DI',D*N, ...
                 'scheduleFactor',s.maximumSpeed^2/(r.minimumCourseSpeed^2+speed^2));
         end

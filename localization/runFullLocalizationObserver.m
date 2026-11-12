@@ -111,7 +111,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             gnssRate=Kg([1,4],:)*(gnssPosition(k,:).'-Cp*x);
         end
         packet=localizationSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
-            h.lateralAcceleration(k),h.yawRate(k),lateral.sideSlipAngle(k), ...
+            h.lateralAcceleration(k),h.yawRate(k), ...
             velocityValid(k),accelerationValid(k),gyroValid(k),cfg);
         priorRate=x(8);
         [x,invariantAudits{k}]=localizationSupport.correct(x,packet,dt,continuous,cfg);
@@ -202,16 +202,17 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
     estimate.diagnostics.intrinsicPrediction=intrinsicStates;
     estimate.diagnostics.invariantOutputs=invariantAudits;
     estimate.diagnostics.invariantOutputNames=["speedSquared","velocityAccelerationDot", ...
-        "velocityAccelerationCross","courseDirection","yawRate"];
+        "velocityAccelerationCross","bodyLateralVelocity"];
     estimate.diagnostics.intrinsicPredictionUsesImu=false;
     estimate.diagnostics.actualOverlapCertified=false;
     certificate=continuous.continuousCertificate.verification;
     estimate.diagnostics.operatingSet=certificate.operatingSet;
     estimate.diagnostics.nominalFusionLmiVerified=certificate.nominalFusionLmiVerified;
     estimate.diagnostics.gyroOutputAvailabilitySatisfied=all(gyroValid);
-    estimate.diagnostics.allAuxiliaryOutputsAvailable=velocityValid & accelerationValid & gyroValid ...
+    estimate.diagnostics.allAuxiliaryOutputsAvailable=velocityValid & accelerationValid ...
         & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable;
-    estimate.diagnostics.auxiliaryAvailabilityContractSatisfied=all(estimate.diagnostics.allAuxiliaryOutputsAvailable);
+    estimate.diagnostics.auxiliaryAvailabilityContractSatisfied= ...
+        all(estimate.diagnostics.allAuxiliaryOutputsAvailable) && all(gyroValid);
 end
 
 function valid=motionValidity(h,name,n)

@@ -21,7 +21,7 @@ classdef squaredSpeedChannelTest < matlab.unittest.TestCase
         function speedMagnitudeFeedbackDoesNotUseAHeadingProjection(testCase)
             [cfg,design,packet,state]=fixture();
             a=localizationSupport.correct(state,packet,.1,design,cfg);
-            changed=state;changed(7)=state(7)+.8;packet.beta=packet.beta-.3;
+            changed=state;changed(7)=state(7)+.8;
             b=localizationSupport.correct(changed,packet,.1,design,cfg);
             testCase.verifyEqual(b([1:6,8]),a([1:6,8]),AbsTol=1e-12);
             testCase.verifyEqual(b(7),changed(7),AbsTol=0);
@@ -45,6 +45,6 @@ function [cfg,design,packet,state]=fixture()
     design=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
         'auxiliaryWeights',[2;0;0],'gyroGainNormalized',1, ...
         'motionGainSchedule',struct('minimumSpeedMps',10,'maximumSpeedMps',15));
-    packet=localizationSupport.measurements(8,0,0,0,0,.2,true,false,false,cfg);
+    packet=localizationSupport.measurements(8,0,0,0,0,true,false,false,cfg);
     state=[0;3;0;0;4;0;.4;0];
 end

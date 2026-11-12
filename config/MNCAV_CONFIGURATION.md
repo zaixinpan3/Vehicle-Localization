@@ -72,14 +72,19 @@ strictly positive lower bound. The ordinary configuration uses [10,15] m/s.
 This is separate from the lateral LPV longitudinal-speed interval. Execution
 at rest remains defined, with no theoretical guarantee there.
 
-The architecture is `intrinsic-nominal-polytope-v11`. Five physical outputs
-remain: squared speed, dot product, cross product, course direction and yaw
-rate. The three `auxiliaryWeights` are now directly synthesized coefficients;
+The architecture is `intrinsic-nominal-polytope-v12`. Four additional outputs
+remain: squared speed, dot product, cross product and body-frame lateral
+velocity. The gyro is a separate scalar measurement. The three
+`auxiliaryWeights` are directly synthesized coefficients;
 the first two use the bounded factor `Vmax^2/(smin^2+sMeasured^2)`. There is no
 separate baseline/augmentation solve. The gyro gain is the analytic optimum
 of its scalar noise LMI, leaving exactly one SDP optimization call.
 
-One nominal fusion LMI is imposed at all analytic coefficient vertices.
+One nominal fusion LMI is imposed at all 64 analytic coefficient vertices.
+The PSD body-lateral Gram is omitted from this sufficient bound to cover
+every sideslip orientation; runtime feedback still uses all four rows.
+Lateral-velocity noise is shared across the packet, with no separate direction
+noise column. Existing gains from the five-output architecture are rejected.
 LiDAR and GNSS share a normalized pose gain; their information and noise
 scales remain separate. A fixed shear of each translation metric makes its
 motion Schur complement affine. Longitudinal motion response, direct pose/direction response, gain caps and

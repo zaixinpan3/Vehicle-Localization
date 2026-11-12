@@ -48,7 +48,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             testCase.verifyEqual(b.diagnostics.packetCounts.bodyVelocityValid,0);
             for k=1:numel(l.time)
                 testCase.verifyEqual(b.diagnostics.invariantOutputs{k}.valid, ...
-                    logical([0;0;0;0;1]));
+                    false(4,1));
             end
         end
         function invalidLateralMaskIsRejected(testCase)
@@ -62,7 +62,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
             testCase.verifyFalse(any(b.diagnostics.motionOutputValidity.bodyAcceleration));
             testCase.verifyEqual(b.diagnostics.invariantOutputNames, ...
-                ["speedSquared","velocityAccelerationDot","velocityAccelerationCross","courseDirection","yawRate"]);
+                ["speedSquared","velocityAccelerationDot","velocityAccelerationCross","bodyLateralVelocity"]);
         end
         function validityRequiresOneBooleanPerFrame(testCase)
             [d,l,c]=fixture();d.highRate.bodyVelocityValid=[true;false];
