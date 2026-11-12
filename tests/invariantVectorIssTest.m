@@ -39,12 +39,12 @@ end
 function errors=finiteIdentityErrors(c)
     stream=RandStream('mt19937ar','Seed',2301);errors=zeros(250,3);
     for k=1:size(errors,1)
-        x=randn(stream,8,1);y=randn(stream,8,1);rate=-.04;
+        x=randn(stream,8,1);y=randn(stream,8,1);rate=-.04;qd=.3*randn(stream);
         x([2,5])=10*x([2,5]);y([2,5])=10*y([2,5]);
         if k==1,y(7)=x(7);elseif k==2,y(7)=x(7)+1e-12;end
-        [F,H,G]=localizationSupport.secants(x,y,rate,c);e=x-y;
+        [F,H,G]=localizationSupport.secants(x,y,rate,c,qd);e=x-y;
         dh=localizationSupport.outputs(x,c)-localizationSupport.outputs(y,c);
-        dg=antenna(x,c)-antenna(y,c);df=drift(x,rate)-drift(y,rate);
+        dg=antenna(x,c)-antenna(y,c);df=drift(x,rate,qd)-drift(y,rate,qd);
         errors(k,:)=[norm(F*e-df)/max(1,norm(df)),norm(H*e-dh)/max(1,norm(dh)), ...
             norm(G*e-dg)/max(1,norm(dg))];
     end
@@ -55,14 +55,14 @@ function errors=rotationErrors(c)
     T([1,4],[1,4])=R;T([2,5],[2,5])=R;T([3,6],[3,6])=R;
     x=[2;12;.6;-1;.4;1.1;.3;.07];y=x+[.4;-.2;.1;-.3;.1;-.2;.1;-.02];
     xr=T*x;yr=T*y;xr(7)=xr(7)+angle;yr(7)=yr(7)+angle;
-    [F,H,G]=localizationSupport.secants(x,y,.03,c);
-    [Fr,Hr,Gr]=localizationSupport.secants(xr,yr,.03,c);
+    [F,H,G]=localizationSupport.secants(x,y,.03,c,.17);
+    [Fr,Hr,Gr]=localizationSupport.secants(xr,yr,.03,c,.17);
     errors=[norm(Fr-T*F*T.'),norm(Hr*T-H),norm(Gr*T-R*G)];
 end
 
-function y=drift(x,b)
+function y=drift(x,b,qd)
     q=x(8)+b;y=zeros(8,1);y([1,4])=x([2,5]);y([2,5])=x([3,6]);
-    y([3,6])=q^2*x([2,5])+2*q*[0,-1;1,0]*x([3,6]);y(7)=x(8);
+    y([3,6])=(q^2*eye(2)+qd*[0,-1;1,0])*x([2,5])+2*q*[0,-1;1,0]*x([3,6]);y(7)=x(8);
 end
 
 function d=direction(psi)

@@ -13,7 +13,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
         function oneSolveMeetsFusionAndMotionConstraints(testCase)
             c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());v=c.invariantDesign.verification;
             testCase.verifyTrue(v.certified && v.nominalFusionLmiVerified && v.motionResponse.verified);
-            testCase.verifyEqual(v.nominalFusion.vertices,64);
+            testCase.verifyEqual(v.nominalFusion.vertices,128);
             testCase.verifyFalse(v.motionResponse.longitudinalPoseFeedbackRequired);
             testCase.verifyFalse(v.motionResponse.fullNonlinearResponseCertified);
             testCase.verifyEqual(v.motionResponse.timeConstantS,.5,AbsTol=0);

@@ -18,10 +18,10 @@ classdef coupledMotionTest < matlab.unittest.TestCase
             testCase.verifyGreaterThanOrEqual(minimumWeight,-1e-14);
         end
         function degenerateDomainsHaveNoDuplicateVertices(testCase)
-            c=mncavFullObserverConfig();c.iss.maximumAcceleration=0;
+            c=mncavFullObserverConfig();c.iss.maximumAcceleration=0;c.maximumTrackAngleAcceleration=0;
             c.iss.maximumSpeed=c.invariantObserver.fusion.minimumCourseSpeed;
             [v,b]=localizationSupport.fusionVertices(c);
-            testCase.verifySize(v,[1,6]);testCase.verifyEqual(v,b(:,1).');
+            testCase.verifySize(v,[1,7]);testCase.verifyEqual(v,b(:,1).');
         end
         function affineVertexInterpolationPreservesTheWholeLmi(testCase)
             testCase.verifyLessThan(affineError(),1e-10);
@@ -40,8 +40,9 @@ function [errors,minimum]=jacobianErrors()
             % Cover arbitrary body heading relative to true course, including
             % headings with zero lateral-output heading sensitivity.
             x=[0;s;a(1);0;0;a(2);-pi+2*pi*rand(stream);q];
-            [F,H]=localizationSupport.secants(x,x,0,c);H=D*H*B;
-            [A,speed,pair]=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c),1);
+            qd=c.maximumTrackAngleAcceleration*(2*rand(stream)-1);
+            [F,H]=localizationSupport.secants(x,x,0,c,qd);H=D*H*B;
+            [A,speed,pair]=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c,qd),1);
             expected=B\F*B/t;expected(8,8)=-1;factor=c.iss.maximumSpeed^2/(s0^2+s^2);
             errors=max(errors,[norm(A-expected,'fro'),norm(speed-factor*H(1,:).'*H(1,:),'fro')]);
             difference=factor*H(2:3,:).'*H(2:3,:)-pair;
@@ -59,7 +60,7 @@ function [error,minimumWeight]=containmentErrors()
         for j=1:500
             s=s0+(c.iss.maximumSpeed-s0)*rand(stream);q=min(c.maximumTrackAngleRate,c.iss.maximumAcceleration/s)*(2*rand(stream)-1);
             a=sqrt(max(0,c.iss.maximumAcceleration^2-(s*q)^2))*(2*rand(stream)-1);
-            f=localizationSupport.fusionFeatures(s,q,a,c);w=vertexWeights(f,b);
+            f=localizationSupport.fusionFeatures(s,q,a,c,c.maximumTrackAngleAcceleration*(2*rand(stream)-1));w=vertexWeights(f,b);
             error=max(error,max([norm(w.'*vertices-f,Inf),abs(sum(w)-1)]));minimumWeight=min(minimumWeight,min(w));
         end
     end
