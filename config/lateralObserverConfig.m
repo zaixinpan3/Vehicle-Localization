@@ -51,8 +51,7 @@ function cfg = lateralObserverConfig(profile)
     cfg.synthesis.processDistribution = eye(2);
     % Fixed within each SDP; epsilon=0.02 s was evaluated in the column-gain study.
     cfg.synthesis.dilationTimeScale = 0.02;
-    % Acceleration gain is fixed to [1;0]/speed for exact disturbance cancellation.
-    % Only the affine yaw-gain coefficients are optimized.
+    % Acceleration gain is X^(-1)*G/speed, with G optimized jointly with yaw gains.
     % A generous metric ceiling avoids poorly scaled SDP constraints. The
     % ceiling is a numerical safeguard, not an optimization objective.
     cfg.synthesis.pCeiling = 1.0e3;

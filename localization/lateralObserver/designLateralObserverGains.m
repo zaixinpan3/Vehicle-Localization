@@ -2,7 +2,7 @@ function design = designLateralObserverGains(cfg)
 % designLateralObserverGains Synthesize column-separated affine lateral gains.
 % Measurements are [Vx*ay; r], with known steering feedthrough subtracted.
 % Schedule P(v) independently of Y(v) = X*L(v), with a common invertible X.
-% The acceleration column is [1;0]/v, canceling the lateral component of E*d.
+% The acceleration column is X^(-1)*G/v, jointly optimized for noise and process error.
 % The yaw column remains affine in v and is synthesized jointly with P.
 % Twelve expanded LMIs use v*(1/v)=1 only on the physical curve, including
 % the affine noise extension at auxiliary vertices and the derivative Pdot.
@@ -38,7 +38,7 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "column-affine-expanded-iss-distributed-v10";
+    design.certificateMethod = "column-affine-expanded-iss-free-distributed-v11";
     design.gainRecoveryMatrix = value(variables.X);
     design.gainBasis = struct('accelerationReciprocal', value(variables.basis.accelerationReciprocal), ...
         'yawConstant', value(variables.basis.yawConstant), 'yawSpeed', value(variables.basis.yawSpeed));
@@ -125,8 +125,8 @@ function variables = synthesisVariables()
     variables = struct();
     variables.P = {sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric')};
     variables.X = sdpvar(2, 2, 'full');
-    % This stored basis column is derived, not an independent decision variable.
-    variables.basis = struct('accelerationReciprocal', variables.X(:, 1), ...
+    % Both innovation columns are synthesized; no exact disturbance cancellation is imposed.
+    variables.basis = struct('accelerationReciprocal', sdpvar(2, 1, 'full'), ...
         'yawConstant', sdpvar(2, 1, 'full'), 'yawSpeed', sdpvar(2, 1, 'full'));
 end
 
@@ -151,8 +151,8 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         speedColumn = variables.basis.accelerationReciprocal;
         S = [-sigma(1)*speedColumn, -sigma(2)*Y(:, 2)];
         noiseMatrices{idx} = S;
-        % Exact cancellation removes only the lateral row of E*d.
-        processInjection = [zeros(2,1), X(:,2)]*double(cfg.processDistribution)*processScale;
+        % The physical acceleration feedthrough gives a speed-independent process block.
+        processInjection = (X - [speedColumn, zeros(2,1)])*double(cfg.processDistribution)*processScale;
         inputBlock = [processInjection, S];
         constraints = [constraints, P >= (1 + margin)*eye(2)]; %#ok<AGROW>
         if isfinite(cfg.pCeiling)

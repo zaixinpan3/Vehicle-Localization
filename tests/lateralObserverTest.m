@@ -198,7 +198,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 'VehicleLocalization:ObsoleteLateralDesign');
         end
 
-        function unrestrictedProcessDesignIsRejected(testCase)
+        function obsoleteProcessDesignIsRejected(testCase)
             design = testCase.CurrentDesign;
             design.certificateMethod = "column-affine-expanded-iss-process-v8";
             testCase.verifyError(@() runLateralVelocityObserver( ...
@@ -206,23 +206,23 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 'VehicleLocalization:ObsoleteLateralDesign');
         end
 
-        function alteredCancellationColumnIsRejected(testCase)
+        function invalidAccelerationColumnIsRejected(testCase)
             design = testCase.CurrentDesign;
-            design.gainBasis.accelerationReciprocal(1) = ...
-                design.gainBasis.accelerationReciprocal(1) + 1;
+            design.gainBasis.accelerationReciprocal(1) = NaN;
             testCase.verifyError(@() runLateralVelocityObserver( ...
                 testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
-                'VehicleLocalization:InvalidLateralCancellation');
+                'VehicleLocalization:InvalidLateralGainBasis');
         end
 
-        function exactCancellationRetainsYawDisturbanceAndSensorNoise(testCase)
+        function reciprocalGainKeepsPhysicalNoiseAndProcessChannelsSpeedIndependent(testCase)
             design = testCase.CurrentDesign;
+            K = design.gainRecoveryMatrix\design.gainBasis.accelerationReciprocal;
             for speed = linspace(1,30,101)
                 L = lateralObserverSupport.scheduleLateralObserverGain(design,speed);
                 Dnu = L*diag([speed,1]);
-                testCase.verifyEqual(L(:,1), [1;0]/speed, AbsTol=1e-10);
-                testCase.verifyEqual(eye(2)-Dnu*diag([1,0]), diag([0,1]), AbsTol=1e-10);
-                testCase.verifyEqual(Dnu(:,1), [1;0], AbsTol=1e-10);
+                testCase.verifyEqual(L(:,1), K/speed, AbsTol=1e-10);
+                testCase.verifyEqual(eye(2)-Dnu*diag([1,0]), eye(2)-[K,zeros(2,1)], AbsTol=1e-10);
+                testCase.verifyEqual(Dnu(:,1), K, AbsTol=1e-10);
             end
         end
 
@@ -233,7 +233,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 'VehicleLocalization:InvalidProcessDistribution');
         end
 
-        function distributedDisturbancesRetainTheirYawComponent(testCase)
+        function distributedDisturbancesMatchPhysicalErrorDynamics(testCase)
             cfg = testCase.CurrentDesign.cfg;
             cfg.synthesis.processDistribution = [1,.2;.3,1];
             design = designLateralObserverGains(cfg);
@@ -247,7 +247,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 plantRate = A*state+design.model.B*delta+Ed;
                 measured = [speed*(plantRate(1)+speed*state(2)+noise(1));state(2)+noise(2)];
                 observerRate = A*estimate+design.model.B*delta+L*(measured-C*estimate-D*delta);
-                expected = (A-L*C)*(state-estimate)+[0;Ed(2)]-L*diag([speed,1])*noise;
+                expected = (A-L*C)*(state-estimate)+(eye(2)-L*diag([speed,1])*diag([1,0]))*Ed-L*diag([speed,1])*noise;
                 testCase.verifyEqual(plantRate-observerRate,expected,AbsTol=1e-10);
                 testCase.verifyGreaterThan(abs(design.processDistribution(2,1)),0);
             end
@@ -525,7 +525,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             cfg = design.cfg;
             cfg.simulation.yawRateNoiseStd = 0;
             cfg.simulation.lateralAccelerationNoiseStd = 0;
-            % Resolve the faster exact-cancellation dynamics before comparing
+            % Check time-resolution convergence before comparing
             % an instantaneous analytic derivative with sampled differences.
             deviations = zeros(2,1);
             for idx = 1:2
@@ -718,7 +718,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.CurrentDesign;
             resolved = designLateralObserverGains(design.cfg);
 
-            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-distributed-v10");
+            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-free-distributed-v11");
             testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.solverSolved);
