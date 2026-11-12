@@ -57,8 +57,8 @@ function design = designLateralObserverGains(cfg)
     design.processErrorScale = double(cfg.synthesis.processErrorScale(:));
     design.processDistribution = double(cfg.synthesis.processDistribution);
     design.measurementErrorScale = sigma;
-    % Diagnostics only: no second-stage noise optimization.
-    design.vertexNoiseBounds = cellfun(@(S) norm(value(S), 2), noiseMatrices);
+    % Recovered input norms require no lower bound on Sym(X).
+    design.vertexNoiseBounds = cellfun(@(S) norm(design.gainRecoveryMatrix\value(S), 2), noiseMatrices);
     design.uniformNoiseGainNormBound = max(design.vertexNoiseBounds);
     design.maxVertexGainNorm = max(arrayfun(@(idx) norm(design.vertexGains(:, :, idx)), 1:3));
     design.uniformGainNormBound = design.maxVertexGainNorm;
@@ -140,7 +140,7 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
     epsilon = double(cfg.dilationTimeScale);
     processScale = diag(double(cfg.processErrorScale(:)));
     X = variables.X;
-    constraints = [gainSquared >= 0, X + X.' >= 2*eye(2)];
+    constraints = [gainSquared >= 0];
     blocks = cell(domain.numLmis, 1);
     noiseMatrices = cell(3, 1);
     for idx = 1:3
