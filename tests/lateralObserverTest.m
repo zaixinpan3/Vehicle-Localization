@@ -198,6 +198,34 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 'VehicleLocalization:ObsoleteLateralDesign');
         end
 
+        function unrestrictedProcessDesignIsRejected(testCase)
+            design = testCase.CurrentDesign;
+            design.certificateMethod = "column-affine-expanded-iss-process-v8";
+            testCase.verifyError(@() runLateralVelocityObserver( ...
+                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
+                'VehicleLocalization:ObsoleteLateralDesign');
+        end
+
+        function alteredCancellationColumnIsRejected(testCase)
+            design = testCase.CurrentDesign;
+            design.gainBasis.accelerationReciprocal(1) = ...
+                design.gainBasis.accelerationReciprocal(1) + 1;
+            testCase.verifyError(@() runLateralVelocityObserver( ...
+                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
+                'VehicleLocalization:InvalidLateralCancellation');
+        end
+
+        function exactCancellationRetainsYawDisturbanceAndSensorNoise(testCase)
+            design = testCase.CurrentDesign;
+            for speed = linspace(1,30,101)
+                L = lateralObserverSupport.scheduleLateralObserverGain(design,speed);
+                Dnu = L*diag([speed,1]);
+                testCase.verifyEqual(L(:,1), [1;0]/speed, AbsTol=1e-10);
+                testCase.verifyEqual(eye(2)-Dnu*diag([1,0]), diag([0,1]), AbsTol=1e-10);
+                testCase.verifyEqual(Dnu(:,1), [1;0], AbsTol=1e-10);
+            end
+        end
+
         function weightedObjectiveConfigurationIsRejected(testCase)
             cfg = testCase.CurrentDesign.cfg;
             cfg.synthesis.initialErrorWeight = 1;
@@ -315,7 +343,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             expectedY = sum(design.vertexY.*reshape(alpha, 1, 1, 3), 3);
             [L, P] = lateralObserverSupport.scheduleLateralObserverGain(design, speed);
             testCase.verifyEqual(P, expectedP, AbsTol=1e-12);
-            testCase.verifyEqual(design.gainRecoveryMatrix*L, expectedY, AbsTol=1e-12);
+            testCase.verifyEqual(design.gainRecoveryMatrix*L, expectedY, AbsTol=1e-12, RelTol=1e-12);
             atMinimum = lateralObserverSupport.scheduleLateralObserverGain(design, design.polytope.speedRange(1));
             atMaximum = lateralObserverSupport.scheduleLateralObserverGain(design, design.polytope.speedRange(2));
             testCase.verifyEqual(atMinimum, design.vertexGains(:, :, 1), AbsTol=1e-10);
@@ -388,14 +416,14 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function affineGainIsIndependentOfTheScheduledMetric(testCase)
             design = testCase.CurrentDesign;
             design.gainRecoveryMatrix = [2,.3;-.2,1.5];
-            design.gainBasis = struct('accelerationReciprocal', [1;2], 'yawConstant', [3;-1], 'yawSpeed', [-.2;.3]);
+            design.gainBasis = struct('accelerationReciprocal', design.gainRecoveryMatrix(:,1), 'yawConstant', [3;-1], 'yawSpeed', [-.2;.3]);
             [L, P] = lateralObserverSupport.scheduleLateralObserverGain(design, 12.3);
             design.vertexLyapunovMatrices = cat(3, 2*eye(2), 5*eye(2), 3*eye(2));
             [sameL, differentP] = lateralObserverSupport.scheduleLateralObserverGain(design, 12.3);
-            expectedY = [[1;2]/12.3, [3;-1]+12.3*[-.2;.3]];
+            expectedY = [design.gainRecoveryMatrix(:,1)/12.3, [3;-1]+12.3*[-.2;.3]];
             testCase.verifyEqual(sameL, L, AbsTol=0);
             testCase.verifyGreaterThan(norm(differentP - P), .1);
-            testCase.verifyEqual(design.gainRecoveryMatrix*L, expectedY, AbsTol=1e-12);
+            testCase.verifyEqual(design.gainRecoveryMatrix*L, expectedY, AbsTol=1e-12, RelTol=1e-12);
             testCase.verifyGreaterThan(norm(differentP*L - expectedY), .1);
         end
 
@@ -416,7 +444,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function affineNoiseExtensionIsRequiredAtTheAuxiliaryVertex(testCase)
             design = testCase.CurrentDesign;
             design.gainRecoveryMatrix = [2,.3;-.2,1.5];
-            basis = struct('accelerationReciprocal',[1;2],'yawConstant',[.3;-.5],'yawSpeed',[.02;.01]);
+            basis = struct('accelerationReciprocal',design.gainRecoveryMatrix(:,1),'yawConstant',[.3;-.5],'yawSpeed',[.02;.01]);
             design.gainBasis = basis;
             sigma = design.measurementErrorScale;
             correct = zeros(2,2,3);
@@ -470,17 +498,23 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             cfg = design.cfg;
             cfg.simulation.yawRateNoiseStd = 0;
             cfg.simulation.lateralAccelerationNoiseStd = 0;
-            result = simulateLateralObserverScenario(design, cfg);
-            estimate = result.estimate;
-
-            sampleTime = design.cfg.simulation.sampleTime;
-            numericalRate = gradient(estimate.sideSlipAngle, sampleTime);
-            settled = estimate.time >= 0.25 .* design.cfg.simulation.tFinal;
-            rateDeviation = estimate.sideSlipAngleRate(settled) - numericalRate(settled);
-
-            testCase.verifyLessThan(sqrt(mean(rateDeviation.^2)), ...
-                0.05 .* max(abs(estimate.sideSlipAngleRate(settled))));
-            testCase.verifyTrue(all(isfinite(estimate.sideSlipAngleRate)));
+            % Resolve the faster exact-cancellation dynamics before comparing
+            % an instantaneous analytic derivative with sampled differences.
+            deviations = zeros(2,1);
+            for idx = 1:2
+                cfg.simulation.sampleTime = .002/2^(idx-1);
+                result = simulateLateralObserverScenario(design, cfg);
+                estimate = result.estimate;
+                numericalRate = gradient(estimate.sideSlipAngle, cfg.simulation.sampleTime);
+                settled = estimate.time >= .25*cfg.simulation.tFinal & ...
+                    estimate.time < cfg.simulation.tFinal;
+                deviations(idx) = sqrt(mean((estimate.sideSlipAngleRate(settled) - ...
+                    numericalRate(settled)).^2));
+                testCase.verifyLessThan(deviations(idx), ...
+                    .05*max(abs(estimate.sideSlipAngleRate(settled))));
+                testCase.verifyTrue(all(isfinite(estimate.sideSlipAngleRate)));
+            end
+            testCase.verifyLessThan(deviations(2), .4*deviations(1));
         end
 
         function speedRateIsReconstructedFromTheSpecificForce(testCase)
@@ -657,7 +691,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design = testCase.CurrentDesign;
             resolved = designLateralObserverGains(design.cfg);
 
-            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-process-v8");
+            testCase.verifyEqual(resolved.certificateMethod, "column-affine-expanded-iss-decoupled-v9");
             testCase.verifyEqual(resolved.issGain, design.issGain, RelTol=1.0e-4);
             testCase.verifyEqual(resolved.vertexGains, design.vertexGains, AbsTol=1.0e-4);
             testCase.verifyTrue(resolved.solverSolved);

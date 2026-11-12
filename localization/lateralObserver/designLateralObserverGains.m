@@ -2,8 +2,8 @@ function design = designLateralObserverGains(cfg)
 % designLateralObserverGains Synthesize column-separated affine lateral gains.
 % Measurements are [Vx*ay; r], with known steering feedthrough subtracted.
 % Schedule P(v) independently of Y(v) = X*L(v), with a common invertible X.
-% The acceleration column is affine in 1/v, the yaw column affine in v.
-% The acceleration column is strictly reciprocal, so v*L_a(v) is constant.
+% The acceleration column is [1;0]/v, canceling the first process input.
+% The yaw column remains affine in v and is synthesized jointly with P.
 % Twelve expanded LMIs use v*(1/v)=1 only on the physical curve, including
 % the affine noise extension at auxiliary vertices and the derivative Pdot.
 % Each LMI is 8-by-8 for the linear LPV model with process disturbances.
@@ -38,7 +38,7 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "column-affine-expanded-iss-process-v8";
+    design.certificateMethod = "column-affine-expanded-iss-decoupled-v9";
     design.gainRecoveryMatrix = value(variables.X);
     design.gainBasis = struct('accelerationReciprocal', value(variables.basis.accelerationReciprocal), ...
         'yawConstant', value(variables.basis.yawConstant), 'yawSpeed', value(variables.basis.yawSpeed));
@@ -113,11 +113,12 @@ function validateConfiguration(cfg)
 end
 
 function variables = synthesisVariables()
-% synthesisVariables Independent metric vertices, common X and affine columns.
+% synthesisVariables Metric vertices, common X and affine yaw column.
     variables = struct();
     variables.P = {sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric'), sdpvar(2, 2, 'symmetric')};
     variables.X = sdpvar(2, 2, 'full');
-    variables.basis = struct('accelerationReciprocal', sdpvar(2, 1, 'full'), ...
+    % This stored basis column is derived, not an independent decision variable.
+    variables.basis = struct('accelerationReciprocal', variables.X(:, 1), ...
         'yawConstant', sdpvar(2, 1, 'full'), 'yawSpeed', sdpvar(2, 1, 'full'));
 end
 
@@ -142,8 +143,8 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         speedColumn = variables.basis.accelerationReciprocal;
         S = [-sigma(1)*speedColumn, -sigma(2)*Y(:, 2)];
         noiseMatrices{idx} = S;
-        % Process acceleration also enters the accelerometer output.
-        processInjection = (X - [speedColumn, zeros(2,1)])*processScale;
+        % Exact cancellation removes the first process input; yaw disturbance remains.
+        processInjection = [zeros(2,1), X(:,2)]*processScale;
         inputBlock = [processInjection, S];
         constraints = [constraints, P >= (1 + margin)*eye(2)]; %#ok<AGROW>
         if isfinite(cfg.pCeiling)
