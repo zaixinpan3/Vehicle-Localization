@@ -38,5 +38,5 @@ function trial=nuscenesTrialConfig(steeringRatio)
     globalCfg.invariantObserver.provenance.noise="Declared transfer scales; no nuScenes reference-error tuning";
     trial=struct('vehicle',vehicle,'provenance',provenance,'lateral',lateral, ...
         'global',globalCfg,'wheelRadiusM',.305,'steeringRatio',steeringRatio, ...
-        'yawDerivativeTimeConstantS',.1,'maximumCanAgeS',.1);
+        'maximumCanAgeS',.1);
 end

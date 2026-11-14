@@ -26,11 +26,12 @@ classdef nuscenesMotionTest < matlab.unittest.TestCase
             m=prepareNuscenesMotion(f.imu,f.wheels,f.steering,f.cfg);
             testCase.verifyEqual([m.longitudinalAcceleration,m.lateralAcceleration],zeros(4,2),AbsTol=1e-12);
         end
-        function accelerationTransportsToRearAxle(testCase)
-            f=fixture();[f.imu.rotation_rate]=deal([0;0;.2]);
+        function preparationDoesNotDifferentiateGyroMeasurements(testCase)
+            f=fixture();[f.imu.rotation_rate]=deal([0;0;.2],[0;0;-.2],[0;0;.2],[0;0;-.2]);
             [m,a]=prepareNuscenesMotion(f.imu,f.wheels,f.steering,f.cfg);
-            testCase.verifyEqual(a.rearAxleAcceleration(:,1),m.longitudinalAcceleration+f.cfg.vehicle.lr*.2^2,AbsTol=1e-12);
-            testCase.verifyEqual(a.rearAxleAcceleration(:,2),m.lateralAcceleration,AbsTol=1e-12);
+            testCase.verifyEqual(m.yawRate,[.2;-.2;.2;-.2],AbsTol=1e-12);
+            testCase.verifyFalse(isfield(a,'yawAcceleration'));
+            testCase.verifyFalse(isfield(a,'rearAxleAcceleration'));
         end
         function navigationPayloadCannotAffectMotion(testCase)
             f=fixture();baseline=prepareNuscenesMotion(f.imu,f.wheels,f.steering,f.cfg);

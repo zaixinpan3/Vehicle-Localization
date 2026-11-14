@@ -23,17 +23,10 @@ function [measurements,auxiliary]=prepareNuscenesMotion(imu,wheels,steering,tria
     ax=cos(theta).*force(:,1)+sin(theta).*(sin(phi).*force(:,2)+cos(phi).*force(:,3));
     ay=cos(phi).*force(:,2)-sin(phi).*force(:,3);
     r=(sin(phi).*gyro(:,2)+cos(phi).*gyro(:,3))./cos(theta);
-    time=(t-t(1))/1e6;rdot=zeros(size(r));
-    for k=2:numel(t)
-        dt=time(k)-time(k-1);a=-expm1(-dt/trial.yawDerivativeTimeConstantS);
-        rdot(k)=rdot(k-1)+a*((r(k)-r(k-1))/dt-rdot(k-1));
-    end
+    time=(t-t(1))/1e6;
     measurements=struct('time',time,'longitudinalSpeed',vx, ...
         'steeringAngle',[steering(si).value].'/trial.steeringRatio, ...
         'longitudinalAcceleration',ax,'lateralAcceleration',ay,'yawRate',r);
-    % Rigid-body acceleration transport from assumed CG to rear-axle origin.
-    offset=trial.vehicle.lr;
     auxiliary=struct('utime',t,'tilt',[phi,theta],'wheelSpeedsMps',wheelMps, ...
-        'packetAgeS',age,'rearAxleAcceleration',[ax+offset*r.^2,ay-offset*rdot], ...
-        'yawAcceleration',rdot);
+        'packetAgeS',age);
 end

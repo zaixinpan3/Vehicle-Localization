@@ -31,6 +31,26 @@ classdef mncavVdbIsolationTest < matlab.unittest.TestCase
             tc.verifyError(@()prepareMncavVdbInputs(folder,fullfile(folder,'interface.json')), ...
                 'VehicleLocalization:OracleWheelCalibration');
         end
+        function syntheticInputsUseModelRatesWithoutReference(tc)
+            folder=tempname;mkdir(folder);cleanup=onCleanup(@()rmdir(folder,'s'));
+            t=(2:.02:3.4).';n=numel(t);zero=zeros(n,1);moving=t>=3;
+            s=table(t,zero,zero,9.81*ones(n,1),.01*double(moving), ...
+                .02*double(moving),.03*double(moving),zero, ...
+                'VariableNames',{'time','specificX','specificY','specificZ', ...
+                'gyroX','gyroY','gyroZ','roadWheelAngle'});
+            cfg=wheelSpeedObserverConfig();names={'omegaFL','omegaFR','omegaRL','omegaRR'};
+            for k=1:4,s.(names{k})=10*double(moving)/cfg.effectiveRadius(k);end
+            writetable(s,fullfile(folder,'sensors.csv'));
+            interface=struct('schemaVersion',2,'source',"independent-mncav-wheel-calibration", ...
+                'effectiveRadiusM',cfg.effectiveRadius);
+            file=fullfile(folder,'interface.json');fid=fopen(file,'w');fprintf(fid,'%s',jsonencode(interface));fclose(fid);
+            out=prepareMncavVdbInputs(folder,file);
+            tc.verifyTrue(all(isfinite(out.highRate.lateralAcceleration)));
+            tc.verifyTrue(all(isfinite(out.lateral.sideSlipAngleRate)));
+            tc.verifyEqual(out.tiltRate(:,:,~moving),zeros(3,3,sum(~moving)),AbsTol=0);
+            tc.verifyFalse(out.referenceUsed);
+            tc.verifyEqual(strlength(out.signature),64);
+        end
         function pointPackNeverReadsPoseOrLabels(tc)
             folder=tempname;mkdir(folder);mkdir(fullfile(folder,'points'));cleanup=onCleanup(@()rmdir(folder,'s'));
             frames=table(1,8,2,'VariableNames',{'frame_index','lidar_stamp_sec','points'});writetable(frames,fullfile(folder,'frames.csv'));

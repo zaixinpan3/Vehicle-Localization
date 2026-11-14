@@ -1416,6 +1416,56 @@ classdef localizationSupport
                 'schemaVersion',1,'source',"front-ouster-raw-imu",'referencePoseUsed',false,'causal',true);
         end
 
+        function [filtered,rate]=filterSignalWithRate(time,signal,timeConstant)
+        % Causal first-order state filter; rate comes from tau*xDot=u-x.
+        % This is a bandwidth-limited rate estimate with lag, not an exact
+        % derivative of the measured signal. No measurement difference is used.
+            arguments
+                time (:,1) double {mustBeReal,mustBeFinite}
+                signal (:,:) double {mustBeReal,mustBeFinite}
+                timeConstant (1,1) double {mustBeReal,mustBeFinite,mustBePositive}
+            end
+            assert(~isempty(time) && size(signal,1)==numel(time) && all(diff(time)>0), ...
+                'VehicleLocalization:InvalidRateFilter','Require aligned samples on an increasing clock.');
+            filtered=signal;rate=zeros(size(signal));
+            for k=2:numel(time)
+                blend=-expm1(-(time(k)-time(k-1))/timeConstant);
+                filtered(k,:)=filtered(k-1,:)+blend*(signal(k,:)-filtered(k-1,:));
+                rate(k,:)=(signal(k,:)-filtered(k,:))/timeConstant;
+            end
+        end
+
+        function [rotation,rate]=levelingRotation(roll,pitch,bodyRate)
+        % Yaw-free leveling rotation and its analytic Euler-kinematic rate.
+            arguments
+                roll (1,1) double {mustBeReal,mustBeFinite}
+                pitch (1,1) double {mustBeReal,mustBeFinite}
+                bodyRate (3,1) double {mustBeReal,mustBeFinite}
+            end
+            cr=cos(roll);sr=sin(roll);cp=cos(pitch);sp=sin(pitch);
+            assert(abs(cp)>1e-6,'VehicleLocalization:SingularTilt','Pitch is outside the Euler chart.');
+            Rx=[1,0,0;0,cr,-sr;0,sr,cr];Ry=[cp,0,sp;0,1,0;-sp,0,cp];
+            dRx=[0,0,0;0,-sr,-cr;0,cr,-sr];dRy=[-sp,0,cp;0,0,0;-cp,0,-sp];
+            rollRate=bodyRate(1)+tan(pitch)*(sr*bodyRate(2)+cr*bodyRate(3));
+            pitchRate=cr*bodyRate(2)-sr*bodyRate(3);
+            rotation=Ry*Rx;rate=dRy*Rx*pitchRate+Ry*dRx*rollRate;
+        end
+
+        function acceleration=transportPlanarAcceleration(acceleration,yawRate,yawAcceleration,offset)
+        % Transport from a reference point to the body-frame displacement offset.
+        % Supply angular acceleration from observer dynamics, not gyro differences.
+            arguments
+                acceleration (:,2) double {mustBeReal,mustBeFinite}
+                yawRate (:,1) double {mustBeReal,mustBeFinite}
+                yawAcceleration (:,1) double {mustBeReal,mustBeFinite}
+                offset (2,1) double {mustBeReal,mustBeFinite}
+            end
+            assert(size(acceleration,1)==numel(yawRate) && numel(yawRate)==numel(yawAcceleration), ...
+                'VehicleLocalization:InvalidAccelerationTransport','Inputs must share a clock.');
+            acceleration=acceleration+[-offset(2)*yawAcceleration-offset(1)*yawRate.^2, ...
+                offset(1)*yawAcceleration-offset(2)*yawRate.^2];
+        end
+
         function [rotation,state,diagnostic]=updateLidarImuTilt(sample,speed,state,cfg)
         % updateLidarImuTilt One causal six-axis IMU update; no pose/reference input.
         % specificForce and angularVelocity are columns in stored point axes. time
@@ -1439,7 +1489,9 @@ classdef localizationSupport
                 assert(dt>0 && dt<=cfg.maximumImuStepSeconds, ...
                     'VehicleLocalization:TiltImuGap','IMU timestamps must increase without an excessive gap.');
                 filtered=state.speed+(1-exp(-dt/cfg.speedTimeSeconds))*(speed-state.speed);
-                acceleration=(filtered-state.speed)/dt;state.speed=filtered;
+                state.speed=filtered;
+                % Derivative of the low-pass state: tau*vDot = wheelSpeed-v.
+                acceleration=(speed-state.speed)/cfg.speedTimeSeconds;
                 if stationary
                     state.biasCount=state.biasCount+1;
                     state.gyroBias=state.gyroBias+(w-state.gyroBias)/state.biasCount;
@@ -1471,7 +1523,8 @@ classdef localizationSupport
             cr=cos(roll);sr=sin(roll);cp=cos(pitch);sp=sin(pitch);
             rotation=[cp,sp*sr,sp*cr;0,cr,-sr;-sp,cp*sr,cp*cr];
             diagnostic=struct('roll',roll,'pitch',pitch,'aligned',state.initialized, ...
-                'gravityAccepted',accepted,'gravityNormMps2',norm(gravity),'gyroBias',state.gyroBias);
+                'gravityAccepted',accepted,'gravityNormMps2',norm(gravity),'gyroBias',state.gyroBias, ...
+                'longitudinalAcceleration',acceleration,'accelerationSource',"speedFilterDynamics");
         end
 
         function assertSensorOnlyLidarTilt(tilt)
@@ -1479,8 +1532,10 @@ classdef localizationSupport
             assert(isstruct(tilt) && all(isfield(tilt, ...
                 {'schemaVersion','source','referencePoseUsed','causal','configuration'})) && ...
                 tilt.schemaVersion==1 && ~tilt.referencePoseUsed && tilt.causal && ...
+                isfield(tilt.configuration,'accelerationSource') && ...
+                string(tilt.configuration.accelerationSource)=="speedFilterDynamics" && ...
                 ismember(string(tilt.source),["front-ouster-raw-imu","disabled"]), ...
-                'VehicleLocalization:ReferenceTiltCache','Regenerate source inputs using sensor-only tilt; legacy reference-attitude caches are not allowed.');
+                'VehicleLocalization:ReferenceTiltCache','Regenerate tilt using current sensor-only filter dynamics; legacy caches are not allowed.');
         end
 
         function [calibration, report] = fitLidarPitchCalibration(featureData, options)

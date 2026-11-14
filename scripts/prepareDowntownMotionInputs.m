@@ -20,19 +20,29 @@ function inputs=prepareDowntownMotionInputs(datasetFolder,lateralDesign)
     h.longitudinalSpeed=max(0,wheel.longitudinalSpeed);
     cfg=lateralObserverConfig();lateralObserverSupport.assertLateralVehicleMatches(lateralDesign,cfg);
     root=fileparts(fileparts(mfilename('fullpath')));alignment=jsondecode(fileread(fullfile(root,'config','offlineReferenceFrontLidarMotion.json')));
-    lever=alignment.leverLidarToInsMeters(:);r=h.yawRate;rdot=gradient(r,t);
-    velocityMap=repmat([1,0,0,1,0,0],numel(t),1);
-    velocityMap(:,5:6)=[lever(2)*r,-lever(1)*r];
-    lateral=runLateralVelocityObserver(h,lateralDesign,cfg,velocityMap);
-    % Existing calibrated output point is the INS point. LiDAR lies at -lever.
+    lever=alignment.leverLidarToInsMeters(:);
+    % Rigid point transport uses the observer state and its ODE derivative.
+    map=@(state,rate) receiverVelocityMap(state,rate,lever);
+    lateral=runLateralVelocityObserver(h,lateralDesign,cfg,map);
     h.longitudinalSpeed=lateral.longitudinalSpeed;
     vy=lateral.lateralVelocity;
     displacement=[-cfg.outputPoint.forwardOffsetM-lever(1);-lever(2)];
-    h.longitudinalAcceleration=h.longitudinalAcceleration-rdot*displacement(2)-r.^2*displacement(1);
-    h.lateralAcceleration=h.lateralAcceleration+rdot*displacement(1)-r.^2*displacement(2);
+    acceleration=localizationSupport.transportPlanarAcceleration( ...
+        [h.longitudinalAcceleration,h.lateralAcceleration], ...
+        lateral.yawRate,lateral.yawRateRate,displacement);
+    h.longitudinalAcceleration=acceleration(:,1);
+    h.lateralAcceleration=acceleration(:,2);
+    r=h.yawRate;
     [motion,motionSegment]=integrateRecordedPlanarMotion(t,[h.longitudinalSpeed,vy,r],t,lateral.velocityValid);
     inputs=struct('highRate',h,'lateral',lateral,'nativeOriginSeconds',begin,'motion',motion,'motionSegment',motionSegment, ...
         'wheel',wheel,'parameters',parameters,'pointAlignment',alignment,'lateralOriginal',lateral, ...
         'referenceUsed',false,'gnssUsed',false,'tiltMode',"disabled-moving-start-no-stationary-alignment", ...
-        'reconstruction',"Offline linear DBW interpolation; LPV output-point transport precedes the existing angle/rate filter; not a real-time latency claim");
+        'reconstruction',"Offline linear DBW interpolation; LPV output-point transport precedes the algebraic angle/rate interface; not a real-time latency claim");
+end
+
+function map=receiverVelocityMap(state,rate,lever)
+    n=size(state,1);value=repmat([1,0,0,1,0,0],n,1);derivative=zeros(n,6);
+    value(:,5:6)=[lever(2)*state(:,2),-lever(1)*state(:,2)];
+    derivative(:,5:6)=[lever(2)*rate(:,2),-lever(1)*rate(:,2)];
+    map=struct('value',value,'rate',derivative);
 end

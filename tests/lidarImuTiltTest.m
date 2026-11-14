@@ -33,6 +33,15 @@ classdef lidarImuTiltTest < matlab.unittest.TestCase
             testCase.verifyEqual(R,eye(3),AbsTol=1e-12);
             testCase.verifyTrue(d.gravityAccepted);
         end
+        function wheelNoiseHasNoInverseSampleIntervalFactor(testCase)
+            cfg=lidarImuTiltConfig();
+            sample=struct('time',0,'specificForce',[0;0;cfg.gravityMps2],'angularVelocity',zeros(3,1));
+            [~,state]=localizationSupport.updateLidarImuTilt(sample,0,[],cfg);
+            sample.time=1e-8;
+            [~,next,d]=localizationSupport.updateLidarImuTilt(sample,.01,state,cfg);
+            testCase.verifyEqual(d.longitudinalAcceleration,(.01-next.speed)/cfg.speedTimeSeconds,AbsTol=1e-12);
+            testCase.verifyLessThanOrEqual(abs(d.longitudinalAcceleration),.01/cfg.speedTimeSeconds);
+        end
         function futureImuAndWheelCannotChangePrefix(testCase)
             [imu,wheel]=lidarImuTiltTest.fixture();q=(0:.02:2).';
             a=localizationSupport.estimateLidarImuTilt(imu,wheel,q);
@@ -69,6 +78,13 @@ classdef lidarImuTiltTest < matlab.unittest.TestCase
             s=struct('schemaVersion',1,'source',"reference",'referencePoseUsed',true, ...
                 'causal',true,'configuration',lidarImuTiltConfig());
             testCase.verifyError(@()localizationSupport.assertSensorOnlyLidarTilt(s), ...
+                'VehicleLocalization:ReferenceTiltCache');
+        end
+        function oldWheelSecantTiltCacheIsRejected(tc)
+            [imu,wheel]=lidarImuTiltTest.fixture();tilt=localizationSupport.estimateLidarImuTilt(imu,wheel,[0;.02]);
+            localizationSupport.assertSensorOnlyLidarTilt(tilt);
+            tilt.configuration=rmfield(tilt.configuration,'accelerationSource');
+            tc.verifyError(@()localizationSupport.assertSensorOnlyLidarTilt(tilt), ...
                 'VehicleLocalization:ReferenceTiltCache');
         end
         function installationRotationIsUnchanged(testCase)

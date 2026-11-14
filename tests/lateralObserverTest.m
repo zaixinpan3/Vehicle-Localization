@@ -416,13 +416,15 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(plantRate - observerRate, expected, AbsTol=1e-12);
         end
 
-        function causalSpeedRateDiagnosticsDoNotUseSpecificForce(testCase)
+        function speedRateDiagnosticsUseKinematicsNotWheelDifferences(testCase)
             measurements = testCase.constantSpeedMeasurements(.03, 10);
             measurements.longitudinalSpeed = [10;10.02;10.08;10.02];
             measurements.longitudinalAcceleration(:) = 50;
             estimate = runLateralVelocityObserver(measurements, testCase.CurrentDesign, testCase.CurrentDesign.cfg);
-            testCase.verifyEqual(estimate.scheduledSpeedRate, [0;2;6;-6], AbsTol=1e-10);
-            testCase.verifyEqual(estimate.diagnostics.schedulingRateWithinBounds, [false;true;false;false]);
+            testCase.verifyEqual(estimate.scheduledSpeedRate, 50*ones(4,1), AbsTol=1e-10);
+            testCase.verifyFalse(any(estimate.diagnostics.schedulingRateWithinBounds));
+            testCase.verifyFalse(any(estimate.diagnostics.schedulingRateKnown));
+            testCase.verifyEqual(estimate.diagnostics.schedulingRateSource,"kinematicEstimate");
             testCase.verifyTrue(all(estimate.velocityValid));
         end
 

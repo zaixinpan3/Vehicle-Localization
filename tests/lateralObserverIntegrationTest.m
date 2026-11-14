@@ -123,7 +123,8 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             cfg = testCase.Design.cfg;
             m = testCase.measurements([0;.1;.2],2);
             transform = [-ones(3,1),zeros(3,2),ones(3,1),zeros(3,1),[.01;-.01;-.03]];
-            actual = runLateralVelocityObserver(m,testCase.Design,cfg,transform);
+            actual = runLateralVelocityObserver(m,testCase.Design,cfg, ...
+                struct('value',transform,'rate',repmat([0,0,0,0,0,-.2],3,1)));
             testCase.verifyGreaterThan(actual.sideSlipAngle(1),3);
             testCase.verifyLessThan(actual.sideSlipAngle(2),-3);
             testCase.verifyEqual(actual.sideSlipAngleRate(2:3), ...
@@ -134,11 +135,12 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             m = testCase.measurements([0;.07;.2;.31],10);
             t = m.time;
             transform = [ones(4,1),zeros(4,1),.2*t,ones(4,1),t,3*t];
-            actual = runLateralVelocityObserver(m,testCase.Design,testCase.Design.cfg,transform);
+            actual = runLateralVelocityObserver(m,testCase.Design,testCase.Design.cfg, ...
+                struct('value',transform,'rate',repmat([0,0,.2,0,1,3],4,1)));
             testCase.verifyEqual(actual.longitudinalSpeed,10+t,AbsTol=1e-12);
             testCase.verifyEqual(actual.lateralVelocity,5*t,AbsTol=1e-12);
-            testCase.verifyEqual(actual.longitudinalSpeedRate,[0;1;1;1],AbsTol=1e-12);
-            testCase.verifyEqual(actual.lateralVelocityRate,[0;5;5;5],AbsTol=1e-12);
+            testCase.verifyEqual(actual.longitudinalSpeedRate,ones(4,1),AbsTol=1e-12);
+            testCase.verifyEqual(actual.lateralVelocityRate,5*ones(4,1),AbsTol=1e-12);
             testCase.verifyEqual(actual.sideSlipAngleRate(2:end), ...
                 50./((10+t(2:end)).^2+25*t(2:end).^2),AbsTol=1e-12);
         end
@@ -176,10 +178,35 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             m.yawRate = [.01;.03;.02;.1];
             transform = [ones(4,1),zeros(4,2),ones(4,1),m.time,2*m.time];
             short = testCase.prefix(m,3);
-            a = runLateralVelocityObserver(short,testCase.Design,testCase.Design.cfg,transform(1:3,:));
-            b = runLateralVelocityObserver(m,testCase.Design,testCase.Design.cfg,transform);
+            a = runLateralVelocityObserver(short,testCase.Design,testCase.Design.cfg, ...
+                struct('value',transform(1:3,:),'rate',repmat([0,0,0,0,1,2],3,1)));
+            b = runLateralVelocityObserver(m,testCase.Design,testCase.Design.cfg, ...
+                struct('value',transform,'rate',repmat([0,0,0,0,1,2],4,1)));
             testCase.verifyEqual(a.sideSlipAngle,b.sideSlipAngle(1:3),AbsTol=0);
             testCase.verifyEqual(a.sideSlipAngleRate,b.sideSlipAngleRate(1:3),AbsTol=0);
+        end
+
+        function changingMapCannotTriggerImplicitMeasurementDifferencing(testCase)
+            m=testCase.measurements([0;1e-6;.2],10);
+            value=repmat([1,0,0,1,0,0],3,1);value(2,6)=.01;
+            testCase.verifyError(@()runLateralVelocityObserver(m,testCase.Design, ...
+                testCase.Design.cfg,value),'VehicleLocalization:OutputMapRateRequired');
+            actual=runLateralVelocityObserver(m,testCase.Design,testCase.Design.cfg, ...
+                struct('value',value,'rate',zeros(3,6)));
+            testCase.verifyEqual(actual.sideSlipAngleRate,zeros(3,1),AbsTol=0);
+        end
+
+        function observerDependentMapUsesTheSuppliedStateDerivative(testCase)
+            design=testCase.heldDesign(testCase.Design);design.model.B=[0;.5];
+            m=testCase.measurements([0;.1;.2],10);m.steeringAngle(:)=1;
+            cfg=design.cfg;cfg.outputPoint.forwardOffsetM=0;
+            map=@(x,xd) struct('value',[ones(3,1),zeros(3,2),ones(3,1),x(:,2),2*x(:,2)], ...
+                'rate',[zeros(3,4),xd(:,2),2*xd(:,2)]);
+            a=runLateralVelocityObserver(m,design,cfg,map);
+            testCase.verifyEqual(a.longitudinalSpeed,10+.5*m.time,AbsTol=1e-12);
+            testCase.verifyEqual(a.lateralVelocity,m.time,AbsTol=1e-12);
+            testCase.verifyEqual(a.longitudinalSpeedRate,.5*ones(3,1),AbsTol=1e-12);
+            testCase.verifyEqual(a.lateralVelocityRate,ones(3,1),AbsTol=1e-12);
         end
 
         function obsoleteFilterSettingsAreRejected(testCase)

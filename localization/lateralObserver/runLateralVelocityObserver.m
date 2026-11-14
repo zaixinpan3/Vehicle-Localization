@@ -10,11 +10,9 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % Output-point transport and sideslip are algebraic; there are no angle states.
 % betaDot uses the LPV derivative and the chain rule through the output map.
 % Longitudinal speed rate is reconstructed as ax + vyObserver*estimatedYawRate.
-% Point transport uses estimated yaw rate and its LPV derivative. Affine-map
-% derivatives use backward secants on the
-% received clock (zero at initialization). No future sample or angle difference
-% is used for the exported rate. These are derivative estimates, not a claim
-% of exact differentiation of noisy measurements.
+% Point transport uses estimated yaw rate and its LPV derivative. Time-varying
+% output maps must supply rates from a model or filter state equation; neither
+% map coefficients nor measured speeds are numerically differentiated here.
 % Consumers must honor velocityValid for velocity, angle and angle-rate aiding.
 % The default exponential-midpoint implementation freezes LPV coefficients
 % at the interval midpoint and exponentiates that affine flow. Speed-domain
@@ -32,6 +30,10 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % Optional outputVelocityMap is n-by-6: [a11 a12 a21 a22 b1 b2], applying
 % vOutput=A*[vx;vyOutputPoint]+b before computing angle and rate. It changes
 % only output coordinates, never the LPV dynamics, scheduling or innovation.
+% A numeric map must be constant. For a time-varying map supply a struct with
+% n-by-6 value and rate fields, or a function handle map(state,stateRate) that
+% returns this struct after the LPV trajectory is evaluated. Its rate is an
+% independently modeled estimate, not necessarily the derivative of noisy values.
     if nargin < 3 || isempty(cfg)
         cfg = lateralObserverConfig();
     end
@@ -46,9 +48,6 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     lateralObserverSupport.assertLateralVehicleMatches(design,cfg);
     measurements = normalizeMeasurements(measurements);
     if nargin<4,outputVelocityMap=repmat([1,0,0,1,0,0],numel(measurements.time),1);end
-    assert(isequal(size(outputVelocityMap),[numel(measurements.time),6]) && all(isfinite(outputVelocityMap),'all'), ...
-        'VehicleLocalization:InvalidOutputVelocityMap','Require a finite n-by-6 affine velocity map.');
-    measurements.outputVelocityMap=double(outputVelocityMap);
     settings = validateRuntimeConfiguration(cfg, design);
     sampleCount = numel(measurements.time);
     state = double(cfg.observer.initialState(:));
@@ -94,8 +93,12 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     vy = history(:,1) - forwardOffset .* r;
     vxDot = measurements.longitudinalAcceleration + history(:,1) .* r;
     vyDot = stateRate(:,1) - forwardOffset .* rDot;
-    map = measurements.outputVelocityMap;
-    mapDot = backwardRate(map, measurements.time);
+    if isa(outputVelocityMap,'function_handle')
+        outputVelocityMap = outputVelocityMap(history,stateRate);
+    end
+    [map,mapDot] = resolveOutputMap(outputVelocityMap,sampleCount);
+    measurements.outputVelocityMap = map;
+    measurements.outputVelocityMapRate = mapDot;
     outputVx = map(:,1).*vx + map(:,2).*vy + map(:,5);
     outputVy = map(:,3).*vx + map(:,4).*vy + map(:,6);
     outputVxDot = map(:,1).*vxDot + map(:,2).*vyDot + ...
@@ -133,17 +136,18 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     estimate.innovation = innovationHistory;
     estimate.gainNorm = gainNorm;
     estimate.scheduledSpeed = measurements.longitudinalSpeed;
-    estimate.scheduledSpeedRate = backwardRate(measurements.longitudinalSpeed, measurements.time);
-    % Causal secants test the received interpolant, not the unknown physical
-    % derivative between samples. Startup has no measured prior interval.
-    rateKnown = [false; true(sampleCount - 1, 1)];
-    rateWithinBounds = rateKnown & estimate.scheduledSpeedRate >= settings.speedRateRange(1) & ...
-        estimate.scheduledSpeedRate <= settings.speedRateRange(2);
+    estimate.scheduledSpeedRate = vxDot;
+    % This physical rate estimate does not certify the derivative of noisy
+    % scheduling measurements. The PDLF rate bound remains an assumption.
+    rateKnown = false(sampleCount,1);
+    rateWithinBounds = observerValid & vxDot >= settings.speedRateRange(1) & ...
+        vxDot <= settings.speedRateRange(2);
     estimate.mode = mode;
     estimate.modeChanged = modeChanged;
     estimate.diagnostics = struct("dynamicModelEvaluated", observerValid, ...
         "sideSlipValid", velocityValid, "modeChanged", modeChanged, ...
         "integrationMethod", integrationMethod, ...
+        "schedulingRateSource", "kinematicEstimate", ...
         "schedulingRateKnown", rateKnown, "schedulingRateWithinBounds", rateWithinBounds);
     estimate.measurements = measurements;
 end
@@ -201,9 +205,26 @@ function valid = modelAvailable(sample, settings)
         sample.longitudinalSpeed <= settings.speedRange(2);
 end
 
-function rate = backwardRate(series, time)
-% backwardRate Causal secants for exogenous inputs, with held-input startup.
-    rate = [zeros(1,size(series,2)); diff(series,1,1)./diff(time)];
+function [map,rate] = resolveOutputMap(input,n)
+% Require a rate source instead of silently differentiating measured maps.
+    if isstruct(input)
+        assert(isscalar(input) && all(isfield(input,{'value','rate'})), ...
+            'VehicleLocalization:InvalidOutputVelocityMap','Supply value and rate arrays.');
+        map=input.value;rate=input.rate;
+    else
+        map=input;
+        assert(isnumeric(map) && isequal(size(map),[n,6]), ...
+            'VehicleLocalization:InvalidOutputVelocityMap','Require an n-by-6 affine velocity map.');
+        assert(all(map==map(1,:),'all'), ...
+            'VehicleLocalization:OutputMapRateRequired', ...
+            'A varying output map requires rates from a model or filter dynamics.');
+        rate=zeros(n,6);
+    end
+    assert(isnumeric(map) && isnumeric(rate) && isreal(map) && isreal(rate) && ...
+        isequal(size(map),[n,6]) && isequal(size(rate),[n,6]) && ...
+        all(isfinite(map),'all') && all(isfinite(rate),'all'), ...
+        'VehicleLocalization:InvalidOutputVelocityMap','Require finite real n-by-6 values and rates.');
+    map=double(map);rate=double(rate);
 end
 
 function [derivative, innovation, gain] = dynamicObserverDerivative( ...
