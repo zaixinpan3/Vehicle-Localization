@@ -51,7 +51,7 @@ classdef localizationSupport
             aligned=struct('highRate',struct('time',t));
             for name=string(fieldnames(h)).'
                 if name=="time",continue;end
-                if any(name==["bodyVelocityValid","bodyAccelerationValid","yawRateValid","courseAngularAccelerationValid"])
+                if any(name==["bodyVelocityValid","bodyAccelerationValid","yawRateValid"])
                     aligned.highRate.(name)=logical(h.(name)(left)) & logical(h.(name)(right));
                 else
                     aligned.highRate.(name)=fullBlend(h.(name),left,right,fraction);
@@ -183,27 +183,13 @@ classdef localizationSupport
         end
 
         %% Intrinsic observer and gain synthesis
-        function [next,q]=predict(state,dt,sideslipRate,courseAcceleration)
-        % Explicit course-angular-acceleration coupling; only speed curvature
-        % remains unmodeled in the translational kinematics.
-            if nargin<4,courseAcceleration=0;end
-            validateattributes(courseAcceleration,{'double'},{'real','finite','scalar'});
+        function [next,q]=predict(state,dt,sideslipRate)
+        % Unmeasured speed curvature and course angular acceleration enter the
+        % process disturbance, not a numerical derivative in the predictor.
             q=state(8)+sideslipRate;
             A=zeros(8);A(1,2)=1;A(2,3)=1;A(4,5)=1;A(5,6)=1;A(7,8)=1;
-            A([3,6],[2,5])=q^2*eye(2)+courseAcceleration*[0,-1;1,0];A([3,6],[3,6])=2*q*[0,-1;1,0];
+            A([3,6],[2,5])=q^2*eye(2);A([3,6],[3,6])=2*q*[0,-1;1,0];
             next=(eye(8)-dt*A)\state;
-        end
-
-        function [derivative,available]=courseRateDerivative(time,rate,valid)
-        % Causal backward secant; never differentiate across invalid samples.
-            time=time(:);rate=rate(:);valid=logical(valid(:));
-            assert(numel(time)==numel(rate) && numel(time)==numel(valid) ...
-                && all(isfinite(time)) && all(diff(time)>0) && all(isfinite(rate(valid))), ...
-                'VehicleLocalization:InvalidCourseRate','Invalid course-rate history.');
-            derivative=zeros(size(time));available=false(size(time));
-            available(2:end)=valid(1:end-1)&valid(2:end);
-            k=find(available);
-            derivative(k)=(rate(k)-rate(k-1))./(time(k)-time(k-1));
         end
 
         function [value,H]=outputs(state,cfg)
@@ -268,10 +254,9 @@ classdef localizationSupport
                 'VehicleLocalization:ObsoleteFusionDesign', ...
                 'Regenerate the nominal fusion configuration; legacy searches and certificates are removed.');
             if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-course-acceleration-v13", ...
+            inputs=jsondecode(jsonencode(struct('architecture',"intrinsic-disturbance-v14", ...
                 'physicalOutputs',"squared-dot-cross-body-lateral", ...
                 'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
-                'courseAccelerationBound',cfg.maximumTrackAngleAcceleration, ...
                 'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).','poseScales',cfg.lidar.poseScales(:).', ...
                 'informationScale',cfg.lidar.gainInformationScale)));
         end
@@ -341,7 +326,7 @@ classdef localizationSupport
             % Homogeneous scaling preserves feedback ratios and creates a
             % visible margin for the independently checked lambda-I condition.
             Pv=1.01*value(P);Pv=(Pv+Pv.')/2;
-            design=struct('architecture',"intrinsic-course-acceleration-v13",'sigma',z.sigma,'P',Pv, ...
+            design=struct('architecture',"intrinsic-disturbance-v14",'sigma',z.sigma,'P',Pv, ...
                 'kappaL',1.01*value(kL),'kappaG',1.01*value(kG),'auxiliaryWeights',1.01*value(kI), ...
                 'gyroGainNormalized',m.gyroGainNormalized,'gyroDesign',m.gyroDesign, ...
                 'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem, ...
@@ -387,7 +372,6 @@ classdef localizationSupport
                 'actualOverlapCertified',false, ...
                 'operatingSet',struct('assumedInvariant',true,'invarianceVerified',false, ...
                     'speedInterval',[z.fusion.minimumCourseSpeed,cfg.iss.maximumSpeed], ...
-                    'courseAccelerationBound',cfg.maximumTrackAngleAcceleration, ...
                     'nonlinearConclusionConditional',true), ...
                 'nominalFusion',struct('certified',worst<0,'vertices',numel(blocks), ...
                     'coversGnssAbsent',z.nominalGnssWeight==0,'coversZeroLidarInformation',false), ...
@@ -418,7 +402,7 @@ classdef localizationSupport
         end
 
         %% Finite nonlinear increment identities
-        function [F,H,Hgnss]=secants(x,xhat,betaRate,cfg,courseAcceleration)
+        function [F,H,Hgnss]=secants(x,xhat,betaRate,cfg)
         % f(x)-f(xhat)=F*(x-xhat), likewise for all nonlinear outputs.
         % These identities are finite differences, including at equal states.
             arguments
@@ -426,14 +410,13 @@ classdef localizationSupport
                 xhat (8,1) double {mustBeReal,mustBeFinite}
                 betaRate (1,1) double {mustBeReal,mustBeFinite}
                 cfg (1,1) struct
-                courseAcceleration (1,1) double {mustBeReal,mustBeFinite}=0
             end
             e=x-xhat;m=(x+xhat)/2;v=m([2,5]);a=m([3,6]);
             J=[0,-1;1,0];q=m(8)+betaRate;half=e(7)/2;
             cardinal=1;if half~=0,cardinal=sin(half)/half;end
             c=cos(half);d=[cos(m(7));sin(m(7))];n=J*d;
             F=zeros(8);F(1,2)=1;F(2,3)=1;F(4,5)=1;F(5,6)=1;F(7,8)=1;
-            F([3,6],[2,5])=(q^2+e(8)^2/4)*eye(2)+courseAcceleration*J;
+            F([3,6],[2,5])=(q^2+e(8)^2/4)*eye(2);
             F([3,6],[3,6])=2*q*J;F([3,6],8)=2*q*v+2*J*a;
             H=zeros(4,8);H(1,[2,5])=2*v.';
             H(2,[2,5])=a.';H(2,[3,6])=v.';
@@ -470,10 +453,8 @@ classdef localizationSupport
                 {'double'},{'real','finite','nonnegative'});
             A=cfg.iss.maximumAcceleration;Q=min(cfg.maximumTrackAngleRate,A/s0);
             crossBound=min(Q,A/(2*s0));
-            validateattributes(cfg.maximumTrackAngleAcceleration,{'double'},{'real','finite','nonnegative','scalar'});
-            Qdot=cfg.maximumTrackAngleAcceleration;
             bounds=[-Q,Q;0,Q^2;-A,A;.5,V^2/(s0^2+V^2); ...
-                -A/(2*s0),A/(2*s0);-crossBound,crossBound;-Qdot,Qdot];
+                -A/(2*s0),A/(2*s0);-crossBound,crossBound];
             vertices=localizationSupport.intervalVertices(bounds);
         end
 
@@ -487,12 +468,11 @@ classdef localizationSupport
             end
         end
 
-        function f=fusionFeatures(speed,courseRate,tangentialAcceleration,cfg,courseAcceleration)
+        function f=fusionFeatures(speed,courseRate,tangentialAcceleration,cfg)
         % Coefficients at a physical nominal point, useful for independent checks.
-            if nargin<5,courseAcceleration=0;end
             denominator=cfg.invariantObserver.fusion.minimumCourseSpeed^2+speed^2;
             f=[courseRate,courseRate^2,tangentialAcceleration,speed^2/denominator, ...
-                speed*tangentialAcceleration/denominator,speed^2*courseRate/denominator,courseAcceleration];
+                speed*tangentialAcceleration/denominator,speed^2*courseRate/denominator];
         end
 
         function [A,speed,pair]=fusionMatrices(cfg,f,gyroGain)
@@ -502,7 +482,7 @@ classdef localizationSupport
             t=cfg.invariantObserver.theta;ell=cfg.invariantObserver.headingLengthM;
             E=eye(8);e2=E(:,2);e3=E(:,3);e5=E(:,5);e6=E(:,6);
             A=zeros(8);A(1,2)=1;A(2,3)=1;A(4,5)=1;A(5,6)=1;A(7,8)=1;
-            A([3,6],[2,5])=(f(2)*eye(2)+f(7)*[0,-1;1,0])/t^2;A([3,6],[3,6])=2*f(1)/t*[0,-1;1,0];
+            A([3,6],[2,5])=f(2)/t^2*eye(2);A([3,6],[3,6])=2*f(1)/t*[0,-1;1,0];
             A(6,8)=2*f(3)/(t^2*ell);A(8,8)=-gyroGain;
             speed=f(4)*(e2*e2.');T=e2*e3.'-e5*e6.';N=e2*e6.'+e5*e3.';
             pair=f(4)*(e3*e3.'+e6*e6.')+f(5)/t*(T+T.')+f(6)/t*(N+N.');
@@ -1975,9 +1955,9 @@ function m=invariantModel(cfg,storedGyro)
                 'scheduleFactor',s.maximumSpeed^2/(r.minimumCourseSpeed^2+speed^2));
         end
     end
-    validateattributes(n.courseAccelerationRadps2,{'double'},{'real','finite','nonnegative','scalar'});
-    m.Dd=diag([n.jerkMps3/sigma^3,s.maximumSpeed*n.courseAccelerationRadps2/sigma^3, ...
-        ell*z.yawAccelerationRadps2/sigma^2]);
+    % Aggregate residual R(phi)*[sDoubleDot;s*qDot], not just speed curvature.
+    % The objective scale is a design weight, not a certified physical bound.
+    m.Dd=diag([n.jerkMps3/sigma^3,n.jerkMps3/sigma^3,ell*z.yawAccelerationRadps2/sigma^2]);
     m.S=diag([s.minimumPositionStrength*[1,1],s.minimumHeadingStrength]);
 end
 

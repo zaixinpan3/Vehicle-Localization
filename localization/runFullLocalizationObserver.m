@@ -1,9 +1,6 @@
 function estimate=runFullLocalizationObserver(data,cfg,options)
 % runFullLocalizationObserver Run the current intrinsic global observer.
-% Prediction uses internal yaw rate and an explicit course-acceleration input.
-% Optional highRate.courseAngularAcceleration supplies that input with its
-% courseAngularAccelerationValid mask. Otherwise use a causal gyro-plus-betaDot
-% backward secant; startup and invalid adjacent samples supply zero, flagged unavailable.
+% Default prediction uses an internal rate state; IMU is auxiliary output only.
 % All calls use the intrinsic eight-state design.
 % The common-clock runtime uses the nominal fusion LMI gains.
 % Pass this run's solved configuration to share gains within one experiment;
@@ -57,18 +54,6 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             'VehicleLocalization:InvalidFullInput','Invalid aligned lateral output.');
         lateral.(name)=lateral.(name)(:);lateral.(name)(~valid)=0;
     end
-    if isfield(h,'courseAngularAcceleration')
-        courseAccelerationValid=motionValidity(h,'courseAngularAccelerationValid',n);
-        courseAcceleration=h.courseAngularAcceleration(:);
-        assert(numel(courseAcceleration)==n && all(isfinite(courseAcceleration(courseAccelerationValid))), ...
-            'VehicleLocalization:InvalidFullInput','Invalid course acceleration.');
-        courseAcceleration(~courseAccelerationValid)=0;
-        courseAccelerationSource="supplied";
-    else
-        [courseAcceleration,courseAccelerationValid]=localizationSupport.courseRateDerivative( ...
-            t,h.yawRate+lateral.sideSlipAngleRate,gyroValid & velocityValid);
-        courseAccelerationSource="causalGyroSideslipSecant";
-    end
     G=source(data,'gnss',t,2);L=source(data,'lidar',t,3);
     overlapChannel=isfield(data,'lidarOverlap');
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
@@ -117,7 +102,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             [gnssPosition(k,:),gnssInformation(:,:,k)]=localizationSupport.correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),yaw,alignment);
             I=gnssInformation(:,:,k);Wg=I/(I+cfg.gnss.gainInformationScale*eye(2));Wg=(Wg+Wg.')/2;
         end
-        x=localizationSupport.predict(x,dt,lateral.sideSlipAngleRate(k),courseAcceleration(k));
+        x=localizationSupport.predict(x,dt,lateral.sideSlipAngleRate(k));
         intrinsicStates(k,:)=x.';
         gnssRate=zeros(2,1);
         if G.valid(k)
@@ -194,9 +179,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             all(velocityValid) && all(accelerationValid) ...
             && all(speedInDomain) ...
             && all(hypot(h.longitudinalAcceleration(:),h.lateralAcceleration(:))<=cfg.iss.maximumAcceleration) ...
-            && maximumRate<=cfg.maximumTrackAngleRate ...
-            && all(courseAccelerationValid(2:end)) ...
-            && all(abs(courseAcceleration)<=cfg.maximumTrackAngleAcceleration), ...
+            && maximumRate<=cfg.maximumTrackAngleRate, ...
         'issSpeedInterval',speedInterval,'observedSpeedWithinIssDomain',speedInDomain, ...
         'zeroSpeedCertified',false,'minimumWeights',weights, ...
         'maximumTrackAngleRate',maximumRate, ...
@@ -220,12 +203,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
     estimate.diagnostics.invariantOutputs=invariantAudits;
     estimate.diagnostics.invariantOutputNames=["speedSquared","velocityAccelerationDot", ...
         "velocityAccelerationCross","bodyLateralVelocity"];
-    estimate.diagnostics.intrinsicPredictionUsesImu=courseAccelerationSource=="causalGyroSideslipSecant" && any(courseAccelerationValid);
-    estimate.diagnostics.courseAngularAcceleration=courseAcceleration;
-    estimate.diagnostics.courseAngularAccelerationValid=courseAccelerationValid;
-    estimate.diagnostics.courseAngularAccelerationSource=courseAccelerationSource;
-    estimate.diagnostics.courseAccelerationEnvelopeSatisfied=all(courseAccelerationValid(2:end)) ...
-        && all(abs(courseAcceleration)<=cfg.maximumTrackAngleAcceleration);
+    estimate.diagnostics.intrinsicPredictionUsesImu=false;
     estimate.diagnostics.actualOverlapCertified=false;
     certificate=continuous.continuousCertificate.verification;
     estimate.diagnostics.operatingSet=certificate.operatingSet;

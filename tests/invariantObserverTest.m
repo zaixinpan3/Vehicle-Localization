@@ -6,60 +6,33 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
     end
     methods (Test)
-        function courseAccelerationUsesOnlyValidPastAndPresentSamples(testCase)
-            t=[0;.1;.3;.6;1];rate=.2+.3*t;valid=[true;true;false;true;true];
-            rate(3)=NaN;
-            [qd,available]=localizationSupport.courseRateDerivative(t,rate,valid);
-            testCase.verifyEqual(available,[false;true;false;false;true]);
-            testCase.verifyEqual(qd,[0;.3;0;0;.3],AbsTol=1e-12);
+        function varyingTurnResidualRetainsUnmeasuredCourseAcceleration(testCase)
+            % An independent analytic trajectory: s(t), phi(t) vary smoothly.
+            t=.7;s=12+.3*t+.02*t^2;sdot=.3+.04*t;sddot=.04;
+            phi=.2+.1*t+.015*t^2;q=.1+.03*t;qdot=.03;
+            R=[cos(phi),-sin(phi);sin(phi),cos(phi)];J=[0,-1;1,0];
+            v=R*[s;0];a=R*[sdot;s*q];
+            jerk=R*[sddot-s*q^2;2*sdot*q+s*qdot];
+            residual=jerk-q^2*v-2*q*J*a;
+            testCase.verifyEqual(residual,R*[sddot;s*qdot],AbsTol=1e-13);
+            testCase.verifyGreaterThan(norm(residual),abs(sddot));
+            % Recover the actual implicit predictor drift, not a duplicate model.
+            x=[0;v(1);a(1);0;v(2);a(2);phi;q];h=.02;
+            xp=localizationSupport.predict(x,h,0);
+            drift=(xp-x)/h;
+            testCase.verifyEqual(drift([3,6]),q^2*xp([2,5])+2*q*J*xp([3,6]),AbsTol=1e-12);
         end
-        function courseAccelerationEntersTheRuntimePredictor(testCase)
-            [data,lateral,c]=fixture();t=lateral.time;
-            data.highRate.yawRate=.1+.2*t;lateral.sideSlipAngleRate=.03*t;
-            result=runFullLocalizationObserver(data,c,LateralInputs=lateral);
-            testCase.verifyEqual(result.diagnostics.courseAngularAcceleration,[0;.23+zeros(numel(t)-1,1)],AbsTol=1e-12);
-            testCase.verifyTrue(result.diagnostics.intrinsicPredictionUsesImu);
-            data.highRate.courseAngularAcceleration=.4+zeros(size(t));
-            explicit=runFullLocalizationObserver(data,c,LateralInputs=lateral);
-            testCase.verifyEqual(explicit.diagnostics.courseAngularAcceleration,data.highRate.courseAngularAcceleration);
-            testCase.verifyGreaterThan(norm(explicit.diagnostics.intrinsicPrediction-result.diagnostics.intrinsicPrediction),1e-5);
-        end
-        function explicitCourseAccelerationTracksAnIncreasingTurnRate(testCase)
-            h=.001;t=(0:h:2).';speed=12;q0=.05;qd=.1;
-            x=[0;speed;0;0;0;speed*q0;0;0];old=x;
-            for k=2:numel(t)
-                q=q0+qd*t(k);
-                x=localizationSupport.predict(x,h,q,qd);
-                old=localizationSupport.predict(old,h,q,0);
-            end
-            angle=q0*t(end)+qd*t(end)^2/2;
-            truth=speed*[cos(angle);sin(angle)];
-            newError=norm(x([2,5])-truth);oldError=norm(old([2,5])-truth);
-            fprintf('TURN-RAMP prediction: velocity error new %.9g, omitted-qdot %.9g m/s\n',newError,oldError);
-            testCase.verifyLessThan(newError,.02);
-            testCase.verifyLessThan(newError,.02*oldError);
-        end
-        function courseAccelerationDomainChangeRejectsStaleGains(testCase)
-            c=freshObserverTestConfig();c.maximumTrackAngleAcceleration=2*c.maximumTrackAngleAcceleration;
-            testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
-        end
-        function varyingTurnHasOnlyTangentialSpeedCurvatureResidual(testCase)
-            t=.7;step=1e-5;s=12+.4*t+.15*t^2;b=.4+.3*t;
-            angle=.2+.1*t+.2*t^2;q=.1+.4*t;qd=.4;
-            R=[cos(angle),-sin(angle);sin(angle),cos(angle)];J=[0,-1;1,0];
-            v=R*[s;0];a=R*[b;s*q];
-            ap=analyticAcceleration(t+step);am=analyticAcceleration(t-step);
-            residual=(ap-am)/(2*step)-(q^2*eye(2)+qd*J)*v-2*q*J*a;
-            testCase.verifyEqual(residual,R*[.3;0],AbsTol=1e-8);
-            x=[0;v(1);a(1);0;v(2);a(2);angle;q];h=1e-7;
-            next=localizationSupport.predict(x,h,0,qd);
-            testCase.verifyEqual((next([3,6])-a)/h,(q^2*eye(2)+qd*J)*v+2*q*J*a,AbsTol=2e-6);
+        function processResidualScaleRejectsStaleGains(testCase)
+            c=freshObserverTestConfig();
+            c.invariantObserver.noise.jerkMps3=.2;
+            testCase.verifyError(@()localizationSupport.runtime(c), ...
+                'VehicleLocalization:StaleInvariantDesign');
         end
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,128);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,64);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,128);
+            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,64);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
             testCase.verifySize(d.P,[8,8]);
@@ -265,9 +238,4 @@ function [d,l,c]=fixture()
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
     l=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
     c=freshObserverTestConfig();c.initialState=[0;8;0;0;0;0;.1];
-end
-
-function a=analyticAcceleration(t)
-    s=12+.4*t+.15*t^2;b=.4+.3*t;q=.1+.4*t;angle=.2+.1*t+.2*t^2;
-    a=[cos(angle),-sin(angle);sin(angle),cos(angle)]*[b;s*q];
 end
