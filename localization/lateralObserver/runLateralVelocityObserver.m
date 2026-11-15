@@ -7,13 +7,13 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % velocityValid is false. Holding is not a low-speed estimation guarantee.
 % There is no inertial master, bias estimate, correction filter or shadow model.
 %
-% Output-point transport and sideslip are algebraic; there are no angle states.
+% Output-point transport and sideslip rate are algebraic; there are no angle states.
 % betaDot uses measured acceleration and estimated velocity/yaw rate.
 % Longitudinal speed rate is reconstructed as ax + vyObserver*estimatedYawRate.
 % Point transport uses estimated yaw rate and its LPV derivative. Time-varying
 % output maps must supply rates from a model or filter state equation; neither
 % map coefficients nor measured speeds are numerically differentiated here.
-% Consumers must honor velocityValid for velocity, angle and angle-rate aiding.
+% Consumers must honor velocityValid for velocity and sideslip-rate aiding.
 % The default exponential-midpoint implementation freezes LPV coefficients
 % at the interval midpoint and exponentiates that affine flow. Speed-domain
 % boundary crossings split an interval; unavailable LPV flow remains held.
@@ -26,9 +26,9 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 %       dynamicValid series; design: current designLateralObserverGains result;
 %       cfg: current lateralObserverConfig (optional).
 % Output:
-%   estimate: LPV state, output-point velocity, angle interface and validity.
+%   estimate: LPV state, output-point velocity, sideslip rate and validity.
 % Optional outputVelocityMap is n-by-6: [a11 a12 a21 a22 b1 b2], applying
-% vOutput=A*[vx;vyOutputPoint]+b before computing angle and rate. It changes
+% vOutput=A*[vx;vyOutputPoint]+b before computing the sideslip rate. It changes
 % only output coordinates, never the LPV dynamics, scheduling or innovation.
 % A numeric map must be constant. For a time-varying map supply a struct with
 % n-by-6 value and rate fields, or a function handle map(state,stateRate) that
@@ -109,9 +109,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     % when its direction is poorly defined, without disabling the LPV flow.
     outputSpeed = hypot(outputVx, outputVy);
     velocityValid = observerValid & outputSpeed >= settings.speedRange(1);
-    beta = zeros(sampleCount,1);
     betaDot = zeros(sampleCount,1);
-    beta(velocityValid) = atan2(outputVy(velocityValid),outputVx(velocityValid));
     betaDot(velocityValid) = (outputVx(velocityValid).*outputVyDot(velocityValid) - ...
         outputVy(velocityValid).*outputVxDot(velocityValid))./outputSpeed(velocityValid).^2;
     mode = repmat("unavailable", sampleCount, 1);
@@ -130,7 +128,6 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     estimate.yawRate = history(:, 2);
     estimate.lateralVelocityRate = outputVyDot;
     estimate.longitudinalSpeedRate = outputVxDot;
-    estimate.sideSlipAngle = beta;
     estimate.sideSlipAngleRate = betaDot;
     estimate.velocityValid = velocityValid;
     estimate.innovation = innovationHistory;

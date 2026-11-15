@@ -92,14 +92,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             testCase.verifyEqual(d.lidar.frameReliability,f.data.lidar.frameReliability,AbsTol=0);
             testCase.verifyEqual(d.lidar.directionReliability,f.data.lidar.directionReliability,AbsTol=0);
         end
-        function alignmentUsesTheShortSideslipArc(testCase)
+        function alignmentNeedsOnlyTheSideslipRate(testCase)
             f=unaligned();
             f.data.lidar.time=f.data.lidar.time+.005;
             f.data.lidar.time(end)=1.995;
-            f.lateral.sideSlipAngle(:)=pi-.01;
-            f.lateral.sideSlipAngle(2:2:end)=-pi+.01;
+            f.lateral.sideSlipAngleRate=.2*f.lateral.time;
             [~,l,~]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
-            testCase.verifyEqual(abs(l.sideSlipAngle),pi*ones(size(l.time)),AbsTol=1e-12);
+            testCase.verifyFalse(isfield(l,'sideSlipAngle'));
+            testCase.verifyEqual(l.sideSlipAngleRate,.2*l.time,AbsTol=1e-12);
         end
         function stateUsesOnlyOneLowRateSolve(testCase)
             f=fixture();r=run(f);
@@ -172,7 +172,7 @@ function f=turning(step)
     f.truth=[v/r*sin(r*t),v/r*(1-cos(r*t))];
     f.data.highRate=struct('time',t,'longitudinalSpeed',v+z,'longitudinalAcceleration',z, ...
         'lateralAcceleration',v*r+z,'yawRate',r+z);
-    f.lateral=struct('time',t,'lateralVelocity',z,'yawRate',r+z,'sideSlipAngle',z,'sideSlipAngleRate',z);
+    f.lateral=struct('time',t,'lateralVelocity',z,'yawRate',r+z,'sideSlipAngleRate',z);
     f.data.gnss=struct('time',t,'position',f.truth,'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
     f.data.lidar=struct('time',t,'pose',[f.truth,r*t],'valid',true(n,1),'information',repmat(1e6*eye(3),1,1,n),'delay',0);
     f.cfg.initialState=[0;v;0;0;0;v*r;0];
@@ -184,7 +184,7 @@ function f=fixture(duration)
     end
     t=(0:.1:duration).';z=zeros(size(t));n=numel(t);
     h=struct('time',t,'longitudinalSpeed',8+z,'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z);
-    lateral=struct('time',t,'lateralVelocity',z,'yawRate',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
+    lateral=struct('time',t,'lateralVelocity',z,'yawRate',z,'sideSlipAngleRate',z);
     g=struct('time',t,'position',[8*t,z],'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[8*t,z,z],'valid',true(n,1),'information',repmat(1e6*eye(3),1,1,n),'delay',0);
     cfg=freshObserverTestConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8;0;0;0;0;0];
@@ -199,7 +199,7 @@ end
 function f=unaligned()
     f=fixture();t=(0:.01:2).';z=zeros(size(t));
     f.data.highRate=struct('time',t,'longitudinalSpeed',8+z,'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z);
-    f.lateral=struct('time',t,'lateralVelocity',z,'yawRate',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
+    f.lateral=struct('time',t,'lateralVelocity',z,'yawRate',z,'sideSlipAngleRate',z);
     g=(-.01:.02:2.01).';n=numel(g);
     f.data.gnss=struct('time',g,'position',[8*g,zeros(n,1)],'valid',true(n,1), ...
         'information',repmat(1e6*eye(2),1,1,n),'delay',0);

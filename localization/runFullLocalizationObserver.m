@@ -9,8 +9,8 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % Missing/invalid measurements withdraw their own correction for that frame.
 % Optional highRate.bodyVelocityValid and bodyAccelerationValid masks also
 % withdraw unavailable motion-output feedback. Absent masks mean all valid.
-% LateralInputs must provide lateralVelocity, sideSlipAngle and
-% sideSlipAngleRate on the frame clock. The angle/rate pair is supplied upstream.
+% LateralInputs must provide lateralVelocity and sideSlipAngleRate on the
+% frame clock. The sideslip rate is supplied upstream.
 % LateralInputs.yawRate supplies rate feedback; missing estimates withdraw it.
 % Optional LateralInputs.yawRateValid further restricts that channel.
 % Optional LateralInputs.velocityValid withdraws all upstream signals,
@@ -32,9 +32,9 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
     assert(isfield(lateral,'time') && isequal(lateral.time(:),t), ...
         'VehicleLocalization:AlignedLateralRequired','Supply lateral estimates on the frame clock.');
-    assert(all(isfield(lateral,{'lateralVelocity','sideSlipAngle','sideSlipAngleRate'})), ...
+    assert(all(isfield(lateral,{'lateralVelocity','sideSlipAngleRate'})), ...
         'VehicleLocalization:AlignedLateralRequired', ...
-        'Supply lateral velocity and the upstream sideslip angle/rate pair; no angle reconstruction is available.');
+        'Supply lateral velocity and the upstream sideslip rate.');
     reportedLateral=lateral;
     velocityValid=motionValidity(h,'bodyVelocityValid',n) ...
         & motionValidity(lateral,'velocityValid',n) & cfg.invariantObserver.velocityAvailable;
@@ -56,7 +56,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             'VehicleLocalization:InvalidFullInput','Invalid aligned motion.');
         h.(name)=h.(name)(:);h.(name)(~valid)=0;
     end
-    for name=["lateralVelocity","sideSlipAngle","sideSlipAngleRate"]
+    for name=["lateralVelocity","sideSlipAngleRate"]
         valid=velocityValid;
         assert(numel(lateral.(name))==n && all(isfinite(lateral.(name)(valid))), ...
             'VehicleLocalization:InvalidFullInput','Invalid aligned lateral output.');

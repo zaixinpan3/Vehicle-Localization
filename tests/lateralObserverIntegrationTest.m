@@ -39,14 +39,13 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             testCase.verifyLessThanOrEqual(max(vecnorm(actual.state,2,2)),.01+1e-14);
         end
 
-        function constantDirectionHasNoAngleStartupLag(testCase)
+        function constantDirectionHasZeroSideslipRate(testCase)
             cfg = testCase.Design.cfg;
             m = testCase.measurements((0:.1:2).',1);
             transform = repmat([1,0,0,1,0,.3],numel(m.time),1);
             actual = runLateralVelocityObserver(m,testCase.Design,cfg,transform);
-            testCase.verifyEqual(actual.sideSlipAngle, ...
-                atan2(.3,1)*ones(size(m.time)),AbsTol=1e-12);
             testCase.verifyEqual(actual.sideSlipAngleRate,zeros(size(m.time)),AbsTol=0);
+            testCase.verifyFalse(isfield(actual,'sideSlipAngle'));
             testCase.verifyFalse(isfield(cfg,'sideSlip'));
             testCase.verifySize(actual.state,[numel(m.time),2]);
         end
@@ -59,7 +58,6 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             m = testCase.measurements((0:.1:1).',0);
             actual = runLateralVelocityObserver(m,design,cfg);
             testCase.verifyEqual(actual.state,repmat([.4,.02],numel(m.time),1),AbsTol=0);
-            testCase.verifyEqual(actual.sideSlipAngle,zeros(size(m.time)),AbsTol=0);
             testCase.verifyEqual(actual.sideSlipAngleRate,zeros(size(m.time)),AbsTol=0);
             testCase.verifyFalse(any(actual.velocityValid));
         end
@@ -73,7 +71,6 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             b = runLateralVelocityObserver(split,testCase.Design,cfg);
             testCase.verifyEqual(b.state(2,:),cfg.observer.initialState.',AbsTol=0);
             testCase.verifyEqual(a.state(end,:),b.state(end,:),AbsTol=1e-12);
-            testCase.verifyEqual(a.sideSlipAngle(end),b.sideSlipAngle(end),AbsTol=1e-12);
         end
 
         function upperSpeedCrossingHoldsAfterLeavingTheDomain(testCase)
@@ -125,8 +122,6 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             transform = [-ones(3,1),zeros(3,2),ones(3,1),zeros(3,1),[.01;-.01;-.03]];
             actual = runLateralVelocityObserver(m,testCase.Design,cfg, ...
                 struct('value',transform,'rate',repmat([0,0,0,0,0,-.2],3,1)));
-            testCase.verifyGreaterThan(actual.sideSlipAngle(1),3);
-            testCase.verifyLessThan(actual.sideSlipAngle(2),-3);
             testCase.verifyEqual(actual.sideSlipAngleRate(2:3), ...
                 .4./(4+[.01;.03].^2),AbsTol=1e-12);
         end
@@ -171,7 +166,6 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             actual = runLateralVelocityObserver(m,testCase.Design,testCase.Design.cfg,transform);
             testCase.verifyFalse(any(actual.velocityValid));
             testCase.verifyTrue(all(actual.diagnostics.dynamicModelEvaluated));
-            testCase.verifyEqual(actual.sideSlipAngle,zeros(3,1),AbsTol=0);
             testCase.verifyEqual(actual.sideSlipAngleRate,zeros(3,1),AbsTol=0);
         end
 
@@ -184,7 +178,6 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
                 struct('value',transform(1:3,:),'rate',repmat([0,0,0,0,1,2],3,1)));
             b = runLateralVelocityObserver(m,testCase.Design,testCase.Design.cfg, ...
                 struct('value',transform,'rate',repmat([0,0,0,0,1,2],4,1)));
-            testCase.verifyEqual(a.sideSlipAngle,b.sideSlipAngle(1:3),AbsTol=0);
             testCase.verifyEqual(a.sideSlipAngleRate,b.sideSlipAngleRate(1:3),AbsTol=0);
         end
 

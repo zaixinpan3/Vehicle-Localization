@@ -49,7 +49,8 @@ function runBessafaMississippiBaseline(folder,tmp)
         n=numel(t);pose=nan(n,3);pose(1,:)=ref(1,:);held=ref(1,3);failure="";
         try
             for frameIndex=2:n
-                vy=0;beta=0;if l.velocityValid(frameIndex),vy=l.lateralVelocity(frameIndex);beta=l.sideSlipAngle(frameIndex);end
+                % The source-method baseline reconstructs heading from course and sideslip.
+                vy=0;beta=0;if l.velocityValid(frameIndex),vy=l.lateralVelocity(frameIndex);beta=atan2(vy,h.longitudinalSpeed(frameIndex));end
                 measurement=[hypot(h.longitudinalSpeed(frameIndex),vy);0;h.yawRate(frameIndex)];position=gnss(frameIndex,:).'-origin;
                 previousVy=0;if l.velocityValid(frameIndex-1),previousVy=l.lateralVelocity(frameIndex-1);end
                 before=[hypot(h.longitudinalSpeed(frameIndex-1),previousVy);0;h.yawRate(frameIndex-1)];positionBefore=position;

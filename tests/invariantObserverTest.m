@@ -73,39 +73,41 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyTrue(all(a.highRate.bodyAccelerationValid));
             testCase.verifyTrue(all(a.highRate.yawRateValid));
         end
-        function synchronizationPreservesTheUpstreamAngleAndRate(testCase)
+        function synchronizationPreservesTheUpstreamRate(testCase)
             [d,l,c]=fixture();t=(.05:.1:.95).';n=numel(t);
-            l.sideSlipAngle=.02*l.time.^2;l.sideSlipAngleRate=.04*l.time;
+            l.sideSlipAngleRate=.04*l.time;
             d.lidar=struct('time',t,'pose',zeros(n,3),'valid',true(n,1), ...
                 'information',repmat(eye(3),1,1,n),'delay',0);
             c.synchronization.motionMaximumBracket=.2;
             [~,aligned]=localizationSupport.synchronizeLocalizationInputs(d,l,c);
-            testCase.verifyEqual(aligned.sideSlipAngle,interp1(l.time,l.sideSlipAngle,t),AbsTol=1e-12);
+            testCase.verifyFalse(isfield(aligned,'sideSlipAngle'));
             testCase.verifyEqual(aligned.sideSlipAngleRate,interp1(l.time,l.sideSlipAngleRate,t),AbsTol=1e-12);
         end
-        function bodyLateralOutputDoesNotUseTheSuppliedAngle(testCase)
-            [d,l,c]=fixture();baseline=runFullLocalizationObserver(d,c,LateralInputs=l);
-            l.sideSlipAngle(:)=.2;
+        function bodyLateralOutputRequiresNoAnglePayload(testCase)
+            [d,l,c]=fixture();
+            testCase.verifyFalse(isfield(l,'sideSlipAngle'));
             supplied=runFullLocalizationObserver(d,c,LateralInputs=l);
             first=supplied.diagnostics.invariantOutputs{1};
             testCase.verifyEqual(first.predicted(4),-8*sin(c.initialState(7)),AbsTol=1e-12);
-            testCase.verifyEqual(supplied.internalState,baseline.internalState,AbsTol=1e-12);
-            testCase.verifyEqual(supplied.lateral.sideSlipAngle,l.sideSlipAngle,AbsTol=1e-12);
+            testCase.verifyFalse(isfield(supplied.lateral,'sideSlipAngle'));
+            l.sideSlipAngle=nan(size(l.time));
+            legacy=runFullLocalizationObserver(d,c,LateralInputs=l);
+            testCase.verifyEqual(legacy.internalState,supplied.internalState,AbsTol=0);
         end
-        function missingSideSlipAngleCannotBeReconstructed(testCase)
-            [d,l,c]=fixture();l=rmfield(l,'sideSlipAngle');
+        function missingSideSlipRateIsRejected(testCase)
+            [d,l,c]=fixture();l=rmfield(l,'sideSlipAngleRate');
             testCase.verifyError(@()runFullLocalizationObserver(d,c,LateralInputs=l), ...
                 'VehicleLocalization:AlignedLateralRequired');
         end
-        function availableSideSlipAngleMustBeFinite(testCase)
-            [d,l,c]=fixture();l.sideSlipAngle(2)=NaN;
+        function availableSideSlipRateMustBeFinite(testCase)
+            [d,l,c]=fixture();l.sideSlipAngleRate(2)=NaN;
             testCase.verifyError(@()runFullLocalizationObserver(d,c,LateralInputs=l), ...
                 'VehicleLocalization:InvalidFullInput');
         end
-        function withdrawnAnglePayloadCannotAffectTheEstimate(testCase)
+        function withdrawnRatePayloadCannotAffectTheEstimate(testCase)
             [d,l,c]=fixture();d.highRate.bodyVelocityValid=false(size(l.time));
             baseline=runFullLocalizationObserver(d,c,LateralInputs=l);
-            l.sideSlipAngle(:)=NaN;
+            l.sideSlipAngleRate(:)=NaN;
             poisoned=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(poisoned.internalState,baseline.internalState,AbsTol=1e-12);
         end
@@ -195,7 +197,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
                 'lateralAcceleration',zero,'yawRate',zero));
             d.lidar=struct('time',t,'pose',[5*t,zero,zero],'valid',true(n,1), ...
                 'information',repmat(1e6*eye(3),1,1,n),'delay',0);
-            l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngle',zero,'sideSlipAngleRate',zero);
+            l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngleRate',zero);
             c=freshObserverTestConfig();c.initialState=[.2;0;0;-.1;0;0;.02];
             a=runFullLocalizationObserver(d,c,LateralInputs=l);
             fprintf('POSE-ONLY 20 s: position %.9g m, velocity %.9g m/s\n', ...
@@ -236,6 +238,6 @@ function [d,l,c]=fixture()
     t=(0:.1:1).';zero=zeros(size(t));
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
-    l=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
+    l=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngleRate',zero);
     c=freshObserverTestConfig();c.initialState=[0;8;0;0;0;0;.1];
 end

@@ -213,7 +213,6 @@ function metrics = computeMetrics(truth, estimate, cfg)
     settledMask = truth.time >= settleTime;
     lateralVelocityError = estimate.lateralVelocity - truth.lateralVelocity;
     yawRateError = estimate.yawRate - truth.yawRate;
-    sideSlipError = estimate.sideSlipAngle - truth.sideSlipAngle;
     sideSlipRateError = estimate.sideSlipAngleRate - truth.sideSlipAngleRate;
 
     metrics = struct();
@@ -221,7 +220,6 @@ function metrics = computeMetrics(truth, estimate, cfg)
     metrics.yawRateRmse = sqrt(mean(yawRateError.^2));
     metrics.settledLateralVelocityRmse = sqrt(mean(lateralVelocityError(settledMask).^2));
     metrics.settledYawRateRmse = sqrt(mean(yawRateError(settledMask).^2));
-    metrics.settledSideSlipRmse = sqrt(mean(sideSlipError(settledMask).^2));
     metrics.settledSideSlipRateRmse = sqrt(mean(sideSlipRateError(settledMask).^2));
     metrics.peakSideSlipAngleRate = max(abs(truth.sideSlipAngleRate));
     metrics.maxSettledLateralVelocityError = max(abs(lateralVelocityError(settledMask)));

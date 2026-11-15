@@ -32,7 +32,7 @@ function f=fixture()
     cfg=freshObserverTestConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8.4;0;0;-.25;0;0];
     cfg=freshObserverTestConfig(cfg);
     f=struct('time',t,'data',struct('highRate',h,'lidar',l),'cfg',cfg, ...
-        'lateral',struct('time',t,'lateralVelocity',-.25+z,'sideSlipAngle',atan2(-.25,8.4)+z,'sideSlipAngleRate',z));
+        'lateral',struct('time',t,'lateralVelocity',-.25+z,'sideSlipAngleRate',z));
 end
 function r=run(f)
     r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);

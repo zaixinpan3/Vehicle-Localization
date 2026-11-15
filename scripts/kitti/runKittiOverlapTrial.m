@@ -179,5 +179,5 @@ function [h,l,tilt]=motionInputs(sensors,initialTilt)
     zero=zeros(n,1);h=struct('time',t,'longitudinalSpeed',nan(n,1),'bodyVelocityValid',false(n,1), ...
         'longitudinalAcceleration',acc(:,1),'lateralAcceleration',acc(:,2),'yawRate',rate);
     % No wheel/lateral direction measurement: withdraw that channel explicitly.
-    l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngle',zero,'sideSlipAngleRate',zero);
+    l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngleRate',zero);
 end

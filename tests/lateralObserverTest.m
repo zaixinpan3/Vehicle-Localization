@@ -123,13 +123,12 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             nominal=runLateralVelocityObserver(measurements,testCase.CurrentDesign,cfg);
             transform=repmat([1,0,0,1,1,2],numel(measurements.time),1);
             actual=runLateralVelocityObserver(measurements,testCase.CurrentDesign,cfg,transform);
-            angle=atan2(2,11);t=measurements.time;
+            t=measurements.time;
             testCase.verifyEqual(actual.state,nominal.state,AbsTol=0);
             testCase.verifyEqual(actual.innovation,nominal.innovation,AbsTol=0);
             testCase.verifyEqual(actual.velocityValid,nominal.velocityValid);
             testCase.verifyEqual(actual.longitudinalSpeed,11*ones(size(t)));
             testCase.verifyEqual(actual.lateralVelocity,2*ones(size(t)));
-            testCase.verifyEqual(actual.sideSlipAngle,angle*ones(size(t)),AbsTol=1e-12);
             testCase.verifyEqual(actual.sideSlipAngleRate,zeros(size(t)),AbsTol=1e-12);
         end
         function identityOutputMapPreservesTheOriginalInterface(testCase)
@@ -573,10 +572,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(atOutput.observerPointLateralVelocity, atObserver.observerPointLateralVelocity, AbsTol=0);
             testCase.verifyEqual(atOutput.lateralVelocity, ...
                 atOutput.observerPointLateralVelocity - 2.5 .* atOutput.yawRate, AbsTol=1.0e-12);
-            settled = true(size(measurements.time));
-            expectedAngle = atan2(atOutput.lateralVelocity(settled), measurements.longitudinalSpeed(settled));
-            testCase.verifyEqual(atOutput.sideSlipAngle(settled), expectedAngle, AbsTol=1.0e-12);
-            testCase.verifyGreaterThan(abs(atOutput.sideSlipAngle(1) - atObserver.sideSlipAngle(1)), 0.03);
             testCase.verifyEqual(atOutput.outputPoint.forwardOffsetM, 2.5);
         end
 
@@ -591,7 +586,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         end
 
         function unavailableLpvWithdrawsSideslip(testCase)
-        % Outside the LPV domain angle and rate are zero placeholders and the held
+        % Outside the LPV domain the rate is a zero placeholder and the held
         % velocity is explicitly unavailable to the global observer.
             design = testCase.CurrentDesign;
             cfg = design.cfg;
@@ -607,7 +602,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             estimate = runLateralVelocityObserver(measurements, design, cfg);
 
             testCase.verifyTrue(all(~estimate.diagnostics.sideSlipValid));
-            testCase.verifyEqual(estimate.sideSlipAngle, zeros(numSamples, 1), AbsTol=0);
             testCase.verifyEqual(estimate.sideSlipAngleRate, zeros(numSamples, 1), AbsTol=0);
             testCase.verifyTrue(all(isfinite(estimate.state(:))));
         end
@@ -629,8 +623,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(estimate.observerPointLateralVelocity(1), 1.0, AbsTol=0.0);
             testCase.verifyEqual(estimate.lateralVelocity, ...
                 (1-cfg.outputPoint.forwardOffsetM*.2)*ones(size(estimate.time)), AbsTol=0.0);
-            testCase.verifyEqual(estimate.sideSlipAngle, ...
-                zeros(size(estimate.sideSlipAngle)), AbsTol=0.0);
             testCase.verifyEqual(estimate.sideSlipAngleRate, ...
                 zeros(size(estimate.sideSlipAngleRate)), AbsTol=0.0);
         end

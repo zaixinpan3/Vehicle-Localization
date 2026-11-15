@@ -75,7 +75,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
         function invalidLpvOutputCannotReachPredictionOrInnovations(testCase)
             [d,l,c]=fixture();l.velocityValid=false(size(l.time));
             a=execute(d,l,c);
-            l.lateralVelocity(:)=NaN;l.sideSlipAngle(:)=NaN;l.sideSlipAngleRate(:)=NaN;
+            l.lateralVelocity(:)=NaN;l.sideSlipAngleRate(:)=NaN;
             b=execute(d,l,c);
             testCase.verifyEqual(a.internalState,b.internalState);
             testCase.verifyEqual(b.diagnostics.packetCounts.bodyVelocityValid,0);
@@ -108,7 +108,7 @@ function [d,l,c]=fixture()
     t=(0:.1:1).';zero=zeros(size(t));
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
-    l=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
+    l=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngleRate',zero);
     c=freshObserverTestConfig();
     c.initialState=[0;3;.2;0;0;0;0];
 end

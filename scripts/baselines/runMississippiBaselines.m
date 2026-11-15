@@ -53,7 +53,7 @@ function runMississippiBaselines(outputFolder,options)
             dd=d;ll=lateral;
             if any(method==["gnss_ekf","no_lidar"]),dd=rmfield(dd,'lidarOverlap');end
             if method=="no_acceleration",dd.highRate.bodyAccelerationValid=false(size(t));end
-            if method=="zero_lateral",ll.lateralVelocity(:)=0;ll.sideSlipAngle(:)=0;ll.sideSlipAngleRate(:)=0;end
+            if method=="zero_lateral",ll.lateralVelocity(:)=0;ll.sideSlipAngleRate(:)=0;end
             if method=="uniform_evidence",dd.lidarOverlap.config.evidenceWeights=false;end
             timer=tic;
             if any(method==["overlap_ekf","overlap_iekf","gnss_ekf"])

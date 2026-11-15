@@ -59,9 +59,9 @@ classdef localizationSupport
             end
             assert(isequal(lateralInput.time,h.time),'VehicleLocalization:SyncCoverage','Lateral and motion clocks differ.');
             lateral=struct('time',t);
-            assert(all(isfield(lateralInput,{'lateralVelocity','sideSlipAngle','sideSlipAngleRate'})), ...
-                'VehicleLocalization:AlignedLateralRequired','Supply the upstream lateral angle/rate pair before synchronization.');
-            for name=["lateralVelocity","sideSlipAngle","sideSlipAngleRate"]
+            assert(all(isfield(lateralInput,{'lateralVelocity','sideSlipAngleRate'})), ...
+                'VehicleLocalization:AlignedLateralRequired','Supply upstream lateral velocity and sideslip rate before synchronization.');
+            for name=["lateralVelocity","sideSlipAngleRate"]
                 lateral.(name)=fullBlend(lateralInput.(name),left,right,fraction);
             end
             if isfield(lateralInput,'yawRate')
@@ -73,11 +73,6 @@ classdef localizationSupport
                     'VehicleLocalization:InvalidMotionValidity','Invalid lateral yaw-rate validity mask.');
                 lateral.yawRateValid=logical(valid(left)) & logical(valid(right));
             end
-            % Algebraic atan2 outputs can straddle the branch cut. Interpolate
-            % the shortest angular increment instead of passing through zero.
-            beta=lateralInput.sideSlipAngle(:);
-            increment=atan2(sin(beta(right)-beta(left)),cos(beta(right)-beta(left)));
-            lateral.sideSlipAngle=beta(left)+fraction.*increment;
             if isfield(lateralInput,'velocityValid')
                 valid=lateralInput.velocityValid(:);
                 assert(numel(valid)==numel(h.time) && all(ismember(valid,[0,1])), ...
