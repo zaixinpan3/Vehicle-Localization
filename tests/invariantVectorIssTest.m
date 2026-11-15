@@ -24,10 +24,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
             testCase.verifyLessThan(max(errors),1e-12);
         end
         function sharedSensorVectorReconstructsEveryPacketIncrement(testCase)
-            c=mncavFullObserverConfig();v=[12;.4];a=[.3;1.2];dv=[.2;-.1];da=[-.04;.08];dr=.003;
+            c=mncavFullObserverConfig();v=[12;.4];a=[.3;1.2];dv=[.2;-.1];da=[-.04;.08];
             N=localizationSupport.measurementSecant(v,a,v+dv,a+da);
-            p=localizationSupport.measurements(v(1),v(2),a(1),a(2),.1,true,true,true,c);
-            m=localizationSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),.1+dr,true,true,true,c);
+            p=localizationSupport.measurements(v(1),v(2),a(1),a(2),true,true,c);
+            m=localizationSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),true,true,c);
             testCase.verifyEqual(m.value-p.value,N*[dv;da],AbsTol=3e-13);
             testCase.verifySize(N,[4,4]);
             testCase.verifyEqual(N(4,:),[0,1,0,0],AbsTol=0);

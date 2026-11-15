@@ -111,11 +111,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             poisoned=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(poisoned.internalState,baseline.internalState,AbsTol=1e-12);
         end
-        function stoppedPacketHasFourOutputsAndSeparateRate(testCase)
+        function stoppedPacketHasOnlyFourMotionOutputs(testCase)
             c=freshObserverTestConfig();
-            packet=localizationSupport.measurements(0,0,0,0,.2,true,true,true,c);
+            packet=localizationSupport.measurements(0,0,0,0,true,true,c);
             testCase.verifySize(packet.value,[4,1]);
-            testCase.verifyEqual(packet.yawRate,.2,AbsTol=1e-12);
+            testCase.verifyFalse(isfield(packet,'yawRate'));
             testCase.verifyFalse(isfield(packet,'beta'));
             testCase.verifyFalse(isfield(packet,'betaRate'));
             x=[0;.1;0;0;.2;0;0;0];design=localizationSupport.runtime(c);
@@ -171,14 +171,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyEqual(a.diagnostics.intrinsicPrediction(2,7),c.initialState(7)+.05*l.time(2),AbsTol=1e-12);
             testCase.verifyFalse(a.diagnostics.intrinsicPredictionUsesImu);
         end
-        function upstreamRateEntersAsAnInnovationOnAnEstimatedState(testCase)
+        function upstreamRateIsNotAnIndependentCorrection(testCase)
             [d,l,c]=fixture();c.initialState(:)=0;d.highRate.longitudinalSpeed(:)=NaN;l.lateralVelocity(:)=NaN;
             d.highRate.bodyVelocityValid=false(size(l.time));d.highRate.bodyAccelerationValid=false(size(l.time));
             l.yawRate(:)=.2;
             a=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(a.diagnostics.intrinsicPrediction(2,7:8),[0,0]);
-            testCase.verifyGreaterThan(a.yawRate(2),0);testCase.verifyLessThan(a.yawRate(2),.2);
-            testCase.verifyGreaterThan(a.headingUnwrapped(end),0);
+            testCase.verifyEqual(a.yawRate,zeros(size(l.time)),AbsTol=0);
+            testCase.verifyEqual(a.headingUnwrapped,zeros(size(l.time)),AbsTol=0);
             testCase.verifyFalse(a.diagnostics.intrinsicPredictionUsesImu);
             testCase.verifyTrue(all(isfinite(a.internalState),'all'));
         end
@@ -227,7 +227,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             c=freshObserverTestConfig();v=[8;.4];a=[.2;1.3];psi=.7;betaRate=.015;
             R=[cos(psi),-sin(psi);sin(psi),cos(psi)];vg=R*v;ag=R*a;
             r=(v(1)*a(2)-v(2)*a(1))/(v.'*v)-betaRate;x=[0;vg(1);ag(1);0;vg(2);ag(2);psi;r];
-            packet=localizationSupport.measurements(v(1),v(2),a(1),a(2),r,true,true,true,c);
+            packet=localizationSupport.measurements(v(1),v(2),a(1),a(2),true,true,c);
             y=localizationSupport.outputs(x,c);
             testCase.verifyEqual(y,packet.value,AbsTol=1e-12);
         end

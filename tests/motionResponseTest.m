@@ -82,7 +82,7 @@ function errors=braking(c,dt,noiseScale)
         now=time(j);
         if now<1,s=8;a=0;elseif now<4,s=8-2*(now-1);a=-2;elseif now<6,s=2;a=0;elseif now<8,s=2+(now-6);a=1;else,s=4;a=0;end
         sm=s+noiseScale*.256*randn(stream);am=a+noiseScale*.233*randn(stream);
-        packet=localizationSupport.measurements(sm,0,am,0,0,true,true,true,c);
+        packet=localizationSupport.measurements(sm,0,am,0,true,true,c);
         x=localizationSupport.predict(x,dt,0);
         x=localizationSupport.correct(x,packet,dt,r,c);
         errors(j,:)=[x(2)-s,x(3)-a];

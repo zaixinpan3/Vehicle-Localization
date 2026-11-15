@@ -43,8 +43,8 @@ end
 function [cfg,design,packet,state]=fixture()
     cfg=mncavFullObserverConfig();
     design=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
-        'auxiliaryWeights',[2;0;0],'yawRateGainNormalized',1, ...
+        'auxiliaryWeights',[2;0;0], ...
         'motionGainSchedule',struct('minimumSpeedMps',10,'maximumSpeedMps',15));
-    packet=localizationSupport.measurements(8,0,0,0,0,true,false,false,cfg);
+    packet=localizationSupport.measurements(8,0,0,0,true,false,cfg);
     state=[0;3;0;0;4;0;.4;0];
 end

@@ -1,5 +1,5 @@
 function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
-% Same intrinsic state/predictor and four additional outputs plus an upstream yaw-rate channel, with covariance feedback.
+% Same intrinsic state/predictor and four additional outputs, with covariance feedback.
 % LiDAR is a local quadratic overlap likelihood, not a Gaussian pose sensor.
 % Its temperature is a tunable empirical likelihood scale. Shared primitive
 % noise columns preserve squared-speed/dot/cross correlations.
@@ -28,21 +28,12 @@ function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
         end
         h=data.highRate;vy=0;if valid,vy=lateral.lateralVelocity(k);end
         av=true;if isfield(h,'bodyAccelerationValid'),av=h.bodyAccelerationValid(k);end
-        rate=0;rateValid=false;
-        if isfield(lateral,'yawRate')
-            rate=lateral.yawRate(k);rateValid=valid && isfinite(rate);
-            if isfield(lateral,'yawRateValid'),rateValid=rateValid && lateral.yawRateValid(k);end
-        end
-        packet=localizationSupport.measurements(h.longitudinalSpeed(k),vy,h.longitudinalAcceleration(k),h.lateralAcceleration(k),rate,valid,av,rateValid,cfg);
+        packet=localizationSupport.measurements(h.longitudinalSpeed(k),vy,h.longitudinalAcceleration(k),h.lateralAcceleration(k),valid,av,cfg);
         [v,H]=localizationSupport.outputs(x,cfg);
         B=localizationSupport.measurementSecant([h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)],[h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)]);
         R=B*diag([noise.velocityMps^2*[1,1],noise.accelerationMps2^2*[1,1]])*B.';
         R=R+1e-8*eye(4);ids=packet.valid;
         [x,P]=update(x,P,packet.value(ids)-v(ids),H(ids,:),R(ids,ids));
-        if packet.yawRateValid
-            Hg=zeros(1,8);Hg(8)=1;
-            [x,P]=update(x,P,packet.yawRate-x(8),Hg,noise.lateralYawRateRadps^2);
-        end
         if ~isempty(options.PoseProvider) && dt>0
             measurement=options.PoseProvider(k,x([1,4,7]));
             if ~isempty(measurement)

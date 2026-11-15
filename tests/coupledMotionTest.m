@@ -41,8 +41,8 @@ function [errors,minimum]=jacobianErrors()
             % headings with zero lateral-output heading sensitivity.
             x=[0;s;a(1);0;0;a(2);-pi+2*pi*rand(stream);q];
             [F,H]=localizationSupport.secants(x,x,0,c);H=D*H*B;
-            [A,speed,pair]=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c),1);
-            expected=B\F*B/t;expected(8,8)=-1;factor=c.iss.maximumSpeed^2/(s0^2+s^2);
+            [A,speed,pair]=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c));
+            expected=B\F*B/t;factor=c.iss.maximumSpeed^2/(s0^2+s^2);
             errors=max(errors,[norm(A-expected,'fro'),norm(speed-factor*H(1,:).'*H(1,:),'fro')]);
             difference=factor*H(2:3,:).'*H(2:3,:)-pair;
             minimum=min(minimum,min(eig((difference+difference.')/2)));
@@ -76,9 +76,9 @@ function error=affineError()
     c=mncavFullObserverConfig();[vertices,b]=localizationSupport.fusionVertices(c);
     f=(.37*b(:,1)+.63*b(:,2)).';w=vertexWeights(f,b);P=diag(1:8);combined=zeros(8);
     for j=1:size(vertices,1)
-        [A,S,B]=localizationSupport.fusionMatrices(c,vertices(j,:),2);M=P*A-3*S-4*B;
+        [A,S,B]=localizationSupport.fusionMatrices(c,vertices(j,:));M=P*A-3*S-4*B;
         combined=combined+w(j)*(M+M.');
     end
-    [A,S,B]=localizationSupport.fusionMatrices(c,f,2);M=P*A-3*S-4*B;
+    [A,S,B]=localizationSupport.fusionMatrices(c,f);M=P*A-3*S-4*B;
     error=norm(combined-M-M.','fro');
 end

@@ -15,22 +15,22 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             omitted=execute(d,l,c);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
             testCase.verifyEqual(a.internalState,omitted.internalState,AbsTol=0);
-            testCase.verifyGreaterThan(a.yawRate(end),.1);
-            testCase.verifyEqual(a.diagnostics.yawRateFeedbackSource,"lateralObserver");
+            testCase.verifyEqual(a.diagnostics.yawRateFeedbackSource,"matchedMotionAndPose");
         end
-        function unavailableUpstreamRateNeverFallsBackToGyro(testCase)
+        function upstreamRatePayloadDoesNotBypassTheMotionInterface(testCase)
             [d,l,c]=fixture();c.initialState(8)=.04;l.yawRate(:)=NaN;
             d.highRate.yawRate(:)=100;a=execute(d,l,c);
             l=rmfield(l,'yawRate');b=execute(d,l,c);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
-            testCase.verifyEqual(a.yawRate,.04+zeros(size(l.time)),AbsTol=1e-12);
-            testCase.verifyFalse(any(a.diagnostics.motionOutputValidity.yawRate));
+            testCase.verifyFalse(isfield(a.diagnostics.motionOutputValidity,'yawRate'));
+            l.yawRate=100*ones(size(l.time));changed=execute(d,l,c);
+            testCase.verifyEqual(changed.internalState,a.internalState,AbsTol=0);
         end
-        function lateralValidityWithdrawsRateFeedback(testCase)
+        function unavailableMotionCannotBeReplacedByRatePayload(testCase)
             [d,l,c]=fixture();l.yawRate(:)=.2;l.velocityValid=false(size(l.time));
             a=execute(d,l,c);l.yawRate(:)=-100;b=execute(d,l,c);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
-            testCase.verifyFalse(a.diagnostics.yawRateOutputAvailabilitySatisfied);
+            testCase.verifyFalse(a.diagnostics.auxiliaryAvailabilityContractSatisfied);
         end
         function rateValiditySurvivesSynchronization(testCase)
             [d,l,c]=fixture();l.yawRate=.1+l.time;l.yawRateValid=true(size(l.time));l.yawRateValid(2)=false;

@@ -52,30 +52,37 @@ classdef fourInvariantOutputsTest < matlab.unittest.TestCase
         end
         function missingVelocityWithdrawsEveryAccelerationOutput(testCase)
             c=mncavFullObserverConfig();
-            p=localizationSupport.measurements(NaN,NaN,20,-30,.1,false,true,true,c);
+            p=localizationSupport.measurements(NaN,NaN,20,-30,false,true,c);
             testCase.verifyEqual(p.valid,false(4,1));
             testCase.verifyEqual(p.value,zeros(4,1),AbsTol=0);
-            testCase.verifyEqual(p.yawRate,.1,AbsTol=0);
-            testCase.verifyTrue(p.yawRateValid);
+            testCase.verifyFalse(isfield(p,'yawRate'));
         end
-        function missingAccelerationKeepsSpeedLateralVelocityAndRate(testCase)
+        function missingAccelerationKeepsSpeedAndLateralVelocity(testCase)
             c=mncavFullObserverConfig();
-            p=localizationSupport.measurements(12,1,NaN,NaN,.1,true,false,true,c);
+            p=localizationSupport.measurements(12,1,NaN,NaN,true,false,c);
             testCase.verifyEqual(p.valid,logical([1;0;0;1]));
             testCase.verifyTrue(all(isfinite(p.value)));
         end
         function accelerationHasNoHiddenProjectionCorrection(testCase)
             c=mncavFullObserverConfig();d=correctionDesign();x=[0;3;.6;0;4;1.2;.2;.03];
-            p=localizationSupport.measurements(NaN,NaN,20,-30,NaN,false,true,false,c);
+            p=localizationSupport.measurements(NaN,NaN,20,-30,false,true,c);
             y=localizationSupport.correct(x,p,.1,d,c);
             testCase.verifyEqual(y,x,AbsTol=0);
         end
-        function separateUpstreamRateAppliesItsInnovationExactlyOnce(testCase)
-            c=mncavFullObserverConfig();d=correctionDesign();x=zeros(8,1);dt=.1;
-            p=localizationSupport.measurements(NaN,NaN,NaN,NaN,.3,false,false,true,c);
-            y=localizationSupport.correct(x,p,dt,d,c);
-            testCase.verifyEqual(y(8),dt*d.yawRateGainNormalized*.3/(1+dt*d.yawRateGainNormalized),AbsTol=1e-14);
-            testCase.verifyEqual(y(1:7),zeros(7,1),AbsTol=0);
+        function motionInnovationCorrectsRateThroughTheHeadingMetric(testCase)
+            c=mncavFullObserverConfig();d=correctionDesign();
+            x=[0;12;0;0;0;0;.1;.03];
+            p=localizationSupport.measurements(12,0,0,0,true,true,c);
+            p.valid=logical([0;0;0;1]);
+            uncoupled=localizationSupport.correct(x,p,.1,d,c);
+            d.P(7:8,7:8)=[2,-1;-1,2];
+            coupled=localizationSupport.correct(x,p,.1,d,c);
+            testCase.verifyEqual(uncoupled(8),x(8),AbsTol=0);
+            testCase.verifyLessThan(coupled(7),x(7));
+            testCase.verifyLessThan(coupled(8),x(8));
+            p.valid(:)=false;
+            withdrawn=localizationSupport.correct(x,p,.1,d,c);
+            testCase.verifyEqual(withdrawn,x,AbsTol=0);
         end
         function numericalNormalizationPreservesThePhysicalOutputs(testCase)
             c=mncavFullObserverConfig();x=[0;3;1;0;4;-2;.2;.3];
@@ -89,6 +96,6 @@ end
 
 function d=correctionDesign()
     d=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
-        'auxiliaryWeights',ones(3,1),'yawRateGainNormalized',2, ...
+        'auxiliaryWeights',ones(3,1), ...
         'motionGainSchedule',struct('minimumSpeedMps',10,'maximumSpeedMps',15));
 end

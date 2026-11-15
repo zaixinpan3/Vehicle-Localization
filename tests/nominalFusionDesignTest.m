@@ -16,6 +16,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyEqual(d.solveAudit.optimizationCalls,1);
             testCase.verifyEqual(d.kappaG,d.kappaL,AbsTol=1e-9);
             testCase.verifyEqual(v.vertices,64);
+            testCase.verifyFalse(v.independentYawRateCorrection);
+            testCase.verifyLessThan(d.P(7,8),0);
+            testCase.verifyFalse(isfield(d,'yawRateGainNormalized'));
             testCase.verifyFalse(isfield(d,'gainSelection'));
             testCase.verifyFalse(isfield(d,'constraintGeneration'));
             testCase.verifyFalse(isfield(d,'accelerationMultipliers'));
@@ -47,6 +50,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyLessThan(norm(e.position(end,:)),.02);
             testCase.verifyLessThan(abs(e.heading(end)),.001);
             testCase.verifyFalse(e.diagnostics.allTheoremHypothesesVerified);
+        end
+        function lidarHeadingInnovationRecoversTheRateState(testCase)
+            [data,lateral,c]=constantMotionFixture(0,.1);
+            lateral.velocityValid=false(size(lateral.time));
+            c.initialState=[0;0;0;0;0;0;.03;.05];
+            estimate=runFullLocalizationObserver(data,c,LateralInputs=lateral);
+            testCase.verifyLessThan(abs(estimate.yawRate(end)),.001);
+            testCase.verifyLessThan(abs(estimate.heading(end)),.001);
         end
         function gnssOnlyRetainsAccuracyWithoutAnOutageCertificate(testCase,dt)
             [data,lateral,c]=constantMotionFixture(5,dt);
