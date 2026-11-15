@@ -21,7 +21,7 @@ classdef coupledMotionTest < matlab.unittest.TestCase
             c=mncavFullObserverConfig();c.iss.maximumAcceleration=0;
             c.iss.maximumSpeed=c.invariantObserver.fusion.minimumCourseSpeed;
             [v,b]=localizationSupport.fusionVertices(c);
-            testCase.verifySize(v,[1,6]);testCase.verifyEqual(v,b(:,1).');
+            testCase.verifySize(v,[1,8]);testCase.verifyEqual(v,b(:,1).');
         end
         function affineVertexInterpolationPreservesTheWholeLmi(testCase)
             testCase.verifyLessThan(affineError(),1e-10);
@@ -40,7 +40,7 @@ function [errors,minimum]=jacobianErrors()
             % Cover arbitrary body heading relative to true course, including
             % headings with zero lateral-output heading sensitivity.
             x=[0;s;a(1);0;0;a(2);-pi+2*pi*rand(stream);q];
-            [F,H]=localizationSupport.secants(x,x,0,c);H=D*H*B;
+            [F,H]=localizationSupport.secants(x,x,c);H=D*H*B;
             [A,speed,pair]=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c));
             expected=B\F*B/t;factor=c.iss.maximumSpeed^2/(s0^2+s^2);
             errors=max(errors,[norm(A-expected,'fro'),norm(speed-factor*H(1,:).'*H(1,:),'fro')]);

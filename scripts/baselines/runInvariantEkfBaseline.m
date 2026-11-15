@@ -17,9 +17,9 @@ function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
     G=zeros(3,8);G(:,[1,4,7])=eye(3);noise=cfg.invariantObserver.noise;
     for k=1:n
         timer=tic;dt=0;if k>1,dt=t(k)-t(k-1);end
-        valid=lateral.velocityValid(k);br=0;if valid,br=lateral.sideSlipAngleRate(k);end
-        old=x;x=localizationSupport.predict(old,dt,br);
-        F=zeros(8);for j=1:8,d=1e-5*max(1,abs(old(j)));a=old;a(j)=a(j)+d;b=old;b(j)=b(j)-d;F(:,j)=(localizationSupport.predict(a,dt,br)-localizationSupport.predict(b,dt,br))/(2*d);end
+        valid=lateral.velocityValid(k);
+        old=x;x=localizationSupport.predict(old,dt,cfg);
+        F=zeros(8);for j=1:8,d=1e-5*max(1,abs(old(j)));a=old;a(j)=a(j)+d;b=old;b(j)=b(j)-d;F(:,j)=(localizationSupport.predict(a,dt,cfg)-localizationSupport.predict(b,dt,cfg))/(2*d);end
         Q=diag([1e-6,1e-4,noise.jerkMps3^2,1e-6,1e-4,noise.jerkMps3^2,1e-7,.03^2]);
         P=F*P*F.'+options.ProcessScale*dt*Q;
         if isfield(data,'gnss') && data.gnss.valid(k)

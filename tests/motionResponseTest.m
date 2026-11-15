@@ -13,7 +13,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
         function oneSolveMeetsFusionAndMotionConstraints(testCase)
             c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());v=c.invariantDesign.verification;
             testCase.verifyTrue(v.certified && v.nominalFusionLmiVerified && v.motionResponse.verified);
-            testCase.verifyEqual(v.nominalFusion.vertices,64);
+            testCase.verifyEqual(v.nominalFusion.vertices,256);
             testCase.verifyFalse(v.motionResponse.longitudinalPoseFeedbackRequired);
             testCase.verifyFalse(v.motionResponse.fullNonlinearResponseCertified);
             testCase.verifyEqual(v.motionResponse.timeConstantS,.5,AbsTol=0);
@@ -83,7 +83,7 @@ function errors=braking(c,dt,noiseScale)
         if now<1,s=8;a=0;elseif now<4,s=8-2*(now-1);a=-2;elseif now<6,s=2;a=0;elseif now<8,s=2+(now-6);a=1;else,s=4;a=0;end
         sm=s+noiseScale*.256*randn(stream);am=a+noiseScale*.233*randn(stream);
         packet=localizationSupport.measurements(sm,0,am,0,true,true,c);
-        x=localizationSupport.predict(x,dt,0);
+        x=localizationSupport.predict(x,dt,c);
         x=localizationSupport.correct(x,packet,dt,r,c);
         errors(j,:)=[x(2)-s,x(3)-a];
     end

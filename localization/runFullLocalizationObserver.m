@@ -9,11 +9,11 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % Missing/invalid measurements withdraw their own correction for that frame.
 % Optional highRate.bodyVelocityValid and bodyAccelerationValid masks also
 % withdraw unavailable motion-output feedback. Absent masks mean all valid.
-% LateralInputs must provide lateralVelocity and sideSlipAngleRate on the
-% frame clock. The sideslip rate is supplied upstream.
+% LateralInputs supplies lateralVelocity on the frame clock. The predictor
+% uses only its own state; no sideslip-angle or rate input is required.
 % Yaw rate is corrected through the coupled motion/pose gains, not a separate input.
 % Optional LateralInputs.velocityValid withdraws all upstream signals,
-% their velocity-dependent innovations and the predictor's sideslip-rate term.
+% and their velocity-dependent innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
 % diagnostics.lidarPoseSupport reports local geometry, not alignment correctness.
     arguments
@@ -31,9 +31,9 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         'VehicleLocalization:InvalidSyncClock','Require an increasing frame clock.');
     assert(isfield(lateral,'time') && isequal(lateral.time(:),t), ...
         'VehicleLocalization:AlignedLateralRequired','Supply lateral estimates on the frame clock.');
-    assert(all(isfield(lateral,{'lateralVelocity','sideSlipAngleRate'})), ...
+    assert(all(isfield(lateral,{'lateralVelocity'})), ...
         'VehicleLocalization:AlignedLateralRequired', ...
-        'Supply lateral velocity and the upstream sideslip rate.');
+        'Supply the upstream lateral velocity.');
     reportedLateral=lateral;
     velocityValid=motionValidity(h,'bodyVelocityValid',n) ...
         & motionValidity(lateral,'velocityValid',n) & cfg.invariantObserver.velocityAvailable;
@@ -47,7 +47,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             'VehicleLocalization:InvalidFullInput','Invalid aligned motion.');
         h.(name)=h.(name)(:);h.(name)(~valid)=0;
     end
-    for name=["lateralVelocity","sideSlipAngleRate"]
+    for name="lateralVelocity"
         valid=velocityValid;
         assert(numel(lateral.(name))==n && all(isfinite(lateral.(name)(valid))), ...
             'VehicleLocalization:InvalidFullInput','Invalid aligned lateral output.');
@@ -93,7 +93,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         speed=h.longitudinalSpeed(k);vy=lateral.lateralVelocity(k);
         rate=x(8);
         predYaw=x(7)+rate*dt;
-        q=rate+lateral.sideSlipAngleRate(k);
+        q=localizationSupport.courseRate(x,cfg);
         maximumRate=max(maximumRate,abs(q));
         yaw=predYaw;
         Wg=zeros(2);
@@ -101,7 +101,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             [gnssPosition(k,:),gnssInformation(:,:,k)]=localizationSupport.correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),yaw,alignment);
             I=gnssInformation(:,:,k);Wg=I/(I+cfg.gnss.gainInformationScale*eye(2));Wg=(Wg+Wg.')/2;
         end
-        x=localizationSupport.predict(x,dt,lateral.sideSlipAngleRate(k));
+        x=localizationSupport.predict(x,dt,cfg);
         intrinsicStates(k,:)=x.';
         gnssRate=zeros(2,1);
         if G.valid(k)
@@ -195,7 +195,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             'bodyAcceleration',velocityValid & accelerationValid ...
                 & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable), ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
-        'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. The nominal fusion design assumes simultaneous sources and a compact invariant operating set; zero-speed execution has no speed division but is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
+        'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. The nominal fusion design assumes simultaneous sources and a compact invariant operating set; low-speed execution uses a smooth denominator extension and is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
     estimate.internalState=z;estimate.yawRate=z(:,8);
     estimate.diagnostics.intrinsicPrediction=intrinsicStates;
     estimate.diagnostics.invariantOutputs=invariantAudits;

@@ -18,7 +18,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyGreaterThan(norm(residual),abs(sddot));
             % Recover the actual implicit predictor drift, not a duplicate model.
             x=[0;v(1);a(1);0;v(2);a(2);phi;q];h=.02;
-            xp=localizationSupport.predict(x,h,0);
+            xp=localizationSupport.predict(x,h,mncavFullObserverConfig());
             drift=(xp-x)/h;
             testCase.verifyEqual(drift([3,6]),q^2*xp([2,5])+2*q*J*xp([3,6]),AbsTol=1e-12);
         end
@@ -30,9 +30,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,64);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,256);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,64);
+            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,256);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
             testCase.verifySize(d.P,[8,8]);
@@ -73,7 +73,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyTrue(all(a.highRate.bodyAccelerationValid));
             testCase.verifyTrue(all(a.highRate.yawRateValid));
         end
-        function synchronizationPreservesTheUpstreamRate(testCase)
+        function synchronizationRequiresOnlyLateralVelocity(testCase)
             [d,l,c]=fixture();t=(.05:.1:.95).';n=numel(t);
             l.sideSlipAngleRate=.04*l.time;
             d.lidar=struct('time',t,'pose',zeros(n,3),'valid',true(n,1), ...
@@ -81,7 +81,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             c.synchronization.motionMaximumBracket=.2;
             [~,aligned]=localizationSupport.synchronizeLocalizationInputs(d,l,c);
             testCase.verifyFalse(isfield(aligned,'sideSlipAngle'));
-            testCase.verifyEqual(aligned.sideSlipAngleRate,interp1(l.time,l.sideSlipAngleRate,t),AbsTol=1e-12);
+            testCase.verifyFalse(isfield(aligned,'sideSlipAngleRate'));
+            testCase.verifyEqual(aligned.lateralVelocity,interp1(l.time,l.lateralVelocity,t),AbsTol=1e-12);
         end
         function bodyLateralOutputRequiresNoAnglePayload(testCase)
             [d,l,c]=fixture();
@@ -94,15 +95,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             legacy=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(legacy.internalState,supplied.internalState,AbsTol=0);
         end
-        function missingSideSlipRateIsRejected(testCase)
-            [d,l,c]=fixture();l=rmfield(l,'sideSlipAngleRate');
-            testCase.verifyError(@()runFullLocalizationObserver(d,c,LateralInputs=l), ...
-                'VehicleLocalization:AlignedLateralRequired');
-        end
-        function availableSideSlipRateMustBeFinite(testCase)
-            [d,l,c]=fixture();l.sideSlipAngleRate(2)=NaN;
-            testCase.verifyError(@()runFullLocalizationObserver(d,c,LateralInputs=l), ...
-                'VehicleLocalization:InvalidFullInput');
+        function sideslipRateIsNeitherRequiredNorConsumed(testCase)
+            [d,l,c]=fixture();baseline=runFullLocalizationObserver(d,c,LateralInputs=l);
+            l.sideSlipAngleRate(:)=NaN;
+            poisoned=runFullLocalizationObserver(d,c,LateralInputs=l);
+            l=rmfield(l,'sideSlipAngleRate');
+            omitted=runFullLocalizationObserver(d,c,LateralInputs=l);
+            testCase.verifyEqual(poisoned.internalState,baseline.internalState,AbsTol=0);
+            testCase.verifyEqual(omitted.internalState,baseline.internalState,AbsTol=0);
         end
         function withdrawnRatePayloadCannotAffectTheEstimate(testCase)
             [d,l,c]=fixture();d.highRate.bodyVelocityValid=false(size(l.time));

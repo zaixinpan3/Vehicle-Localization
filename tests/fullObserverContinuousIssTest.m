@@ -26,7 +26,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
         end
         function changedNoiseCannotReuseTemporaryGains(testCase)
-            c=freshObserverTestConfig();c.invariantObserver.noise.lateralYawRateRadps=2*c.invariantObserver.noise.lateralYawRateRadps;
+            c=freshObserverTestConfig();c.invariantObserver.noise.accelerationMps2=2*c.invariantObserver.noise.accelerationMps2;
             testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
