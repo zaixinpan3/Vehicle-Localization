@@ -518,32 +518,22 @@ classdef lateralObserverTest < matlab.unittest.TestCase
                 'VehicleLocalization:ObsoleteLateralDesign');
         end
 
-        function sideSlipRateIsConsistentWithTheSideSlipAngle(testCase)
-        % sideSlipRateIsConsistentWithTheSideSlipAngle: The algebraic
-        % sideslip derivative agrees approximately with a finite difference of
-        % its reported angle. This is the signal the ego-state observer
-        % consumes as part of the track-angle rate.
-            design = testCase.CurrentDesign;
-            cfg = design.cfg;
-            cfg.simulation.yawRateNoiseStd = 0;
-            cfg.simulation.lateralAccelerationNoiseStd = 0;
-            % Check time-resolution convergence before comparing
-            % an instantaneous analytic derivative with sampled differences.
-            deviations = zeros(2,1);
-            for idx = 1:2
-                cfg.simulation.sampleTime = .002/2^(idx-1);
-                result = simulateLateralObserverScenario(design, cfg);
-                estimate = result.estimate;
-                numericalRate = gradient(estimate.sideSlipAngle, cfg.simulation.sampleTime);
-                settled = estimate.time >= .25*cfg.simulation.tFinal & ...
-                    estimate.time < cfg.simulation.tFinal;
-                deviations(idx) = sqrt(mean((estimate.sideSlipAngleRate(settled) - ...
-                    numericalRate(settled)).^2));
-                testCase.verifyLessThan(deviations(idx), ...
-                    .05*max(abs(estimate.sideSlipAngleRate(settled))));
-                testCase.verifyTrue(all(isfinite(estimate.sideSlipAngleRate)));
-            end
-            testCase.verifyLessThan(deviations(2), .4*deviations(1));
+        function sideslipRateUsesAccelerationNotObserverStateDerivative(testCase)
+            design=testCase.CurrentDesign;cfg=design.cfg;
+            cfg.outputPoint.forwardOffsetM=0;cfg.observer.initialState=[1;.2];
+            m=testCase.constantSpeedMeasurements(.1,10);
+            m.longitudinalAcceleration(:)=-.2;m.lateralAcceleration(:)=2;
+            m.yawRate(:)=.2;
+            a=runLateralVelocityObserver(m,design,cfg);
+            % The same instantaneous circular motion has constant sideslip.
+            % Changing steering changes the observer RHS, not that kinematic fact.
+            m.steeringAngle(:)=m.steeringAngle+.1;
+            b=runLateralVelocityObserver(m,design,cfg);
+            testCase.verifyEqual(a.sideSlipAngleRate(1),0,AbsTol=1e-12);
+            testCase.verifyEqual(b.sideSlipAngleRate(1),0,AbsTol=1e-12);
+            testCase.verifyGreaterThan(abs(a.observerPointLateralVelocityRate(1)- ...
+                b.observerPointLateralVelocityRate(1)),1e-6);
+            testCase.verifyEqual(a.diagnostics.sideSlipRateSource,"accelerationKinematics");
         end
 
         function speedRateIsReconstructedFromTheSpecificForce(testCase)

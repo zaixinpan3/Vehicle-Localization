@@ -148,6 +148,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
         function pointTransportUsesTheObserverYawDerivative(testCase)
             design = testCase.heldDesign(testCase.Design);
             design.model.B = [0;.5];
+            design.gainBasis.accelerationReciprocal=zeros(2,1);
             cfg = design.cfg;
             cfg.outputPoint.forwardOffsetM = 2;
             m = testCase.measurements([0;.07;.2;.31],10);
@@ -155,6 +156,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             % Gyro samples deliberately disagree: transport must use the
             % estimated rigid-body state, including its analytic derivative.
             m.yawRate(:) = 7;
+            m.lateralAcceleration=10*.5*m.time; % Physical acceleration for vy=0 and r=.5*t.
             actual = runLateralVelocityObserver(m,design,cfg);
             testCase.verifyEqual(actual.lateralVelocity,-m.time,AbsTol=1e-12);
             testCase.verifyEqual(actual.lateralVelocityRate,-ones(4,1),AbsTol=1e-12);
@@ -198,7 +200,8 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
 
         function observerDependentMapUsesTheSuppliedStateDerivative(testCase)
             design=testCase.heldDesign(testCase.Design);design.model.B=[0;.5];
-            m=testCase.measurements([0;.1;.2],10);m.steeringAngle(:)=1;
+            design.gainBasis.accelerationReciprocal=zeros(2,1);
+            m=testCase.measurements([0;.1;.2],10);m.steeringAngle(:)=1;m.lateralAcceleration=10*.5*m.time;
             cfg=design.cfg;cfg.outputPoint.forwardOffsetM=0;
             map=@(x,xd) struct('value',[ones(3,1),zeros(3,2),ones(3,1),x(:,2),2*x(:,2)], ...
                 'rate',[zeros(3,4),xd(:,2),2*xd(:,2)]);

@@ -8,7 +8,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % There is no inertial master, bias estimate, correction filter or shadow model.
 %
 % Output-point transport and sideslip are algebraic; there are no angle states.
-% betaDot uses the LPV derivative and the chain rule through the output map.
+% betaDot uses measured acceleration and estimated velocity/yaw rate.
 % Longitudinal speed rate is reconstructed as ax + vyObserver*estimatedYawRate.
 % Point transport uses estimated yaw rate and its LPV derivative. Time-varying
 % output maps must supply rates from a model or filter state equation; neither
@@ -85,14 +85,14 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
         end
         assert(all(isfinite(state)), "The lateral observer diverged in interval %d.", sampleIdx);
     end
-    % Differentiate the same point transport and affine map used for velocity.
+    % Reconstruct velocity rates from acceleration kinematics; no signal differences.
     observerValid = velocityValid;
     r = history(:,2);
     rDot = stateRate(:,2);
     vx = measurements.longitudinalSpeed;
     vy = history(:,1) - forwardOffset .* r;
     vxDot = measurements.longitudinalAcceleration + history(:,1) .* r;
-    vyDot = stateRate(:,1) - forwardOffset .* rDot;
+    vyDot = measurements.lateralAcceleration - vx .* r - forwardOffset .* rDot;
     if isa(outputVelocityMap,'function_handle')
         outputVelocityMap = outputVelocityMap(history,stateRate);
     end
@@ -146,6 +146,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     estimate.modeChanged = modeChanged;
     estimate.diagnostics = struct("dynamicModelEvaluated", observerValid, ...
         "sideSlipValid", velocityValid, "modeChanged", modeChanged, ...
+        "sideSlipRateSource", "accelerationKinematics", ...
         "integrationMethod", integrationMethod, ...
         "schedulingRateSource", "kinematicEstimate", ...
         "schedulingRateKnown", rateKnown, "schedulingRateWithinBounds", rateWithinBounds);
