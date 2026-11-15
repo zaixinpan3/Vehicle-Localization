@@ -64,7 +64,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
         function bothMissingPredictAndThenRecover(testCase)
             f=fixture(8,"both");mask=f.data.lidar.time>=2 & f.data.lidar.time<4;
             f.data.lidar.valid(mask)=false;f.data.gnss.valid(mask)=false;
-            f.data.highRate.yawRate(f.data.highRate.time>=2 & f.data.highRate.time<4)=.02;r=run(f);
+            f.lateral.yawRate(f.data.highRate.time>=2 & f.data.highRate.time<4)=.02;r=run(f);
             outage=r.time>=2 & r.time<4;
             testCase.verifyEqual(r.diagnostics.mode(outage),zeros(nnz(outage),1));
             testCase.verifyGreaterThan(max(abs(r.heading(outage))),1e-4);
@@ -106,7 +106,7 @@ function f=fixture(duration,mode)
     t=(0:.1:duration).';n=numel(t);zero=zeros(n,1);m=t;
     high=struct('time',t,'longitudinalSpeed',8+zero,'longitudinalAcceleration',zero, ...
         'lateralAcceleration',zero,'yawRate',zero);
-    lateral=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
+    lateral=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
     gnss=struct('time',m,'position',[8*m,zeros(size(m))],'information',repmat(1e6*eye(2),1,1,numel(m)), ...
         'valid',true(size(m)),'delay',0);
     lidar=struct('time',m,'pose',[8*m,zeros(numel(m),2)],'information',repmat(1e6*eye(3),1,1,numel(m)), ...
@@ -132,7 +132,7 @@ end
 
 function f=turnFixture(duration)
     f=fixture(duration,"both");t=f.data.highRate.time;m=f.data.lidar.time;r=.2;v=8;
-    f.data.highRate.yawRate(:)=r;f.data.highRate.lateralAcceleration(:)=v*r;
+    f.lateral.yawRate(:)=r;f.data.highRate.yawRate(:)=r;f.data.highRate.lateralAcceleration(:)=v*r;
     f.truth=[v/r*sin(r*t),v/r*(1-cos(r*t)),r*t];
     f.data.lidar.pose=[v/r*sin(r*m),v/r*(1-cos(r*m)),r*m];
     f.data.gnss.position=f.data.lidar.pose(:,1:2);f.cfg.initialState=[0;v;0;0;0;v*r;0];

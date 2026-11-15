@@ -371,7 +371,7 @@ function f=movingFixture(duration,offset)
     end
     high=struct('time',t,'longitudinalSpeed',speed+zero,'longitudinalAcceleration',zero, ...
         'lateralAcceleration',zero,'yawRate',zero);
-    lateral=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
+    lateral=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
     data=struct('highRate',high,'lidarOverlap',struct('map',map,'sources',{sources}));
     cfg=freshObserverTestConfig();
     initial=truth(1,:)+offset;

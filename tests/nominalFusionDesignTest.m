@@ -73,7 +73,7 @@ function [data,lateral,c]=constantMotionFixture(speed,dt)
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero), ...
         'lidar',struct('time',t,'pose',[speed*t,zero,zero], ...
         'information',repmat(1e6*eye(3),1,1,n),'valid',true(n,1),'delay',0));
-    lateral=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
+    lateral=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
     [~,c]=selected();
 end
 

@@ -109,11 +109,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             poisoned=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(poisoned.internalState,baseline.internalState,AbsTol=1e-12);
         end
-        function stoppedPacketHasFourOutputsAndSeparateGyro(testCase)
+        function stoppedPacketHasFourOutputsAndSeparateRate(testCase)
             c=freshObserverTestConfig();
             packet=localizationSupport.measurements(0,0,0,0,.2,true,true,true,c);
             testCase.verifySize(packet.value,[4,1]);
-            testCase.verifyEqual(packet.gyro,.2,AbsTol=1e-12);
+            testCase.verifyEqual(packet.yawRate,.2,AbsTol=1e-12);
             testCase.verifyFalse(isfield(packet,'beta'));
             testCase.verifyFalse(isfield(packet,'betaRate'));
             x=[0;.1;0;0;.2;0;0;0];design=localizationSupport.runtime(c);
@@ -169,10 +169,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyEqual(a.diagnostics.intrinsicPrediction(2,7),c.initialState(7)+.05*l.time(2),AbsTol=1e-12);
             testCase.verifyFalse(a.diagnostics.intrinsicPredictionUsesImu);
         end
-        function gyroEntersAsAnInnovationOnAnEstimatedState(testCase)
+        function upstreamRateEntersAsAnInnovationOnAnEstimatedState(testCase)
             [d,l,c]=fixture();c.initialState(:)=0;d.highRate.longitudinalSpeed(:)=NaN;l.lateralVelocity(:)=NaN;
             d.highRate.bodyVelocityValid=false(size(l.time));d.highRate.bodyAccelerationValid=false(size(l.time));
-            d.highRate.yawRate(:)=.2;
+            l.yawRate(:)=.2;
             a=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(a.diagnostics.intrinsicPrediction(2,7:8),[0,0]);
             testCase.verifyGreaterThan(a.yawRate(2),0);testCase.verifyLessThan(a.yawRate(2),.2);
@@ -181,7 +181,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyTrue(all(isfinite(a.internalState),'all'));
         end
         function stoppedRotatingVehicleHasNoSpeedDivision(testCase)
-            [d,l,c]=fixture();c.initialState(:)=0;d.highRate.longitudinalSpeed(:)=0;d.highRate.yawRate(:)=.2;
+            [d,l,c]=fixture();c.initialState(:)=0;d.highRate.longitudinalSpeed(:)=0;l.yawRate(:)=.2;
             a=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(a.position,zeros(numel(l.time),2),AbsTol=1e-12);
             testCase.verifyTrue(all(isfinite(a.internalState),'all'));
@@ -236,6 +236,6 @@ function [d,l,c]=fixture()
     t=(0:.1:1).';zero=zeros(size(t));
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
-    l=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
+    l=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
     c=freshObserverTestConfig();c.initialState=[0;8;0;0;0;0;.1];
 end

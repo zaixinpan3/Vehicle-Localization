@@ -7,6 +7,39 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
         end
     end
     methods (Test)
+        function rawGyroIsNotAGlobalInput(testCase)
+            [d,l,c]=fixture();l.yawRate(:)=.12;
+            a=execute(d,l,c);
+            d.highRate.yawRate(:)=NaN;d.highRate.yawRateValid=false(size(l.time));
+            b=execute(d,l,c);d.highRate=rmfield(d.highRate,{'yawRate','yawRateValid'});
+            omitted=execute(d,l,c);
+            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
+            testCase.verifyEqual(a.internalState,omitted.internalState,AbsTol=0);
+            testCase.verifyGreaterThan(a.yawRate(end),.1);
+            testCase.verifyEqual(a.diagnostics.yawRateFeedbackSource,"lateralObserver");
+        end
+        function unavailableUpstreamRateNeverFallsBackToGyro(testCase)
+            [d,l,c]=fixture();c.initialState(8)=.04;l.yawRate(:)=NaN;
+            d.highRate.yawRate(:)=100;a=execute(d,l,c);
+            l=rmfield(l,'yawRate');b=execute(d,l,c);
+            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
+            testCase.verifyEqual(a.yawRate,.04+zeros(size(l.time)),AbsTol=1e-12);
+            testCase.verifyFalse(any(a.diagnostics.motionOutputValidity.yawRate));
+        end
+        function lateralValidityWithdrawsRateFeedback(testCase)
+            [d,l,c]=fixture();l.yawRate(:)=.2;l.velocityValid=false(size(l.time));
+            a=execute(d,l,c);l.yawRate(:)=-100;b=execute(d,l,c);
+            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
+            testCase.verifyFalse(a.diagnostics.yawRateOutputAvailabilitySatisfied);
+        end
+        function rateValiditySurvivesSynchronization(testCase)
+            [d,l,c]=fixture();l.yawRate=.1+l.time;l.yawRateValid=true(size(l.time));l.yawRateValid(2)=false;
+            d.lidar=struct('time',l.time,'pose',zeros(numel(l.time),3),'valid',true(size(l.time)), ...
+                'information',repmat(eye(3),1,1,numel(l.time)),'delay',0);
+            [~,out]=localizationSupport.synchronizeLocalizationInputs(d,l,c);
+            testCase.verifyEqual(out.yawRate,l.yawRate,AbsTol=0);
+            testCase.verifyEqual(out.yawRateValid,l.yawRateValid);
+        end
         function defaultMasksPreserveTheExistingRuntime(testCase)
             [d,l,c]=fixture();a=execute(d,l,c);
             d.highRate.bodyVelocityValid=true(size(l.time));
@@ -75,7 +108,7 @@ function [d,l,c]=fixture()
     t=(0:.1:1).';zero=zeros(size(t));
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
-    l=struct('time',t,'lateralVelocity',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
+    l=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngle',zero,'sideSlipAngleRate',zero);
     c=freshObserverTestConfig();
     c.initialState=[0;3;.2;0;0;0;0];
 end

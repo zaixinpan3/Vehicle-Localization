@@ -1,6 +1,6 @@
 function estimate=runFullLocalizationObserver(data,cfg,options)
 % runFullLocalizationObserver Run the current intrinsic global observer.
-% Default prediction uses an internal rate state; IMU is auxiliary output only.
+% Prediction uses an internal rate state; rate feedback uses the lateral estimate.
 % All calls use the intrinsic eight-state design.
 % The common-clock runtime uses the nominal fusion LMI gains.
 % Pass this run's solved configuration to share gains within one experiment;
@@ -11,7 +11,9 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % withdraw unavailable motion-output feedback. Absent masks mean all valid.
 % LateralInputs must provide lateralVelocity, sideSlipAngle and
 % sideSlipAngleRate on the frame clock. The angle/rate pair is supplied upstream.
-% Optional LateralInputs.velocityValid withdraws all three upstream signals,
+% LateralInputs.yawRate supplies rate feedback; missing estimates withdraw it.
+% Optional LateralInputs.yawRateValid further restricts that channel.
+% Optional LateralInputs.velocityValid withdraws all upstream signals,
 % their velocity-dependent innovations and the predictor's sideslip-rate term.
 % LiDAR remains available without velocity aiding, including at standstill.
 % diagnostics.lidarPoseSupport reports local geometry, not alignment correctness.
@@ -37,13 +39,19 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
     velocityValid=motionValidity(h,'bodyVelocityValid',n) ...
         & motionValidity(lateral,'velocityValid',n) & cfg.invariantObserver.velocityAvailable;
     accelerationValid=motionValidity(h,'bodyAccelerationValid',n);
-    gyroValid=motionValidity(h,'yawRateValid',n);
-    fields=["longitudinalSpeed","longitudinalAcceleration","lateralAcceleration","yawRate"];
+    yawRateValid=motionValidity(lateral,'velocityValid',n) & motionValidity(lateral,'yawRateValid',n);
+    if ~isfield(lateral,'yawRate')
+        lateral.yawRate=zeros(n,1);yawRateValid(:)=false;
+    end
+    assert(numel(lateral.yawRate)==n,'VehicleLocalization:InvalidFullInput','Invalid upstream yaw-rate length.');
+    lateral.yawRate=lateral.yawRate(:);
+    yawRateValid=yawRateValid & isfinite(lateral.yawRate);
+    lateral.yawRate(~yawRateValid)=0;
+    fields=["longitudinalSpeed","longitudinalAcceleration","lateralAcceleration"];
     for name=fields
         valid=true(n,1);
         if name=="longitudinalSpeed",valid=velocityValid;end
         if any(name==["longitudinalAcceleration","lateralAcceleration"]),valid=accelerationValid;end
-        if name=="yawRate",valid=gyroValid;end
         assert(numel(h.(name))==n && all(isfinite(h.(name)(valid))), ...
             'VehicleLocalization:InvalidFullInput','Invalid aligned motion.');
         h.(name)=h.(name)(:);h.(name)(~valid)=0;
@@ -111,8 +119,8 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             gnssRate=Kg([1,4],:)*(gnssPosition(k,:).'-Cp*x);
         end
         packet=localizationSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
-            h.lateralAcceleration(k),h.yawRate(k), ...
-            velocityValid(k),accelerationValid(k),gyroValid(k),cfg);
+            h.lateralAcceleration(k),lateral.yawRate(k), ...
+            velocityValid(k),accelerationValid(k),yawRateValid(k),cfg);
         priorRate=x(8);
         [x,invariantAudits{k}]=localizationSupport.correct(x,packet,dt,continuous,cfg);
         % Complete the implicit psi-dot = estimated-rate equation using
@@ -195,7 +203,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         'motionOutputValidity',struct('bodyVelocity',velocityValid & cfg.invariantObserver.velocityAvailable, ...
             'bodyAcceleration',velocityValid & accelerationValid ...
                 & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable, ...
-            'yawRate',gyroValid), ...
+            'yawRate',yawRateValid), ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
         'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. The nominal fusion design assumes simultaneous sources and a compact invariant operating set; zero-speed execution has no speed division but is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
     estimate.internalState=z;estimate.yawRate=z(:,8);
@@ -204,15 +212,16 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
     estimate.diagnostics.invariantOutputNames=["speedSquared","velocityAccelerationDot", ...
         "velocityAccelerationCross","bodyLateralVelocity"];
     estimate.diagnostics.intrinsicPredictionUsesImu=false;
+    estimate.diagnostics.yawRateFeedbackSource="lateralObserver";
     estimate.diagnostics.actualOverlapCertified=false;
     certificate=continuous.continuousCertificate.verification;
     estimate.diagnostics.operatingSet=certificate.operatingSet;
     estimate.diagnostics.nominalFusionLmiVerified=certificate.nominalFusionLmiVerified;
-    estimate.diagnostics.gyroOutputAvailabilitySatisfied=all(gyroValid);
+    estimate.diagnostics.yawRateOutputAvailabilitySatisfied=all(yawRateValid);
     estimate.diagnostics.allAuxiliaryOutputsAvailable=velocityValid & accelerationValid ...
         & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable;
     estimate.diagnostics.auxiliaryAvailabilityContractSatisfied= ...
-        all(estimate.diagnostics.allAuxiliaryOutputsAvailable) && all(gyroValid);
+        all(estimate.diagnostics.allAuxiliaryOutputsAvailable) && all(yawRateValid);
 end
 
 function valid=motionValidity(h,name,n)

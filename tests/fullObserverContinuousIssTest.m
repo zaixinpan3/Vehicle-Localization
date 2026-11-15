@@ -26,7 +26,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
         end
         function changedNoiseCannotReuseTemporaryGains(testCase)
-            c=freshObserverTestConfig();c.invariantObserver.noise.gyroRadps=2*c.invariantObserver.noise.gyroRadps;
+            c=freshObserverTestConfig();c.invariantObserver.noise.lateralYawRateRadps=2*c.invariantObserver.noise.lateralYawRateRadps;
             testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
@@ -47,7 +47,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
                 'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z));
             data.lidar=struct('time',t,'pose',zeros(2,3),'valid',true(2,1), ...
                 'information',zeros(3,3,2),'delay',0);
-            lat=struct('time',t,'lateralVelocity',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
+            lat=struct('time',t,'lateralVelocity',z,'yawRate',z,'sideSlipAngle',z,'sideSlipAngleRate',z);
             r=runFullLocalizationObserver(data,c,LateralInputs=lat);
             testCase.verifyTrue(r.diagnostics.nominalFusionLmiVerified);
             testCase.verifyFalse(any(r.diagnostics.lidarPoseSupport.sectorQualified));
