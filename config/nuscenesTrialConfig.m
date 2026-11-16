@@ -28,6 +28,7 @@ function trial=nuscenesTrialConfig(steeringRatio)
     lateral.simulation.lateralAccelerationNoiseStd=.05;
     lateral.synthesis.measurementErrorScale=[.25;.02]; % Physical [ay; r] scales.
     globalCfg=mncavFullObserverConfig();globalCfg.kind="nuscenes-overlap-development-trial";
+    globalCfg.invariantObserver.nominalHeadingWeight=0;
     globalCfg.invariantObserver.nominalGnssWeight=0; % Declared GNSS-free nominal fusion.
     globalCfg.invariantObserver.balancedPoseMetric=true;
     globalCfg.invariantObserver=rmfield(globalCfg.invariantObserver,{'headingGainLimits','matchedGainLimits'});

@@ -1,6 +1,6 @@
 function estimate=runFullLocalizationObserver(data,cfg,options)
 % runFullLocalizationObserver Run the current intrinsic global observer.
-% Prediction uses an internal rate state; rate feedback uses the lateral estimate.
+% Prediction uses an internal rate state; heading innovations also correct that state.
 % All calls use the intrinsic eight-state design.
 % The common-clock runtime uses the nominal fusion LMI gains.
 % Pass this run's solved configuration to share gains within one experiment;
@@ -12,6 +12,8 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % LateralInputs supplies lateralVelocity on the frame clock. The predictor
 % uses only its own state; no sideslip-angle or rate input is required.
 % Yaw rate is corrected through the coupled motion/pose gains, not a separate input.
+% Optional data.gnssHeading supplies independent heading (rad), information
+% (rad^-2), time, valid and delay=0; it is never inferred from a reference pose.
 % Optional LateralInputs.velocityValid withdraws all upstream signals,
 % and their velocity-dependent innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
@@ -54,6 +56,8 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         lateral.(name)=lateral.(name)(:);lateral.(name)(~valid)=0;
     end
     G=source(data,'gnss',t,2);L=source(data,'lidar',t,3);
+    heading=localizationSupport.headingMeasurements(data,t,cfg);
+    validateattributes(cfg.gnss.headingGainInformationScale,{'double'},{'real','finite','positive','scalar'});
     overlapChannel=isfield(data,'lidarOverlap');
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
         'minimumInformation',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3));
@@ -80,6 +84,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
     if numel(x)==7,x(8)=0;end
     z=zeros(n,stateCount);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
     yawCorrection=zeros(n,1);gnssPosition=nan(n,2);gnssInformation=nan(2,2,n);
+    headingWeight=zeros(n,1);headingInnovation=nan(n,1);
     weights=nan(n,2);maximumRate=0;
     lidarAudits=cell(n,1);poseWeights=zeros(3,3,n);preLidarStates=zeros(n,stateCount);
     intrinsicStates=zeros(n,stateCount);invariantAudits=cell(n,1);
@@ -104,10 +109,19 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         x=localizationSupport.predict(x,dt,cfg);
         intrinsicStates(k,:)=x.';
         gnssRate=zeros(2,1);
-        if G.valid(k)
-            Cp=zeros(2,8);Cp(1,1)=1;Cp(2,4)=1;Kg=continuous.LG*Wg;
-            x=(eye(8)+dt*Kg*Cp)\(x+dt*Kg*gnssPosition(k,:).');
-            gnssRate=Kg([1,4],:)*(gnssPosition(k,:).'-Cp*x);
+        if G.valid(k) || heading.valid(k)
+            ell=cfg.invariantObserver.headingLengthM;
+            Cg=zeros(3,8);Cg(1,1)=1;Cg(2,4)=1;Cg(3,7)=ell;
+            observation=Cg*x;
+            if G.valid(k),observation(1:2)=gnssPosition(k,:).';end
+            if heading.valid(k)
+                headingWeight(k)=heading.information(k)/(heading.information(k)+cfg.gnss.headingGainInformationScale);
+                headingInnovation(k)=atan2(sin(heading.heading(k)-x(7)),cos(heading.heading(k)-x(7)));
+                observation(3)=ell*(x(7)+headingInnovation(k));
+            end
+            Kg=continuous.LG*blkdiag(Wg,headingWeight(k));
+            x=(eye(8)+dt*Kg*Cg)\(x+dt*Kg*observation);
+            gnssRate=Kg([1,4],:)*(observation-Cg*x);
         end
         packet=localizationSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
             h.lateralAcceleration(k), ...
@@ -174,6 +188,8 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         'yawCorrection',yawCorrection, ...
         'lidarMatched',{lidarAudits},'poseWeight',poseWeights,'preLidarState',preLidarStates, ...
         'lidarInformationBounds',informationBounds, ...
+        'independentHeadingValid',heading.valid,'independentHeadingWeight',headingWeight, ...
+        'independentHeadingInnovation',headingInnovation, ...
         'observedMotionEnvelopeSatisfied', ...
             all(velocityValid) && all(accelerationValid) ...
             && all(speedInDomain) ...
