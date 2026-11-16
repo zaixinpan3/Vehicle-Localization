@@ -18,7 +18,6 @@ classdef localizationSupport
             assert(~isfield(cfg,'timing') || string(cfg.timing)=="synchronous", ...
                 'VehicleLocalization:ObsoleteFullConfig','Only the common frame clock is supported.');
             assert(isfield(cfg,'iss'),'VehicleLocalization:MissingFullIssDomain','Declare the current continuous design domain.');
-            validateattributes(cfg.gnss.gainInformationScale,{'numeric'},{'real','finite','positive','scalar'});
             if ~isfield(cfg,'invariantDesign')
                 [~,cfg]=synthesizeMncavInvariantDesign(cfg);
             end
@@ -112,11 +111,14 @@ classdef localizationSupport
                 position=nan(numel(t),2);information=nan(2,2,numel(t));
                 for k=find(ok).'
                     position(k,:)=(1-w(k))*g.position(a(k),:)+w(k)*g.position(b(k),:);
-                    information(:,:,k)=(1-w(k))*g.information(:,:,a(k))+w(k)*g.information(:,:,b(k));
+                    if isfield(g,'information')
+                        information(:,:,k)=(1-w(k))*g.information(:,:,a(k))+w(k)*g.information(:,:,b(k));
+                    end
                 end
                 gnssWait(ok)=g.time(b(ok))-t(ok);gnssBracket(ok)=g.time(b(ok))-g.time(a(ok));
                 aligned.gnss=struct('time',t,'position',position,'information',information,'valid',ok,'delay',0, ...
                     'sourceLeftTime',g.time(a),'sourceRightTime',g.time(b));
+                if ~isfield(g,'information'),aligned.gnss=rmfield(aligned.gnss,'information');end
             end
             if isfield(data,'gnssHeading')
                 heading=localizationSupport.headingMeasurements(data,t,cfg);
@@ -174,31 +176,29 @@ classdef localizationSupport
         end
 
         function packet=headingMeasurements(data,t,cfg)
-        % Independent receiver heading, in radians, with inverse-variance information.
+        % Independent receiver heading in radians; no reliability estimate is required.
         % Interpolate the shortest arc; reject invalid endpoints and long gaps.
             t=t(:);n=numel(t);
-            packet=struct('time',t,'heading',nan(n,1),'information',nan(n,1), ...
+            packet=struct('time',t,'heading',nan(n,1), ...
                 'valid',false(n,1),'delay',0,'waitSeconds',zeros(n,1));
             if ~isfield(data,'gnssHeading'),return;end
             h=data.gnssHeading;
-            assert(all(isfield(h,{'time','heading','information','valid','delay'})) ...
+            assert(all(isfield(h,{'time','heading','valid','delay'})) ...
                 && isequal(h.delay,0),'VehicleLocalization:InvalidHeadingInput', ...
-                'Supply independent heading, information, validity, time and zero delay.');
-            time=h.time(:);angle=h.heading(:);info=h.information(:);valid=h.valid(:);
+                'Supply independent heading, validity, time and zero delay.');
+            time=h.time(:);angle=h.heading(:);valid=h.valid(:);
             assert(numel(time)>=2 && all(isfinite(time)) && all(diff(time)>0) ...
-                && numel(angle)==numel(time) && numel(info)==numel(time) ...
+                && numel(angle)==numel(time) ...
                 && numel(valid)==numel(time) && all(ismember(valid,[0,1])), ...
                 'VehicleLocalization:InvalidHeadingInput','Invalid independent heading packet dimensions.');
             valid=logical(valid);
-            assert(isreal(angle) && isreal(info) && all(isfinite(angle(valid))) ...
-                && all(isfinite(info(valid))) && all(info(valid)>0), ...
-                'VehicleLocalization:InvalidHeadingInput','Valid heading requires finite radians and positive information.');
+            assert(isreal(angle) && all(isfinite(angle(valid))), ...
+                'VehicleLocalization:InvalidHeadingInput','Valid heading requires finite radians.');
             [a,b,w,ok]=fullBrackets(time,t,cfg.synchronization.gnssMaximumBracket);
             ok=ok & valid(a) & valid(b);
             for k=find(ok).'
                 delta=atan2(sin(angle(b(k))-angle(a(k))),cos(angle(b(k))-angle(a(k))));
                 packet.heading(k)=atan2(sin(angle(a(k))+w(k)*delta),cos(angle(a(k))+w(k)*delta));
-                packet.information(k)=(1-w(k))*info(a(k))+w(k)*info(b(k));
                 packet.waitSeconds(k)=time(b(k))-t(k);
             end
             packet.valid=ok;
@@ -218,6 +218,7 @@ classdef localizationSupport
             if all(offset==0) && all(C==0,'all'),return;end
             R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];J=[0,-1;1,0];
             position=position-(R*offset).';
+            if isempty(information),return;end
             covariance=information\eye(2)+R*C*R.'+alignment.headingStdRad^2*(R*J*offset)*(R*J*offset).';
             information=covariance\eye(2);information=(information+information.')/2;
         end
@@ -306,7 +307,7 @@ classdef localizationSupport
                 'VehicleLocalization:ObsoleteFusionDesign', ...
                 'Regenerate the nominal fusion configuration; legacy searches and certificates are removed.');
             if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"linear-heading-v18", ...
+            inputs=jsondecode(jsonencode(struct('architecture',"fixed-linear-output-v19", ...
                 'physicalOutputs',"squared-dot-cross-body-lateral", ...
                 'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
                 'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).','poseScales',cfg.lidar.poseScales(:).', ...
@@ -356,7 +357,7 @@ classdef localizationSupport
                     constraints=[constraints,response{j}<=-z.margin*eye(2)]; %#ok<AGROW>
                 end
             end
-            PG=[-kL*m.C.'*m.S*m.DL,-kG*m.C.'*m.WG*m.DG];
+            PG=[-kL*m.C.'*m.S*m.DL,-kG*m.CG.'*m.DG];
             [cost,blocks]=invariantNoiseEnergy(PG,P);constraints=[constraints,blocks];
             for motion=m.motion
                 weights=kI;weights(1:2)=motion.scheduleFactor*kI(1:2);
@@ -375,7 +376,7 @@ classdef localizationSupport
             % Homogeneous scaling preserves feedback ratios and creates a
             % visible margin for the independently checked lambda-I condition.
             Pv=1.01*value(P);Pv=(Pv+Pv.')/2;
-            design=struct('architecture',"linear-heading-v18",'sigma',z.sigma,'P',Pv, ...
+            design=struct('architecture',"fixed-linear-output-v19",'sigma',z.sigma,'P',Pv, ...
                 'kappaL',1.01*value(kL),'kappaG',1.01*value(kG),'auxiliaryWeights',1.01*value(kI), ...
                 'lambda',z.lambda,'meanSquareBound',1.01*value(cost),'solverStatus',result.problem, ...
                 'solverInfo',string(result.info),'inputs',inputs, ...
@@ -410,7 +411,7 @@ classdef localizationSupport
                 && design.sigma==z.sigma && design.lambda==z.lambda ...
                 && norm(design.P-design.P.','fro')<=1e-10*max(1,norm(P,'fro')) ...
                 && balanced && structure<1e-8*max(1,norm(P,'fro'));
-            scope="Nominal continuous multi-source fusion on the declared positive-speed domain, with all auxiliary outputs, informative LiDAR and nominal isotropic GNSS position information and declared independent-heading weight. Nonlinear local use assumes a compact invariant operating set and sufficiently small errors/disturbances (Bessafa Remark 3). Invariance, a numerical attraction radius, outages, actual overlap maps, the lateral cascade and sampling are not certified.";
+            scope="Nominal continuous multi-source fusion on the declared positive-speed domain, with all auxiliary outputs, informative LiDAR and the declared available position and independent-heading outputs with a fixed offline gain. Nonlinear local use assumes a compact invariant operating set and sufficiently small errors/disturbances (Bessafa Remark 3). Invariance, a numerical attraction radius, outages, actual overlap maps, the lateral cascade and sampling are not certified.";
             v=struct('certified',valid,'nominalFusionLmiVerified',worst<0, ...
                 'worstVertexEigenvalue',worst,'vertices',numel(blocks), ...
                 'minimumEigenvalueP',min(eig(P)),'maximumEigenvalueP',max(eig(P)), ...
@@ -420,8 +421,8 @@ classdef localizationSupport
                     'speedInterval',[z.fusion.minimumCourseSpeed,cfg.iss.maximumSpeed], ...
                     'nonlinearConclusionConditional',true), ...
                 'nominalFusion',struct('certified',worst<0,'vertices',numel(blocks), ...
-                    'coversGnssAbsent',z.nominalGnssWeight==0 && z.nominalHeadingWeight==0, ...
-                    'coversHeadingAbsent',z.nominalHeadingWeight==0,'coversZeroLidarInformation',false), ...
+                    'coversGnssAbsent',~z.gnssPositionAvailable && ~z.gnssHeadingAvailable, ...
+                    'coversHeadingAbsent',~z.gnssHeadingAvailable,'coversZeroLidarInformation',false), ...
                 'additionalOutputCount',4,'bodyLateralGramOmittedFromBound',true, ...
                 'feedbackAuthority',authority,'motionResponse',response, ...
                 'independentYawRateCorrection',false,'allAuxiliaryOutputsRequired',true, ...
@@ -558,11 +559,11 @@ classdef localizationSupport
             S=diag([cfg.iss.minimumPositionStrength*[1,1],cfg.iss.minimumHeadingStrength]) ...
                 -(cfg.iss.maximumPositionHeadingCoupling+z.fusion.lidarOperatorMismatch)*eye(3);
             rho=norm(cfg.gnss.outputPoint.bodyOffset)/z.headingLengthM;
-            % Young's inequality encloses every lever orientation for nominal
-            % isotropic GNSS weight w. No claim about arbitrary anisotropic W.
-            sensor=-2*d.kappaL*C.'*S*C-d.kappaG*z.nominalGnssWeight*(Cp.'*Cp) ...
-                +d.kappaG*z.nominalGnssWeight*rho^2*(E(:,7)*E(:,7).') ...
-                -2*d.kappaG*z.nominalHeadingWeight*(E(:,7)*E(:,7).');
+            % Young's inequality encloses every lever orientation for the fixed
+            % position gain. Availability declares the nominal sensor mode.
+            sensor=-2*d.kappaL*C.'*S*C-d.kappaG*double(z.gnssPositionAvailable)*(Cp.'*Cp) ...
+                +d.kappaG*double(z.gnssPositionAvailable)*rho^2*(E(:,7)*E(:,7).') ...
+                -2*d.kappaG*double(z.gnssHeadingAvailable)*(E(:,7)*E(:,7).');
             vertices=localizationSupport.fusionVertices(cfg);blocks=cell(1,size(vertices,1));
             for j=1:numel(blocks)
                 [A,speed,pair]=localizationSupport.fusionMatrices(cfg,vertices(j,:));
@@ -2027,8 +2028,8 @@ end
 function m=invariantModel(cfg)
     z=cfg.invariantObserver;s=cfg.iss;ell=z.headingLengthM;sigma=z.sigma;n=z.noise;
     r=z.fusion;
-    validateattributes(z.nominalGnssWeight,{'double'},{'real','finite','nonnegative','scalar','<=',1});
-    validateattributes(z.nominalHeadingWeight,{'double'},{'real','finite','nonnegative','scalar','<=',1});
+    validateattributes(z.gnssPositionAvailable,{'logical'},{'scalar'});
+    validateattributes(z.gnssHeadingAvailable,{'logical'},{'scalar'});
     validateattributes(n.gnssHeadingRad,{'double'},{'real','finite','positive','scalar'});
     validateattributes(r.minimumCourseSpeed,{'double'},{'real','finite','positive','scalar','<=',s.maximumSpeed});
     validateattributes([s.maximumAcceleration,cfg.maximumTrackAngleRate,r.lidarOperatorMismatch], ...
@@ -2056,7 +2057,8 @@ function m=invariantModel(cfg)
     m.B=zeros(8,3);m.B(3,1)=1;m.B(6,2)=1;m.B(8,3)=1;m.e7=zeros(8,1);m.e7(7)=1;m.e8=zeros(8,1);m.e8(8)=1;
     m.e1=zeros(8,1);m.e1(1)=1;m.e5=zeros(8,1);m.e5(5)=1;
     m.DL=diag([n.lidarPositionM,n.lidarPositionM,ell*n.lidarHeadingRad]);m.DG=diag([n.gnssPositionM,n.gnssPositionM,ell*n.gnssHeadingRad]);
-    m.WG=diag([z.nominalGnssWeight,z.nominalGnssWeight,z.nominalHeadingWeight]);
+    available=[z.gnssPositionAvailable,z.gnssPositionAvailable,z.gnssHeadingAvailable];
+    m.CG=m.C(available,:);m.DG=m.DG(available,available);
     D=localizationSupport.outputNormalization(cfg,sigma);
     E=diag([ones(1,6),ell,ell]);T=diag(sigma.^[1,2,3,1,2,3,1,2]);
     speedPoints=unique([r.minimumCourseSpeed,(r.minimumCourseSpeed+s.maximumSpeed)/2,s.maximumSpeed]);

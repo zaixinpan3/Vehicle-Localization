@@ -12,8 +12,9 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % LateralInputs supplies lateralVelocity on the frame clock. The predictor
 % uses only its own state; no sideslip-angle or rate input is required.
 % Yaw rate is corrected through the coupled motion/pose gains, not a separate input.
-% Optional data.gnssHeading supplies independent heading (rad), information
-% (rad^-2), time, valid and delay=0; it is never inferred from a reference pose.
+% Optional data.gnssHeading supplies independent heading (rad), time, valid
+% and delay=0; it is never inferred from a reference pose. Information metadata
+% is not used to weight position or heading corrections.
 % Optional LateralInputs.velocityValid withdraws all upstream signals,
 % and their velocity-dependent innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
@@ -57,7 +58,8 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
     end
     G=source(data,'gnss',t,2);L=source(data,'lidar',t,3);
     heading=localizationSupport.headingMeasurements(data,t,cfg);
-    validateattributes(cfg.gnss.headingGainInformationScale,{'double'},{'real','finite','positive','scalar'});
+    G.valid=G.valid & cfg.invariantObserver.gnssPositionAvailable;
+    heading.valid=heading.valid & cfg.invariantObserver.gnssHeadingAvailable;
     overlapChannel=isfield(data,'lidarOverlap');
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
         'minimumInformation',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3));
@@ -83,9 +85,9 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         'Supply an explicit common initial state.');x=x(:);
     if numel(x)==7,x(8)=0;end
     z=zeros(n,stateCount);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
-    yawCorrection=zeros(n,1);gnssPosition=nan(n,2);gnssInformation=nan(2,2,n);
-    headingWeight=zeros(n,1);headingInnovation=nan(n,1);
-    weights=nan(n,2);maximumRate=0;
+    yawCorrection=zeros(n,1);gnssPosition=nan(n,2);
+    headingInnovation=nan(n,1);
+    lidarStrength=nan(n,1);maximumRate=0;
     lidarAudits=cell(n,1);poseWeights=zeros(3,3,n);preLidarStates=zeros(n,stateCount);
     intrinsicStates=zeros(n,stateCount);invariantAudits=cell(n,1);
     informationBounds=nan(n,3);
@@ -101,10 +103,8 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         q=localizationSupport.courseRate(x,cfg);
         maximumRate=max(maximumRate,abs(q));
         yaw=predYaw;
-        Wg=zeros(2);
         if G.valid(k)
-            [gnssPosition(k,:),gnssInformation(:,:,k)]=localizationSupport.correctGnssOutputPoint(G.values(k,:),G.information(:,:,k),yaw,alignment);
-            I=gnssInformation(:,:,k);Wg=I/(I+cfg.gnss.gainInformationScale*eye(2));Wg=(Wg+Wg.')/2;
+            gnssPosition(k,:)=localizationSupport.correctGnssOutputPoint(G.values(k,:),[],yaw,alignment);
         end
         x=localizationSupport.predict(x,dt,cfg);
         intrinsicStates(k,:)=x.';
@@ -115,11 +115,11 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             observation=Cg*x;
             if G.valid(k),observation(1:2)=gnssPosition(k,:).';end
             if heading.valid(k)
-                headingWeight(k)=heading.information(k)/(heading.information(k)+cfg.gnss.headingGainInformationScale);
                 headingInnovation(k)=atan2(sin(heading.heading(k)-x(7)),cos(heading.heading(k)-x(7)));
                 observation(3)=ell*(x(7)+headingInnovation(k));
             end
-            Kg=continuous.LG*blkdiag(Wg,headingWeight(k));
+            active=[G.valid(k),G.valid(k),heading.valid(k)];
+            Kg=continuous.LG(:,active);Cg=Cg(active,:);observation=observation(active);
             x=(eye(8)+dt*Kg*Cg)\(x+dt*Kg*observation);
             gnssRate=Kg([1,4],:)*(observation-Cg*x);
         end
@@ -169,11 +169,11 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             rateCorrection=audit.continuousCorrection;
             if dt>0,rateCorrection=delta/dt;end
             correction(k,3:4)=rateCorrection([1,4]).';yawCorrection(k)=rateCorrection(7);
-            weights(k,2)=min(audit.filter.strengths);
+            lidarStrength(k)=min(audit.filter.strengths);
             if audit.filter.S(3,3)>0,headingMode(k)=2;end
         end
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Synchronous update became nonfinite.');
-        if G.valid(k),correction(k,1:2)=gnssRate.';weights(k,1)=min(eig(Wg));end
+        if G.valid(k),correction(k,1:2)=gnssRate.';end
         z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));
     end
     lidarPoseSupport.sourceValid=L.valid;
@@ -184,11 +184,11 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
     speedInterval=[cfg.invariantObserver.fusion.minimumCourseSpeed,cfg.iss.maximumSpeed];
     speedInDomain=velocityValid & measuredSpeed>=speedInterval(1) & measuredSpeed<=speedInterval(2);
     estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'positionCorrection',correction, ...
-        'gnssPositionAtObserverPoint',gnssPosition,'gnssInformationAtObserverPoint',gnssInformation, ...
+        'gnssPositionAtObserverPoint',gnssPosition, ...
         'yawCorrection',yawCorrection, ...
         'lidarMatched',{lidarAudits},'poseWeight',poseWeights,'preLidarState',preLidarStates, ...
         'lidarInformationBounds',informationBounds, ...
-        'independentHeadingValid',heading.valid,'independentHeadingWeight',headingWeight, ...
+        'independentHeadingValid',heading.valid, ...
         'independentHeadingInnovation',headingInnovation, ...
         'observedMotionEnvelopeSatisfied', ...
             all(velocityValid) && all(accelerationValid) ...
@@ -196,7 +196,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             && all(hypot(h.longitudinalAcceleration(:),h.lateralAcceleration(:))<=cfg.iss.maximumAcceleration) ...
             && maximumRate<=cfg.maximumTrackAngleRate, ...
         'issSpeedInterval',speedInterval,'observedSpeedWithinIssDomain',speedInDomain, ...
-        'zeroSpeedCertified',false,'minimumWeights',weights, ...
+        'zeroSpeedCertified',false,'minimumLidarStrength',lidarStrength,'gnssPositionValid',G.valid, ...
         'maximumTrackAngleRate',maximumRate, ...
         'rateEnvelopeSatisfied',maximumRate<=cfg.maximumTrackAngleRate, ...
         'packetCounts',struct('gnssValid',nnz(G.valid),'gnssInvalid',nnz(~G.valid), ...
@@ -251,6 +251,14 @@ function s=source(data,name,t,width)
     end
     assert(isfield(a,'delay') && isequal(a.delay,0),'VehicleLocalization:FullZeroDelayRequired','Declare zero perception delay.');
     assert(isequal(a.time(:),t),'VehicleLocalization:SynchronousInputsRequired','Source clocks must equal the localization clock.');
+    if width==2
+        assert(isequal(size(a.position),[n,2]) && numel(a.valid)==n && all(ismember(a.valid,[0,1])), ...
+            'VehicleLocalization:InvalidFullSource','Invalid position packet dimensions.');
+        s.valid=logical(a.valid(:));s.values=a.position;
+        assert(isreal(s.values) && all(isfinite(s.values(s.valid,:)),'all'), ...
+            'VehicleLocalization:InvalidFullSource','Valid position packets must be finite.');
+        return;
+    end
     assert(isequal(size(a.(field)),[n,width]) && numel(a.valid)==n && ...
         all(ismember(a.valid,[0,1])) && size(a.information,1)==width && size(a.information,2)==width && size(a.information,3)==n, ...
         'VehicleLocalization:InvalidFullSource','Invalid synchronized source dimensions.');

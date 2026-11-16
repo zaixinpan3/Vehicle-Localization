@@ -58,21 +58,43 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             testCase.verifyEqual(a.diagnostics.independentHeadingInnovation(1),.02,AbsTol=1e-12);
             testCase.verifyLessThan(max(abs(diff(a.headingUnwrapped))),.02);
         end
-        function headingWeightChangesDesignAndCertificate(testCase)
+        function reliabilityMetadataCannotChangeTheState(testCase)
+            [data,c,l]=fixture();t=data.highRate.time;n=numel(t);
+            c.initialState([1,7])=[.1;.1];
+            data.gnss=struct('time',t,'position',[12*t,zeros(n,1)],'valid',true(n,1),'delay',0);
+            a=runFullLocalizationObserver(data,c,LateralInputs=l);
+            data.gnss.information=repmat(diag([1e-12,1e12]),1,1,n);
+            data.gnssHeading.information=nan(n,1);
+            b=runFullLocalizationObserver(data,c,LateralInputs=l);
+            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
+            data.gnss.information=nan(2,2,n);data.gnssHeading.information=1e12*ones(n,1);
+            b=runFullLocalizationObserver(data,c,LateralInputs=l);
+            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
+        end
+        function synchronizesPositionWithoutInformation(testCase)
+            [data,c,l]=fixture();t=data.highRate.time;n=numel(t);
+            data.gnss=struct('time',t,'position',[12*t,zeros(n,1)],'valid',true(n,1),'delay',0);
+            data.lidar=struct('time',t,'pose',zeros(n,3),'information',repmat(eye(3),1,1,n), ...
+                'valid',false(n,1),'delay',0);
+            [aligned,~,~]=localizationSupport.synchronizeLocalizationInputs(data,l,c);
+            testCase.verifyEqual(aligned.gnss.position,data.gnss.position,AbsTol=0);
+            testCase.verifyFalse(isfield(aligned.gnss,'information'));
+        end
+        function headingAvailabilityChangesDesignAndCertificate(testCase)
             c=freshObserverTestConfig();d=localizationSupport.runtime(c);
             testCase.verifySize(d.LG,[8,3]);
             testCase.verifyGreaterThan(abs(d.LG(8,3)),0);
-            lower=c;lower.invariantObserver.nominalHeadingWeight=0;
+            lower=c;lower.invariantObserver.gnssHeadingAvailable=false;
             a=localizationSupport.fusionBlocks(c.invariantDesign,c);
             b=localizationSupport.fusionBlocks(c.invariantDesign,lower);
-            delta=zeros(8);delta(7,7)=-2*c.invariantDesign.kappaG*c.invariantObserver.nominalHeadingWeight;
+            delta=zeros(8);delta(7,7)=-2*c.invariantDesign.kappaG;
             testCase.verifyEqual(a{1}-b{1},delta,AbsTol=1e-11);
             testCase.verifyError(@()localizationSupport.runtime(lower),'VehicleLocalization:StaleInvariantDesign');
         end
     end
 end
 function h=packet(t,heading)
-    h=struct('time',t,'heading',heading,'information',1e4*ones(size(t)),'valid',true(size(t)),'delay',0);
+    h=struct('time',t,'heading',heading,'valid',true(size(t)),'delay',0);
 end
 function [data,c,l]=fixture()
     c=freshObserverTestConfig();t=(0:.05:1).';z=zeros(size(t));
