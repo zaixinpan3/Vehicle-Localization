@@ -7,8 +7,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
         end
     end
     methods (Test)
-        function gradientIsTheDerivativeOfNegativeLogScore(testCase)
-            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0;
+        function frameGradientIsTheDerivativeOfNegativeLogScore(testCase)
+            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0;cfg.aggregation="frame";
             pose=truth+[0.15,-0.10,deg2rad(1.5)];
             m=localizationSupport.evaluateOverlapGradient(map,source,pose(:),cfg);
             steps=[1e-6,1e-6,1e-7];expected=zeros(3,1);
@@ -23,6 +23,45 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
                 map,source,pose,cfg.geometry),RelTol=1e-12);
             testCase.verifyEqual(m.gradient,expected,RelTol=1e-5,AbsTol=1e-8);
             testCase.verifyEqual(m.linearizationPose,pose(:));
+        end
+        function featureChannelsMatchIndependentClassEvaluations(testCase)
+            [map,source,truth]=scene();pose=truth(:)+[0.35;-0.2;0.04];
+            cfg=overlapGradientConfig();cfg.scaleLadder=0.5;
+            result=localizationSupport.evaluateOverlapGradient(map,source,pose,cfg);
+            names=unique(source.components.semanticName);
+            testCase.verifyEqual([result.channels.name],names.');
+            cfg.aggregation="frame";
+            gradients=zeros(3,numel(names));metrics=zeros(3,3,numel(names));
+            scores=zeros(size(names));
+            for c=1:numel(names)
+                indices=find(source.components.semanticName==names(c));
+                fixed=map;moving=source;
+                fixed.components=selectComponents(map.components,indices);
+                moving.components=selectComponents(source.components,indices);
+                one=localizationSupport.evaluateOverlapGradient(fixed,moving,pose,cfg);
+                scores(c)=one.similarity;gradients(:,c)=one.gradient;metrics(:,:,c)=one.information;
+                testCase.verifyEqual(result.channels(c).similarity,scores(c),AbsTol=1e-12);
+                testCase.verifyEqual(result.channels(c).gradient,one.gradient,AbsTol=1e-10);
+                testCase.verifyEqual(result.channels(c).information,one.information,AbsTol=1e-10);
+            end
+            testCase.verifyEqual(result.similarity,exp(mean(log(scores))),AbsTol=1e-12);
+            testCase.verifyEqual(result.gradient,mean(gradients,2),AbsTol=1e-10);
+            testCase.verifyEqual(result.information,mean(metrics,3),AbsTol=1e-10);
+            pooled=localizationSupport.evaluateOverlapGradient(map,source,pose,cfg);
+            testCase.verifyGreaterThan(norm(pooled.gradient-result.gradient),1e-3);
+        end
+        function unevaluableChannelIsOmittedOnlyAtThatScale(testCase)
+            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=[0 2];
+            % The sign lies far from its sole partner, but is inside the map crop.
+            map.components.mean(6,1)=map.components.mean(6,1)+45;
+            result=localizationSupport.evaluateOverlapGradient(map,source,truth(:),cfg);
+            sign=result.channels([result.channels.name]=="trafficSign");
+            testCase.verifyTrue(isnan(sign.similarity(1)));
+            testCase.verifyGreaterThan(sign.similarity(2),0);
+            for k=1:2
+                costs=arrayfun(@(ch) -log(ch.similarity(k)),result.channels);
+                testCase.verifyEqual(result.scaleSimilarity(k),exp(-mean(costs,'omitnan')),AbsTol=1e-12);
+            end
         end
         function gaussNewtonMetricIsExactForOnePairAtAnyDistance(testCase)
             % One sign in map and source: every -log E_sigma is quadratic in
@@ -135,7 +174,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(both,[0;0;0],G,design,cfg), ...
                 'VehicleLocalization:AmbiguousLidarMeasurement');
         end
-        function frameOverlapReducesErrorOutsideTheIssSpeedDomain(testCase)
+        function channelOverlapReducesErrorOutsideTheIssSpeedDomain(testCase)
             % This 2 m/s finite-landmark scene is outside the default ISS
             % interval. Check finite execution and finite-horizon reduction;
             % neither asymptotic convergence nor old settling rates follow.
@@ -143,6 +182,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             error=r.pose-f.truth;error(:,3)=atan2(sin(error(:,3)),cos(error(:,3)));
             testCase.verifyEqual(r.diagnostics.lidarChannel,"overlapGradient");
             testCase.verifyTrue(all(r.diagnostics.lidarOverlap.available(2:end)));
+            audit=r.diagnostics.lidarOverlap;
+            testCase.verifyEqual([audit.channels{end}.name],["curb","pole","trafficSign"]);
+            testCase.verifyEqual(audit.scaleLadder,overlapGradientConfig().scaleLadder);
             testCase.verifyGreaterThan(norm(error(1,1:2)),0.2);
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
             testCase.verifyLessThan(norm(error(end,1:2)),.1*norm(error(1,1:2)));

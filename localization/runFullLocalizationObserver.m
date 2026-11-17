@@ -64,9 +64,11 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
         'minimumInformation',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3));
     if overlapChannel
+        overlapDiagnostics.channels=cell(n,1);
         assert(~isfield(data,'lidar'),'VehicleLocalization:AmbiguousLidarInput', ...
             'Supply exactly one LiDAR channel: pose/residual measurements or overlap sources.');
         overlap=overlapSource(data.lidarOverlap,t);L.valid=overlap.valid;
+        overlapDiagnostics.scaleLadder=overlap.config.scaleLadder;
         L.frameReliability=overlap.frameReliability;
         L.directionReliability=overlap.directionReliability;
     end
@@ -138,6 +140,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
             overlapDiagnostics.similarity(k)=measurement.similarity;overlapDiagnostics.seconds(k)=measurement.seconds;
             overlapDiagnostics.minimumInformation(k)=measurement.minimumInformation;
             overlapDiagnostics.gradient(k,:)=measurement.gradient.';
+            overlapDiagnostics.channels{k}=measurement.channels;
             L.valid(k)=measurement.available;
         end
         if L.valid(k)
