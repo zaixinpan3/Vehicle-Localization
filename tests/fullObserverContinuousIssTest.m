@@ -48,7 +48,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             data.lidar=struct('time',t,'pose',zeros(2,3),'valid',true(2,1), ...
                 'information',zeros(3,3,2),'delay',0);
             lat=struct('time',t,'lateralVelocity',z,'yawRate',z,'sideSlipAngleRate',z);
-            r=runFullLocalizationObserver(data,c,LateralInputs=lat);
+            r=syntheticObserver.run(data,c,LateralInputs=lat);
             testCase.verifyTrue(r.diagnostics.nominalFusionLmiVerified);
             testCase.verifyFalse(any(r.diagnostics.lidarPoseSupport.sectorQualified));
             testCase.verifyEqual(r.diagnostics.poseWeight,zeros(3,3,2));

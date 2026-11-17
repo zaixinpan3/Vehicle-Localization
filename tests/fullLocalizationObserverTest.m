@@ -52,7 +52,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end
         function publicEntryIsDeterministic(testCase)
-            f=turnFixture(4);r=run(f);
+            f=turnFixture(4);f.data=rmfield(f.data,'lidar');r=run(f);
             direct=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
             testCase.verifyEqual(r,direct);
         end
@@ -123,7 +123,7 @@ function f=fixture(duration,mode)
 end
 
 function r=run(f)
-    r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
+    r=syntheticObserver.run(f.data,f.cfg,LateralInputs=f.lateral);
 end
 
 function s=trimSource(s,count)

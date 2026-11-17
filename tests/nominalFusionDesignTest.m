@@ -45,7 +45,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             [data,lateral,c]=constantMotionFixture(0,dt);
             lateral.velocityValid=false(size(lateral.time));
             c.initialState=[.2;.05;0;-.1;-.03;0;.03];
-            e=runFullLocalizationObserver(data,c,LateralInputs=lateral);
+            e=syntheticObserver.run(data,c,LateralInputs=lateral);
             testCase.verifyTrue(all(isfinite(e.internalState),'all'));
             testCase.verifyLessThan(norm(e.position(end,:)),.02);
             testCase.verifyLessThan(abs(e.heading(end)),.001);
@@ -55,7 +55,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             [data,lateral,c]=constantMotionFixture(0,.1);
             lateral.velocityValid=false(size(lateral.time));
             c.initialState=[0;0;0;0;0;0;.03;.05];
-            estimate=runFullLocalizationObserver(data,c,LateralInputs=lateral);
+            estimate=syntheticObserver.run(data,c,LateralInputs=lateral);
             testCase.verifyLessThan(abs(estimate.yawRate(end)),.001);
             testCase.verifyLessThan(abs(estimate.heading(end)),.001);
         end

@@ -26,12 +26,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyEqual(a.filter.S*[0;-3;1],zeros(3,1),AbsTol=1e-12);
             testCase.verifyGreaterThan(abs(a.filter.S(2,3)),0);
         end
-        function residualAndPoseChannelsAgreeForAffineTranslation(testCase)
-            f=fixture();pose=[.7;.2;0];m=curb(pose);
-            [a,info]=localizationSupport.computeLidarMatchedCorrection(m,pose,f.G,f.design,f.cfg);
-            p=struct('pose',zeros(3,1),'information',info.filter.normalizedInformation);
-            b=localizationSupport.computeLidarMatchedCorrection(p,pose,f.G,f.design,f.cfg);
-            testCase.verifyEqual(a,b,AbsTol=1e-12);
+        function directPoseIsRejected(testCase)
+            f=fixture();packet=struct('pose',zeros(3,1),'information',eye(3));
+            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(packet,[.7;.2;0], ...
+                f.G,f.design,f.cfg),'VehicleLocalization:InvalidLidarMeasurement');
         end
         function residualIsEvaluatedAtPrediction(testCase)
             f=fixture();pose=[0;.2;0];m=curb(pose);
@@ -76,7 +74,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyTrue(a.jumpNonexpansive);
         end
         function zeroInformationCannotCorrectInvisiblePose(testCase)
-            f=fixture();m=struct('pose',[10;20;1],'information',zeros(3));
+            f=fixture();m=struct('gradient',[10;20;1],'linearizationPose',zeros(3,1),'information',zeros(3));
             [c,a]=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),f.G,f.design,f.cfg, ...
                 StepSize=1,Discretization="implicit");
             testCase.verifyEqual(c,zeros(7,1),AbsTol=0);
@@ -85,7 +83,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyEqual(a.jumpMaximumEnergyRatio,1,AbsTol=1e-12);
         end
         function frameRejectionWithdrawsAllCorrection(testCase)
-            f=fixture();m=struct('pose',[1;1;1],'information',1e8*eye(3),'frameReliability',0);
+            f=fixture();m=struct('gradient',ones(3,1),'linearizationPose',zeros(3,1),'information',1e8*eye(3),'frameReliability',0);
             c=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),f.G,f.design,f.cfg);
             testCase.verifyEqual(c,zeros(7,1),AbsTol=0);
         end
@@ -113,12 +111,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyError(@()localizationSupport.filterLidarPoseInformation(eye(3),f.cfg,1.1), ...
                 'VehicleLocalization:InvalidLidarReliability');
         end
-        function angleInnovationUsesLocalChart(testCase)
-            f=fixture();m=struct('pose',[0;0;-pi+.01],'information',diag([0,0,100]));
-            c=localizationSupport.computeLidarMatchedCorrection(m,[0;0;pi-.01],f.G,f.design,f.cfg);
-            testCase.verifyGreaterThan(c(7),0);
-            testCase.verifyLessThan(c(7),.1);
-        end
         function currentDesignDoesNotInventBaselineYawCertificate(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.designFullObserverGains(cfg);
             testCase.verifySize(d.lidarMatched.T,[8,8]);
@@ -144,7 +136,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyLessThanOrEqual(max(changes),1e-10);
         end
         function indefiniteMetricCannotBeUsedAsACertificate(testCase)
-            f=fixture();f.design.P(7,7)=-1;m=struct('pose',zeros(3,1),'information',eye(3));
+            f=fixture();f.design.P(7,7)=-1;m=struct('gradient',zeros(3,1),'linearizationPose',zeros(3,1),'information',eye(3));
             testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),f.G,f.design,f.cfg), ...
                 'VehicleLocalization:InvalidLidarMetric');
         end
@@ -161,8 +153,9 @@ function f=rotatedFixture(angle)
     f=fixture();B=eye(7);B(1,2)=.3;B(4,7)=.4;f.design.P=B.'*B;
     f.design.T=diag(2.^[1,2,3,1,2,3,1]);
     U=[cos(angle),-sin(angle),0;sin(angle),cos(angle),0;0,0,1];
-    f.measurement=struct('pose',zeros(3,1),'information',U*diag([0,20,2])*U.');
     f.state=[.3;.2;-.1;-.4;.1;.2;.05];
+    information=U*diag([0,20,2])*U.';p=f.G*f.state;
+    f.measurement=struct('gradient',information*p,'linearizationPose',p,'information',information);
 end
 
 function m=curb(pose)
@@ -184,7 +177,8 @@ function changes=switchingEnergy()
     f=rotatedFixture(0);state=f.state;changes=zeros(250,1);
     for k=1:numel(changes)
         [U,~]=qr(randn(3));values=10.^(-4+8*rand(3,1));values(1:mod(k,4))=0;
-        m=struct('pose',zeros(3,1),'information',U*diag(values)*U.', ...
+        p=f.G*state;information=U*diag(values)*U.';
+        m=struct('gradient',information*p,'linearizationPose',p,'information',information, ...
             'frameReliability',double(mod(k,7)~=0),'directionReliability',rand(3,1));
         before=f.design.T\state;
         delta=localizationSupport.computeLidarMatchedCorrection(m,f.G*state,f.G,f.design,f.cfg, ...

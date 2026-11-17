@@ -75,7 +75,7 @@ function [estimate,initialError,finalError]=runScenario(cfg,speed,mode)
     end
     cfg.initialState=[.02;speed;0;-.015;0;0;.01;0];
     data=struct('highRate',high,'gnss',gnss,'lidar',lidar);
-    estimate=runFullLocalizationObserver(data,cfg,LateralInputs=lateral);
+    estimate=syntheticObserver.run(data,cfg,LateralInputs=lateral);
     % Use the same physical pose norm for every speed and availability case.
     initialError=norm([.02,-.015,.01]);
     finalError=norm([estimate.position(end,:)-truth(end,1:2),estimate.heading(end)]);

@@ -81,5 +81,5 @@ function f=offsetInput(f)
 end
 
 function r=run(f)
-    r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
+    r=syntheticObserver.run(f.data,f.cfg,LateralInputs=f.lateral);
 end

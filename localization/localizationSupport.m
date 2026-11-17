@@ -34,103 +34,32 @@ classdef localizationSupport
                 lateralInput (1,1) struct
                 cfg (1,1) struct=mncavFullObserverConfig()
             end
-            h=data.highRate;overlapChannel=isfield(data,'lidarOverlap');
-            if overlapChannel
-                assert(~isfield(data,'lidar'),'VehicleLocalization:AmbiguousLidarInput', ...
-                    'Supply one LiDAR channel when synchronizing inputs.');
-                t=data.lidarOverlap.time(:);
-            else
-                t=data.lidar.time(:);
-            end
-            assert(all(diff(t)>0) && all(isfinite(t)),'VehicleLocalization:InvalidSyncClock','Invalid LiDAR clock.');
-            selected=t>=h.time(1) & t<=h.time(end);t=t(selected);
-            assert(numel(t)>=2,'VehicleLocalization:SyncCoverage','Need two covered localization frames.');
-            [left,right,fraction,covered]=fullBrackets(h.time,t,cfg.synchronization.motionMaximumBracket);
-            assert(all(covered),'VehicleLocalization:SyncCoverage','Motion does not cover the frame clock.');
-            aligned=struct('highRate',struct('time',t));
-            for name=string(fieldnames(h)).'
-                if name=="time",continue;end
-                if any(name==["bodyVelocityValid","bodyAccelerationValid","yawRateValid"])
-                    aligned.highRate.(name)=logical(h.(name)(left)) & logical(h.(name)(right));
-                else
-                    aligned.highRate.(name)=fullBlend(h.(name),left,right,fraction);
+            localizationSupport.rejectExternalLidar(data);
+            assert(isfield(data,'lidarOverlap'),'VehicleLocalization:MissingOverlapSource', ...
+                'Provide the scan clock and source clouds in lidarOverlap.');
+            [aligned,lateral,metadata,selected]=observerInternal.alignFrameClock(data,lateralInput,cfg,data.lidarOverlap.time(:));
+            aligned.lidarOverlap=data.lidarOverlap;aligned.lidarOverlap.time=aligned.highRate.time;
+            aligned.lidarOverlap.sources=data.lidarOverlap.sources(selected);
+            if isfield(data.lidarOverlap,'valid'),aligned.lidarOverlap.valid=data.lidarOverlap.valid(selected);end
+            for name=["frameReliability","directionReliability"]
+                if isfield(data.lidarOverlap,name)
+                    aligned.lidarOverlap.(name)=data.lidarOverlap.(name)(selected,:);
                 end
             end
-            assert(isequal(lateralInput.time,h.time),'VehicleLocalization:SyncCoverage','Lateral and motion clocks differ.');
-            lateral=struct('time',t);
-            assert(all(isfield(lateralInput,{'lateralVelocity'})), ...
-                'VehicleLocalization:AlignedLateralRequired','Supply upstream lateral velocity before synchronization.');
-            for name="lateralVelocity"
-                lateral.(name)=fullBlend(lateralInput.(name),left,right,fraction);
-            end
-            if isfield(lateralInput,'yawRate')
-                lateral.yawRate=fullBlend(lateralInput.yawRate,left,right,fraction);
-            end
-            if isfield(lateralInput,'yawRateValid')
-                valid=lateralInput.yawRateValid(:);
-                assert(numel(valid)==numel(h.time) && all(ismember(valid,[0,1])), ...
-                    'VehicleLocalization:InvalidMotionValidity','Invalid lateral yaw-rate validity mask.');
-                lateral.yawRateValid=logical(valid(left)) & logical(valid(right));
-            end
-            if isfield(lateralInput,'velocityValid')
-                valid=lateralInput.velocityValid(:);
-                assert(numel(valid)==numel(h.time) && all(ismember(valid,[0,1])), ...
-                    'VehicleLocalization:InvalidMotionValidity','Invalid lateral velocity validity mask.');
-                lateral.velocityValid=logical(valid(left)) & logical(valid(right));
-            end
-            if overlapChannel
-                aligned.lidarOverlap=data.lidarOverlap;aligned.lidarOverlap.time=t;
-                aligned.lidarOverlap.sources=data.lidarOverlap.sources(selected);
-                if isfield(data.lidarOverlap,'valid'),aligned.lidarOverlap.valid=data.lidarOverlap.valid(selected);end
-                for name=["frameReliability","directionReliability"]
-                    if isfield(data.lidarOverlap,name)
-                        aligned.lidarOverlap.(name)=data.lidarOverlap.(name)(selected,:);
-                    end
-                end
-            else
+        end
+
+        function rejectExternalLidar(data)
+            if isfield(data,'lidar')
+                assert(~isfield(data,'lidarOverlap'),'VehicleLocalization:AmbiguousLidarInput', ...
+                    'Supply only the map and scan clouds in lidarOverlap.');
                 assert(~any(isfield(data.lidar,{'residualModels','poseErrorVariance'})), ...
-                    'VehicleLocalization:ArchivedRegistrationMeasurement', ...
-                    'Frozen registration models and pose-error calibration are no longer supported.');
-                aligned.lidar=data.lidar;aligned.lidar.time=t;
-                aligned.lidar.pose=data.lidar.pose(selected,:);
-                aligned.lidar.valid=data.lidar.valid(selected);
-                aligned.lidar.information=data.lidar.information(:,:,selected);
-                for name=["frameReliability","directionReliability"]
-                    if isfield(data.lidar,name),aligned.lidar.(name)=data.lidar.(name)(selected,:);end
-                end
-                if isfield(data.lidar,'evaluateResidual')
-                    originalIndex=find(selected);provider=data.lidar.evaluateResidual;
-                    aligned.lidar.evaluateResidual=@(k,pose)provider(originalIndex(k),pose);
-                end
+                    'VehicleLocalization:ArchivedRegistrationMeasurement','Frozen registration inputs are retired.');
+                error('VehicleLocalization:ExternalLidarPose','Provide a map and scan clouds for LiDAR feedback.');
             end
-            motionWait=h.time(right)-t;gnssWait=zeros(size(t));gnssBracket=zeros(size(t));
-            if isfield(data,'gnss')
-                g=data.gnss;
-                [a,b,w,ok]=fullBrackets(g.time,t,cfg.synchronization.gnssMaximumBracket);
-                ok=ok & g.valid(a) & g.valid(b);
-                position=nan(numel(t),2);information=nan(2,2,numel(t));
-                for k=find(ok).'
-                    position(k,:)=(1-w(k))*g.position(a(k),:)+w(k)*g.position(b(k),:);
-                    if isfield(g,'information')
-                        information(:,:,k)=(1-w(k))*g.information(:,:,a(k))+w(k)*g.information(:,:,b(k));
-                    end
-                end
-                gnssWait(ok)=g.time(b(ok))-t(ok);gnssBracket(ok)=g.time(b(ok))-g.time(a(ok));
-                aligned.gnss=struct('time',t,'position',position,'information',information,'valid',ok,'delay',0, ...
-                    'sourceLeftTime',g.time(a),'sourceRightTime',g.time(b));
-                if ~isfield(g,'information'),aligned.gnss=rmfield(aligned.gnss,'information');end
+            if isfield(data,'lidarOverlap')
+                assert(~any(isfield(data.lidarOverlap,{'pose','evaluateResidual','gradient','residual'})), ...
+                    'VehicleLocalization:ExternalLidarPose','Provide feature clouds for LiDAR feedback.');
             end
-            if isfield(data,'gnssHeading')
-                heading=localizationSupport.headingMeasurements(data,t,cfg);
-                aligned.gnssHeading=rmfield(heading,{'waitSeconds'});
-                gnssWait=max(gnssWait,heading.waitSeconds);
-            end
-            metadata=struct('clock',"Native LiDAR frames; no synthetic inter-frame localization outputs", ...
-                'nominalRateHz',1/median(diff(t)),'frames',numel(t), ...
-                'motionModelMeasurementExtrapolation',false,'offlineBracketInterpolation',true, ...
-                'maximumGnssBracketSeconds',max(gnssBracket),'maximumGnssWaitSeconds',max(gnssWait), ...
-                'maximumMotionWaitSeconds',max(motionWait),'frameWaitSeconds',max(motionWait,gnssWait), ...
-                'inputScope',"Wheel/lateral estimates retain their native preprocessing; only aligned frame values enter localization");
         end
 
         function support=lidarPoseSupport(filter,cfg)
@@ -194,7 +123,7 @@ classdef localizationSupport
             valid=logical(valid);
             assert(isreal(angle) && all(isfinite(angle(valid))), ...
                 'VehicleLocalization:InvalidHeadingInput','Valid heading requires finite radians.');
-            [a,b,w,ok]=fullBrackets(time,t,cfg.synchronization.gnssMaximumBracket);
+            [a,b,w,ok]=observerInternal.frameBrackets(time,t,cfg.synchronization.gnssMaximumBracket);
             ok=ok & valid(a) & valid(b);
             for k=find(ok).'
                 delta=atan2(sin(angle(b(k))-angle(a(k))),cos(angle(b(k))-angle(a(k))));
@@ -687,9 +616,9 @@ classdef localizationSupport
 
         function [correction,audit] = computeLidarMatchedCorrection(measurement,pose,G,design,cfg,options)
         % computeLidarMatchedCorrection Continuous LiDAR injection and its discretization.
-        % C=D\(G*T), xi=-F*D'*J'*W*r or S*(D\(qL-pose)); the continuous
+        % C=D\(G*T), xi=-F*D'*J'*W*r; the continuous
         % correction is kappa*T*(P\(C'*xi)). P is a Lyapunov matrix, not covariance.
-        % Supply pose/information, residual/jacobian/weights/linearizationPose, or
+        % Supply residual/jacobian/weights/linearizationPose or
         % gradient/information/linearizationPose. Residuals and physical pose
         % Jacobians MUST be evaluated at POSE, with frozen associations; a final
         % optimizer gradient is not the predicted-pose residual. A gradient
@@ -736,7 +665,7 @@ classdef localizationSupport
                     'VehicleLocalization:InvalidLidarGradient','The pose gradient must contain three finite values.');
             elseif residualMode
                 assert(~isfield(measurement,'pose') && ~isfield(measurement,'information'), ...
-                    'VehicleLocalization:AmbiguousLidarMeasurement','Choose residual or pose information input.');
+                    'VehicleLocalization:AmbiguousLidarMeasurement','Supply residual weights and Jacobian without a pose or information field.');
                 assert(isfield(measurement,'linearizationPose') && ...
                     isequal(measurement.linearizationPose(:),pose), ...
                     'VehicleLocalization:StaleLidarLinearization','Evaluate scan residuals at the supplied predicted pose.');
@@ -758,9 +687,8 @@ classdef localizationSupport
                 end
                 information=J.'*WJ;gradient=J.'*Wr;
             else
-                assert(isfield(measurement,'pose') && isfield(measurement,'information'), ...
-                    'VehicleLocalization:InvalidLidarMeasurement','Supply pose and physical information.');
-                information=measurement.information;
+                error('VehicleLocalization:InvalidLidarMeasurement', ...
+                    'Supply a cost gradient or geometric residual evaluated at the predicted pose.');
             end
             frame=1;direction=ones(3,1);
             if isfield(measurement,'frameReliability'),frame=measurement.frameReliability;end
@@ -771,7 +699,7 @@ classdef localizationSupport
             C=filter.D\(G*T);
             if residualMode
                 xi=-filter.F*filter.D.'*gradient;representation="predictedPoseResidual";
-            elseif gradientMode
+            else
                 % Like a residual gradient J'*W*r, inject only where the cost has
                 % positive curvature; unsupported directions receive no correction.
                 normalized=filter.D.'*gradient;
@@ -779,12 +707,6 @@ classdef localizationSupport
                 U=filter.eigenvectors(:,active);supported=U*(U.'*normalized);
                 xi=-filter.F*supported;representation="predictedPoseGradient";
                 unsupportedGradient=norm(normalized-supported);
-            else
-                innovation=measurement.pose(:)-pose;
-                assert(numel(innovation)==3 && isreal(innovation) && all(isfinite(innovation)), ...
-                    'VehicleLocalization:InvalidLidarMeasurement','Pose must contain three finite values.');
-                innovation(3)=atan2(sin(innovation(3)),cos(innovation(3)));
-                xi=filter.S*(filter.D\innovation);representation="localPoseInformation";
             end
             Q=kappa*(C.'*filter.S*C);Q=(Q+Q.')/2;
             Z=L\Q/L.';Z=(Z+Z.')/2;
@@ -1909,25 +1831,6 @@ classdef localizationSupport
             model=struct('fixed',f,'moving',m,'height',height,'origin',pose(1:2));
         end
     end
-end
-
-% Alignment and measurement support: local helpers
-function [a,b,w,ok]=fullBrackets(source,target,maximum)
-    source=source(:);assert(numel(source)>=2 && all(isfinite(source)) && all(diff(source)>0), ...
-        'VehicleLocalization:InvalidSyncClock','Need an increasing finite source clock.');
-    a=ones(size(target));b=a;w=zeros(size(target));ok=false(size(target));j=1;
-    for k=1:numel(target)
-        while j<numel(source) && source(j+1)<=target(k),j=j+1;end
-        a(k)=j;b(k)=min(j+1,numel(source));
-        if source(j)==target(k),b(k)=j;ok(k)=true;
-        elseif source(j)<target(k) && b(k)>j && source(b(k))>=target(k) && source(b(k))-source(j)<=maximum
-            w(k)=(target(k)-source(j))/(source(b(k))-source(j));ok(k)=true;
-        end
-    end
-end
-
-function result=fullBlend(values,a,b,w)
-    result=(1-w).*values(a,:)+w.*values(b,:);
 end
 
 % Intrinsic observer and gain synthesis: local helpers

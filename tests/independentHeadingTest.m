@@ -28,7 +28,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             data.gnssHeading.heading(2:2:end)=-pi+.02;
             data.lidar=struct('time',t,'pose',zeros(n,3),'information',repmat(eye(3),1,1,n), ...
                 'valid',false(n,1),'delay',0);
-            [aligned,~,~]=localizationSupport.synchronizeLocalizationInputs(data,l,c);
+            [aligned,~,~]=syntheticObserver.align(data,l,c);
             testCase.verifyTrue(all(aligned.gnssHeading.valid));
             testCase.verifyFalse(isfield(aligned,'gnss'));
             testCase.verifyEqual(aligned.gnssHeading.heading,data.gnssHeading.heading,AbsTol=1e-12);
@@ -76,7 +76,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             data.gnss=struct('time',t,'position',[12*t,zeros(n,1)],'valid',true(n,1),'delay',0);
             data.lidar=struct('time',t,'pose',zeros(n,3),'information',repmat(eye(3),1,1,n), ...
                 'valid',false(n,1),'delay',0);
-            [aligned,~,~]=localizationSupport.synchronizeLocalizationInputs(data,l,c);
+            [aligned,~,~]=syntheticObserver.align(data,l,c);
             testCase.verifyEqual(aligned.gnss.position,data.gnss.position,AbsTol=0);
             testCase.verifyFalse(isfield(aligned.gnss,'information'));
         end

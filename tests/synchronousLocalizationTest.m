@@ -88,7 +88,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
         function sourceReliabilityIsAlignedWithItsOwnFrame(testCase)
             f=unaligned();f.data.lidar.frameReliability=(0:20).'/20;
             f.data.lidar.directionReliability=repmat([0,.5,1],21,1);
-            [d,~,~]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            [d,~,~]=syntheticObserver.align(f.data,f.lateral,f.cfg);
             testCase.verifyEqual(d.lidar.frameReliability,f.data.lidar.frameReliability,AbsTol=0);
             testCase.verifyEqual(d.lidar.directionReliability,f.data.lidar.directionReliability,AbsTol=0);
         end
@@ -97,7 +97,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             f.data.lidar.time=f.data.lidar.time+.005;
             f.data.lidar.time(end)=1.995;
             f.lateral.sideSlipAngleRate=.2*f.lateral.time;
-            [~,l,~]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            [~,l,~]=syntheticObserver.align(f.data,f.lateral,f.cfg);
             testCase.verifyFalse(isfield(l,'sideSlipAngle'));
             testCase.verifyFalse(isfield(l,'sideSlipAngleRate'));
             testCase.verifyEqual(l.lateralVelocity,zeros(size(l.time)),AbsTol=1e-12);
@@ -112,7 +112,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             testCase.verifyError(@()run(f),'VehicleLocalization:FullZeroDelayRequired');
         end
         function alignmentRetainsRealLidarAndReportsWaiting(testCase)
-            f=unaligned();[d,~,m]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            f=unaligned();[d,~,m]=syntheticObserver.align(f.data,f.lateral,f.cfg);
             testCase.verifyEqual(d.lidar.pose,f.data.lidar.pose,AbsTol=0);
             testCase.verifyEqual(d.gnss.position(:,1),8*d.highRate.time,AbsTol=1e-12);
             testCase.verifyEqual(m.maximumGnssWaitSeconds,.01,AbsTol=1e-12);
@@ -120,23 +120,23 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
         end
         function alignmentCannotBridgeMissingMeasurements(testCase)
             f=unaligned();f.data.gnss.valid(:)=false;
-            [d,~,~]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            [d,~,~]=syntheticObserver.align(f.data,f.lateral,f.cfg);
             testCase.verifyFalse(any(d.gnss.valid));
             testCase.verifyTrue(all(isnan(d.gnss.position),'all'));
         end
         function alignmentDoesNotExtrapolatePastFinalGnss(testCase)
             f=unaligned();f.data.gnss.time(end)=f.data.gnss.time(end)-.011;
-            [d,~,~]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            [d,~,~]=syntheticObserver.align(f.data,f.lateral,f.cfg);
             testCase.verifyFalse(d.gnss.valid(end));
         end
         function alignmentRejectsWideGnssBrackets(testCase)
             f=unaligned();f.cfg.synchronization.gnssMaximumBracket=.005;
-            [d,~,~]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            [d,~,~]=syntheticObserver.align(f.data,f.lateral,f.cfg);
             testCase.verifyFalse(any(d.gnss.valid));
         end
         function alignmentDoesNotRestoreWithdrawnLpvAiding(testCase)
             f=unaligned();f.lateral.velocityValid=f.lateral.time<1;
-            [~,l,~]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            [~,l,~]=syntheticObserver.align(f.data,f.lateral,f.cfg);
             testCase.verifyTrue(all(l.velocityValid(l.time<0.9)));
             testCase.verifyFalse(any(l.velocityValid(l.time>=1)));
         end
@@ -194,7 +194,7 @@ function f=fixture(duration)
 end
 
 function r=run(f)
-    r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
+    r=syntheticObserver.run(f.data,f.cfg,LateralInputs=f.lateral);
 end
 
 function f=unaligned()

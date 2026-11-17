@@ -2,9 +2,9 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
 % validateSyntheticLocalizationCascade Exercise the complete observer cascade.
 % A 2-DOF bicycle plant with analytic speed and steering generates the truth.
 % Synthetic wheel speed, steering, IMU, 20 Hz receiver positions and jittered
-% 10 Hz LiDAR poses then pass through the production chain: direct LPV
-% lateral observer -> frame-clock synchronization -> intrinsic eight-state
-% observer with current MnCAV configuration and receiver output-point correction.
+% 10 Hz synthetic quadratic LiDAR residuals exercise the LPV and eight-state
+% observer dynamics. The simulation uses its own sensor model and shares
+% the frame-clock interpolation and time integration with map-based localization.
 % GNSS corrects position; gyro and LiDAR supply heading/rate innovations.
 % Scenarios separate convention errors (clean signals), noise/bias accuracy,
 % source availability and lateral-model mismatch.
@@ -50,7 +50,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
         signals=synthesizeSignals(truth,settings,noise);
         timer=tic;lateral=runLateralVelocityObserver(signals.highRate,design,lateralCfg);lateralSeconds=toc(timer);
         data=struct('highRate',signals.highRate,'gnss',signals.gnss,'lidar',signals.lidar);
-        [aligned,alignedLateral,synchronization]=localizationSupport.synchronizeLocalizationInputs(data,lateral,cfg);
+        [aligned,alignedLateral,synchronization]=syntheticObserver.align(data,lateral,cfg);
         t=aligned.highRate.time;frameTruth=truthAt(truth,t);
         current=aligned;
         if ~ismember("gnss",sources),current=rmfield(current,'gnss');end
@@ -64,7 +64,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
             current.lidar.valid=current.lidar.valid & mod(floor(t),2)==1;
         end
         runCfg=cfg;runCfg.initialState=initialState(frameTruth,aligned.highRate,alignedLateral,settings,init);
-        timer=tic;estimate=runFullLocalizationObserver(current,runCfg,LateralInputs=alignedLateral);seconds=toc(timer);
+        timer=tic;estimate=syntheticObserver.run(current,runCfg,LateralInputs=alignedLateral);seconds=toc(timer);
         metrics=scoreRun(estimate,frameTruth,truth,lateral,current,settings,mask);
         runs{k}=struct('scenario',name,'truthModel',string(ifelse(truth.mismatch,"mismatch","nominal")), ...
             'noise',noise,'initialization',init,'sources',sources,'estimate',estimate,'metrics',metrics, ...

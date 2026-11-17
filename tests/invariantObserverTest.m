@@ -68,7 +68,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             d.lidar=struct('time',t,'pose',zeros(n,3),'valid',true(n,1), ...
                 'information',repmat(eye(3),1,1,n),'delay',0);
             c.synchronization.motionMaximumBracket=.2;
-            [a,~,~]=localizationSupport.synchronizeLocalizationInputs(d,l,c);
+            [a,~,~]=syntheticObserver.align(d,l,c);
             testCase.verifyEqual(a.highRate.bodyVelocityValid,[false;false;true(n-2,1)]);
             testCase.verifyTrue(all(a.highRate.bodyAccelerationValid));
             testCase.verifyTrue(all(a.highRate.yawRateValid));
@@ -79,7 +79,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             d.lidar=struct('time',t,'pose',zeros(n,3),'valid',true(n,1), ...
                 'information',repmat(eye(3),1,1,n),'delay',0);
             c.synchronization.motionMaximumBracket=.2;
-            [~,aligned]=localizationSupport.synchronizeLocalizationInputs(d,l,c);
+            [~,aligned]=syntheticObserver.align(d,l,c);
             testCase.verifyFalse(isfield(aligned,'sideSlipAngle'));
             testCase.verifyFalse(isfield(aligned,'sideSlipAngleRate'));
             testCase.verifyEqual(aligned.lateralVelocity,interp1(l.time,l.lateralVelocity,t),AbsTol=1e-12);
@@ -199,7 +199,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
                 'information',repmat(1e6*eye(3),1,1,n),'delay',0);
             l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngleRate',zero);
             c=freshObserverTestConfig();c.initialState=[.2;0;0;-.1;0;0;.02];
-            a=runFullLocalizationObserver(d,c,LateralInputs=l);
+            a=syntheticObserver.run(d,c,LateralInputs=l);
             fprintf('POSE-ONLY 20 s: position %.9g m, velocity %.9g m/s\n', ...
                 norm(a.position(end,:)-[100,0]),norm(a.velocity(end,:)-[5,0]));
             testCase.verifyLessThan(norm(a.position(end,:)-[100,0]),.02);

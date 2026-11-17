@@ -156,11 +156,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
         end
         function synchronizationCropsRecordedQuality(testCase)
-            f=croppedFixture(false);[d,l]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
+            f=croppedFixture(false);[d,l]=syntheticObserver.align(f.data,f.lateral,f.cfg);
             testCase.verifyEqual(d.lidar.frameReliability,[.2;.4;.6],AbsTol=0);
             testCase.verifyEqual(d.lidar.directionReliability,repmat([.2,.5,.9],3,1),AbsTol=0);
             testCase.verifyFalse(any(l.velocityValid));
-            r=runFullLocalizationObserver(d,f.cfg,LateralInputs=l);
+            r=syntheticObserver.run(d,f.cfg,LateralInputs=l);
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
         end
         function synchronizationCropsOverlapQualityAndSources(testCase)
@@ -196,7 +196,7 @@ function f=fixture(duration)
 end
 
 function r=execute(f)
-    r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
+    r=syntheticObserver.run(f.data,f.cfg,LateralInputs=f.lateral);
 end
 
 

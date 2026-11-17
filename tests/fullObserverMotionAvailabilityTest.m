@@ -36,7 +36,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             [d,l,c]=fixture();l.yawRate=.1+l.time;l.yawRateValid=true(size(l.time));l.yawRateValid(2)=false;
             d.lidar=struct('time',l.time,'pose',zeros(numel(l.time),3),'valid',true(size(l.time)), ...
                 'information',repmat(eye(3),1,1,numel(l.time)),'delay',0);
-            [~,out]=localizationSupport.synchronizeLocalizationInputs(d,l,c);
+            [~,out]=syntheticObserver.align(d,l,c);
             testCase.verifyEqual(out.yawRate,l.yawRate,AbsTol=0);
             testCase.verifyEqual(out.yawRateValid,l.yawRateValid);
         end

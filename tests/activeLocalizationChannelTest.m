@@ -32,6 +32,17 @@ classdef activeLocalizationChannelTest < matlab.unittest.TestCase
             test.verifyError(@()runFullLocalizationObserver(data), ...
                 'VehicleLocalization:ArchivedRegistration');
         end
+        function productionRejectsExternalPoseAndResidualProviders(test)
+            payloads={struct('pose',[1 2 .1]), struct('evaluateResidual',@(~,~)struct())};
+            for k=1:numel(payloads)
+                data=struct('lidar',payloads{k});
+                test.verifyError(@()runFullLocalizationObserver(data),'VehicleLocalization:ExternalLidarPose');
+                test.verifyError(@()localizationSupport.synchronizeLocalizationInputs(data,struct()), ...
+                    'VehicleLocalization:ExternalLidarPose');
+                data=struct('lidarOverlap',payloads{k});
+                test.verifyError(@()runFullLocalizationObserver(data),'VehicleLocalization:ExternalLidarPose');
+            end
+        end
         function synchronizationPreservesCoveredOverlapSources(test)
             high=struct('time',[0;.1;.2],'longitudinalSpeed',[2;2;2]);
             lateral=struct('time',high.time,'lateralVelocity',[0;0;0],'yawRate',[0;0;0],'sideSlipAngleRate',[0;0;0]);
