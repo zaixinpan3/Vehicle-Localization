@@ -40,7 +40,7 @@ function runMississippiBaselines(outputFolder,options)
     end
     meta.ekfTuning=tuning;
     t=t-t(1);rows={};scenarios=["both","gnss_loss","lidar_loss","alternating","no_gnss","random80_1","random80_2","random80_3"];
-    methods=["proposed","overlap_ekf","overlap_iekf","gnss_ekf","no_lidar","no_acceleration","zero_lateral","uniform_evidence"];
+    methods=["proposed","overlap_ekf","overlap_iekf","gnss_ekf","no_lidar","no_acceleration","zero_lateral"];
     curves=struct();
     for s=scenarios
         d=data;middle=t>=t(end)*.35 & t<t(end)*.65;
@@ -54,7 +54,6 @@ function runMississippiBaselines(outputFolder,options)
             if any(method==["gnss_ekf","no_lidar"]),dd=rmfield(dd,'lidarOverlap');end
             if method=="no_acceleration",dd.highRate.bodyAccelerationValid=false(size(t));end
             if method=="zero_lateral",ll.lateralVelocity(:)=0;end
-            if method=="uniform_evidence",dd.lidarOverlap.config.evidenceWeights=false;end
             timer=tic;
             if any(method==["overlap_ekf","overlap_iekf","gnss_ekf"])
                 its=1;if method=="overlap_iekf",its=5;end

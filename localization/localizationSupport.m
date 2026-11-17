@@ -817,95 +817,52 @@ classdef localizationSupport
 
         function measurement=evaluateOverlapGradient(fixedCloud,movingCloud,pose,cfg)
         % evaluateOverlapGradient Correspondence-free LiDAR gradient at the observer prediction.
-        % For every bandwidth sigma of cfg.scaleLadder both mixtures are smoothed by
-        % N(0,sigma^2/2*I), which adds sigma^2*I to every pair covariance, so the
-        % class-balanced cross energy E_sigma is the expected overlap under an
-        % isotropic horizontal prediction error of that size; sigma=0 is the exact
-        % score of scoreSemanticProbabilityCloudAlignment for frame aggregation.
-        % The corresponding frame outputs are
-        %   gradient    g = sum_sigma -grad(E_sigma)/E_sigma          (analytic SE(2))
-        %   information M = sum_sigma sum_ij pi_ij J_ij' Sigma_ij^-1 J_ij
-        % with pi_ij the pair responsibilities at scale sigma: the Gauss-Newton (EM)
-        % metric of each -log E_sigma. It is positive semidefinite, exact for one
-        % pair at any translation, and does not vanish at a kernel inflection, so
-        % the regularized observer step stays bounded. For mixtures this is not
-        % the true cost Hessian: pair-score covariance can cancel its apparent
-        % curvature. Full rank does not certify a restoring sector or exclude
-        % an incorrect local alignment.
-        % Summing the scales fuses them in information form: the sharp scale
-        % dominates near alignment, the wide ones keep a restoring force where the
-        % sharp kernels have decayed; they do not guarantee a capture radius.
-        % With cfg.evidenceWeights, map view
-        % reliability and source temporal stability scale the mixture masses before
-        % class balancing, as in registration. No pose is optimized, no
-        % correspondence is selected and no acceptance test is applied; zero overlap
-        % at every scale returns available=false. similarity reports the first
-        % ladder entry with nonzero overlap. Map means are shifted to POSE before
-        % evaluation, which leaves the overlap and its pose derivatives unchanged
-        % and avoids UTM-scale cancellation.
-        % Default channel aggregation computes a normalized overlap per semantic
-        % class. At each scale it averages the negative-log gradients and metrics
-        % of classes with evaluable overlap. The corresponding scale similarity
-        % is their geometric mean. Channel diagnostics retain unfused values.
-        % With cfg.aggregation="landmark" the cost at each scale is instead the
-        % per-landmark mixture likelihood -sum_j v_j log(eps + sum_i u_i N_ij) of
-        % localizationSupport.semanticLandmarkLikelihood, with registration's support
-        % geometry and, with cfg.orientation, its axis kernel. Map masses form one
-        % density per class, source masses carry 1/C per class, and the evidence
-        % factors multiply after this normalization. similarity is then the share
-        % of source mass the map explains.
+        % Crop the local map, condition its moments on view, and weight map and
+        % source masses by available view reliability and temporal stability.
+        % At each bandwidth average the negative-log overlap gradient and the
+        % Gauss-Newton metric of evaluable semantic channels. Sum these across
+        % bandwidths. Each scale similarity is the geometric mean of its
+        % normalized class overlaps. An empty set contributes no feedback.
             arguments
                 fixedCloud (1,1) struct
                 movingCloud (1,1) struct
                 pose (3,1) double {mustBeReal,mustBeFinite}
                 cfg (1,1) struct = overlapGradientConfig()
             end
-            assert(isfield(cfg,'geometry') && ~isfield(cfg,'registration'), ...
+            assert(isfield(cfg,'geometry') && ~any(isfield(cfg, ...
+                {'registration','aggregation','orientation','outlierDensity','viewConditioning','evidenceWeights'})), ...
                 'VehicleLocalization:ObsoleteOverlapConfig','Rebuild overlap settings with overlapGradientConfig.');
             timer=tic;linearization=pose;pose=pose(:).';
             ladder=cfg.scaleLadder(:).';
             validateattributes(ladder,{'double'},{'real','finite','nonnegative','nonempty','vector'});
-            assert(isscalar(cfg.aggregation) && ismember(cfg.aggregation,["channel","frame","landmark"]) && ...
-                (~cfg.orientation || cfg.aggregation=="landmark"),'VehicleLocalization:InvalidOverlapAggregation', ...
-                'aggregation is "channel", "frame" or "landmark"; orientation requires landmark aggregation.');
-            validateattributes(cfg.outlierDensity,{'double'},{'real','finite','positive','scalar'});
+            assert(isequal(string(cfg.geometry.heightMode),"xy"),'VehicleLocalization:PlanarOverlapRequired', ...
+                'Feature-channel feedback requires the XY marginal.');
             measurement=struct('gradient',zeros(3,1),'information',zeros(3),'linearizationPose',linearization, ...
                 'available',false,'similarity',0,'minimumInformation',NaN,'scaleLadder',ladder, ...
                 'scaleSimilarity',nan(size(ladder)),'mapComponents',0,'sourceComponents',0, ...
                 'sharedClasses',strings(1,0),'informationCalibrated',false,'seconds',0, ...
-                'geometrySource',"semanticGaussianOverlap scale ladder at the observer prediction; no registration");
+                'geometrySource',"per-feature-channel semantic overlap at the observer prediction");
             measurement.channels=struct('name',{},'similarity',{},'gradient',{},'information',{});
-            if cfg.aggregation=="channel"
-                measurement.geometrySource="per-feature-channel semantic overlap at the observer prediction";
-            end
             local=localizationSupport.selectLocalProbabilityCloud(fixedCloud,pose,cfg.localMapRadius);
             if local.components.numComponents==0 || movingCloud.components.numComponents==0
                 measurement.seconds=toc(timer);return;
             end
-            if cfg.viewConditioning,local=localizationSupport.conditionSemanticMapOnView(local,pose);end
-            if cfg.aggregation=="landmark"
-                measurement=injectionLandmarkLikelihoodGradient(local,movingCloud,pose,cfg,measurement);
-                measurement.seconds=toc(timer);return;
-            end
+            local=localizationSupport.conditionSemanticMapOnView(local,pose);
             [f,m]=localizationSupport.prepareSemanticRegistration(local,movingCloud,cfg.geometry);
-            if cfg.evidenceWeights
-                % Map view reliability and source temporal stability scale the masses
-                % before class balancing, so an unsupported or flickering landmark
-                % cannot carry a whole class.
-                if isfield(f,'viewReliability'),f.mixtureWeight=f.mixtureWeight.*double(f.viewReliability(:));end
-                if isfield(m,'temporalStability'),m.mixtureWeight=m.mixtureWeight.*double(m.temporalStability(:));end
+            if isfield(f,'viewReliability')
+                f.mixtureWeight=f.mixtureWeight.*double(f.viewReliability(:));
+            end
+            if isfield(m,'temporalStability')
+                m.mixtureWeight=m.mixtureWeight.*double(m.temporalStability(:));
             end
             measurement.mapComponents=f.numComponents;measurement.sourceComponents=m.numComponents;
             f.mean(:,1:2)=f.mean(:,1:2)-pose(1:2);
             origin=[0,0,pose(3)];gradient=zeros(3,1);information=zeros(3);
             shared=intersect(f.semanticName(f.mixtureWeight>0),m.semanticName(m.mixtureWeight>0));
             measurement.sharedClasses=reshape(string(shared),1,[]);
-            channelMode=cfg.aggregation=="channel";
-            if channelMode
-                for c=1:numel(shared)
-                    measurement.channels(c)=struct('name',shared(c),'similarity',nan(size(ladder)), ...
-                        'gradient',nan(3,numel(ladder)),'information',nan(3,3,numel(ladder)));
-                end
+            for c=1:numel(shared)
+                measurement.channels(c)=struct('name',shared(c),'similarity',nan(size(ladder)), ...
+                    'gradient',nan(3,numel(ladder)),'information',nan(3,3,numel(ladder)));
             end
             for k=1:numel(ladder)
                 fk=f;mk=m;
@@ -914,35 +871,27 @@ classdef localizationSupport
                     fk.covariance(1:2,1:2,:)=fk.covariance(1:2,1:2,:)+inflation;
                     mk.covariance(1:2,1:2,:)=mk.covariance(1:2,1:2,:)+inflation;
                 end
-                if channelMode
-                    logScore=0;scaleGradient=zeros(3,1);scaleMetric=zeros(3);count=0;
-                    for c=1:numel(shared)
-                        fixedClass=overlapClassComponents(fk,shared(c));
-                        movingClass=overlapClassComponents(mk,shared(c));
-                        [fixedClass,movingClass]=localizationSupport.balanceSemanticDistributions(fixedClass,movingClass);
-                        [energy,ascent,metric]=localizationSupport.semanticGaussianOverlap(fixedClass,movingClass,origin);
-                        if ~(energy>realmin),continue;end
-                        score=min(energy,1);
-                        g=-ascent(:)/energy;
-                        measurement.channels(c).similarity(k)=score;
-                        measurement.channels(c).gradient(:,k)=g;
-                        measurement.channels(c).information(:,:,k)=metric;
-                        logScore=logScore+log(score);
-                        scaleGradient=scaleGradient+g;scaleMetric=scaleMetric+metric;
-                        count=count+1;
-                    end
-                    if count>0
-                        gradient=gradient+scaleGradient/count;
-                        information=information+scaleMetric/count;
-                        measurement.scaleSimilarity(k)=exp(logScore/count);
-                    end
-                    continue
+                logScore=0;scaleGradient=zeros(3,1);scaleMetric=zeros(3);count=0;
+                for c=1:numel(shared)
+                    fixedClass=overlapClassComponents(fk,shared(c));
+                    movingClass=overlapClassComponents(mk,shared(c));
+                    [fixedClass,movingClass]=localizationSupport.balanceSemanticDistributions(fixedClass,movingClass);
+                    [energy,ascent,metric]=localizationSupport.semanticGaussianOverlap(fixedClass,movingClass,origin);
+                    if ~(energy>realmin),continue;end
+                    score=min(energy,1);
+                    g=-ascent(:)/energy;
+                    measurement.channels(c).similarity(k)=score;
+                    measurement.channels(c).gradient(:,k)=g;
+                    measurement.channels(c).information(:,:,k)=metric;
+                    logScore=logScore+log(score);
+                    scaleGradient=scaleGradient+g;scaleMetric=scaleMetric+metric;
+                    count=count+1;
                 end
-                [fk,mk]=localizationSupport.balanceSemanticDistributions(fk,mk);
-                [energy,ascent,metric]=localizationSupport.semanticGaussianOverlap(fk,mk,origin);
-                if ~(energy>realmin),continue;end
-                gradient=gradient-ascent(:)/energy;information=information+metric;
-                measurement.scaleSimilarity(k)=min(energy,1);
+                if count>0
+                    gradient=gradient+scaleGradient/count;
+                    information=information+scaleMetric/count;
+                    measurement.scaleSimilarity(k)=exp(logScore/count);
+                end
             end
             evaluated=isfinite(measurement.scaleSimilarity);
             if any(evaluated)
@@ -1198,87 +1147,6 @@ classdef localizationSupport
                 metric = metric + triu(metric,1).';
                 if energy > 0, metric = metric/energy; end
             end
-        end
-
-        function [cost, gradient, metric, explained] = semanticLandmarkLikelihood(fixed, moving, pose, outlierDensity, angularFloor)
-        % semanticLandmarkLikelihood: Per-landmark mixture likelihood and SE(2) derivatives.
-        %   cost = -sum_j v_j log(outlierDensity + sum_i u_i N_ij K_ij)
-        % over same-class pairs. N_ij = N(mu_i; R*mu_j+t, A_i+R*B_j*R') is the
-        % Gaussian overlap integral, u the fixed masses (one density per class),
-        % v the moving masses and outlierDensity (1/m^2) a uniform outlier floor,
-        % so an unexplained landmark loses its influence. With a finite
-        % angularFloor, components also carry an axis: K_ij = exp(-kappa_ij*s_ij^2/2)
-        % with s_ij the sine between the fixed axis and the rotated moving axis and
-        % kappa_ij = c_i*c_j/(angularFloor^2+a_i+a_j), from the support geometry of
-        % localizationSupport.prepareSemanticOverlapGeometry (orientationNormal or supportTangent,
-        % axisConfidence c, angularVariance a). GRADIENT is d(cost)/d[x y psi]
-        % (3-by-1) and METRIC the Gauss-Newton metric sum_j v_j sum_i r_ij
-        % (J_ij'*Sigma_ij^-1*J_ij + kappa_ij*ds_ij^2*e3*e3'), with responsibilities
-        % r_ij = u_i N_ij K_ij/(outlierDensity + sum_i u_i N_ij K_ij). EXPLAINED is
-        % the moving mass explained by the fixed mixture, sum_j v_j(1-r_0j).
-            assert(size(fixed.mean,2)==2 && size(moving.mean,2)==2,'VehicleLocalization:LikelihoodRequiresXY', ...
-                'The landmark likelihood is defined for the XY marginal only.');
-            oriented = isfinite(angularFloor);
-            c = cos(pose(3)); s = sin(pose(3));
-            rotation = [c -s; s c]; rate = [-s -c; c -s];
-            means = moving.mean*rotation.' + pose(1:2);
-            lever = moving.mean*rate.';
-            a0 = reshape(moving.covariance(1,1,:), [], 1);
-            b0 = reshape(moving.covariance(1,2,:), [], 1);
-            d0 = reshape(moving.covariance(2,2,:), [], 1);
-            ma = c*c*a0 - 2*c*s*b0 + s*s*d0;
-            mb = c*s*(a0-d0) + (c*c-s*s)*b0;
-            md = s*s*a0 + 2*c*s*b0 + c*c*d0;
-            if oriented
-                axis = moving.supportTangent*rotation.'; axisRate = moving.supportTangent*rate.';
-            end
-            cost = 0; gradient = zeros(3,1); metric = zeros(3); explained = 0;
-            names = intersect(unique(fixed.semanticName(fixed.mixtureWeight>0)), ...
-                unique(moving.semanticName(moving.mixtureWeight>0)));
-            for name = names.'
-                f = find(fixed.semanticName == name & fixed.mixtureWeight > 0);
-                allMoving = find(moving.semanticName == name & moving.mixtureWeight > 0);
-                u = fixed.mixtureWeight(f);
-                fa = reshape(fixed.covariance(1,1,f), [], 1);
-                fb = reshape(fixed.covariance(1,2,f), [], 1);
-                fd = reshape(fixed.covariance(2,2,f), [], 1);
-                blockSize = max(1, floor(250000/max(numel(f),1)));
-                for start = 1:blockSize:numel(allMoving)
-                    m = allMoving(start:min(start+blockSize-1,end));
-                    a = fa + ma(m).'; b = fb + mb(m).'; d = fd + md(m).';
-                    determinant = a.*d - b.*b;
-                    dx = fixed.mean(f,1) - means(m,1).';
-                    dy = fixed.mean(f,2) - means(m,2).';
-                    qx = (d.*dx-b.*dy)./determinant;
-                    qy = (a.*dy-b.*dx)./determinant;
-                    kernel = exp(-0.5*(dx.*qx+dy.*qy))./(2*pi*sqrt(determinant));
-                    lx = lever(m,1).'; ly = lever(m,2).';
-                    da = -2*mb(m).'; db = (ma(m)-md(m)).'; dd = 2*mb(m).';
-                    yaw = qx.*lx + qy.*ly + 0.5*(qx.^2.*da+2*qx.*qy.*db+qy.^2.*dd - ...
-                        (d.*da+a.*dd-2*b.*db)./determinant);
-                    sx = (d.*lx-b.*ly)./determinant; sy = (a.*ly-b.*lx)./determinant;
-                    yawMetric = lx.*sx + ly.*sy;
-                    if oriented
-                        sine = fixed.orientationNormal(f,:)*axis(m,:).';
-                        sineRate = fixed.orientationNormal(f,:)*axisRate(m,:).';
-                        kappa = (fixed.axisConfidence(f)*moving.axisConfidence(m).')./ ...
-                            (angularFloor^2 + fixed.angularVariance(f) + moving.angularVariance(m).');
-                        kernel = kernel.*exp(-0.5*kappa.*sine.^2);
-                        yaw = yaw - kappa.*sine.*sineRate;
-                        yawMetric = yawMetric + kappa.*sineRate.^2;
-                    end
-                    v = moving.mixtureWeight(m).';
-                    density = u.'*kernel;
-                    omega = (u.*kernel)./(outlierDensity+density).*v;
-                    cost = cost - sum(v.*log(outlierDensity+density));
-                    explained = explained + sum(v.*density./(outlierDensity+density));
-                    gradient = gradient - [sum(omega.*qx,'all'); sum(omega.*qy,'all'); sum(omega.*yaw,'all')];
-                    metric = metric + [sum(omega.*d./determinant,'all'), -sum(omega.*b./determinant,'all'), sum(omega.*sx,'all'); ...
-                        0, sum(omega.*a./determinant,'all'), sum(omega.*sy,'all'); ...
-                        0, 0, sum(omega.*yawMetric,'all')];
-                end
-            end
-            metric = metric + triu(metric,1).';
         end
 
         function [fixed,indices]=selectLocalProbabilityCloud(map,seed,radius)
@@ -2163,50 +2031,6 @@ function part=overlapClassComponents(components,name)
     keep=components.semanticName==name & components.mixtureWeight>0;
     part=struct('mean',components.mean(keep,:), 'covariance',components.covariance(:,:,keep), ...
         'mixtureWeight',components.mixtureWeight(keep), 'semanticName',components.semanticName(keep));
-end
-
-function measurement=injectionLandmarkLikelihoodGradient(local,movingCloud,pose,cfg,measurement)
-% Per-landmark mixture likelihood at every ladder scale (semanticLandmarkLikelihood).
-% Map masses form one density per class and source masses carry 1/C per class;
-% Evidence factors multiply after this normalization. Support geometry supplies
-% axes, confidences and angular variances for the optional orientation kernel.
-    ladder=measurement.scaleLadder;
-    geometry=localizationSupport.prepareSemanticOverlapGeometry(local,movingCloud,pose,cfg.geometry);
-    f=geometry.fixed;m=geometry.moving; % map means relative to POSE
-    f.mean=f.mean(:,1:2);m.mean=m.mean(:,1:2);f.covariance=f.planarCovariance;m.covariance=m.planarCovariance;
-    names=intersect(unique(f.semanticName(f.mixtureWeight>0)),unique(m.semanticName(m.mixtureWeight>0)));
-    measurement.mapComponents=f.numComponents;measurement.sourceComponents=m.numComponents;
-    measurement.sharedClasses=reshape(string(names),1,[]);
-    if isempty(names),return;end
-    u=zeros(size(f.mixtureWeight));v=zeros(size(m.mixtureWeight));
-    for name=names.'
-        I=f.semanticName==name & f.mixtureWeight>0;J=m.semanticName==name & m.mixtureWeight>0;
-        u(I)=f.mixtureWeight(I)/sum(f.mixtureWeight(I));v(J)=m.mixtureWeight(J)/sum(m.mixtureWeight(J))/numel(names);
-    end
-    if cfg.evidenceWeights,u=u.*f.viewReliability(:);v=v.*m.temporalStability(:);end
-    f.mixtureWeight=u;m.mixtureWeight=v;
-    angularFloor=NaN;if cfg.orientation,angularFloor=cfg.geometry.support.angularFloor;end
-    origin=[0,0,pose(3)];gradient=zeros(3,1);information=zeros(3);
-    for k=1:numel(ladder)
-        fk=f;mk=m;
-        if ladder(k)>0
-            inflation=ladder(k)^2/2*eye(2);
-            fk.covariance=fk.covariance+inflation;mk.covariance=mk.covariance+inflation;
-        end
-        [~,g,M,explained]=localizationSupport.semanticLandmarkLikelihood(fk,mk,origin,cfg.outlierDensity,angularFloor);
-        if ~(explained>0),continue;end
-        gradient=gradient+g;information=information+M;
-        measurement.scaleSimilarity(k)=explained/max(sum(v),realmin);
-    end
-    evaluated=isfinite(measurement.scaleSimilarity);
-    if any(evaluated)
-        information=(information+information.')/2;
-        measurement.gradient=gradient;measurement.information=information;
-        measurement.similarity=measurement.scaleSimilarity(find(evaluated,1));
-        measurement.minimumInformation=min(eig(information));
-        measurement.available=true;
-        measurement.geometrySource="semanticLandmarkLikelihood scale ladder at the observer prediction; no registration";
-    end
 end
 
 % Semantic mixture geometry: local helpers

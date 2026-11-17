@@ -8,7 +8,14 @@ def main():
  p=argparse.ArgumentParser();p.add_argument('--folder',type=Path,default=Path('output/mississippi_baselines_20261030'));a=p.parse_args();rows=[]
  for drive in [1,2]:
   with (a.folder/f'drive{drive}_metrics.csv').open() as f:current=list(csv.DictReader(f))
-  assert len(current)==256, f'Drive {drive} is incomplete: {len(current)} rows'
+  methods=set(LABELS)
+  if not any(r['method']=='uniform_evidence' for r in current):
+   methods.remove('uniform_evidence')
+  # Historical exports named the middle interval 'withheld'.
+  keys={(r['method'],r['scenario'],'middle_30pct' if r['window']=='withheld' else r['window']) for r in current}
+  scenarios={'both','gnss_loss','lidar_loss','alternating','no_gnss','random80_1','random80_2','random80_3'}
+  expected={(m,s,w) for m in methods for s in scenarios for w in ('all','after_2s','middle_30pct','recovery')}
+  assert keys==expected and len(current)==len(expected), f'Drive {drive} is incomplete or duplicated'
   rows+=current
  with (a.folder/'combined_metrics.csv').open('w') as f:
   w=csv.DictWriter(f,fieldnames=rows[0]);w.writeheader();w.writerows(rows)
@@ -26,6 +33,7 @@ def main():
  '\\small\\begin{tabular}{llrr}\\toprule Sequence & Method & Both sensors & No GNSS\\\\\\midrule']
  for d in [1,2]:
   for m in ['proposed','no_lidar','no_acceleration','zero_lateral','uniform_evidence']:
+   if m=='uniform_evidence' and not any(r['drive']==str(d) and r['method']==m for r in rows):continue
    out.append(f"{d} & {LABELS[m]} & {metric(find(d,'both',m))} & {metric(find(d,'no_gnss',m))}\\\\")
   if d==1:out.append('\\midrule')
  out+=['\\bottomrule\\end{tabular}\\end{table*}']

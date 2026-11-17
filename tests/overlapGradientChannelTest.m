@@ -7,8 +7,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
         end
     end
     methods (Test)
-        function frameGradientIsTheDerivativeOfNegativeLogScore(testCase)
-            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0;cfg.aggregation="frame";
+        function singleChannelGradientMatchesIndependentAlignmentScore(testCase)
+            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0;
+            map.components=selectComponents(map.components,1:3);source.components=selectComponents(source.components,1:3);
             pose=truth+[0.15,-0.10,deg2rad(1.5)];
             m=localizationSupport.evaluateOverlapGradient(map,source,pose(:),cfg);
             steps=[1e-6,1e-6,1e-7];expected=zeros(3,1);
@@ -30,7 +31,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             result=localizationSupport.evaluateOverlapGradient(map,source,pose,cfg);
             names=unique(source.components.semanticName);
             testCase.verifyEqual([result.channels.name],names.');
-            cfg.aggregation="frame";
             gradients=zeros(3,numel(names));metrics=zeros(3,3,numel(names));
             scores=zeros(size(names));
             for c=1:numel(names)
@@ -47,8 +47,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyEqual(result.similarity,exp(mean(log(scores))),AbsTol=1e-12);
             testCase.verifyEqual(result.gradient,mean(gradients,2),AbsTol=1e-10);
             testCase.verifyEqual(result.information,mean(metrics,3),AbsTol=1e-10);
-            pooled=localizationSupport.evaluateOverlapGradient(map,source,pose,cfg);
-            testCase.verifyGreaterThan(norm(pooled.gradient-result.gradient),1e-3);
+
         end
         function unevaluableChannelIsOmittedOnlyAtThatScale(testCase)
             [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=[0 2];
@@ -205,9 +204,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             [map,source,truth]=scene();pose=(truth+[0.2,-0.1,deg2rad(1)]).';
             % Halving one pole's temporal stability changes the balanced gradient;
             % a uniform factor on a class does not (balancing removes it).
-            off=overlapGradientConfig();off.evidenceWeights=false;
+            plain=localizationSupport.evaluateOverlapGradient(map,source,pose);
             source.components.temporalStability=ones(6,1);source.components.temporalStability(4)=0.5;
-            plain=localizationSupport.evaluateOverlapGradient(map,source,pose,off);
             weighted=localizationSupport.evaluateOverlapGradient(map,source,pose);
             testCase.verifyGreaterThan(norm(weighted.gradient-plain.gradient),1e-6*norm(plain.gradient));
             uniform=source;uniform.components.temporalStability=0.5*ones(6,1);
@@ -252,77 +250,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyGreaterThan(norm(b.gradient-a.gradient),0);
             testCase.verifyGreaterThan(b.gradient.'*offset.',0);
         end
-        function landmarkGradientIsTheDerivativeOfItsCost(testCase)
-            [map,source,truth]=scene();[f,m]=likelihoodInputs(map,source,truth);
-            p=[0.15,-0.10,truth(3)+deg2rad(1.5)];h=[1e-6 1e-6 1e-7];
-            for angular=[NaN deg2rad(1)]
-                [~,g,M]=localizationSupport.semanticLandmarkLikelihood(f,m,p,1e-4,angular);expected=zeros(3,1);
-                for j=1:3
-                    e=zeros(1,3);e(j)=h(j);
-                    expected(j)=(localizationSupport.semanticLandmarkLikelihood(f,m,p+e,1e-4,angular)- ...
-                        localizationSupport.semanticLandmarkLikelihood(f,m,p-e,1e-4,angular))/(2*h(j));
-                end
-                testCase.verifyEqual(g,expected,RelTol=1e-5,AbsTol=1e-8);
-                testCase.verifyEqual(M,M.',AbsTol=1e-12);
-                testCase.verifyGreaterThan(min(eig(M)),0);
+        function retiredOverlapSelectorsAreRejected(testCase)
+            [map,source,pose]=scene();
+            retired=struct('aggregation',"frame",'orientation',true,'outlierDensity',1e-4, ...
+                'viewConditioning',false,'evidenceWeights',false);
+            settings=overlapGradientConfig();
+            for name=string(fieldnames(retired)).'
+                testCase.verifyFalse(isfield(settings,name));
+                stale=settings;stale.(name)=retired.(name);
+                testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,pose(:),stale), ...
+                    'VehicleLocalization:ObsoleteOverlapConfig');
             end
-        end
-        function landmarkMetricIsExactForOnePair(testCase)
-            % One sign: the responsibility scales gradient and metric alike, so the
-            % translation Gauss-Newton step lands on the optimum from any offset.
-            [map,source,truth]=scene();
-            map.components=selectComponents(map.components,6);source.components=selectComponents(source.components,6);
-            [f,m]=likelihoodInputs(map,source,truth);
-            for offset=[0.1 0;1 0;0 2;-3 1.5].'
-                p=[offset.',truth(3)];
-                [~,g,M]=localizationSupport.semanticLandmarkLikelihood(f,m,p,1e-4,NaN);
-                testCase.verifyEqual(p(1:2)-(M(1:2,1:2)\g(1:2)).',[0 0],AbsTol=1e-8);
-            end
-        end
-        function orientationSuppliesYawWithoutLeverArm(testCase)
-            % A curb segment at the vehicle origin has no lever arm: the position
-            % kernel's Gauss-Newton metric carries no yaw, while the axis kernel
-            % restores a 1 deg rotation in one step.
-            c=struct('mean',[0 0],'covariance',[2.5 0;0 0.03],'semanticName',"curb",'mixtureWeight',1, ...
-                'numComponents',1,'repeatability',1);
-            cloud=struct('components',c,'frameCalibration',lidarFrameCalibrationConfig());
-            [f,m]=likelihoodInputs(cloud,cloud,[0 0 0]);rotation=deg2rad(1);
-            [~,~,plain]=localizationSupport.semanticLandmarkLikelihood(f,m,[0 0 rotation],1e-4,NaN);
-            [~,g,M]=localizationSupport.semanticLandmarkLikelihood(f,m,[0 0 rotation],1e-4,deg2rad(1));
-            testCase.verifyEqual(plain(3,3),0);
-            testCase.verifyEqual(rotation-g(3)/M(3,3),0,AbsTol=0.05*rotation);
-        end
-        function outlierFloorBoundsAnUnexplainedLandmark(testCase)
-            [map,source,truth]=scene();[f,m]=likelihoodInputs(map,source,truth);
-            p=[0.1,-0.05,truth(3)+deg2rad(0.5)];
-            [~,g,~,explained]=localizationSupport.semanticLandmarkLikelihood(f,m,p,1e-4,deg2rad(1));
-            % A pole 30 m away with no map partner, appended without renormalizing the others.
-            far=m;far.mean(end+1,:)=[30 30];far.covariance(:,:,end+1)=0.04*eye(2);far.semanticName(end+1)="pole";
-            far.mixtureWeight(end+1)=0.1;far.supportTangent(end+1,:)=[1 0];far.axisConfidence(end+1)=0;
-            far.angularVariance(end+1)=0;far.numComponents=far.numComponents+1;
-            [~,gFar,~,explainedFar]=localizationSupport.semanticLandmarkLikelihood(f,far,p,1e-4,deg2rad(1));
-            testCase.verifyEqual(gFar,g,RelTol=1e-9,AbsTol=1e-12);
-            testCase.verifyEqual(explainedFar,explained,AbsTol=1e-12);
-        end
-        function landmarkChannelConvergesWithoutRegistration(testCase)
-            % Preserve the accuracy target with a longer settling interval
-            % after removing the independent projected-speed correction.
-            f=movingFixture(20);cfg=overlapGradientConfig();cfg.aggregation="landmark";cfg.orientation=true;
-            f.data.lidarOverlap.config=cfg;
-            r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
-            error=r.pose(end,:)-f.truth(end,:);
-            testCase.verifyTrue(all(r.diagnostics.lidarOverlap.available(2:end)));
-            testCase.verifyLessThan(norm(error(1:2)),1e-3);
-            testCase.verifyLessThan(abs(rad2deg(atan2(sin(error(3)),cos(error(3))))),1e-2);
-            [map,source,truth]=scene();
-            m=localizationSupport.evaluateOverlapGradient(map,source,truth(:),cfg);
-            testCase.verifyEqual(m.similarity,1,AbsTol=0.01); % the map explains the source
-            invalid=overlapGradientConfig();invalid.orientation=true;
-            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,truth(:),invalid), ...
-                'VehicleLocalization:InvalidOverlapAggregation');
-            invalid=overlapGradientConfig();invalid.aggregation="pairs";
-            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,truth(:),invalid), ...
-                'VehicleLocalization:InvalidOverlapAggregation');
+            settings.geometry.heightMode="auto";
+            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,pose(:),settings), ...
+                'VehicleLocalization:PlanarOverlapRequired');
         end
         function retiredSolverConfigurationCannotReachOverlap(testCase)
             cloud=distributionRegistrationTest.exampleCloud();cfg=overlapGradientConfig();
@@ -377,18 +318,6 @@ function c=place(c,pose)
     r=[cos(pose(3)) -sin(pose(3));sin(pose(3)) cos(pose(3))];
     c.mean=c.mean*r.'+pose(1:2);
     for k=1:c.numComponents,c.covariance(:,:,k)=r*c.covariance(:,:,k)*r.';end
-end
-
-function [f,m]=likelihoodInputs(map,source,origin)
-% Support geometry with masses normalized as the landmark channel does.
-    g=localizationSupport.prepareSemanticOverlapGeometry(map,source,origin,semanticGeometryConfig());
-    f=g.fixed;m=g.moving;f.mean=f.mean(:,1:2);m.mean=m.mean(:,1:2);
-    f.covariance=f.planarCovariance;m.covariance=m.planarCovariance;names=unique(f.semanticName);
-    for name=names.'
-        I=f.semanticName==name;J=m.semanticName==name;
-        f.mixtureWeight(I)=f.mixtureWeight(I)/sum(f.mixtureWeight(I));
-        m.mixtureWeight(J)=m.mixtureWeight(J)/sum(m.mixtureWeight(J))/numel(names);
-    end
 end
 
 function c=selectComponents(c,keep)
