@@ -36,9 +36,9 @@ def select_poses(dataset, scene_names):
                        key=lambda row: row["timestamp"])
         can = dataset / "can_bus"
         imu = read_json(can / f"{name}_ms_imu.json")
-        wheel = read_json(can / f"{name}_zoe_veh_info.json")
+        vehicle_info = read_json(can / f"{name}_zoe_veh_info.json")
         steer = read_json(can / f"{name}_steeranglefeedback.json")
-        lo, hi = max(wheel[0]["utime"], steer[0]["utime"]), min(wheel[-1]["utime"], steer[-1]["utime"])
+        lo, hi = max(vehicle_info[0]["utime"], steer[0]["utime"]), min(vehicle_info[-1]["utime"], steer[-1]["utime"])
         native = [row["utime"] for row in imu if lo <= row["utime"] <= hi]
         mapping = lidar[::2]
         query = [row for i, row in enumerate(lidar) if i % 2 == 1

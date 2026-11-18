@@ -1,20 +1,22 @@
-function [measurements,auxiliary]=prepareNuscenesMotion(imu,wheels,steering,trial)
+function [measurements,auxiliary]=prepareNuscenesMotion(imu,vehicleInfo,steering,trial)
 % prepareNuscenesMotion Sensor-only, causal preparation on the native IMU clock.
 % Accept only ms_imu, zoe_veh_info and steeranglefeedback messages. No pose,
-% navigation velocity or reference trajectory is read. Wheel/steer packets use
+% navigation velocity or reference trajectory is read. Speed/steer packets use
 % last received samples; all streams must have coverage with bounded age.
 % IMU quaternion supplies tilt only; its arbitrary yaw is discarded.
     t=double([imu.utime].');assert(all(diff(t)>0),'VehicleLocalization:InvalidNuscenesClock','IMU clock must increase.');
-    wt=double([wheels.utime].');st=double([steering.utime].');
-    assert(all(diff(wt)>0) && all(diff(st)>0),'VehicleLocalization:InvalidNuscenesClock','CAN clocks must increase.');
-    keep=t>=max(wt(1),st(1)) & t<=min(wt(end),st(end));imu=imu(keep);t=t(keep);
+    vt=double([vehicleInfo.utime].');st=double([steering.utime].');
+    assert(all(diff(vt)>0) && all(diff(st)>0),'VehicleLocalization:InvalidNuscenesClock','CAN clocks must increase.');
+    keep=t>=max(vt(1),st(1)) & t<=min(vt(end),st(end));imu=imu(keep);t=t(keep);
     assert(numel(t)>=2,'VehicleLocalization:MissingNuscenesCoverage','No common sensor interval.');
-    wi=interp1(wt,(1:numel(wt)).',t,'previous');si=interp1(st,(1:numel(st)).',t,'previous');
-    age=[t-wt(wi),t-st(si)]/1e6;
+    vi=interp1(vt,(1:numel(vt)).',t,'previous');si=interp1(st,(1:numel(st)).',t,'previous');
+    age=[t-vt(vi),t-st(si)]/1e6;
     assert(all(age<=trial.maximumCanAgeS,'all'),'VehicleLocalization:StaleNuscenesCan','CAN packet age exceeds the declared limit.');
-    rpm=[[wheels(wi).FL_wheel_speed].',[wheels(wi).FR_wheel_speed].', ...
-        [wheels(wi).RL_wheel_speed].',[wheels(wi).RR_wheel_speed].'];
-    wheelMps=rpm*(2*pi*trial.wheelRadiusM/60);vx=mean(wheelMps(:,3:4),2);
+    % The Zoe CAN odometer reports vehicle speed directly in km/h.
+    speedKmh=[vehicleInfo(vi).odom_speed].';
+    assert(iscolumn(speedKmh) && numel(speedKmh)==numel(t) && all(isfinite(speedKmh)), ...
+        'VehicleLocalization:InvalidNuscenesSpeed','Require one finite CAN vehicle speed per aligned sample.');
+    vx=double(speedKmh)/3.6;
     q=reshape([imu.q],4,[]).';q=q./vecnorm(q,2,2);
     phi=atan2(2*(q(:,1).*q(:,2)+q(:,3).*q(:,4)),1-2*(q(:,2).^2+q(:,3).^2));
     theta=asin(max(-1,min(1,2*(q(:,1).*q(:,3)-q(:,4).*q(:,2)))));
@@ -27,6 +29,5 @@ function [measurements,auxiliary]=prepareNuscenesMotion(imu,wheels,steering,tria
     measurements=struct('time',time,'longitudinalSpeed',vx, ...
         'steeringAngle',[steering(si).value].'/trial.steeringRatio, ...
         'longitudinalAcceleration',ax,'lateralAcceleration',ay,'yawRate',r);
-    auxiliary=struct('utime',t,'tilt',[phi,theta],'wheelSpeedsMps',wheelMps, ...
-        'packetAgeS',age);
+    auxiliary=struct('utime',t,'tilt',[phi,theta],'packetAgeS',age);
 end
