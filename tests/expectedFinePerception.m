@@ -172,7 +172,7 @@ function expected = expectedFinePerception(dataset, frameIndex)
     end
 
     if dataset=="downtown"
-        aligned=jsondecode(fileread(fullfile(root,'tests','reference','downtownAlignedMasks.json')));
+        aligned=jsondecode(fileread(fullfile(root,'tests','reference','downtownDefaultMasks.json')));
         for entry=aligned.entries(:).'
             if entry.frameIndex~=frameIndex,continue;end
             for name=["curb","facade","pole","trafficSign"]

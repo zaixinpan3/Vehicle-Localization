@@ -3,7 +3,6 @@ function accepted=evaluatePillarDistributionRules(features,names,rules)
 % Each alternative describes one supported statistical morphology. All its
 % predicates must pass; any alternative can retain the complete pillar.
 % allOf intersects rule groups without expanding their Cartesian product.
-% Historical conjunction arrays remain supported for strictPrecision.
     if isstruct(rules) && isscalar(rules) && isfield(rules,'allOf')
         accepted=true(size(features,1),1);
         for k=1:numel(rules.allOf)

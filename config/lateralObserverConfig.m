@@ -66,6 +66,7 @@ function cfg = lateralObserverConfig(profile)
     % Freeze LPV coefficients at each interval midpoint and exponentiate
     % the resulting affine flow. This is a numerical implementation,
     % not an extension of the continuous ISS certificate to sampled data.
+    % Fixed implementation identifier retained in experiment metadata.
     cfg.observer.integrationMethod = "exponentialMidpoint";
     cfg.observer.initialState = [0.0; 0.0];
     % Only the LPV [vy; r] state estimates velocity. Out-of-domain samples

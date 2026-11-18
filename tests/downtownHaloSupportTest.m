@@ -19,15 +19,12 @@ classdef downtownHaloSupportTest < matlab.unittest.TestCase
             p=perceptionConfig('Downtown');cloud=coarseSemanticProbabilityCloudConfig(p.voxel);cloud.semanticNames="pole";
             branch=analyzeDowntownPillarStatistics(pillars,p.offGroundFeatures,cloud);
             branch.poleCellMask=[true false false];
-            cfg=p.downtownCandidates;cfg.precisionFilter.enabled=false;
+            cfg=p.downtownCandidates;cfg.precisionFilter.rules=struct(); % Isolate the halo support check.
             gate=filterDowntownPoleDistribution(branch.columnMaps,cfg.poleDistributionGate);
             t.verifyEqual(gate,[true false false]);
             [~,current]=classifyDowntownPillarStatistics(struct(),branch,"pole",cfg);
-            cfg.poleDistributionGate.requireHaloSupport=false;
-            [~,historical]=classifyDowntownPillarStatistics(struct(),branch,"pole",cfg);
             t.verifyEqual(current.poleCellMask,[true false false]);
-            t.verifyEqual(historical.poleCellMask,[true true false]);
-            t.verifyEqual(current.columnMaps.statistics,historical.columnMaps.statistics);
+            t.verifyEqual(current.columnMaps.statistics,branch.columnMaps.statistics);
         end
         function facadeRequiresHorizontalExtentOrWithinPillarHeight(t)
             stats=struct('pillarIndices',int32([1;2;3]),'count',[20;20;20], ...
@@ -59,13 +56,6 @@ classdef downtownHaloSupportTest < matlab.unittest.TestCase
             wide.meanXYZ=wide.meanXYZ+[100 -200 30];
             [shifted,other]=measurePillarMomentContext(wide,[1 13],7);
             t.verifyEqual(other,n);t.verifyEqual(shifted,x,'AbsTol',1e-8);
-        end
-        function historicalOperatingPointsPreserveHaloExpansion(t)
-            for policy=["highRecall","strictPrecision"]
-                cfg=downtownCandidateConfig(.3,policy);
-                t.verifyFalse(cfg.poleDistributionGate.requireHaloSupport);
-            end
-            t.verifyTrue(downtownCandidateConfig(.3).poleDistributionGate.requireHaloSupport);
         end
     end
 end

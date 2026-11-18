@@ -24,12 +24,8 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         end
     end
 
-    properties (TestParameter)
-        integrationMethod = struct('midpoint', "exponentialMidpoint", 'rk4', "rk4", 'euler', "euler")
-    end
-
     methods (Test)
-        function virtualObservationDrivesEveryIntegrator(testCase, integrationMethod)
+        function virtualObservationDrivesMidpointUpdate(testCase)
             design = testCase.CurrentDesign;
             % Exercise measurement wiring with deterministic gains independently
             % of the optimization objective and solver tolerances.
@@ -37,7 +33,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             design.gainBasis = struct('accelerationReciprocal', [1;0], ...
                 'yawConstant', [0;1], 'yawSpeed', zeros(2,1));
             cfg = design.cfg;
-            cfg.observer.integrationMethod = integrationMethod;
             measurements = testCase.constantSpeedMeasurements(.02, 12);
             baseline = runLateralVelocityObserver(measurements, design, cfg);
             measurements.lateralAcceleration(:) = .1;
@@ -49,6 +44,16 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(withGyro.innovation(1, :), [1.2, .03], AbsTol=1e-12);
             testCase.verifySize(actual.innovation, [numel(measurements.time), 2]);
             testCase.verifyEqual(actual.innovation(1), 1.2, AbsTol=1e-12);
+        end
+
+        function rejectsRetiredIntegrators(testCase)
+            design=testCase.CurrentDesign;
+            for name=["rk4","euler"]
+                cfg=design.cfg;cfg.observer.integrationMethod=name;
+                testCase.verifyError(@()runLateralVelocityObserver( ...
+                    testCase.constantSpeedMeasurements(.1,12),design,cfg), ...
+                    'VehicleLocalization:RetiredLateralIntegrator');
+            end
         end
 
         function missingLateralAccelerationIsRejected(testCase)
@@ -158,10 +163,9 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual([speed*ay; state(2)], C*state + D*steering, AbsTol=1e-12);
         end
 
-        function knownSteeringFeedthroughCancelsAtZeroState(testCase, integrationMethod)
+        function knownSteeringFeedthroughCancelsAtZeroState(testCase)
             design = testCase.CurrentDesign;
             cfg = design.cfg;
-            cfg.observer.integrationMethod = integrationMethod;
             measurements = testCase.constantSpeedMeasurements(.01, 17);
             measurements.steeringAngle(:) = .03;
             measurements.lateralAcceleration(:) = design.model.B(1)*.03;
@@ -458,7 +462,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         function accelerationNoiseCorrectionDoesNotGrowWithSpeed(testCase)
             design = testCase.CurrentDesign;
             cfg = design.cfg;
-            cfg.observer.integrationMethod = "euler";
             expected = design.gainRecoveryMatrix\design.gainBasis.accelerationReciprocal*.1;
             for speed = [1, 3, 12, 30]
                 measurements = testCase.constantSpeedMeasurements(.01, speed);
@@ -683,13 +686,15 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         % without the former master/injection lag.
             design = testCase.CurrentDesign;
             cfg = design.cfg;
-            cfg.observer.integrationMethod = "euler";
             cfg.observer.initialState = [0.0; 0.0];
             measurements = testCase.constantSpeedMeasurements(0.01, 10.0);
             measurements.lateralAcceleration(:) = 0.1; % y = 1 at Vx = 10.
             estimate = runLateralVelocityObserver(measurements, design, cfg);
             gain = lateralObserverSupport.scheduleLateralObserverGain(design, 10.0);
-            testCase.verifyEqual(estimate.lateralVelocity(2), 0.01*(gain(1,1)-cfg.outputPoint.forwardOffsetM*gain(2,1)), AbsTol=1e-12);
+            [A,C]=lateralObserverSupport.evaluateLateralModel(design.model,[10,.1]);
+            F=A-gain*C;
+            endpoint=F\((expm(.01*F)-eye(2))*gain(:,1));
+            testCase.verifyEqual(estimate.lateralVelocity(2), [1,-cfg.outputPoint.forwardOffsetM]*endpoint, AbsTol=1e-12);
             testCase.verifyEqual(estimate.state(:,1), estimate.observerPointLateralVelocity);
             testCase.verifyEqual(estimate.stateNames, ["lateralVelocity","yawRate"]);
         end

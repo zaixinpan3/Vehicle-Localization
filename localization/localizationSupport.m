@@ -1617,7 +1617,7 @@ classdef localizationSupport
                 cfg.wheelbase>0 && cfg.frontTrack>0 && cfg.rearTrack>0 && cfg.rearCgDistance>=0 && ...
                 cfg.filterTimeConstant>0 && cfg.maximumWheelAge>0 && cfg.consensusThreshold>0 && ...
                 cfg.maximumWheelRate>0 && cfg.maximumSteeringAngle>0 && cfg.maximumSteeringAngle<pi/2 && ...
-                ismember(cfg.method,["robust","mean","rear"]), ...
+                isequal(string(cfg.method),"robust"), ...
                 'VehicleLocalization:InvalidWheelConfig','Invalid wheel observer configuration.');
             pre=find(wt<=t(1),1,'last');
             if isempty(pre) || t(1)-wt(pre)>cfg.maximumWheelAge
@@ -1645,12 +1645,11 @@ classdef localizationSupport
                     stationary=all(available) && all(abs(w(iw,:))<=cfg.stationaryWheelRate) && abs(r)<=cfg.stationaryYawRate;
                     if stationary,candidate(:)=0;end
                     selected=available;
-                    if cfg.method=="rear",selected(1:2)=false;end
-                    if cfg.method=="robust" && nnz(selected)>=3
+                    if nnz(selected)>=3
                         center=median(candidate(selected));
                         selected=selected & abs(candidate-center)<=cfg.consensusThreshold;
                     end
-                    if cfg.method=="robust" && nnz(selected)==2 && ...
+                    if nnz(selected)==2 && ...
                             max(candidate(selected))-min(candidate(selected))>2*cfg.consensusThreshold
                         selected(:)=false;
                     end

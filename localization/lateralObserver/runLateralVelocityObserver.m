@@ -56,7 +56,6 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     gainNorm = zeros(sampleCount, 1);
     stateRate = zeros(sampleCount, 2);
     velocityValid = false(sampleCount, 1);
-    integrationMethod = lower(strtrim(string(cfg.observer.integrationMethod)));
     for sampleIdx = 1:sampleCount
         sample = sampleAt(measurements, sampleIdx, 0.0);
         [derivative, innovation, gain, valid] = ...
@@ -70,19 +69,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
             break;
         end
         dt = measurements.time(sampleIdx + 1) - measurements.time(sampleIdx);
-        if integrationMethod == "exponentialmidpoint"
-            state = exponentialInterval(state, measurements, sampleIdx, dt, design, settings);
-        elseif integrationMethod == "euler"
-            state = state + dt .* derivative;
-        else
-            midSample = sampleAt(measurements, sampleIdx, 0.5);
-            nextSample = sampleAt(measurements, sampleIdx, 1.0);
-            k1 = derivative;
-            k2 = observerDerivative(state + 0.5 .* dt .* k1, midSample, design, settings);
-            k3 = observerDerivative(state + 0.5 .* dt .* k2, midSample, design, settings);
-            k4 = observerDerivative(state + dt .* k3, nextSample, design, settings);
-            state = state + (dt ./ 6.0) .* (k1 + 2.0 .* k2 + 2.0 .* k3 + k4);
-        end
+        state = exponentialInterval(state, measurements, sampleIdx, dt, design, settings);
         assert(all(isfinite(state)), "The lateral observer diverged in interval %d.", sampleIdx);
     end
     % Reconstruct velocity rates from acceleration kinematics; no signal differences.
@@ -144,7 +131,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     estimate.diagnostics = struct("dynamicModelEvaluated", observerValid, ...
         "sideSlipValid", velocityValid, "modeChanged", modeChanged, ...
         "sideSlipRateSource", "accelerationKinematics", ...
-        "integrationMethod", integrationMethod, ...
+        "integrationMethod", "exponentialmidpoint", ...
         "schedulingRateSource", "kinematicEstimate", ...
         "schedulingRateKnown", rateKnown, "schedulingRateWithinBounds", rateWithinBounds);
     estimate.measurements = measurements;
@@ -317,9 +304,8 @@ function settings = validateRuntimeConfiguration(cfg, design)
     assert(numel(speedRange) == 2 && all(isfinite(speedRange)) && speedRange(1) > 0.0 && ...
         speedRange(2) > speedRange(1), ...
         "design.polytope.speedRange must define a positive nonempty speed interval.");
-    integrationMethod = lower(strtrim(string(cfg.observer.integrationMethod)));
-    assert(any(integrationMethod == ["exponentialmidpoint", "rk4", "euler"]), ...
-        "cfg.observer.integrationMethod must be exponentialMidpoint, rk4 or euler.");
+    assert(strcmpi(strtrim(string(cfg.observer.integrationMethod)),"exponentialMidpoint"), ...
+        'VehicleLocalization:RetiredLateralIntegrator','Lateral integration uses exponentialMidpoint.');
     assert(~isfield(cfg.observer, 'nonlinearity') && ...
         ~isfield(cfg.synthesis, 'lipschitzConstant') && ~isfield(cfg.synthesis, 'accelerationGainConstant') && ...
         ~isfield(cfg.synthesis, 'issGainRelaxation') && ~isfield(cfg.synthesis, 'initialErrorWeight'), ...

@@ -1,5 +1,7 @@
 function cfg=lidarImuTiltConfig()
 % lidarImuTiltConfig Causal gravity-direction filter in stored point axes.
+% Sensor preprocessing before XY projection, separate from the localization
+% algorithm and its feedback law. Replay profiles describe tilt availability.
 % Time constants are physical smoothing times, not fitted to reference poses.
 % Wheel acceleration and v*r approximate planar translational acceleration;
 % slip, grades, accelerometer bias and IMU lever-arm dynamics remain errors.

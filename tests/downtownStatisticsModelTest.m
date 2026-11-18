@@ -1,39 +1,22 @@
 classdef downtownStatisticsModelTest < matlab.unittest.TestCase
-% downtownStatisticsModelTest: Portable statistical model and scope contracts.
+% downtownStatisticsModelTest: Downtown pillar candidate rules and channel scope.
     methods (TestClassSetup)
         function paths(~)
             setupVehicleLocalization;
         end
     end
     methods (Test)
-        function operatingPointsRetainStatisticalSchemas(testCase)
-            balanced=perceptionConfig('Downtown');
-            strict=perceptionConfig('Downtown','offline','strictPrecision');
-            testCase.verifyTrue(balanced.groundFeatures.collectPillarDistributionShape);
-            testCase.verifyTrue(isfield(balanced.downtownCandidates.precisionFilter.rules.pole,'allOf'));
-            testCase.verifyFalse(isfield(strict.downtownCandidates.precisionFilter.rules.pole,'alternatives'));
-            testCase.verifyEqual(balanced.voxel.voxelSize,strict.voxel.voxelSize);
-            testCase.verifyEqual(pillarGridExtent(balanced.voxel),pillarGridExtent(strict.voxel));
-            testCase.verifyEqual(strict.downtownCandidates.precisionFilter.rules, ...
-                jsondecode(fileread(fullfile(strict.downtownCandidates.modelDirectory,'downtownPrecisionRules.json'))));
-            testCase.verifyFalse(isfield(perceptionConfig('Mississippi').groundFeatures,'collectPillarDistributionShape'));
-        end
-        function precisionDefaultsOnlyRemoveBroadCandidatePillars(testCase)
-            root=fileparts(fileparts(mfilename('fullpath')));
-            file=fullfile(root,'data','raw','downTownPointClouds.mat');
-            testCase.assumeTrue(isfile(file));
-            frame=loadPointCloudFrame(file,75);
-            strict=perceptionConfig('Downtown');
-            broad=perceptionConfig('Downtown','coarseProbabilityCloud','highRecall');
-            a=perceiveFrame(frame,strict);b=perceiveFrame(frame,broad);
-            testCase.verifyTrue(strict.downtownCandidates.precisionFilter.enabled);
-            testCase.verifyFalse(broad.downtownCandidates.precisionFilter.enabled);
-            testCase.verifyEqual(a.candidates.geometry,b.candidates.geometry);
-            for k=1:numel(a.candidates.semanticNames)
-                testCase.verifyTrue(all(ismember(a.candidates.pillarIndices{k},b.candidates.pillarIndices{k})));
+        function usesBalancedRulesInBothProducts(testCase)
+            for mode=["coarseProbabilityCloud","offline"]
+                cfg=perceptionConfig("Downtown",mode);
+                c=cfg.downtownCandidates;
+                testCase.verifyEqual(c.precisionFilter.rules,jsondecode(fileread( ...
+                    fullfile(fileparts(which('perceptionConfig')),'downtownBalancedRules.json'))));
+                testCase.verifyFalse(isfield(c,'candidatePolicy'));
+                c.candidatePolicy="strictPrecision";
+                testCase.verifyError(@()classifyDowntownPillarStatistics(struct(),struct(),"pole",c), ...
+                    'perception:RetiredCandidatePolicy');
             end
-            testCase.verifyFalse(isfield(a,'featureMasks'));
-            testCase.verifyEqual(a.sourceSummary,b.sourceSummary);
         end
         function pooledPoleGateRejectsSpreadAndIgnoresCoordinateTranslation(testCase)
             stats=struct('pillarIndices',int32([1;5]),'count',[30;30], ...
@@ -56,31 +39,12 @@ classdef downtownStatisticsModelTest < matlab.unittest.TestCase
             testCase.verifyEqual(coarse.voxel.gridDims,[334 334]);
             testCase.verifyEqual(coarse.voxel.voxelSize,fine.voxel.voxelSize);
             testCase.verifyEqual(pillarGridExtent(coarse.voxel),pillarGridExtent(fine.voxel));
-            testCase.verifyFalse(coarse.downtownCandidates.useModels);
             testCase.verifyEqual(coarse.downtownCandidates,fine.downtownCandidates);
             testCase.verifyEqual(perceptionConfig('Mississippi').voxel.voxelSize,[.6 .6]);
             testCase.verifyEqual(perceptionConfig('Carla').voxel.voxelSize,[.6 .6]);
         end
-        function trainedModelsUseOnlyDistributionFeatures(testCase)
-            cfg=downtownCandidateConfig(.6);
-            testCase.verifyTrue(cfg.useModels);
-            testCase.verifyFalse(downtownCandidateConfig(.3).useModels);
-            for name=["curb","facade","pole","trafficSign"]
-                model=jsondecode(fileread(fullfile(cfg.modelDirectory,cfg.modelFiles.(name))));
-                features=string(model.featureNames);
-                testCase.verifyEqual(numel(unique(features)),numel(features));
-                testCase.verifyFalse(any(ismember(lower(features),["frame","pointindex","pillarindex","dataset","x","y"])));
-                testCase.verifyTrue(all(isfinite(model.threshold)));
-                testCase.verifyGreaterThan(model.decisionThreshold,0);
-                testCase.verifyLessThan(model.decisionThreshold,1);
-                testCase.verifyGreaterThanOrEqual(model.value,zeros(size(model.value)));
-                testCase.verifyLessThanOrEqual(model.value,ones(size(model.value)));
-                testCase.verifyEqual(numel(model.left),numel(model.value));
-                testCase.verifyEqual(numel(model.right),numel(model.value));
-                score=scoreSemanticPillarModel(zeros(2,numel(features)),model,model.decisionThreshold);
-                testCase.verifyTrue(all(isfinite(score)));
-                testCase.verifyEqual(score(1),score(2));
-            end
+        function rejectsHistoricalClassifierLattice(testCase)
+            testCase.verifyError(@()downtownCandidateConfig(.6),'perception:DowntownRuleLattice');
         end
         function otherDatasetsRetainTheirExistingConfiguration(testCase)
             for name=["Mississippi","Carla"]
@@ -102,7 +66,7 @@ classdef downtownStatisticsModelTest < matlab.unittest.TestCase
             testCase.verifySize(x,[2 numel(names)]);
             testCase.verifyTrue(all(isfinite(x),'all'));
         end
-        function nestedDiagnosticsMatchFinalStatisticalAndEnvelopeMasks(testCase)
+        function nestedDiagnosticsMatchFinalCandidateMasks(testCase)
             points=[10 5 0;10.03 5.04 1.4;10.05 5.01 2.5; ...
                 10.7 5.01 .8;10.72 5.03 2.1;10.74 5.05 2.6];
             frame=struct('x',points(:,1),'y',points(:,2),'z',points(:,3), ...
@@ -113,8 +77,7 @@ classdef downtownStatisticsModelTest < matlab.unittest.TestCase
                 pillars=pillarizePointCloud(frame,cfg.voxel);
                 cloud=coarseSemanticProbabilityCloudConfig(cfg.voxel);cloud.semanticNames=names;
                 branch=analyzeDowntownPillarStatistics(pillars,cfg.offGroundFeatures,cloud);
-                % Deliberately stale aliases must be refreshed regardless of
-                % whether a model or the offline envelope selects candidates.
+                % Both products must refresh aliases from the final candidate decisions.
                 branch.facade.mask(:)=true;branch.facade.pillarLinIdx=1;
                 branch.candidates.candidateMask(:)=true;
                 branch.columnMaps.trafficSignCellMask(:)=true;
