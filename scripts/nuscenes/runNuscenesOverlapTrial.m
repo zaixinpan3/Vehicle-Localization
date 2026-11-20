@@ -216,7 +216,7 @@ function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDes
 end
 
 function summary=mapStabilitySummary(map)
-% Summarize actual repeated-frame inference; never scale weights by frame count.
+% Summarize repeatability inference and deployment mass.
     layers=map.canonicalMap.layers;classes=cell(numel(layers),1);
     for k=1:numel(layers)
         layer=layers(k);components=layer.components;published=layer.componentPublished;
@@ -231,7 +231,7 @@ function summary=mapStabilitySummary(map)
     end
     summary=struct('ingestedFrames',map.sourceFrameCount,'sourcePoints',map.canonicalMap.sourcePointCount, ...
         'observationBlockSize',map.config.temporalMap.observationBlockSize, ...
-        'weightSemantics',"Reference mass times inferred repeatability; separate frame/block IDs retained", ...
+        'weightSemantics',map.canonicalMap.fieldSemantics, ...
         'classes',{classes});
 end
 

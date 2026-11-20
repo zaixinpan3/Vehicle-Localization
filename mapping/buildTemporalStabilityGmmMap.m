@@ -4,9 +4,10 @@ function map = buildTemporalStabilityGmmMap(points, labels, observations, cfg)
 % and optional sourceId vectors. Numeric frames can be grouped using
 % cfg.observationBlockSize and cfg.blockOriginFrame. Explicit blocks win.
 % q(A) prod_k q(H_k,mu_k,U_k) retains hypothesis/offset/mean dependence.
-% Tiles fit unique deterministic XY representatives including their halos;
-% only owned support cells contribute reference mass. See the design document
-% research/repeated_observation_map_design.md for the objective and limits.
+% Tiles fit unique deterministic XY representatives including their halos.
+% Only owned support cells contribute reference mass. Positive block support
+% below confirmation discounts the field mass without changing the fitted posterior.
+% See research/repeated_observation_map_design.md for the fitting objective.
     if nargin < 4, cfg = temporalStabilityMapConfig(); end
     assert(isfield(cfg,'schemaVersion') && cfg.schemaVersion==2, ...
         'buildTemporalStabilityGmmMap:UnsupportedConfiguration','Rebuild configuration with temporalStabilityMapConfig.');
@@ -32,7 +33,7 @@ function map = buildTemporalStabilityGmmMap(points, labels, observations, cfg)
         'schemaVersion',2,'classLabels',classes,'sourcePointCount',size(points,1), ...
         'layers',[],'spatialDimension',size(points,2), ...
         'heightModel',"conditionalGaussianGivenXY",'coordinateFrame',"mapXY", ...
-        'fieldSemantics',"referenceMassTimesRepeatabilityGaussianIntensity", ...
+        'fieldSemantics',"blockSupportWeightedRepeatabilityGaussianIntensity", ...
         'coverageSemantics',"ownedFittingRegionsNotVisibility", ...
         'observationBlockPolicy',"explicitIdsOrFixedFrameGroups",'config',cfg);
     map.frameCalibration=validateLidarFrameCalibration(cfg.frameCalibration);
@@ -91,7 +92,7 @@ function p=classParameters(cfg,name)
         "emMaxIterations","selectionMinBlocks","selectionHoldoutEvery"];
     for key=integers, validateattributes(p.(key),{'numeric'},{'scalar','integer','positive','finite'},mfilename,key); end
     assert(p.minObservedBlocks>=2 && p.selectionMinBlocks>=3 && p.selectionHoldoutEvery>=2, ...
-        'Repeatability needs two blocks; selection needs training and held-out blocks.');
+        'Confirmation needs two blocks; selection needs training and held-out blocks.');
     validateattributes(p.tileOrigin,{'numeric'},{'real','size',[1 2],'finite'});
     validateattributes(p.backgroundBetaPrior,{'numeric'},{'real','size',[1 2],'finite','>',1});
     validateattributes(p.repeatabilityPrior,{'numeric'},{'scalar','>',0,'<',1});
@@ -413,8 +414,8 @@ function [components,cells,backgroundMass]=publishTile(fit,xy,core,center,tile,p
         c.referenceMass=referenceMass(k); c.status="variable";
         if c.observedBlockCount<p.minObservedBlocks, c.status="unconfirmed";
         elseif q.r>threshold && sum(q.count)>=p.minComponentPoints, c.status="repeatable"; end
-        c.published=c.status=="repeatable" && c.referenceMass>0;
-        c.mass=c.referenceMass*c.repeatability*double(c.published);
+        [c.mass,c.published]=mappingSupport.publicationMass(c.referenceMass,c.repeatability, ...
+            c.observedBlockCount,p.minObservedBlocks,c.status);
         [c.meanXYZ,c.covarianceXYZ,c.heightAvailable,c.heightStatus]=conditionalHeight( ...
             raw,groups,fit.gamma(:,k+1),c.mean,c.covariance,p,cfg);
         c.blockEffectiveCounts=q.count; c.blockOffsetsStable=q.stable.locationMean-q.stable.mean.';

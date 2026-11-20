@@ -4,6 +4,14 @@ classdef mappingSupport
 % Example: components = mappingSupport.validateSemanticProbabilityCloud(mapCloud).
 
     methods (Static)
+        function [mass,published]=publicationMass(referenceMass,r,blocks,confirmationBlocks,status)
+        % Sparse candidates retain a fraction of their repeatability-weighted area.
+            sparse=blocks>0 & blocks<confirmationBlocks & status=="unconfirmed";
+            confirmed=blocks>=confirmationBlocks & status=="repeatable";
+            published=referenceMass>0 & (sparse | confirmed);
+            mass=referenceMass.*r.*min(1,blocks./confirmationBlocks).*published;
+        end
+
         function index=compileFieldIndex(layer)
         % compileFieldIndex: Rasterize error-bounded Gaussian extents.
         % Each of K positive components may omit at most epsilon/K intensity.
@@ -55,7 +63,17 @@ classdef mappingSupport
                 assert(size(layer.coverageRegions,2)==4 && all(isfinite(layer.coverageRegions),'all') && ...
                     all(layer.coverageRegions(:,3:4)>layer.coverageRegions(:,1:2),'all'),'Invalid coverage.');
                 r=mappingSupport.clipUnit(layer.componentRepeatability);
-                expected=layer.componentReferenceMasses.*r.*double(layer.componentPublished);
+                counts=reshape([layer.components.observedBlockCount],K,1);
+                status=reshape(string({layer.components.status}),K,1);
+                [expected,published]=mappingSupport.publicationMass(layer.componentReferenceMasses, ...
+                    r,counts,layer.params.minObservedBlocks,status);
+                if map.fieldSemantics=="referenceMassTimesRepeatabilityGaussianIntensity"
+                    % Frozen maps used confirmed candidates only.
+                    published=published & status=="repeatable";
+                    expected=expected.*published;
+                end
+                assert(isequal(published,layer.componentPublished), ...
+                    'VehicleLocalization:PublicationMismatch','Publication disagrees with block support.');
                 assert(all(isfinite(layer.componentReferenceMasses) & layer.componentReferenceMasses>=0) && ...
                     norm(mass-expected,1)<1e-10*max(1,sum(mass)) && ...
                     abs(sum(mass)-layer.totalMass)<1e-10*max(1,sum(mass)), ...
@@ -70,8 +88,6 @@ classdef mappingSupport
                         c.mass==mass(k) && c.referenceMass==layer.componentReferenceMasses(k) && ...
                         c.repeatability==r(k) && c.published==layer.componentPublished(k), ...
                         'VehicleLocalization:ComponentIndexMismatch','Component data and field arrays disagree.');
-                    assert(~c.published || (c.status=="repeatable" && c.observedBlockCount>=layer.params.minObservedBlocks), ...
-                        'Unconfirmed or variable components cannot be published.');
                     assert(norm(c.covariance-c.withinBlockCovariance-c.stableOffsetCovariance-c.referenceMeanCovariance,'fro')<1e-8, ...
                         'Predictive covariance semantics disagree.');
                     if c.heightAvailable

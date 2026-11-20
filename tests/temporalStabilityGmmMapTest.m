@@ -59,18 +59,39 @@ classdef temporalStabilityGmmMapTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(map.layers.componentRepeatability,0.5);
             testCase.verifyEqual(map.layers.components.observedBlockCount,2);
             testCase.verifyTrue(map.layers.components.published);
-            testCase.verifyGreaterThan(map.layers.totalMass,0);
+            c=map.layers.components;
+            testCase.verifyEqual(map.layers.totalMass,c.referenceMass*c.repeatability,'AbsTol',1e-14);
         end
-        function oneBlockRemainsUnconfirmedWithFavorablePrior(testCase)
+        function oneBlockContributesDiscountedMassEvenWithFavorablePrior(testCase)
             [p,x,l,b]=testCase.fixture(1); p.defaultParams.repeatabilityPrior=0.99;
             map=buildTemporalStabilityGmmMap(x,l,b,p);
             cloud=temporalMapToProbabilityCloud(map);
             [score,d]=queryTemporalStabilityGmmMap(map,[1 0],"stable");
             testCase.verifyEqual(map.layers.components.status,"unconfirmed");
+            c=map.layers.components;
+            testCase.verifyTrue(c.published);
+            testCase.verifyEqual(cloud.components.mass,c.referenceMass*c.repeatability/2,'AbsTol',1e-14);
+            testCase.verifyGreaterThan(score,0);
+            testCase.verifyEqual(score,testCase.cloudScores(cloud,[1 0]),'AbsTol',1e-14);
+            testCase.verifyEqual(d.status,"valid");
+        end
+        function zeroEffectiveBlocksContributeNoMass(testCase)
+            [p,x,l,b]=testCase.fixture(1); p.defaultParams.minBlockEffectiveCount=size(x,1)+1;
+            map=buildTemporalStabilityGmmMap(x,l,b,p);
+            testCase.verifyEqual(map.layers.components.observedBlockCount,0);
+            testCase.verifyFalse(map.layers.components.published);
+            testCase.verifyEqual(temporalMapToProbabilityCloud(map).totalMass,0,'AbsTol',0);
+        end
+        function frozenConfirmedOnlyMapKeepsItsStoredField(testCase)
+            [p,x,l,b]=testCase.fixture(1); map=buildTemporalStabilityGmmMap(x,l,b,p);
+            map.fieldSemantics="referenceMassTimesRepeatabilityGaussianIntensity";
+            layer=map.layers; layer.components.published=false; layer.components.mass=0;
+            layer.componentPublished=false; layer.componentMasses=0;
+            layer.componentMixtureWeights=0; layer.totalMass=0;
+            layer.queryIndex=mappingSupport.compileFieldIndex(layer); map.layers=layer;
+            cloud=temporalMapToProbabilityCloud(map);
             testCase.verifyEqual(cloud.totalMass,0,'AbsTol',0);
-            testCase.verifyEmpty(cloud.components.mean);
-            testCase.verifyEqual(score,0,'AbsTol',0);
-            testCase.verifyEqual(d.status,"noPublishedStructure");
+            testCase.verifyEqual(queryTemporalStabilityGmmMap(map,[1 0],"stable"),0,'AbsTol',0);
         end
         function denseStackedMarginalMatchesStructuredHypothesis(testCase)
             [p,x,l,b]=testCase.fixture(3); p.defaultParams.storeEmAssignments=true;
@@ -105,10 +126,15 @@ classdef temporalStabilityGmmMapTest < matlab.unittest.TestCase
         end
         function explicitBlocksControlTemporalEvidence(testCase)
             [p,x,l,b]=testCase.fixture(3);
+            p.defaultParams.minObservedBlocks=4; p.defaultParams.repeatabilityPrior=0.1;
             obs=struct('frameId',b,'observationBlockId',ones(size(b)));
             map=buildTemporalStabilityGmmMap(x,l,obs,p);
-            testCase.verifyEqual(map.layers.components.observedBlockCount,1);
-            testCase.verifyEqual(map.layers.components.status,"unconfirmed");
+            c=map.layers.components;
+            testCase.verifyEqual(c.observedBlockCount,1);
+            testCase.verifyEqual(c.status,"unconfirmed");
+            testCase.verifyLessThan(c.repeatability,0.5);
+            testCase.verifyTrue(c.published);
+            testCase.verifyEqual(c.mass,c.referenceMass*c.repeatability/4,'AbsTol',1e-14);
             testCase.verifyEqual(map.layers.representativeBlockIds,repmat("1",5,1));
         end
         function unrelatedBlocksDoNotSupplyEvidence(testCase)
