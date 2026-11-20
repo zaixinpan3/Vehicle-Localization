@@ -33,7 +33,7 @@ function estimate=integrate(data,cfg,lateral,L)
     heading.valid=heading.valid & cfg.invariantObserver.gnssHeadingAvailable;
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
         'minimumInformation',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3), ...
-        'channels',{cell(n,1)},'scaleLadder',L.scaleLadder);
+        'channels',{cell(n,1)});
     alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
     [continuous,cfg]=localizationSupport.designFullObserverGains(cfg);
@@ -100,7 +100,7 @@ function estimate=integrate(data,cfg,lateral,L)
             measurement=L.evaluate(k,x([1,4,7]));
             assert(~isfield(measurement,'pose') && (isfield(measurement,'gradient') || isfield(measurement,'residual')), ...
                 'VehicleLocalization:ExternalLidarPose','LiDAR feedback must be evaluated at the prediction.');
-            if isfield(measurement,'scaleSimilarity')
+            if isfield(measurement,'similarity') && isfield(measurement,'channels')
                 overlapDiagnostics.evaluated(k)=true;overlapDiagnostics.available(k)=measurement.available;
                 overlapDiagnostics.similarity(k)=measurement.similarity;overlapDiagnostics.seconds(k)=measurement.seconds;
                 overlapDiagnostics.minimumInformation(k)=measurement.minimumInformation;

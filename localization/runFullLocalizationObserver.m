@@ -31,11 +31,10 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         'Use the geometric information filter; registration-error calibration is removed.');
     localizationSupport.rejectExternalLidar(data);
     valid=false(numel(data.highRate.time),1);
-    lidar=struct('valid',valid,'name',"none",'scaleLadder',[]);
+    lidar=struct('valid',valid,'name',"none");
     if isfield(data,'lidarOverlap')
         lidar=overlapSource(data.lidarOverlap,data.highRate.time(:));
         lidar.name="overlapGradient";
-        lidar.scaleLadder=lidar.config.scaleLadder;
         map=lidar.map;sources=lidar.sources;settings=lidar.config;
         lidar.evaluate=@(k,pose)localizationSupport.evaluateOverlapGradient(map,sources{k},pose,settings);
     end

@@ -741,10 +741,10 @@ classdef localizationSupport
         % evaluateOverlapGradient Correspondence-free LiDAR gradient at the observer prediction.
         % Crop the local map, condition its moments on view, and weight map and
         % source masses by available view reliability and temporal stability.
-        % At each bandwidth average the negative-log overlap gradient and the
-        % Gauss-Newton metric of evaluable semantic channels. Sum these across
-        % bandwidths. Each scale similarity is the geometric mean of its
-        % normalized class overlaps. An empty set contributes no feedback.
+        % Average the exact single-scale negative-log overlap (Cauchy-Schwarz
+        % divergence) gradient and Gauss-Newton metric across evaluable shared
+        % semantic channels. Similarity is the geometric mean of normalized
+        % class overlaps. An empty set contributes no feedback.
             arguments
                 fixedCloud (1,1) struct
                 movingCloud (1,1) struct
@@ -752,18 +752,16 @@ classdef localizationSupport
                 cfg (1,1) struct = overlapGradientConfig()
             end
             assert(isfield(cfg,'geometry') && ~any(isfield(cfg, ...
-                {'registration','aggregation','orientation','outlierDensity','viewConditioning','evidenceWeights'})), ...
+                {'registration','aggregation','orientation','outlierDensity','viewConditioning','evidenceWeights','scaleLadder'})), ...
                 'VehicleLocalization:ObsoleteOverlapConfig','Rebuild overlap settings with overlapGradientConfig.');
             timer=tic;linearization=pose;pose=pose(:).';
-            ladder=cfg.scaleLadder(:).';
-            validateattributes(ladder,{'double'},{'real','finite','nonnegative','nonempty','vector'});
             assert(isequal(string(cfg.geometry.heightMode),"xy"),'VehicleLocalization:PlanarOverlapRequired', ...
                 'Feature-channel feedback requires the XY marginal.');
             measurement=struct('gradient',zeros(3,1),'information',zeros(3),'linearizationPose',linearization, ...
-                'available',false,'similarity',0,'minimumInformation',NaN,'scaleLadder',ladder, ...
-                'scaleSimilarity',nan(size(ladder)),'mapComponents',0,'sourceComponents',0, ...
+                'available',false,'similarity',0,'minimumInformation',NaN, ...
+                'mapComponents',0,'sourceComponents',0, ...
                 'sharedClasses',strings(1,0),'informationCalibrated',false,'seconds',0, ...
-                'geometrySource',"per-feature-channel semantic overlap at the observer prediction");
+                'geometrySource',"per-feature-channel exact semantic overlap at the observer prediction");
             measurement.channels=struct('name',{},'similarity',{},'gradient',{},'information',{});
             local=localizationSupport.selectLocalProbabilityCloud(fixedCloud,pose,cfg.localMapRadius);
             if local.components.numComponents==0 || movingCloud.components.numComponents==0
@@ -782,44 +780,29 @@ classdef localizationSupport
             origin=[0,0,pose(3)];gradient=zeros(3,1);information=zeros(3);
             shared=intersect(f.semanticName(f.mixtureWeight>0),m.semanticName(m.mixtureWeight>0));
             measurement.sharedClasses=reshape(string(shared),1,[]);
+            logScore=0;count=0;
             for c=1:numel(shared)
-                measurement.channels(c)=struct('name',shared(c),'similarity',nan(size(ladder)), ...
-                    'gradient',nan(3,numel(ladder)),'information',nan(3,3,numel(ladder)));
+                measurement.channels(c)=struct('name',shared(c),'similarity',NaN, ...
+                    'gradient',nan(3,1),'information',nan(3,3));
+                fixedClass=overlapClassComponents(f,shared(c));
+                movingClass=overlapClassComponents(m,shared(c));
+                [fixedClass,movingClass]=localizationSupport.balanceSemanticDistributions(fixedClass,movingClass);
+                [energy,ascent,metric]=localizationSupport.semanticGaussianOverlap(fixedClass,movingClass,origin);
+                if ~(energy>realmin),continue;end
+                score=min(energy,1);
+                g=-ascent(:)/energy;
+                measurement.channels(c).similarity=score;
+                measurement.channels(c).gradient=g;
+                measurement.channels(c).information=metric;
+                logScore=logScore+log(score);
+                gradient=gradient+g;information=information+metric;
+                count=count+1;
             end
-            for k=1:numel(ladder)
-                fk=f;mk=m;
-                if ladder(k)>0
-                    inflation=ladder(k)^2/2*eye(2); % isotropic, hence rotation invariant
-                    fk.covariance(1:2,1:2,:)=fk.covariance(1:2,1:2,:)+inflation;
-                    mk.covariance(1:2,1:2,:)=mk.covariance(1:2,1:2,:)+inflation;
-                end
-                logScore=0;scaleGradient=zeros(3,1);scaleMetric=zeros(3);count=0;
-                for c=1:numel(shared)
-                    fixedClass=overlapClassComponents(fk,shared(c));
-                    movingClass=overlapClassComponents(mk,shared(c));
-                    [fixedClass,movingClass]=localizationSupport.balanceSemanticDistributions(fixedClass,movingClass);
-                    [energy,ascent,metric]=localizationSupport.semanticGaussianOverlap(fixedClass,movingClass,origin);
-                    if ~(energy>realmin),continue;end
-                    score=min(energy,1);
-                    g=-ascent(:)/energy;
-                    measurement.channels(c).similarity(k)=score;
-                    measurement.channels(c).gradient(:,k)=g;
-                    measurement.channels(c).information(:,:,k)=metric;
-                    logScore=logScore+log(score);
-                    scaleGradient=scaleGradient+g;scaleMetric=scaleMetric+metric;
-                    count=count+1;
-                end
-                if count>0
-                    gradient=gradient+scaleGradient/count;
-                    information=information+scaleMetric/count;
-                    measurement.scaleSimilarity(k)=exp(logScore/count);
-                end
-            end
-            evaluated=isfinite(measurement.scaleSimilarity);
-            if any(evaluated)
-                information=(information+information.')/2;
+            if count>0
+                gradient=gradient/count;
+                information=(information+information.')/(2*count);
                 measurement.gradient=gradient;measurement.information=information;
-                measurement.similarity=measurement.scaleSimilarity(find(evaluated,1));
+                measurement.similarity=exp(logScore/count);
                 measurement.minimumInformation=min(eig(information));
                 measurement.available=true;
             end

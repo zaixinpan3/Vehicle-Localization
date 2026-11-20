@@ -11,7 +11,7 @@ function estimate=run(data,cfg,options)
     end
     assert(~isfield(data,'lidarOverlap'),'VehicleLocalization:AmbiguousLidarInput','Supply one test source.');
     source=syntheticSource(data.lidar,data.highRate.time(:));
-    lidar=struct('name',"syntheticResidual",'scaleLadder',[],'valid',source.valid, ...
+    lidar=struct('name',"syntheticResidual",'valid',source.valid, ...
         'frameReliability',source.frameReliability,'directionReliability',source.directionReliability);
     if isfield(source,'evaluateResidual')
         lidar.evaluate=source.evaluateResidual;

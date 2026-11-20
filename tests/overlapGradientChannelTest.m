@@ -8,7 +8,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
     end
     methods (Test)
         function singleChannelGradientMatchesIndependentAlignmentScore(testCase)
-            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0;
+            [map,source,truth]=scene();cfg=overlapGradientConfig();
             map.components=selectComponents(map.components,1:3);source.components=selectComponents(source.components,1:3);
             pose=truth+[0.15,-0.10,deg2rad(1.5)];
             m=localizationSupport.evaluateOverlapGradient(map,source,pose(:),cfg);
@@ -27,7 +27,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
         end
         function featureChannelsMatchIndependentClassEvaluations(testCase)
             [map,source,truth]=scene();pose=truth(:)+[0.35;-0.2;0.04];
-            cfg=overlapGradientConfig();cfg.scaleLadder=0.5;
+            cfg=overlapGradientConfig();
             result=localizationSupport.evaluateOverlapGradient(map,source,pose,cfg);
             names=unique(source.components.semanticName);
             testCase.verifyEqual([result.channels.name],names.');
@@ -47,33 +47,27 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyEqual(result.similarity,exp(mean(log(scores))),AbsTol=1e-12);
             testCase.verifyEqual(result.gradient,mean(gradients,2),AbsTol=1e-10);
             testCase.verifyEqual(result.information,mean(metrics,3),AbsTol=1e-10);
-
         end
-        function unevaluableChannelIsOmittedOnlyAtThatScale(testCase)
-            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=[0 2];
+        function unevaluableChannelIsOmitted(testCase)
+            [map,source,truth]=scene();cfg=overlapGradientConfig();
             % The sign lies far from its sole partner, but is inside the map crop.
             map.components.mean(6,1)=map.components.mean(6,1)+45;
             result=localizationSupport.evaluateOverlapGradient(map,source,truth(:),cfg);
             sign=result.channels([result.channels.name]=="trafficSign");
-            testCase.verifyTrue(isnan(sign.similarity(1)));
-            testCase.verifyGreaterThan(sign.similarity(2),0);
-            for k=1:2
-                costs=arrayfun(@(ch) -log(ch.similarity(k)),result.channels);
-                testCase.verifyEqual(result.scaleSimilarity(k),exp(-mean(costs,'omitnan')),AbsTol=1e-12);
-            end
+            testCase.verifyTrue(isnan(sign.similarity));
+            costs=arrayfun(@(ch) -log(ch.similarity),result.channels);
+            testCase.verifyEqual(result.similarity,exp(-mean(costs,'omitnan')),AbsTol=1e-12);
         end
         function gaussNewtonMetricIsExactForOnePairAtAnyDistance(testCase)
-            % One sign in map and source: every -log E_sigma is quadratic in
-            % translation with the common residual, so the ladder metric is the sum
-            % of the inflated pair precisions and the translation Gauss-Newton step
-            % from any offset lands on the optimum. With one pair the 3-by-3 metric
-            % has rank two.
+            % One sign in map and source: -log E is quadratic in translation
+            % with the exact pair precision inv(Sigma + R*Lambda*R'), so the
+            % translation Gauss-Newton step from any offset lands on the optimum.
+            % With one pair the 3-by-3 metric has rank two.
             [map,source,truth]=scene();
             map.components=selectComponents(map.components,6);source.components=selectComponents(source.components,6);
             R=[cos(truth(3)) -sin(truth(3));sin(truth(3)) cos(truth(3))];
             pair=map.components.covariance(:,:,1)+R*source.components.covariance(:,:,1)*R.';
-            precision=zeros(2);
-            for sigma=overlapGradientConfig().scaleLadder,precision=precision+inv(pair+sigma^2*eye(2));end
+            precision=inv(pair);
             offsets=[0.1 0;1 0;0 2;-3 1.5];
             for k=1:size(offsets,1)
                 pose=truth(:);pose(1:2)=pose(1:2)+offsets(k,:).';
@@ -95,8 +89,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyGreaterThan(min(eig(m.information)),0);
             testCase.verifyEqual(m.similarity,1,AbsTol=1e-12);
         end
-        function smoothedGradientIsTheDerivativeOfItsNegativeLogSimilarity(testCase)
-            [map,source,truth]=scene();cfg=overlapGradientConfig();cfg.scaleLadder=0.5;
+        function gradientMatchesNegativeLogSimilarityDerivative(testCase)
+            [map,source,truth]=scene();cfg=overlapGradientConfig();
             pose=(truth+[0.15,-0.10,deg2rad(1.5)]).';
             m=localizationSupport.evaluateOverlapGradient(map,source,pose,cfg);
             steps=[1e-6;1e-6;1e-7];expected=zeros(3,1);
@@ -107,12 +101,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
                 expected(j)=-(log(plus)-log(minus))/(2*steps(j));
             end
             testCase.verifyEqual(m.gradient,expected,RelTol=1e-5,AbsTol=1e-8);
-            aligned=localizationSupport.evaluateOverlapGradient(map,source,truth(:),cfg);
-            sharp=cfg;sharp.scaleLadder=0;
-            exact=localizationSupport.evaluateOverlapGradient(map,source,truth(:),sharp);
-            testCase.verifyLessThan(norm(aligned.gradient),1e-9);
-            testCase.verifyEqual(aligned.similarity,1,AbsTol=1e-12);
-            testCase.verifyLessThan(trace(aligned.information),trace(exact.information));
+            testCase.verifyEqual(m.minimumInformation,min(eig(m.information)),AbsTol=1e-12);
         end
         function mixtureMassScaleDoesNotChangeTheChannel(testCase)
             [map,source,truth]=scene();pose=(truth+[0.2,0.1,deg2rad(2)]).';
@@ -183,7 +172,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyTrue(all(r.diagnostics.lidarOverlap.available(2:end)));
             audit=r.diagnostics.lidarOverlap;
             testCase.verifyEqual([audit.channels{end}.name],["curb","pole","trafficSign"]);
-            testCase.verifyEqual(audit.scaleLadder,overlapGradientConfig().scaleLadder);
             testCase.verifyGreaterThan(norm(error(1,1:2)),0.2);
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
             testCase.verifyLessThan(norm(error(end,1:2)),.1*norm(error(1,1:2)));
@@ -215,45 +203,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             noPoles=localizationSupport.evaluateOverlapGradient(map,zeroed,pose);
             testCase.verifyFalse(ismember("pole",noPoles.sharedClasses));
         end
-        function scaleLadderIsTheSumOfSingleScales(testCase)
-            [map,source,truth]=scene();pose=(truth+[0.4,-0.2,deg2rad(2)]).';
-            cfg=overlapGradientConfig();ladder=cfg.scaleLadder;
-            multi=localizationSupport.evaluateOverlapGradient(map,source,pose,cfg);
-            gradient=zeros(3,1);information=zeros(3);
-            for k=1:numel(ladder)
-                single=cfg;single.scaleLadder=ladder(k);
-                m=localizationSupport.evaluateOverlapGradient(map,source,pose,single);
-                testCase.verifyEqual(multi.scaleSimilarity(k),m.similarity,RelTol=1e-12);
-                gradient=gradient+m.gradient;information=information+m.information;
-            end
-            testCase.verifyEqual(multi.gradient,gradient,RelTol=1e-9,AbsTol=1e-12);
-            testCase.verifyEqual(multi.information,information,RelTol=1e-9,AbsTol=1e-9);
-            testCase.verifyEqual(multi.similarity,multi.scaleSimilarity(1));
-            testCase.verifyEqual(multi.minimumInformation,min(eig(multi.information)),AbsTol=1e-12);
-            invalid=cfg;invalid.scaleLadder=[0 -1];
-            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,pose,invalid), ...
-                'MATLAB:expectedNonnegative');
-            invalid.scaleLadder=[];
-            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,pose,invalid), ...
-                'MATLAB:expectedNonempty');
-        end
-        function scaleLadderRestoresGradientBeyondTheExactBasin(testCase)
-            [map,source,truth]=scene();offset=6*[-sin(truth(3)),cos(truth(3)),0];pose=(truth+offset).';
-            exact=overlapGradientConfig();exact.scaleLadder=0;
-            a=localizationSupport.evaluateOverlapGradient(map,source,pose,exact);
-            b=localizationSupport.evaluateOverlapGradient(map,source,pose,overlapGradientConfig());
-            testCase.verifyTrue(b.available);
-            wide=exact;wide.scaleLadder=overlapGradientConfig().scaleLadder(end);
-            coarse=localizationSupport.evaluateOverlapGradient(map,source,pose,wide);
-            testCase.verifyTrue(coarse.available);
-            testCase.verifyGreaterThan(coarse.gradient.'*offset.',0);
-            testCase.verifyGreaterThan(norm(b.gradient-a.gradient),0);
-            testCase.verifyGreaterThan(b.gradient.'*offset.',0);
-        end
         function retiredOverlapSelectorsAreRejected(testCase)
             [map,source,pose]=scene();
             retired=struct('aggregation',"frame",'orientation',true,'outlierDensity',1e-4, ...
-                'viewConditioning',false,'evidenceWeights',false);
+                'viewConditioning',false,'evidenceWeights',false,'scaleLadder',[0 0.5 1 2]);
             settings=overlapGradientConfig();
             for name=string(fieldnames(retired)).'
                 testCase.verifyFalse(isfield(settings,name));
