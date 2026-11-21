@@ -4,13 +4,14 @@ function report=runDowntownReferenceExperiment(datasetRoot,outputRoot,options)
 % this operation; saved historical gain snapshots are never live defaults.
     arguments
         datasetRoot (1,1) string="data/processed/downtown_reference_gnss_free_20261005"
-        outputRoot (1,1) string="output/downtown_exact_start_gnss_free_20261005"
+        outputRoot (1,1) string=""
         options.Only (1,1) string=""
         options.MapRoot (1,1) string=""
     end
     setupVehicleLocalization();maxNumCompThreads(2);
-    if ~isfolder(outputRoot),mkdir(outputRoot);end
     protocol=downtownReferenceReplayConfig();
+    if outputRoot=="",outputRoot=fullfile('output',protocol.mapPerceptionVersion);end
+    if ~isfolder(outputRoot),mkdir(outputRoot);end
     cfg=lateralObserverConfig();timer=tic;lateralDesign=designLateralObserverGains(cfg);synthesisSeconds=toc(timer);
     save(fullfile(outputRoot,'lateral_design.mat'),'lateralDesign','cfg','synthesisSeconds','-v7.3');
     folders=dir(fullfile(datasetRoot,'raw_data*'));records=cell(0,1);
@@ -24,11 +25,26 @@ function report=runDowntownReferenceExperiment(datasetRoot,outputRoot,options)
             if ~isfile(fullfile(mapFolder,'map_summary.json'))
                 assert(strlength(options.MapRoot)==0,'VehicleLocalization:MissingFrozenMap','The supplied frozen map is unavailable.');
                 buildDowntownReferenceFeatureMap(dataset,mapFolder);
+            elseif strlength(options.MapRoot)==0
+                saved=jsondecode(fileread(fullfile(mapFolder,'map_summary.json')));
+                assert(isfield(saved,'mapPerceptionVersion') && ...
+                    string(saved.mapPerceptionVersion)==protocol.mapPerceptionVersion, ...
+                    'VehicleLocalization:StaleFineMap', ...
+                    'Choose a fresh output folder to rebuild fine features, or explicitly supply the frozen MapRoot.');
             end
             inputs=prepareDowntownMotionInputs(dataset,lateralDesign);[ids,native]=downtownReplayFrameSchedule(dataset,inputs);
             packet=readDowntownInitialPose(dataset,ids(1),native(1));
             if isfile(fullfile(localFolder,'summary.json'))
-                existing=jsondecode(fileread(fullfile(localFolder,'summary.json')));
+                summaryFile=fullfile(localFolder,'summary.json');
+                existing=jsondecode(fileread(summaryFile));
+                mapFile=fullfile(mapFolder,'probability_cloud.mat');
+                mapInfo=dir(mapFile); resultInfo=dir(summaryFile);
+                assert(isfield(existing,'mapFile') && isscalar(mapInfo) && ...
+                    isequal(java.io.File(existing.mapFile).getCanonicalPath(), ...
+                        java.io.File(char(mapFile)).getCanonicalPath()) && ...
+                    mapInfo.datenum<=resultInfo.datenum, ...
+                    'VehicleLocalization:StaleReplayMap', ...
+                    'The saved trajectory predates or uses a different map. Choose a fresh output folder.');
                 assert(isfield(existing,'observerArchitecture') && string(existing.observerArchitecture)==protocol.observer.kind && ...
                     isfield(existing,'replayVersion') && string(existing.replayVersion)==protocol.replayVersion, ...
                     'VehicleLocalization:StaleObserver','Existing output uses a different observer; choose a new output root.');

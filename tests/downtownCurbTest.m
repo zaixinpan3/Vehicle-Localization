@@ -8,6 +8,52 @@ classdef downtownCurbTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function fineSurfacesDistinguishGradeFromOutwardStep(testCase)
+            cfg=downtownCurbConfig().surfaceCheck;
+            [x,y]=ndgrid(-5:.12:5,2:.10:6);
+            z=.04*x+.09*y;
+            edge=(-3:.12:3).'; candidates=[edge,4*ones(size(edge)),.04*edge+.36];
+            testCase.verifyFalse(any(checkDowntownCurbSurfaces(candidates,[x(:),y(:),z(:)],cfg)));
+            raised=z+.12*(y>4);
+            testCase.verifyTrue(all(checkDowntownCurbSurfaces(candidates,[x(:),y(:),raised(:)],cfg)));
+            visible=y<4;
+            testCase.verifyTrue(all(checkDowntownCurbSurfaces(candidates, ...
+                [x(visible),y(visible),z(visible)],cfg)));
+        end
+        function registeredStraightCurbUsesCoverageOnEachSide(testCase)
+            cfg=downtownCurbConfig().straightRun;
+            s=(0:2:100).'; path=[s,zeros(size(s))]; frames=cell(numel(s),1);
+            for k=1:numel(s)
+                frames{k}=[s(k),-4,0];
+                if s(k)>30 && s(k)<40
+                    frames{k}=[frames{k};repmat([s(k),-8,0;s(k),5,0],30,1)];
+                end
+            end
+            % The single-view endpoint has the same status as all other inliers.
+            rotation=[cos(.7),-sin(.7);sin(.7),cos(.7)];offset=[114,-52];
+            for k=1:numel(s),frames{k}(:,1:2)=frames{k}(:,1:2)*rotation+offset;end
+            cleaned=refineDowntownCurbRuns(frames,path*rotation+offset,cfg);
+            for k=1:numel(s),testCase.verifyEqual(cleaned{k},frames{k}(1,:));end
+            testCase.verifyEqual(refineDowntownCurbRuns(frames(1:8),path(1:8,:),cfg),frames(1:8));
+            testCase.verifyEqual(refineDowntownCurbRuns(frames,zeros(size(path)),cfg),frames);
+        end
+        function looseStepCannotExtendAcrossUnobservedStations(testCase)
+            cfg=downtownCurbConfig().straightRun;
+            s=(0:2:120).'; path=[s,zeros(size(s))]; frames=cell(numel(s),1);
+            for k=1:numel(s)
+                frames{k}=[s(k),5,0];
+                if s(k)<=70
+                    frames{k}(end+1,:)=[s(k),-4,0];
+                elseif s(k)>=108
+                    frames{k}(end+1,:)=[s(k),-4.8,0];
+                end
+            end
+            cleaned=refineDowntownCurbRuns(frames,path,cfg);
+            for k=1:numel(s)
+                expected=frames{k}(frames{k}(:,2)~=-4.8,:);
+                testCase.verifyEqual(cleaned{k},expected);
+            end
+        end
         function reviewedNegativeScanPublishesNoCurb(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','processed','downtown_reference_gnss_free_20261005', ...

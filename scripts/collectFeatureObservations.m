@@ -71,6 +71,7 @@ function featureData = collectFeatureObservations(matPath, frameIndices, framePo
     featureData.numFrames = numFrames;
     featureData.frameSummaryTable = array2table([frameIndices(:), counts], ...
         "VariableNames", ["frameIdx", featureVariableNames(:).']);
+    featureData=refineDowntownMappingCurbs(featureData,perceptionCfg);
 end
 
 function featurePoints = pointsFromFeatureMask(frame, featureMask)

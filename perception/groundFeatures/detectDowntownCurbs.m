@@ -58,6 +58,9 @@ function [ground,curb] = detectDowntownCurbs(context,ground,allPoints,cfg,candid
             points,allPoints,cells,mapSize,maps,accepted,cfg.endpointExtension,cfg.obstacleClearance,supportEligible);
     end
     curb.acceptedMask = accepted & eligible;
+    selected = find(curb.acceptedMask);
+    curb.acceptedMask(selected) = checkDowntownCurbSurfaces( ...
+        points(selected,:),allPoints,cfg.surfaceCheck);
     cellMask = false(fliplr(mapSize));
     cellMask(cells(curb.acceptedMask)) = true;
     curb.cellMask = cellMask.';

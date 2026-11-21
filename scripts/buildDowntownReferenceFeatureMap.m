@@ -19,16 +19,19 @@ function report=buildDowntownReferenceFeatureMap(datasetFolder,outputFolder)
         for c=1:4
             mask=perception.featureMasks.(protocol.featureNames(c));valid=logical(mask(:)) & all(isfinite(xyz),2);
             points=registerPointsToGlobalFrame(xyz(valid,:),featureData.framePoseTable(j,:));featureData.counts(j,c)=size(points,1);
-            % Exactly the temporal map's deterministic per-acquisition representatives.
-            if ~isempty(points)
-                origin=cfg.temporalMap.defaultParams.tileOrigin;resolution=cfg.temporalMap.defaultParams.representativeResolution;
-                voxel=floor((points(:,1:2)-origin)/resolution);center=origin+(voxel+.5)*resolution;
-                [~,~,group]=unique(voxel,'rows');[~,order]=sortrows([group,sum((points(:,1:2)-center).^2,2),points(:,1:2)],[1,2,3,4]);
-                keep=order([true;diff(group(order))~=0]);points=points(sort(keep),:);
+            % The sequence-level curb decision uses all measured returns.
+            if protocol.featureNames(c)~="curb"
+                points=mapRepresentatives(points,cfg.temporalMap.defaultParams);
             end
             featureData.pointsByFeatureFrame{c,j}=points;
         end
         if mod(j,25)==0 || j==numel(chosen),fprintf('map %s %d/%d\n',datasetFolder,j,numel(chosen));end
+    end
+    featureData=refineDowntownMappingCurbs(featureData,p);
+    curb=find(protocol.featureNames=="curb");
+    for j=1:numel(chosen)
+        featureData.pointsByFeatureFrame{curb,j}=mapRepresentatives( ...
+            featureData.pointsByFeatureFrame{curb,j},cfg.temporalMap.defaultParams);
     end
     perceptionSeconds=toc(timer);save(fullfile(outputFolder,'feature_observations.mat'),'featureData','-v7.3');
     timer=tic;probabilityCloudMap=buildSlidingWindowMap(featureData,cfg);mapSeconds=toc(timer);
@@ -39,10 +42,20 @@ function report=buildDowntownReferenceFeatureMap(datasetFolder,outputFolder)
     save(fullfile(outputFolder,'probability_cloud.mat'),'cloud','-v7.3');
     writetable(probabilityCloudMap.layerSummaryTable,fullfile(outputFolder,'map_layer_summary.csv'));
     report=struct('datasetFolder',datasetFolder,'trainingFrames',chosen,'featureNames',protocol.featureNames, ...
-        'observedPoints',sum(featureData.counts,1),'components',cloud.components.numComponents, ...
+        'mapPerceptionVersion',protocol.mapPerceptionVersion,'observedPoints',sum(featureData.counts,1),'components',cloud.components.numComponents, ...
         'layerSummary',probabilityCloudMap.layerSummaryTable,'perceptionSeconds',perceptionSeconds,'mapSeconds',mapSeconds, ...
         'poseReferencePoint',"front LiDAR origin",'referenceKind',protocol.referenceKind, ...
         'gnssUsed',false,'mappingDeskew',"Reference SE3 interpolation within each scan; no extrapolation", ...
         'thinning',"Same 0.1 m deterministic XY representative used by the temporal map",'queryFrames',frames.frame_index(mod(frames.frame_index,2)==0 & frames.available==1));
     f=fopen(fullfile(outputFolder,'map_summary.json'),'w');fprintf(f,'%s\n',jsonencode(report,PrettyPrint=true));fclose(f);
+end
+
+function points=mapRepresentatives(points,cfg)
+% Keep the measured return nearest each map voxel center, with stable ties.
+    if isempty(points),return;end
+    voxel=floor((points(:,1:2)-cfg.tileOrigin)/cfg.representativeResolution);
+    center=cfg.tileOrigin+(voxel+.5)*cfg.representativeResolution;
+    [~,~,group]=unique(voxel,'rows');
+    [~,order]=sortrows([group,sum((points(:,1:2)-center).^2,2),points(:,1:2)],[1,2,3,4]);
+    keep=order([true;diff(group(order))~=0]);points=points(sort(keep),:);
 end
