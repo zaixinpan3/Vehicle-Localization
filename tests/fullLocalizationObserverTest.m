@@ -61,15 +61,16 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             testCase.verifyLessThan(abs(r.heading(end)),1e-4*abs(f.cfg.initialState(7)));
             testCase.verifyEqual(r.diagnostics.headingMode,2*ones(size(r.time)));
         end
-        function bothMissingPreservePredictionDespiteRatePayload(testCase)
+        function upstreamRateStillCorrectsDuringAPoseOutage(testCase)
             f=fixture(8,"both");mask=f.data.lidar.time>=2 & f.data.lidar.time<4;
             f.data.lidar.valid(mask)=false;f.data.gnss.valid(mask)=false;
-            % This payload is not an independent global-observer measurement.
             f.lateral.yawRate(f.data.highRate.time>=2 & f.data.highRate.time<4)=.02;r=run(f);
             outage=r.time>=2 & r.time<4;
             testCase.verifyEqual(r.diagnostics.mode(outage),zeros(nnz(outage),1));
-            testCase.verifyEqual(r.heading,zeros(size(r.time)),AbsTol=1e-12);
-            testCase.verifyEqual(r.position,f.truth(:,1:2),AbsTol=1e-9);
+            gain=f.cfg.invariantObserver.yawRateGainPerSecond;
+            dt=[0;diff(r.time)];expected=.02*(1-cumprod(1./(1+gain*dt(outage))));
+            testCase.verifyEqual(r.yawRate(outage),expected,AbsTol=1e-12);
+            testCase.verifyGreaterThan(max(r.heading(outage)),0);
         end
         function delayedPacketsAreRejectedExplicitly(testCase)
             f=fixture(1,"both");f.data.gnss.delay=.1;

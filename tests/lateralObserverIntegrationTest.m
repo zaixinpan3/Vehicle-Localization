@@ -166,6 +166,7 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             actual = runLateralVelocityObserver(m,testCase.Design,testCase.Design.cfg,transform);
             testCase.verifyFalse(any(actual.velocityValid));
             testCase.verifyTrue(all(actual.diagnostics.dynamicModelEvaluated));
+            testCase.verifyTrue(all(actual.yawRateValid));
             testCase.verifyEqual(actual.sideSlipAngleRate,zeros(3,1),AbsTol=0);
         end
 

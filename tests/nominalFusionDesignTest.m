@@ -11,13 +11,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
     end
     methods (Test)
         function singleSolveReturnsIndependentlyVerifiedGains(testCase)
-            [d,c]=selected();v=localizationSupport.verifyInvariantDesign(d,c);
+            c=freshObserverTestConfig();d=c.invariantDesign;v=localizationSupport.verifyInvariantDesign(d,c);
             testCase.verifyTrue(v.certified && v.motionResponse.verified);
             testCase.verifyEqual(d.solveAudit.optimizationCalls,1);
             testCase.verifyEqual(d.kappaG,d.kappaL,AbsTol=1e-9);
             testCase.verifyEqual(v.vertices,256);
-            testCase.verifyFalse(v.independentYawRateCorrection);
-            testCase.verifyLessThan(d.P(7,8),0);
+            testCase.verifyTrue(v.independentYawRateCorrection && v.upstreamYawRateRequired);
+            testCase.verifyEqual(d.P(8,1:7),zeros(1,7));
             testCase.verifyFalse(isfield(d,'yawRateGainNormalized'));
             testCase.verifyFalse(isfield(d,'gainSelection'));
             testCase.verifyFalse(isfield(d,'constraintGeneration'));
@@ -51,13 +51,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyLessThan(abs(e.heading(end)),.001);
             testCase.verifyFalse(e.diagnostics.allTheoremHypothesesVerified);
         end
-        function lidarHeadingInnovationRecoversTheRateState(testCase)
-            [data,lateral,c]=constantMotionFixture(0,.1);
-            lateral.velocityValid=false(size(lateral.time));
+        function lidarHeadingInnovationLeavesTheUnavailableRateAlone(testCase)
+            [data,lateral,c]=constantMotionFixture(0,.1,freshObserverTestConfig());
+            lateral.velocityValid=false(size(lateral.time));lateral.yawRateValid=false(size(lateral.time));
             c.initialState=[0;0;0;0;0;0;.03;.05];
             estimate=syntheticObserver.run(data,c,LateralInputs=lateral);
-            testCase.verifyLessThan(abs(estimate.yawRate(end)),.001);
-            testCase.verifyLessThan(abs(estimate.heading(end)),.001);
+            testCase.verifyEqual(estimate.yawRate,.05*ones(size(lateral.time)),AbsTol=0);
+            testCase.verifyLessThan(abs(estimate.heading(end)),.03);
         end
         function gnssOnlyRetainsAccuracyWithoutAnOutageCertificate(testCase,dt)
             [data,lateral,c]=constantMotionFixture(5,dt);
@@ -78,14 +78,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
     end
 end
 
-function [data,lateral,c]=constantMotionFixture(speed,dt)
+function [data,lateral,c]=constantMotionFixture(speed,dt,c)
     t=(0:dt:8).';n=numel(t);zero=zeros(n,1);
     data=struct('highRate',struct('time',t,'longitudinalSpeed',speed+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero), ...
         'lidar',struct('time',t,'pose',[speed*t,zero,zero], ...
         'information',repmat(1e6*eye(3),1,1,n),'valid',true(n,1),'delay',0));
     lateral=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngleRate',zero);
-    [~,c]=selected();
+    if nargin<3,[~,c]=selected();end
 end
 
 function [d,c]=selected()

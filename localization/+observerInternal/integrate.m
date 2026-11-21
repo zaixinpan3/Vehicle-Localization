@@ -9,6 +9,7 @@ function estimate=integrate(data,cfg,lateral,L)
         'VehicleLocalization:AlignedLateralRequired', ...
         'Supply the upstream lateral velocity.');
     reportedLateral=lateral;
+    [upstreamRate,rateValid]=observerInternal.upstreamYawRate(lateral);
     velocityValid=motionValidity(h,'bodyVelocityValid',n) ...
         & motionValidity(lateral,'velocityValid',n) & cfg.invariantObserver.velocityAvailable;
     accelerationValid=motionValidity(h,'bodyAccelerationValid',n);
@@ -40,6 +41,11 @@ function estimate=integrate(data,cfg,lateral,L)
     lidarInjection=continuous.lidarMatched;
     stateCount=8;
     poseJacobian=zeros(3,stateCount);poseJacobian(1,1)=1;poseJacobian(2,4)=1;poseJacobian(3,7)=1;
+    linearOutput=zeros(4,stateCount);
+    linearOutput(1:3,:)=poseJacobian;
+    linearOutput(3,7)=cfg.invariantObserver.headingLengthM;
+    linearOutput(4,8)=1;
+    headingKinematics=zeros(stateCount);headingKinematics(7,8)=1;
     design=struct('kind',"nominal-fusion-implicit",'continuousDesign',continuous, ...
         'lidarMatched',lidarInjection,'lidarJumpCertificate',"Implicit locally affine fixed-metric contraction", ...
         'designRoute',continuous.designRoute, ...
@@ -51,6 +57,7 @@ function estimate=integrate(data,cfg,lateral,L)
     z=zeros(n,stateCount);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
     yawCorrection=zeros(n,1);gnssPosition=nan(n,2);
     headingInnovation=nan(n,1);
+    rateInnovation=nan(n,1);
     lidarStrength=nan(n,1);maximumRate=0;
     lidarAudits=cell(n,1);poseWeights=zeros(3,3,n);preLidarStates=zeros(n,stateCount);
     intrinsicStates=zeros(n,stateCount);invariantAudits=cell(n,1);
@@ -73,28 +80,28 @@ function estimate=integrate(data,cfg,lateral,L)
         x=localizationSupport.predict(x,dt,cfg);
         intrinsicStates(k,:)=x.';
         gnssRate=zeros(2,1);
-        if G.valid(k) || heading.valid(k)
-            ell=cfg.invariantObserver.headingLengthM;
-            Cg=zeros(3,8);Cg(1,1)=1;Cg(2,4)=1;Cg(3,7)=ell;
-            observation=Cg*x;
+        if G.valid(k) || heading.valid(k) || rateValid(k)
+            observation=linearOutput*x;
             if G.valid(k),observation(1:2)=gnssPosition(k,:).';end
             if heading.valid(k)
                 headingInnovation(k)=atan2(sin(heading.heading(k)-x(7)),cos(heading.heading(k)-x(7)));
-                observation(3)=ell*(x(7)+headingInnovation(k));
+                observation(3)=linearOutput(3,7)*(x(7)+headingInnovation(k));
             end
-            active=[G.valid(k),G.valid(k),heading.valid(k)];
-            Kg=continuous.LG(:,active);Cg=Cg(active,:);observation=observation(active);
-            x=(eye(8)+dt*Kg*Cg)\(x+dt*Kg*observation);
+            if rateValid(k)
+                observation(4)=upstreamRate(k);
+                rateInnovation(k)=upstreamRate(k)-x(8);
+            end
+            active=[G.valid(k),G.valid(k),heading.valid(k),rateValid(k)];
+            Kg=continuous.linearOutputGain(:,active);Cg=linearOutput(active,:);observation=observation(active);
+            % The prediction already integrated the prior rate. Complete
+            % psi-dot = r with only the endpoint rate increment in this solve.
+            x=x+(eye(8)+dt*(Kg*Cg-headingKinematics))\(dt*Kg*(observation-Cg*x));
             gnssRate=Kg([1,4],:)*(observation-Cg*x);
         end
         packet=localizationSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
             h.lateralAcceleration(k), ...
             velocityValid(k),accelerationValid(k),cfg);
-        priorRate=x(8);
         [x,invariantAudits{k}]=localizationSupport.correct(x,packet,dt,continuous,cfg);
-        % Complete the implicit psi-dot = estimated-rate equation using
-        % the posterior STATE. No gyro sample appears in this prediction.
-        x(7)=x(7)+dt*(x(8)-priorRate);
         preLidarStates(k,:)=x.';
         if L.valid(k)
             measurement=L.evaluate(k,x([1,4,7]));
@@ -178,7 +185,10 @@ function estimate=integrate(data,cfg,lateral,L)
     estimate.diagnostics.invariantOutputNames=["speedSquared","velocityAccelerationDot", ...
         "velocityAccelerationCross","bodyLateralVelocity"];
     estimate.diagnostics.intrinsicPredictionUsesImu=false;
-    estimate.diagnostics.yawRateFeedbackSource="matchedMotionAndPose";
+    estimate.diagnostics.yawRateFeedbackSource="upstreamLateralObserver";
+    estimate.diagnostics.upstreamYawRateValid=rateValid;
+    estimate.diagnostics.upstreamYawRateInnovation=rateInnovation;
+    estimate.diagnostics.packetCounts.upstreamYawRateValid=nnz(rateValid);
     estimate.diagnostics.actualOverlapCertified=false;
     certificate=continuous.continuousCertificate.verification;
     estimate.diagnostics.operatingSet=certificate.operatingSet;

@@ -10,6 +10,7 @@ function report=runDowntownReferenceExperiment(datasetRoot,outputRoot,options)
     end
     setupVehicleLocalization();maxNumCompThreads(2);
     if ~isfolder(outputRoot),mkdir(outputRoot);end
+    protocol=downtownReferenceReplayConfig();
     cfg=lateralObserverConfig();timer=tic;lateralDesign=designLateralObserverGains(cfg);synthesisSeconds=toc(timer);
     save(fullfile(outputRoot,'lateral_design.mat'),'lateralDesign','cfg','synthesisSeconds','-v7.3');
     folders=dir(fullfile(datasetRoot,'raw_data*'));records=cell(0,1);
@@ -28,6 +29,8 @@ function report=runDowntownReferenceExperiment(datasetRoot,outputRoot,options)
             packet=readDowntownInitialPose(dataset,ids(1),native(1));
             if isfile(fullfile(localFolder,'summary.json'))
                 existing=jsondecode(fileread(fullfile(localFolder,'summary.json')));
+                assert(isfield(existing,'observerArchitecture') && string(existing.observerArchitecture)==protocol.observer.kind, ...
+                    'VehicleLocalization:StaleObserver','Existing output uses a different observer; choose a new output root.');
                 assert(isfield(existing,'lidarChannel') && string(existing.lidarChannel)==activeLocalizationChannel() && ...
                     isfield(existing,'initializationMode') && string(existing.initializationMode)=="reference_pose_once" && ...
                     existing.referenceInitializationCount==1 && ~existing.referenceUsedAfterInitialization && ...

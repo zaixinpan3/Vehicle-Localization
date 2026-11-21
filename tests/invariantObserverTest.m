@@ -171,14 +171,16 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyEqual(a.diagnostics.intrinsicPrediction(2,7),c.initialState(7)+.05*l.time(2),AbsTol=1e-12);
             testCase.verifyFalse(a.diagnostics.intrinsicPredictionUsesImu);
         end
-        function upstreamRateIsNotAnIndependentCorrection(testCase)
+        function upstreamLinearRateFeedbackMovesRateAndHeading(testCase)
             [d,l,c]=fixture();c.initialState(:)=0;d.highRate.longitudinalSpeed(:)=NaN;l.lateralVelocity(:)=NaN;
             d.highRate.bodyVelocityValid=false(size(l.time));d.highRate.bodyAccelerationValid=false(size(l.time));
             l.yawRate(:)=.2;
             a=runFullLocalizationObserver(d,c,LateralInputs=l);
             testCase.verifyEqual(a.diagnostics.intrinsicPrediction(2,7:8),[0,0]);
-            testCase.verifyEqual(a.yawRate,zeros(size(l.time)),AbsTol=0);
-            testCase.verifyEqual(a.headingUnwrapped,zeros(size(l.time)),AbsTol=0);
+            dt=[0;diff(l.time)];
+            expected=.2*(1-cumprod(1./(1+c.invariantObserver.yawRateGainPerSecond*dt)));
+            testCase.verifyEqual(a.yawRate,expected,AbsTol=1e-12);
+            testCase.verifyEqual(a.headingUnwrapped,cumsum(dt.*expected),AbsTol=1e-12);
             testCase.verifyFalse(a.diagnostics.intrinsicPredictionUsesImu);
             testCase.verifyTrue(all(isfinite(a.internalState),'all'));
         end

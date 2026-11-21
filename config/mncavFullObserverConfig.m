@@ -1,5 +1,5 @@
 function cfg=mncavFullObserverConfig(options)
-% Current MnCAV intrinsic predictor; IMU is confined to invariant innovations.
+% MnCAV intrinsic prediction with direct linear upstream yaw-rate feedback.
 % Autonomous translational prediction uses a C2 extension below its speed cutoff.
 % This factory returns parameters only. Solve gains immediately before use
 % with [design,cfg]=synthesizeMncavInvariantDesign(cfg).
@@ -8,7 +8,7 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-fixed-linear-output-v19",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-linear-yaw-rate-v20",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('outputPoint', ...
@@ -32,6 +32,7 @@ function cfg=mncavFullObserverConfig(options)
     z.noiseObjective="normalizedFullState";
     % One simultaneous SDP in the fixed-shear metric; no outer tuning loop.
     z.motionResponse=struct('enabled',true,'timeConstantS',.5);
+    z.yawRateGainPerSecond=1/z.motionResponse.timeConstantS;
     z.velocityAvailable=true;z.accelerationAvailable=true;
     z.fusion=struct('minimumCourseSpeed',10,'lidarOperatorMismatch',.001);
     z.provenance.speedOutput="Physical squared-speed output with bounded gain factor Vmax^2/(smin^2+sMeasured^2); coefficients optimized directly in the single nominal fusion SDP";
@@ -39,17 +40,17 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.operatingSet="Bessafa et al. (2026), Remark 3: compact invariant operating set assumed; invariance and numerical attraction radius are not computed or certified";
     z.headingGainLimits=[8,8]; % kappaL*(P^-1)77 and directionGain*(P^-1)77.
     z.matchedGainLimits=[8,8,2]; % Position L/G and velocity-direction self-feedback.
-    z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]; predict uses course rate from its internal global velocity and acceleration; no upstream rate input; Four additional outputs: squared speed, velocity-acceleration dot/cross and body-frame lateral velocity; yaw-rate correction uses coupled heading gains from independent heading, motion and LiDAR innovations; no body-acceleration projections or cross-minus-rate constraint; no direct gyro input to the global observer";
+    z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]. The linear outputs are position, independent heading and estimated body yaw rate from the lateral observer. The four nonlinear motion outputs are squared speed, velocity-acceleration dot/cross and body-frame lateral velocity.";
     z.provenance.independentHeading="Independent heading input, e.g. dual-antenna GNSS; The 0.01 rad offline noise scale is a configurable design assumption, not a measured receiver specification. One fixed offline gain acts on valid linear outputs; no receiver-information reliability weight is used.";
-    z.provenance.angularModel="Yaw-rate process scale maximumTrackAngleRate / 2 s; heading and yaw rate are corrected by matched output innovations";
+    z.provenance.angularModel="Heading integrates the internal body rate. A valid upstream rate drives a finite-gain linear innovation on that state. A missing rate leaves its state constant.";
     z.provenance.lowSpeed="C2 denominator extension equals squared speed above 0.5 m/s; the positive-speed nominal certificate does not certify this low-speed extension";
     z.provenance.courseAcceleration="Unmeasured course acceleration is a process disturbance, never a differentiated predictor input. jerkMps3 scales the aggregate translational residual R(phi)*[sDoubleDot;s*qDot] in the noise objective; it is a design weight, not a verified physical upper bound";
     z.provenance.operatingPoints="One nominal simultaneous-source noise objective; motion cases cover minimum/midpoint/maximum speed and zero, tangential and normal acceleration";
-    z.provenance.metric="Rotation-invariant translational blocks and a full heading/rate metric; off-diagonal coupling routes heading innovations to the yaw-rate state without a separate rate measurement correction";
+    z.provenance.metric="The Schur complement preserves the seven previously designed physical gain rows. A separate scalar rate metric removes all motion and pose injection into body rate.";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
-    z.provenance.noiseObjective="All eight normalized errors at the nominal simultaneous-source pose point; shared primitive velocity/acceleration columns including the measured lateral-velocity row, this energy proxy is not an empirical covariance guarantee";
-    z.provenance.fusion="One nominal simultaneous LiDAR/GNSS/auxiliary certificate; eight analytic coefficient intervals enclose the nominal error bound, omitting the PSD body-lateral Gram uniformly over sideslip. No sensor-outage or finite nonlinear-error certificate";
-    z.provenance.feedback="Shared normalized pose gain kappaL=kappaG. Fixed shear Pc=U'*diag(p,R)*U, U=[1 -1 1;0 1 0;0 0 1], makes the motion Schur metric R affine and retains pose-to-motion correction. Self-feedback caps stay inside the solve";
+    z.provenance.noiseObjective="The SDP noise objective selects the original matched-gain template. It excludes upstream yaw-rate estimation error and its correlation with lateral velocity.";
+    z.provenance.fusion="Positive-speed nominal vertex certificate with valid upstream body rate, available motion outputs and the declared pose geometry.";
+    z.provenance.feedback="A single fixed-shear SDP sets the matched gains. The deployed metric separates the rate and is checked again at every fusion vertex with the direct rate row active.";
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];
     cfg.invariantObserver=z;cfg.gainSource="unsolved-invariant";

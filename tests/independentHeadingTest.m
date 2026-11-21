@@ -43,12 +43,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             testCase.verifyEqual(a.headingUnwrapped,b.headingUnwrapped,AbsTol=0);
             testCase.verifyEqual(a.position,b.position,AbsTol=0);
         end
-        function headingCorrectsRateWithoutPositionOrLidar(testCase)
+        function headingCorrectsHeadingWhileRateIsHeld(testCase)
             [data,c,l]=fixture();c.initialState(7)=.2;
             a=runFullLocalizationObserver(data,c,LateralInputs=l);
             data=rmfield(data,'gnssHeading');b=runFullLocalizationObserver(data,c,LateralInputs=l);
             testCase.verifyLessThan(abs(a.headingUnwrapped(end)),abs(b.headingUnwrapped(end)));
-            testCase.verifyGreaterThan(max(abs(a.yawRate-b.yawRate)),1e-4);
+            testCase.verifyEqual(a.yawRate,b.yawRate,AbsTol=0);
             testCase.verifyTrue(all(a.diagnostics.independentHeadingValid));
         end
         function wrappedInnovationUsesShortArc(testCase)
@@ -83,7 +83,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
         function headingAvailabilityChangesDesignAndCertificate(testCase)
             c=freshObserverTestConfig();d=localizationSupport.runtime(c);
             testCase.verifySize(d.LG,[8,3]);
-            testCase.verifyGreaterThan(abs(d.LG(8,3)),0);
+            testCase.verifyEqual(d.linearOutputGain(8,:),[0,0,0,c.invariantObserver.yawRateGainPerSecond]);
+            testCase.verifyEqual(d.linearOutputGain(1:7,4),zeros(7,1));
+            testCase.verifyEqual(d.linearOutputGain(:,1:3),d.LG);
             lower=c;lower.invariantObserver.gnssHeadingAvailable=false;
             a=localizationSupport.fusionBlocks(c.invariantDesign,c);
             b=localizationSupport.fusionBlocks(c.invariantDesign,lower);

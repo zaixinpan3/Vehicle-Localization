@@ -23,13 +23,9 @@ function [aligned,lateral,metadata,selected]=alignFrameClock(data,lateralInput,c
         lateral.(name)=fullBlend(lateralInput.(name),left,right,fraction);
     end
     if isfield(lateralInput,'yawRate')
-        lateral.yawRate=fullBlend(lateralInput.yawRate,left,right,fraction);
-    end
-    if isfield(lateralInput,'yawRateValid')
-        valid=lateralInput.yawRateValid(:);
-        assert(numel(valid)==numel(h.time) && all(ismember(valid,[0,1])), ...
-            'VehicleLocalization:InvalidMotionValidity','Invalid lateral yaw-rate validity mask.');
-        lateral.yawRateValid=logical(valid(left)) & logical(valid(right));
+        [rate,valid]=observerInternal.upstreamYawRate(lateralInput);
+        lateral.yawRate=fullBlend(rate,left,right,fraction);
+        lateral.yawRateValid=valid(left) & valid(right);
     end
     if isfield(lateralInput,'velocityValid')
         valid=lateralInput.velocityValid(:);

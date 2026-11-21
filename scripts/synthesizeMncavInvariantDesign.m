@@ -10,8 +10,8 @@ function [design,cfg]=synthesizeMncavInvariantDesign(cfg)
     design=localizationSupport.synthesize(cfg);
     cfg.invariantDesign=design;cfg.gainSource="fresh-lmi";
     runtime=localizationSupport.runtime(cfg);
-    fprintf('NOMINAL FUSION: %d vertices, worst %.9g; one SDP; noise proxy %.9g\n', ...
-        runtime.continuousCertificate.verification.vertices,design.verification.worstVertexEigenvalue,design.meanSquareBound);
+    fprintf('NOMINAL FUSION: %d vertices, worst %.9g; one SDP; gain-template noise proxy %.9g\n', ...
+        runtime.continuousCertificate.verification.vertices,design.verification.worstVertexEigenvalue,design.templateNoiseEnergy);
     fprintf('MOTION RESPONSE: required %d, nominal time constant %.3g s; operating-set invariance assumed, radius not certified\n', ...
         design.verification.motionResponse.required,design.verification.motionResponse.timeConstantS);
 end

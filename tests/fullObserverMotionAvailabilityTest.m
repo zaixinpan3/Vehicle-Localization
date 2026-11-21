@@ -15,21 +15,30 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             omitted=execute(d,l,c);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
             testCase.verifyEqual(a.internalState,omitted.internalState,AbsTol=0);
-            testCase.verifyEqual(a.diagnostics.yawRateFeedbackSource,"matchedMotionAndPose");
+            testCase.verifyEqual(a.diagnostics.yawRateFeedbackSource,"upstreamLateralObserver");
         end
-        function upstreamRatePayloadDoesNotBypassTheMotionInterface(testCase)
+        function missingAndNonfiniteUpstreamRateHoldTheInitialRate(testCase)
             [d,l,c]=fixture();c.initialState(8)=.04;l.yawRate(:)=NaN;
             d.highRate.yawRate(:)=100;a=execute(d,l,c);
             l=rmfield(l,'yawRate');b=execute(d,l,c);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
             testCase.verifyFalse(isfield(a.diagnostics.motionOutputValidity,'yawRate'));
-            l.yawRate=100*ones(size(l.time));changed=execute(d,l,c);
-            testCase.verifyEqual(changed.internalState,a.internalState,AbsTol=0);
+            testCase.verifyEqual(a.yawRate,.04*ones(size(l.time)),AbsTol=0);
+            testCase.verifyFalse(any(a.diagnostics.upstreamYawRateValid));
         end
-        function unavailableMotionCannotBeReplacedByRatePayload(testCase)
-            [d,l,c]=fixture();l.yawRate(:)=.2;l.velocityValid=false(size(l.time));
-            a=execute(d,l,c);l.yawRate(:)=-100;b=execute(d,l,c);
-            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
+        function upstreamRateHasItsOwnAvailabilityAndResumesAfterAGap(testCase)
+            [d,l,c]=fixture();
+            t=[0;.03;.14;.23;.55;.81;1;1.05;1.2;1.6;2];
+            d.highRate.time=t;l.time=t;l.yawRate(:)=.2;l.velocityValid=false(size(t));
+            l.yawRateValid=true(size(t));l.yawRateValid(4:6)=false;l.yawRate(5)=1e6;
+            l.yawRate(7)=NaN;
+            a=execute(d,l,c);
+            valid=l.yawRateValid & isfinite(l.yawRate);
+            gain=c.invariantObserver.yawRateGainPerSecond;
+            expected=.2*(1-cumprod(1./(1+gain*[0;diff(t)].*valid)));
+            testCase.verifyEqual(a.yawRate,expected,AbsTol=1e-12);
+            testCase.verifyEqual(a.diagnostics.upstreamYawRateValid,valid);
+            testCase.verifyEqual(a.diagnostics.packetCounts.upstreamYawRateValid,nnz(valid));
             testCase.verifyFalse(a.diagnostics.auxiliaryAvailabilityContractSatisfied);
         end
         function rateValiditySurvivesSynchronization(testCase)
@@ -39,6 +48,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             [~,out]=syntheticObserver.align(d,l,c);
             testCase.verifyEqual(out.yawRate,l.yawRate,AbsTol=0);
             testCase.verifyEqual(out.yawRateValid,l.yawRateValid);
+            d.lidar.time=[0;.05;.1;.15;.2];
+            c.synchronization.motionMaximumBracket=.11;
+            d.lidar.pose=zeros(5,3);d.lidar.valid=true(5,1);d.lidar.information=repmat(eye(3),1,1,5);
+            [~,out]=syntheticObserver.align(d,l,c);
+            testCase.verifyEqual(out.yawRateValid,[true;false;false;false;true]);
         end
         function defaultMasksPreserveTheExistingRuntime(testCase)
             [d,l,c]=fixture();a=execute(d,l,c);

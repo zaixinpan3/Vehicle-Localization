@@ -1,7 +1,7 @@
 function estimate=runFullLocalizationObserver(data,cfg,options)
 % runFullLocalizationObserver Run the current intrinsic global observer.
 % Supply a feature map and scan clouds in data.lidarOverlap for LiDAR feedback.
-% Prediction uses an internal rate state; heading innovations also correct that state.
+% Heading prediction integrates the internal body yaw-rate state.
 % All calls use the intrinsic eight-state design.
 % The common-clock runtime uses the nominal fusion LMI gains.
 % Pass this run's solved configuration to share gains within one experiment;
@@ -10,14 +10,15 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % Missing/invalid measurements withdraw their own correction for that frame.
 % Optional highRate.bodyVelocityValid and bodyAccelerationValid masks also
 % withdraw unavailable motion-output feedback. Absent masks mean all valid.
-% LateralInputs supplies lateralVelocity on the frame clock. The predictor
-% uses only its own state; no sideslip-angle or rate input is required.
-% Yaw rate is corrected through the coupled motion/pose gains, not a separate input.
+% LateralInputs.yawRate is the lateral observer estimate in rad/s. Its
+% difference from the internal rate enters the first (linear) feedback term.
+% A finite value is active when yawRateValid is true (defaults to true).
+% Missing or invalid rate holds the previous rate while heading integrates it.
+% Motion, LiDAR and GNSS have zero gain into the rate state.
 % Optional data.gnssHeading supplies independent heading (rad), time, valid
 % and delay=0; it is never inferred from a reference pose. Information metadata
 % is not used to weight position or heading corrections.
-% Optional LateralInputs.velocityValid withdraws all upstream signals,
-% and their velocity-dependent innovations.
+% Optional LateralInputs.velocityValid gates the velocity-dependent innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
 % diagnostics.lidarPoseSupport reports local geometry, not alignment correctness.
     arguments

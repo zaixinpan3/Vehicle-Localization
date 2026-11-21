@@ -13,7 +13,8 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
 % Point transport uses estimated yaw rate and its LPV derivative. Time-varying
 % output maps must supply rates from a model or filter state equation; neither
 % map coefficients nor measured speeds are numerically differentiated here.
-% Consumers must honor velocityValid for velocity and sideslip-rate aiding.
+% Consumers must honor velocityValid for velocity/sideslip aiding and
+% yawRateValid for yaw-rate aiding. The latter tracks dynamic-model validity.
 % The default exponential-midpoint implementation freezes LPV coefficients
 % at the interval midpoint and exponentiates that affine flow. Speed-domain
 % boundary crossings split an interval; unavailable LPV flow remains held.
@@ -113,6 +114,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     estimate.lateralVelocity = outputVy;
     estimate.outputPoint = cfg.outputPoint;
     estimate.yawRate = history(:, 2);
+    estimate.yawRateValid = observerValid;
     estimate.lateralVelocityRate = outputVyDot;
     estimate.longitudinalSpeedRate = outputVxDot;
     estimate.sideSlipAngleRate = betaDot;
