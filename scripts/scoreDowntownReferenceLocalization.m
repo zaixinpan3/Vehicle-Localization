@@ -10,6 +10,10 @@ function metrics=scoreDowntownReferenceLocalization(datasetFolder,localizationFo
         'positionP95M',prctile(e,95),'positionMaximumM',max(e),'headingRmseDeg',sqrt(mean(heading.^2)), ...
         'headingMaximumAbsDeg',max(abs(heading)),'overlapAvailableFrames',nnz(run.accepted), ...
         'referenceKind',"pseudo_ground_truth",'alignment',"None; fixed map coordinates",'sameDriveCorrelated',true);
+    protocol=downtownReferenceReplayConfig();target=protocol.rmseTargets;
+    metrics.rmseTargets=target;
+    metrics.meetsRmseTargets=metrics.positionRmseM<=target.positionM && metrics.headingRmseDeg<=target.headingDeg;
+    metrics.framesOutsideThresholds=nnz(e>target.positionM | abs(heading)>target.headingDeg);
     if all(ismember({'dead_reckoning_x_m','dead_reckoning_y_m','dead_reckoning_yaw_rad'},run.Properties.VariableNames))
         dr=[run.dead_reckoning_x_m,run.dead_reckoning_y_m,run.dead_reckoning_yaw_rad]-reference;
         dr(:,3)=atan2(sin(dr(:,3)),cos(dr(:,3)));

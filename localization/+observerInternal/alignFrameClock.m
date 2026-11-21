@@ -9,8 +9,11 @@ function [aligned,lateral,metadata,selected]=alignFrameClock(data,lateralInput,c
     aligned=struct('highRate',struct('time',t));
     for name=string(fieldnames(h)).'
         if name=="time",continue;end
-        if any(name==["bodyVelocityValid","bodyAccelerationValid","yawRateValid"])
-            aligned.highRate.(name)=logical(h.(name)(left)) & logical(h.(name)(right));
+        if any(name==["bodyVelocityValid","bodyAccelerationValid","yawRateValid","rollingValid"])
+            mask=h.(name);
+            assert(isvector(mask) && numel(mask)==numel(h.time) && all(ismember(mask(:),[0,1])), ...
+                'VehicleLocalization:InvalidMotionValidity','Invalid native motion validity mask.');
+            mask=logical(mask(:));aligned.highRate.(name)=mask(left) & mask(right);
         else
             aligned.highRate.(name)=fullBlend(h.(name),left,right,fraction);
         end

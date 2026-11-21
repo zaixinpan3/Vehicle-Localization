@@ -13,6 +13,15 @@ function estimate=integrate(data,cfg,lateral,L)
     velocityValid=motionValidity(h,'bodyVelocityValid',n) ...
         & motionValidity(lateral,'velocityValid',n) & cfg.invariantObserver.velocityAvailable;
     accelerationValid=motionValidity(h,'bodyAccelerationValid',n);
+    rollingValid=false(n,1);
+    if isfield(h,'rollingVelocity') || isfield(h,'rollingValid')
+        assert(all(isfield(h,{'rollingVelocity','rollingValid'})) && isequal(size(h.rollingVelocity),[n,2]), ...
+            'VehicleLocalization:InvalidRollingMotion','Supply an aligned two-axis rolling velocity and validity mask.');
+        rollingValid=motionValidity(h,'rollingValid',n) & motionValidity(h,'bodyVelocityValid',n) ...
+            & cfg.invariantObserver.velocityAvailable & ~velocityValid;
+        assert(isreal(h.rollingVelocity) && all(isfinite(h.rollingVelocity(rollingValid,:)),'all'), ...
+            'VehicleLocalization:InvalidRollingMotion','Valid rolling velocities must be finite.');
+    end
     fields=["longitudinalSpeed","longitudinalAcceleration","lateralAcceleration"];
     for name=fields
         valid=true(n,1);
@@ -77,8 +86,21 @@ function estimate=integrate(data,cfg,lateral,L)
         if G.valid(k)
             gnssPosition(k,:)=localizationSupport.correctGnssOutputPoint(G.values(k,:),[],yaw,alignment);
         end
+        previous=x;
         x=localizationSupport.predict(x,dt,cfg);
         intrinsicStates(k,:)=x.';
+        if rollingValid(k) && dt>0
+            % Integrate wheel/steering motion only outside LPV coverage. Apply
+            % pose corrections afterwards so a simultaneous GNSS fix survives.
+            R=[cos(x(7)),-sin(x(7));sin(x(7)),cos(x(7))];
+            v=R*h.rollingVelocity(k,:).';
+            x([1,4])=previous([1,4])+dt/2*(previous([2,5])+v);
+            x([2,5])=v;
+            x([3,6])=0;
+            if accelerationValid(k) && cfg.invariantObserver.accelerationAvailable
+                x([3,6])=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
+            end
+        end
         gnssRate=zeros(2,1);
         if G.valid(k) || heading.valid(k) || rateValid(k)
             observation=linearOutput*x;
@@ -181,6 +203,7 @@ function estimate=integrate(data,cfg,lateral,L)
         'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. The nominal fusion design assumes simultaneous sources and a compact invariant operating set; low-speed execution uses a smooth denominator extension and is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
     estimate.internalState=z;estimate.yawRate=z(:,8);
     estimate.diagnostics.intrinsicPrediction=intrinsicStates;
+    estimate.diagnostics.rollingPredictionActive=rollingValid & [false;diff(t)>0];
     estimate.diagnostics.invariantOutputs=invariantAudits;
     estimate.diagnostics.invariantOutputNames=["speedSquared","velocityAccelerationDot", ...
         "velocityAccelerationCross","bodyLateralVelocity"];

@@ -27,6 +27,8 @@ classdef downtownReferenceReplayTest < matlab.unittest.TestCase
             writetable(truth,fullfile(folder,'mapping_poses.csv'));
             writetable(trajectory,fullfile(folder,'trajectory.csv'));
             result=scoreDowntownReferenceLocalization(folder,folder);
+            test.verifyFalse(result.meetsRmseTargets);
+            test.verifyEqual(result.framesOutsideThresholds,1);
             test.verifyEqual(result.samples,2);
             test.verifyEqual(result.overlapAvailableFrames,1);
             test.verifyEqual(result.positionRmseM,sqrt(.125),AbsTol=1e-12);
@@ -60,6 +62,13 @@ classdef downtownReferenceReplayTest < matlab.unittest.TestCase
             test.verifyEqual(a.highRate,b.highRate);test.verifyEqual(a.lateral,b.lateral);
             test.verifyFalse(a.referenceUsed);test.verifyFalse(a.gnssUsed);
             test.verifyEqual(a.highRate.longitudinalSpeed,10*ones(size(a.highRate.time)),'AbsTol',1e-8);
+            test.verifyFalse(any(a.rollingValid));
+            wheels{:,2:5}=repmat(.5./wheel.effectiveRadius,n,1);
+            writetable(wheels,fullfile(folder,'sensors','wheel_speed_report.csv'));
+            slow=prepareDowntownMotionInputs(folder,design);
+            test.verifyTrue(all(slow.rollingValid));
+            test.verifyFalse(any(slow.lateral.velocityValid));
+            test.verifyEqual(slow.rollingVelocity,repmat([.5,0],numel(slow.highRate.time),1),'AbsTol',1e-8);
         end
         function measuredDeskewUsesTranslationAndRejectsExtrapolation(test)
             frame=struct('x',single([3,3]),'y',single([0,0]),'z',single([0,0]), ...

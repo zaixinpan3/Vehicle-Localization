@@ -60,6 +60,27 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             d.highRate.bodyAccelerationValid=true(size(l.time));b=execute(d,l,c);
             testCase.verifyEqual(a,b);
         end
+        function rollingVelocityBridgesOnlyTheLateralOutage(testCase)
+            [d,l,c]=fixture();n=numel(l.time);c.initialState=[0;1;0;0;0;0;0;.05];
+            l.yawRateValid=false(n,1);l.velocityValid=false(n,1);d.highRate.rollingValid=true(n,1);
+            d.highRate.rollingVelocity=zeros(n,2);
+            e=execute(d,l,c);
+            testCase.verifyEqual(e.position(2:end,1),.05*ones(n-1,1),AbsTol=1e-12);
+            testCase.verifyEqual(e.velocity(2:end,:),zeros(n-1,2),AbsTol=0);
+            testCase.verifyEqual(e.yawRate,.05*ones(n,1),AbsTol=0);
+            testCase.verifyEqual(e.diagnostics.rollingPredictionActive,[false;true(n-1,1)]);
+            l.velocityValid(:)=true;d.highRate.rollingVelocity(:)=NaN;f=execute(d,l,c);
+            testCase.verifyFalse(any(f.diagnostics.rollingPredictionActive));
+        end
+        function rolledPredictionAcceptsASimultaneousPositionFix(testCase)
+            [d,l,c]=fixture();n=numel(l.time);l.velocityValid=false(n,1);
+            d.highRate.rollingValid=true(n,1);d.highRate.rollingVelocity=zeros(n,2);
+            plain=execute(d,l,c);
+            d.gnss=struct('time',l.time,'position',repmat([5,1],n,1),'valid',true(n,1),'delay',0);
+            corrected=execute(d,l,c);
+            testCase.verifyGreaterThan(norm(corrected.position(end,:)-plain.position(end,:)),.1);
+            testCase.verifyEqual(corrected.yawRate,plain.yawRate,AbsTol=0);
+        end
         function absentOutputsPreserveFreePrediction(testCase)
             [d,l,c]=fixture();n=numel(l.time);
             d.highRate.bodyVelocityValid=false(n,1);d.highRate.bodyAccelerationValid=false(n,1);

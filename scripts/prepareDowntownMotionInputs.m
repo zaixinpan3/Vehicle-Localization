@@ -24,6 +24,13 @@ function inputs=prepareDowntownMotionInputs(datasetFolder,lateralDesign)
     % Rigid point transport uses the observer state and its ODE derivative.
     map=@(state,rate) receiverVelocityMap(state,rate,lever);
     lateral=runLateralVelocityObserver(h,lateralDesign,cfg,map);
+    % Low-speed no-slip bicycle velocity at the front LiDAR. Wheel consensus
+    % supplies speed at the vehicle centerline. Transport it from the rear axle.
+    arm=[cfg.vehicle.lr-cfg.outputPoint.forwardOffsetM;0]-lever(1:2);
+    u=wheel.longitudinalSpeed;
+    turnRate=u.*tan(h.steeringAngle)/(cfg.vehicle.lf+cfg.vehicle.lr);
+    rollingVelocity=[u-arm(2)*turnRate,arm(1)*turnRate];
+    rollingValid=wheel.valid & abs(u)<cfg.scheduling.speedRange(1);
     h.longitudinalSpeed=lateral.longitudinalSpeed;
     vy=lateral.lateralVelocity;
     displacement=[-cfg.outputPoint.forwardOffsetM-lever(1);-lever(2)];
@@ -35,7 +42,7 @@ function inputs=prepareDowntownMotionInputs(datasetFolder,lateralDesign)
     r=h.yawRate;
     [motion,motionSegment]=integrateRecordedPlanarMotion(t,[h.longitudinalSpeed,vy,r],t,lateral.velocityValid);
     inputs=struct('highRate',h,'lateral',lateral,'nativeOriginSeconds',begin,'motion',motion,'motionSegment',motionSegment, ...
-        'wheel',wheel,'parameters',parameters,'pointAlignment',alignment,'lateralOriginal',lateral, ...
+        'rollingVelocity',rollingVelocity,'rollingValid',rollingValid,'wheel',wheel,'parameters',parameters,'pointAlignment',alignment,'lateralOriginal',lateral, ...
         'referenceUsed',false,'gnssUsed',false,'tiltMode',"disabled-moving-start-no-stationary-alignment", ...
         'reconstruction',"Offline linear DBW interpolation; LPV output-point transport precedes the algebraic sideslip-rate interface; not a real-time latency claim");
 end

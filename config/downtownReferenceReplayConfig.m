@@ -3,11 +3,16 @@ function cfg=downtownReferenceReplayConfig()
 % Alternate covered acquisitions for mapping/query; keep original frame IDs.
 % One reference pose initializes the first query; tracking has no reference.
 % The observer is the MnCAV configuration with LMI-solved gains (same vehicle).
+% A 0.2 s body-rate response targets the nominal even-acquisition interval.
+% Each class uses the single-scale overlap with uniform background in the crop.
 % Moving-start records lack stationary tilt alignment: sensor tilt is disabled.
     cfg=struct('featureNames',["curb","pole","trafficSign","facade"], ...
         'initializationMode',"reference_pose_once",'motionStepSeconds',.01, ...
         'mapFrameParity',1,'queryFrameParity',0,'mapThinningResolutionM',.1, ...
-        'sourceWindow',localizationSourceWindowConfig(),'observer',mncavFullObserverConfig());
+        'sourceWindow',localizationSourceWindowConfig(),'overlap',overlapGradientConfig(UniformBackground=true), ...
+        'replayVersion',"downtown-background-rolling-v1", ...
+        'observer',mncavFullObserverConfig(DesignOverride=struct('yawRateGainPerSecond',5)));
+    cfg.rmseTargets=struct('positionM',.20,'headingDeg',1);
     cfg.tilt=lidarImuTiltConfig();cfg.tilt.mode="disabled";
     cfg.referenceKind="pseudo_ground_truth";
     cfg.evaluation="Same-drive interleaved disjoint acquisitions; neighboring observations and reference errors remain correlated";

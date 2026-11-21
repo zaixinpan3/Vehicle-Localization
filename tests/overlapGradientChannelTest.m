@@ -25,6 +25,23 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyEqual(m.gradient,expected,RelTol=1e-5,AbsTol=1e-8);
             testCase.verifyEqual(m.linearizationPose,pose(:));
         end
+        function uniformBackgroundMatchesTheScoreAndAttenuatesASpuriousSign(testCase)
+            [map,source,truth]=scene();cfg=overlapGradientConfig(UniformBackground=true);
+            source.components.mean(end,1)=source.components.mean(end,1)+6;
+            p=truth(:)+[.08;-.02;.006];
+            m=localizationSupport.evaluateOverlapGradient(map,source,p,cfg);
+            sign=m.channels([m.channels.name]=="trafficSign");curb=m.channels([m.channels.name]=="curb");
+            testCase.verifyLessThan(sign.supportFraction,.001);
+            testCase.verifyGreaterThan(curb.supportFraction,.99);
+            testCase.verifyGreaterThan(sign.similarity,sign.rawSimilarity);
+            for j=1:3
+                step=zeros(3,1);step(j)=1e-6;
+                a=localizationSupport.evaluateOverlapGradient(map,source,p+step,cfg);
+                b=localizationSupport.evaluateOverlapGradient(map,source,p-step,cfg);
+                testCase.verifyEqual(m.gradient(j),-(log(a.similarity)-log(b.similarity))/2e-6,AbsTol=2e-6);
+            end
+            testCase.verifyGreaterThanOrEqual(min(eig(m.information)),-1e-12);
+        end
         function featureChannelsMatchIndependentClassEvaluations(testCase)
             [map,source,truth]=scene();pose=truth(:)+[0.35;-0.2;0.04];
             cfg=overlapGradientConfig();

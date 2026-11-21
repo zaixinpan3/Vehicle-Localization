@@ -19,6 +19,8 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % and delay=0; it is never inferred from a reference pose. Information metadata
 % is not used to weight position or heading corrections.
 % Optional LateralInputs.velocityValid gates the velocity-dependent innovations.
+% Optional highRate.rollingVelocity [vx,vy] (m/s) and rollingValid select
+% low-speed wheel/steering propagation when lateral velocity is unavailable.
 % LiDAR remains available without velocity aiding, including at standstill.
 % diagnostics.lidarPoseSupport reports local geometry, not alignment correctness.
     arguments

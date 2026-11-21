@@ -774,7 +774,8 @@ classdef localizationSupport
         % Average the exact single-scale negative-log overlap (Cauchy-Schwarz
         % divergence) gradient and Gauss-Newton metric across evaluable shared
         % semantic channels. Similarity is the geometric mean of normalized
-        % class overlaps. An empty set contributes no feedback.
+        % class overlaps. Optional uniform background reduces the influence of
+        % an unsupported class using the spatial density of the map crop.
             arguments
                 fixedCloud (1,1) struct
                 movingCloud (1,1) struct
@@ -792,7 +793,7 @@ classdef localizationSupport
                 'mapComponents',0,'sourceComponents',0, ...
                 'sharedClasses',strings(1,0),'informationCalibrated',false,'seconds',0, ...
                 'geometrySource',"per-feature-channel exact semantic overlap at the observer prediction");
-            measurement.channels=struct('name',{},'similarity',{},'gradient',{},'information',{});
+            measurement.channels=struct('name',{},'similarity',{},'rawSimilarity',{},'supportFraction',{},'gradient',{},'information',{});
             local=localizationSupport.selectLocalProbabilityCloud(fixedCloud,pose,cfg.localMapRadius);
             if local.components.numComponents==0 || movingCloud.components.numComponents==0
                 measurement.seconds=toc(timer);return;
@@ -810,22 +811,37 @@ classdef localizationSupport
             origin=[0,0,pose(3)];gradient=zeros(3,1);information=zeros(3);
             shared=intersect(f.semanticName(f.mixtureWeight>0),m.semanticName(m.mixtureWeight>0));
             measurement.sharedClasses=reshape(string(shared),1,[]);
-            logScore=0;count=0;
+            useBackground=isfield(cfg,'uniformBackground') && cfg.uniformBackground;
+            if useBackground
+                validateattributes(cfg.localMapRadius,{'numeric'},{'real','finite','scalar','positive'});
+            end
+            logScore=0;count=0;hasSupport=false;
             for c=1:numel(shared)
-                measurement.channels(c)=struct('name',shared(c),'similarity',NaN, ...
+                measurement.channels(c)=struct('name',shared(c),'similarity',NaN,'rawSimilarity',NaN,'supportFraction',0, ...
                     'gradient',nan(3,1),'information',nan(3,3));
                 fixedClass=overlapClassComponents(f,shared(c));
                 movingClass=overlapClassComponents(m,shared(c));
                 [fixedClass,movingClass]=localizationSupport.balanceSemanticDistributions(fixedClass,movingClass);
                 [energy,ascent,metric]=localizationSupport.semanticGaussianOverlap(fixedClass,movingClass,origin);
-                if ~(energy>realmin),continue;end
+                % The balanced fields have unit L2 norm. Their L1 masses
+                % convert the uniform disk density to the same overlap units.
+                background=0;
+                if useBackground
+                    background=sum(fixedClass.mixtureWeight)*sum(movingClass.mixtureWeight)/(pi*cfg.localMapRadius^2);
+                end
+                if ~(energy+background>realmin),continue;end
                 score=min(energy,1);
-                g=-ascent(:)/energy;
-                measurement.channels(c).similarity=score;
+                fraction=energy/(energy+background);
+                g=-ascent(:)/(energy+background);
+                similarity=(score+background)/(1+background);
+                measurement.channels(c).rawSimilarity=score;
+                measurement.channels(c).similarity=similarity;
+                measurement.channels(c).supportFraction=fraction;
                 measurement.channels(c).gradient=g;
-                measurement.channels(c).information=metric;
-                logScore=logScore+log(score);
-                gradient=gradient+g;information=information+metric;
+                measurement.channels(c).information=fraction*metric;
+                logScore=logScore+log(similarity);
+                gradient=gradient+g;information=information+fraction*metric;
+                hasSupport=hasSupport || energy>realmin;
                 count=count+1;
             end
             if count>0
@@ -834,7 +850,7 @@ classdef localizationSupport
                 measurement.gradient=gradient;measurement.information=information;
                 measurement.similarity=exp(logScore/count);
                 measurement.minimumInformation=min(eig(information));
-                measurement.available=true;
+                measurement.available=hasSupport;
             end
             measurement.seconds=toc(timer);
         end
