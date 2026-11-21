@@ -12,9 +12,10 @@ function report=buildDowntownReferenceFeatureMap(datasetFolder,outputFolder)
     featureData=struct('featureNames',protocol.featureNames,'frameIndices',chosen.', ...
         'frameCalibration',p.frameCalibration,'framePoseTable',readFramePoseTable(fullfile(datasetFolder,'mapping_poses.csv'),chosen), ...
         'pointsByFeatureFrame',{cell(4,numel(chosen))},'counts',zeros(numel(chosen),4));
+    loadFrame=@(id) deskewReferenceMappingFrame(loadPointCloudFrame(matPath,id),poses);
     timer=tic;
     for j=1:numel(chosen)
-        frame=loadPointCloudFrame(matPath,chosen(j));frame=deskewReferenceMappingFrame(frame,poses);
+        frame=loadFrame(chosen(j));
         perception=perceiveFrame(frame,p);xyz=[double(frame.x(:)),double(frame.y(:)),double(frame.z(:))];
         for c=1:4
             mask=perception.featureMasks.(protocol.featureNames(c));valid=logical(mask(:)) & all(isfinite(xyz),2);
@@ -27,7 +28,7 @@ function report=buildDowntownReferenceFeatureMap(datasetFolder,outputFolder)
         end
         if mod(j,25)==0 || j==numel(chosen),fprintf('map %s %d/%d\n',datasetFolder,j,numel(chosen));end
     end
-    featureData=refineDowntownMappingCurbs(featureData,p);
+    featureData=refineDowntownMappingCurbs(featureData,p,loadFrame);
     curb=find(protocol.featureNames=="curb");
     for j=1:numel(chosen)
         featureData.pointsByFeatureFrame{curb,j}=mapRepresentatives( ...

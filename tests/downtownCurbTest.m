@@ -54,6 +54,32 @@ classdef downtownCurbTest < matlab.unittest.TestCase
                 testCase.verifyEqual(cleaned{k},expected);
             end
         end
+        function bendCheckResolvesRotatedStepAndRejectsSmoothGrade(testCase)
+            cfg=downtownCurbConfig().bendStep;
+            [s,v]=ndgrid(-1.5:.12:1.5,-.9:.09:.9);
+            t=[cosd(37),sind(37)]; n=[-t(2),t(1)]; anchor=[5*n,-1.4];
+            xy=anchor(1:2)+s(:)*t+v(:)*n;
+            z=anchor(3)+.07*s(:)-.05*v(:);
+            raised=z+.11*(v(:)>.10*s(:).^2);
+            testCase.verifyTrue(confirmDowntownBendCurbStep(anchor,[xy,raised],cfg));
+            testCase.verifyFalse(confirmDowntownBendCurbStep(anchor,[xy,z],cfg));
+            occluded=v(:)<0;
+            testCase.verifyFalse(confirmDowntownBendCurbStep(anchor,[xy(occluded,:),z(occluded)],cfg));
+        end
+        function turnUsesRawEvidenceAtObservedLocation(testCase)
+            cfg=downtownCurbConfig().straightRun;
+            path=[(0:2:40).',zeros(21,1);44,2;47,5;48,9;48,14;48,20;48,30;48,40;48,50];
+            points=repmat({zeros(0,3)},1,size(path,1));
+            % An earlier scan sees both turn candidates. The validator confirms
+            % the one nearest the route and rejects the more distant candidate.
+            points{16}=[44,2.1,1;43,4,0];
+            mask=@(k,p) k==16 & p(:,3)==1;
+            out=refineDowntownCurbRuns(points,path,cfg,mask);
+            testCase.verifyEqual(out{16},points{16}(1,:));
+            straight=[(0:2:56).',zeros(29,1)];
+            reference=refineDowntownCurbRuns(points,straight,cfg);
+            testCase.verifyEqual(refineDowntownCurbRuns(points,straight,cfg,mask),reference);
+        end
         function reviewedNegativeScanPublishesNoCurb(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             file=fullfile(root,'data','processed','downtown_reference_gnss_free_20261005', ...
@@ -63,6 +89,27 @@ classdef downtownCurbTest < matlab.unittest.TestCase
             result=perceiveFrame(loadPointCloudFrame(file,184),cfg);
             testCase.verifyEmpty(result.candidates.pillarIndices{1});
             testCase.verifyEqual(result.probabilityCloud.components.numComponents,0);
+        end
+        function reviewedTurnKeepsMeasuredStepAndRejectsTwoFalseLocations(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            folder=fullfile(root,'data','processed','downtown_reference_gnss_free_20261005', ...
+                'raw_data_2024-05-21-11-49-00_0');
+            file=fullfile(folder,'pointClouds.mat');
+            testCase.assumeTrue(isfile(file),'The reviewed Downtown recording is required.');
+            poses=readtable(fullfile(folder,'mapping_poses.csv'));
+            ids=poses.frame_index(mod(poses.frame_index,2)==1 & poses.lidar_stamp_sec<poses.lidar_stamp_sec(end)-.1002);
+            points=repmat({zeros(0,3)},1,numel(ids));
+            points{ids==449}=[197.401261,-122.453025,14.413305];
+            points{ids==451}=[192.934528,-118.652066,13.973596;193.715381,-117.369692,14.152745];
+            p=perceptionConfig("Downtown","offline");
+            data=struct('featureNames',"curb",'pointsByFeatureFrame',{points}, ...
+                'frameIndices',ids,'framePoseTable',readFramePoseTable(fullfile(folder,'mapping_poses.csv'),ids), ...
+                'frameCalibration',p.frameCalibration,'counts',zeros(numel(ids),1));
+            loader=@(id) deskewReferenceMappingFrame(loadPointCloudFrame(file,id),poses);
+            result=refineDowntownMappingCurbs(data,p,loader);
+            testCase.verifyEmpty(result.pointsByFeatureFrame{ids==449});
+            testCase.verifyEqual(result.pointsByFeatureFrame{ids==451},points{ids==451}(2,:));
+            testCase.verifyEqual(sum(result.counts),1);
         end
         function rejectsScatteredGradeReturnsAndRetainsHeightBreaks(testCase)
             cfg=downtownCandidateConfig(.3).curbRoadPatch;

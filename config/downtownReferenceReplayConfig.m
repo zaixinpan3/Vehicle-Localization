@@ -11,7 +11,7 @@ function cfg=downtownReferenceReplayConfig()
         'sourceWindow',localizationSourceWindowConfig(),'overlap',overlapGradientConfig(UniformBackground=true), ...
         'replayVersion',"downtown-solved-rate-v2", ...
         'observer',mncavFullObserverConfig());
-    cfg.mapPerceptionVersion="downtown-fine-curb-runs-v1";
+    cfg.mapPerceptionVersion="downtown-fine-curb-bends-v2";
     cfg.rmseTargets=struct('positionM',.20,'headingDeg',1);
     cfg.tilt=lidarImuTiltConfig();cfg.tilt.mode="disabled";
     cfg.referenceKind="pseudo_ground_truth";

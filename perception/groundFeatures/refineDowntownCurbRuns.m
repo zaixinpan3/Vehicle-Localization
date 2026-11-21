@@ -1,8 +1,10 @@
-function pointsByFrame = refineDowntownCurbRuns(pointsByFrame,path,cfg)
+function pointsByFrame = refineDowntownCurbRuns(pointsByFrame,path,cfg,validateBend)
 % Refine registered fine curb returns using straight stretches of the driven path.
 % Vote by distinct longitudinal stations, so a dense patch or a stopped car
 % cannot establish a road boundary merely by repeating the same observation.
-% Short turns and stretches without a supported model retain single-scan labels.
+% Optional validateBend(frameOrdinal,registeredXYZ) confirms measured edges
+% through short turns and at transitions where a straight-line fit ends.
+    if nargin<4, validateBend=[]; end
     path=double(path);
     assert(size(path,2)==2 && size(path,1)==numel(pointsByFrame) && all(isfinite(path),'all'), ...
         'One finite planar mapping pose is required per acquisition.');
@@ -10,7 +12,13 @@ function pointsByFrame = refineDowntownCurbRuns(pointsByFrame,path,cfg)
     if numel(counts)<2 || ~any(counts), return; end
     breaks=straightStretches(path,cfg);
     lengths=vecnorm(diff(path(breaks,:),1,1),2,2);
-    if ~any(lengths>=cfg.minLength), return; end
+    junction=false(numel(lengths)+1,1);
+    if ~isempty(validateBend) && numel(lengths)>1
+        directions=diff(path(breaks,:),1,1)./max(lengths,eps);
+        junction(2:end-1)=sum(directions(1:end-1,:).*directions(2:end,:),2)<cosd(cfg.mergeAngleDeg) ...
+            & lengths(1:end-1)>0 & lengths(2:end)>0;
+    end
+    if ~any(lengths>=cfg.minLength) && ~any(junction), return; end
     points=double(vertcat(pointsByFrame{:}));
     xy=points(:,1:2); frame=repelem((1:numel(counts)).',counts);
     travel=[0;cumsum(vecnorm(diff(path,1,1),2,2))];
@@ -32,6 +40,21 @@ function pointsByFrame = refineDowntownCurbRuns(pointsByFrame,path,cfg)
     for j=find(lengths>=cfg.minLength).'
         rows=find(owner==j);
         keep(rows)=onBoundaries(station(rows),across(rows),lengths(j),cfg);
+    end
+    if any(junction)
+        bend=false(size(frame));
+        for j=find(junction(1:end-1) | junction(2:end)).'
+            rows=find(owner==j);
+            bend(rows)=lengths(j)<cfg.minLength | ...
+                (junction(j) & station(rows)<=cfg.stationLength) | ...
+                (junction(j+1) & station(rows)>=lengths(j)-cfg.stationLength);
+        end
+        % A bend can depart from the line before or beyond its last station.
+        % Replace the straight decision there using the originating scan.
+        for k=unique(frame(bend)).'
+            rows=find(bend & frame==k);
+            keep(rows)=validateBend(k,points(rows,:));
+        end
     end
     parts=mat2cell(keep,counts,1);
     for k=1:numel(counts)
