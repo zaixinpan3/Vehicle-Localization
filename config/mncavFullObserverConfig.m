@@ -7,8 +7,10 @@ function cfg=mncavFullObserverConfig(options)
         options.DesignOverride (1,1) struct=struct()
         options.Theta (1,1) double {mustBeReal,mustBeFinite}=4
     end
+    assert(~isfield(options.DesignOverride,'yawRateGainPerSecond'),'VehicleLocalization:PrescribedRateGain', ...
+        'The direct yaw-rate gain is a design output. Configure the physical noise scales and solve again.');
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-linear-yaw-rate-v20",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-solved-yaw-rate-v21",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('outputPoint', ...
@@ -32,7 +34,9 @@ function cfg=mncavFullObserverConfig(options)
     z.noiseObjective="normalizedFullState";
     % One simultaneous SDP in the fixed-shear metric; no outer tuning loop.
     z.motionResponse=struct('enabled',true,'timeConstantS',.5);
-    z.yawRateGainPerSecond=1/z.motionResponse.timeConstantS;
+    lateral=lateralObserverConfig();
+    z.noise.upstreamRateRadps=lateral.synthesis.measurementErrorScale(2);
+    z.provenance.upstreamRateNoise="Use the lateral design's bias-plus-noise rate scale as an engineering proxy for upstream estimation error. The joint covariance with lateral velocity is unknown.";
     z.velocityAvailable=true;z.accelerationAvailable=true;
     z.fusion=struct('minimumCourseSpeed',10,'lidarOperatorMismatch',.001);
     z.provenance.speedOutput="Physical squared-speed output with bounded gain factor Vmax^2/(smin^2+sMeasured^2); coefficients optimized directly in the single nominal fusion SDP";
@@ -46,11 +50,11 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.lowSpeed="C2 denominator extension equals squared speed above 0.5 m/s; the positive-speed nominal certificate does not certify this low-speed extension";
     z.provenance.courseAcceleration="Unmeasured course acceleration is a process disturbance, never a differentiated predictor input. jerkMps3 scales the aggregate translational residual R(phi)*[sDoubleDot;s*qDot] in the noise objective; it is a design weight, not a verified physical upper bound";
     z.provenance.operatingPoints="One nominal simultaneous-source noise objective; motion cases cover minimum/midpoint/maximum speed and zero, tangential and normal acceleration";
-    z.provenance.metric="The Schur complement preserves the seven previously designed physical gain rows. A separate scalar rate metric removes all motion and pose injection into body rate.";
+    z.provenance.metric="The SDP uses a diagonal angular metric so only the direct linear rate channel injects into body rate.";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
-    z.provenance.noiseObjective="The SDP noise objective selects the original matched-gain template. It excludes upstream yaw-rate estimation error and its correlation with lateral velocity.";
+    z.provenance.noiseObjective="The objective adds the isolated rate channel squared H2 energy for angular-acceleration and upstream-rate disturbances to the remaining full-state injection costs.";
     z.provenance.fusion="Positive-speed nominal vertex certificate with valid upstream body rate, available motion outputs and the declared pose geometry.";
-    z.provenance.feedback="A single fixed-shear SDP sets the matched gains. The deployed metric separates the rate and is checked again at every fusion vertex with the direct rate row active.";
+    z.provenance.feedback="One fixed-shear SDP selects the matched gains and the metric-weighted rate innovation. The deployed metric and gains are checked at every fusion vertex.";
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];
     cfg.invariantObserver=z;cfg.gainSource="unsolved-invariant";

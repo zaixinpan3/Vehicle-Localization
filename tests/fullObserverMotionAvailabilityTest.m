@@ -34,7 +34,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             l.yawRate(7)=NaN;
             a=execute(d,l,c);
             valid=l.yawRateValid & isfinite(l.yawRate);
-            gain=c.invariantObserver.yawRateGainPerSecond;
+            gain=c.invariantDesign.verification.yawRateGainPerSecond;
             expected=.2*(1-cumprod(1./(1+gain*[0;diff(t)].*valid)));
             testCase.verifyEqual(a.yawRate,expected,AbsTol=1e-12);
             testCase.verifyEqual(a.diagnostics.upstreamYawRateValid,valid);

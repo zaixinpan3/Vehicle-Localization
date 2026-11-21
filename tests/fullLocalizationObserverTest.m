@@ -67,7 +67,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             f.lateral.yawRate(f.data.highRate.time>=2 & f.data.highRate.time<4)=.02;r=run(f);
             outage=r.time>=2 & r.time<4;
             testCase.verifyEqual(r.diagnostics.mode(outage),zeros(nnz(outage),1));
-            gain=f.cfg.invariantObserver.yawRateGainPerSecond;
+            gain=f.cfg.invariantDesign.verification.yawRateGainPerSecond;
             dt=[0;diff(r.time)];expected=.02*(1-cumprod(1./(1+gain*dt(outage))));
             testCase.verifyEqual(r.yawRate(outage),expected,AbsTol=1e-12);
             testCase.verifyGreaterThan(max(r.heading(outage)),0);

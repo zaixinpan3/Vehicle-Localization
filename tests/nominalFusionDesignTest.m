@@ -23,6 +23,21 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyFalse(isfield(d,'constraintGeneration'));
             testCase.verifyFalse(isfield(d,'accelerationMultipliers'));
         end
+        function rateGainRespondsToNoiseAndRejectsPresetValues(testCase)
+            c=freshObserverTestConfig();base=c.invariantDesign;
+            testCase.verifyFalse(isfield(c.invariantObserver,'yawRateGainPerSecond'));
+            downtown=downtownReferenceReplayConfig();
+            testCase.verifyEqual(localizationSupport.invariantInputs(downtown.observer),base.inputs);
+            testCase.verifyTrue(base.verification.rateEnergyVerified);
+            c.invariantObserver.noise.upstreamRateRadps=2*c.invariantObserver.noise.upstreamRateRadps;
+            testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
+            other=freshObserverTestConfig(c);
+            testCase.verifyLessThan(other.invariantDesign.verification.yawRateGainPerSecond,base.verification.yawRateGainPerSecond);
+            broken=base;broken.kappaR=0;
+            testCase.verifyFalse(localizationSupport.verifyInvariantDesign(broken,mncavFullObserverConfig()).certified);
+            testCase.verifyError(@() mncavFullObserverConfig(DesignOverride=struct('yawRateGainPerSecond',5)), ...
+                'VehicleLocalization:PrescribedRateGain');
+        end
         function obsoleteSearchIsRejectedExplicitly(testCase)
             c=mncavSmallOffsetObserverConfig();c.gainSelection=struct('enabled',true);
             testCase.verifyError(@()localizationSupport.invariantInputs(c),'VehicleLocalization:ObsoleteFusionDesign');

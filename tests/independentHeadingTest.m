@@ -83,7 +83,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
         function headingAvailabilityChangesDesignAndCertificate(testCase)
             c=freshObserverTestConfig();d=localizationSupport.runtime(c);
             testCase.verifySize(d.LG,[8,3]);
-            testCase.verifyEqual(d.linearOutputGain(8,:),[0,0,0,c.invariantObserver.yawRateGainPerSecond]);
+            g=c.invariantObserver.theta*c.invariantDesign.kappaR/c.invariantDesign.P(8,8);
+            testCase.verifyEqual(d.linearOutputGain(8,:),[0,0,0,g]);
             testCase.verifyEqual(d.linearOutputGain(1:7,4),zeros(7,1));
             testCase.verifyEqual(d.linearOutputGain(:,1:3),d.LG);
             lower=c;lower.invariantObserver.gnssHeadingAvailable=false;
