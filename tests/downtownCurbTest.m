@@ -8,6 +8,41 @@ classdef downtownCurbTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function reviewedNegativeScanPublishesNoCurb(testCase)
+            root=fileparts(fileparts(mfilename('fullpath')));
+            file=fullfile(root,'data','processed','downtown_reference_gnss_free_20261005', ...
+                'raw_data_2024-05-21-11-47-40_0','pointClouds.mat');
+            testCase.assumeTrue(isfile(file),'The reviewed Downtown recording is required.');
+            cfg=perceptionConfig('Downtown');cfg.featureNames="curb";
+            result=perceiveFrame(loadPointCloudFrame(file,184),cfg);
+            testCase.verifyEmpty(result.candidates.pillarIndices{1});
+            testCase.verifyEqual(result.probabilityCloud.components.numComponents,0);
+        end
+        function rejectsScatteredGradeReturnsAndRetainsHeightBreaks(testCase)
+            cfg=downtownCandidateConfig(.3).curbRoadPatch;
+            [x,y]=meshgrid((0:24)*.3);
+            stats=struct('heightMap',.08*x+.03*y,'countMap',ones(size(x)));
+            scattered=false(size(x));scattered(5:4:21,5:4:21)=true;
+            testCase.verifyFalse(any(rejectCurbRoadPatches(scattered,scattered,stats,.3,cfg),'all'));
+            % Raised returns disagree with the surrounding grade.
+            stats.heightMap(scattered)=stats.heightMap(scattered)+.15;
+            testCase.verifyEqual(rejectCurbRoadPatches(scattered,scattered,stats,.3,cfg),scattered);
+        end
+        function retainsSparseLinearEdgesAndConnectedSegmentsOnGrades(testCase)
+            cfg=downtownCandidateConfig(.3).curbRoadPatch;
+            [x,y]=meshgrid((0:24)*.3);
+            stats=struct('heightMap',.08*x+.03*y+.12*(y>3),'countMap',ones(size(x)));
+            narrow=false(size(x));narrow(11,3:4:23)=true;
+            testCase.verifyEqual(rejectCurbRoadPatches(narrow,narrow,stats,.3,cfg),narrow);
+            % In a broad road patch, a connected curb and its measured endpoint survive.
+            stats.heightMap=.08*x+.03*y;
+            wide=false(size(x));wide(4:4:20,4:4:20)=true;wide(11,2:5)=true;wide(11,10)=true;
+            proposals=wide;proposals(11,6:8)=true;
+            keep=rejectCurbRoadPatches(wide,proposals,stats,.3,cfg);
+            testCase.verifyTrue(all(keep(11,[2:5,10])));
+            testCase.verifyFalse(keep(20,20));
+            testCase.verifyFalse(any(keep(~wide)));
+        end
         function rejectsShortFragmentsAndRetainsMeasuredLongBoundary(testCase)
             x=[(0:.3:1.5),6,6.3].';
             points=[x,zeros(size(x)),zeros(size(x))];

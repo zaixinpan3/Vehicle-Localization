@@ -53,6 +53,13 @@ function [ground,offGround]=classifyDowntownPillarStatistics(ground,offGround,na
         offGround.trafficSignProbability(~offGround.trafficSignCellMask)=0;
     end
     [ground,offGround]=applyDowntownPrecisionRules(ground,offGround,names,cfg.precisionFilter.rules);
+    if any(names=="curb")
+        if ~isfield(cfg,'curbRoadPatch')
+            cfg.curbRoadPatch=downtownCandidateConfig(cfg.spacing).curbRoadPatch;
+        end
+        ground.curbCellMask=rejectCurbRoadPatches(ground.curbCellMask,candidates,ground.stats,cfg.spacing,cfg.curbRoadPatch);
+        ground.curbProbability(~ground.curbCellMask)=0;
+    end
     offGround=synchronizeStructuralMasks(offGround);
 end
 
