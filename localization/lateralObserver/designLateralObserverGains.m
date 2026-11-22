@@ -124,7 +124,7 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
     epsilon = double(cfg.dilationTimeScale);
     processScale = diag(double(cfg.processErrorScale(:)));
     X = variables.X;
-    constraints = [gainSquared >= 0];
+    constraints = [];
     blocks = cell(domain.numLmis, 1);
     noiseMatrices = cell(3, 1);
     for idx = 1:3

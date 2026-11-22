@@ -8,16 +8,15 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite,mustBePositive}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-unit-lidar-metric-v27",'maximumBodyYawRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-unit-lidar-metric-v28",'maximumBodyYawRate',.4,'initialState',[]);
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('outputPoint', ...
         jsondecode(fileread(fullfile(here,'mncavBestposOutputPoint.json'))));
-    cfg.lidar=struct('poseScales',[1;1;.1]);
     cfg.iss=struct('maximumSpeed',15,'maximumAcceleration',2, ...
         'minimumPositionStrength',.25,'minimumHeadingStrength',.97, ...
         'maximumPositionHeadingCoupling',.06);
     receiver=jsondecode(fileread(fullfile(here,'mncavGnssHeading.json')));
-    z=struct('sigma',4,'headingLengthM',10, ...
+    z=struct('theta',options.Theta,'headingLengthM',10, ...
         'noise',struct('lidarPositionM',.0279,'lidarHeadingRad',.00211,'gnssPositionM',receiver.positionErrorScaleM,'gnssHeadingRad',receiver.headingErrorScaleRad, ...
             'velocityMps',.256,'accelerationMps2',.233,'jerkMps3',.05), ...
         'lambda',1,'margin',1e-7,'solver',"sedumi");
@@ -25,11 +24,9 @@ function cfg=mncavFullObserverConfig(options)
         'noise',"Inherited declared sensor priors: conditional registration moments on the first 60 s of the 2026-10-02 study; independent BESTPOS and HEADING2 calibration on 12-11-24; adopted lateral identification and independently corrected IMU on 12-11-24; these are design priors, not an overlap covariance certificate", ...
         'headingLengthM',"Heading error weighted by a 10 m landmark range", ...
         'normalization',"Unit LiDAR coefficient. The verified absolute margin uses the solved certificate floor.");
-    z.theta=options.Theta;z.sigma=z.theta;
     z.motionTimeConstantS=.5; % Nominal longitudinal response used by the matched motion design.
     z.gnssBandwidthRatio=1; % Normalized poles of each measured position chain.
     z.yawAccelerationRadps2=cfg.maximumBodyYawRate/2;
-    z.noiseObjective="normalizedFullState";
     lateral=lateralObserverConfig();
     z.noise.upstreamRateRadps=lateral.synthesis.measurementErrorScale(2);
     z.provenance.upstreamRateNoise="Use the lateral design's bias-plus-noise rate scale as an engineering proxy for upstream estimation error. The joint covariance with lateral velocity is unknown.";
@@ -42,8 +39,7 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.lowSpeed="The body-rate drift is smooth at zero speed. The motion response design uses its declared speed range.";
     z.provenance.bodyJerk="The jerkMps3 design weight scales the aggregate translational process disturbance R(psi)*uDoubleDot + rDot*J*v. A physical upper bound must be established separately.";
     z.provenance.metric="The SDP uses a diagonal angular metric so only the direct linear rate channel injects into body rate.";
-    z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
-    z.provenance.noiseObjective="LiDAR, process and rate injection costs select the common metric. The GNSS heading bandwidth minimizes a scalar noise proxy subject to packet dissipation.";
+    z.provenance.gainSelection="LiDAR, process and rate injection costs select the common metric. The GNSS heading bandwidth minimizes a scalar noise proxy subject to packet dissipation.";
     z.provenance.fusion="Four drift inequalities use one rotation-invariant planar metric. Each complete GNSS pose adds a positive semidefinite output Gram term. The nominal certificate assumes the declared motion and LiDAR bounds.";
     assert(all(ismember(fieldnames(options.DesignOverride),fieldnames(z))), ...
         'VehicleLocalization:UnknownDesignOption','Design overrides must name an existing observer option.');

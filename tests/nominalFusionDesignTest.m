@@ -14,13 +14,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             c=freshObserverTestConfig();d=c.invariantDesign;v=localizationSupport.verifyInvariantDesign(d,c);
             testCase.verifyTrue(v.certified && v.matchedAuxiliaryGain);
             testCase.verifyGreaterThanOrEqual(d.solveAudit.optimizationCalls,2);
-            testCase.verifyEqual(d.K(1:3,1),[3;3;1]);
+            testCase.verifyEqual(d.Y(1:3,1),d.P(1:3,1:3)*[3;3;1]);
             testCase.verifyEqual([v.vertices,v.matrixInequalities],[4,4]);
             testCase.verifyLessThan(v.gnssDissipationDefect,1e-8);
-            raw=localizationSupport.fusionBlocks(d,c,0);
+            raw=localizationSupport.fusionBlocks(d.P,d.Y(8,4),c,0);
             decay=-max(cellfun(@(b)max(eig(b)),raw));
             z=c.invariantObserver;
-            floorBound=min([1,min(eig(d.P)),d.kappaR/z.margin,decay/(2*z.lambda+z.margin)]);
+            floorBound=min([1,min(eig(d.P)),d.Y(8,4)/z.margin,decay/(2*z.lambda+z.margin)]);
             testCase.verifyEqual(d.lambda/z.lambda,floorBound,AbsTol=1e-7);
             testCase.verifyTrue(v.independentYawRateCorrection && v.upstreamYawRateRequired);
             testCase.verifyEqual(d.P(8,1:7),zeros(1,7));
@@ -32,7 +32,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
             other=freshObserverTestConfig(c);
             testCase.verifyLessThan(other.invariantDesign.verification.yawRateGainPerSecond,base.verification.yawRateGainPerSecond);
-            broken=base;broken.kappaR=0;
+            broken=base;broken.Y(8,4)=0;
             testCase.verifyFalse(localizationSupport.verifyInvariantDesign(broken,mncavFullObserverConfig()).certified);
             testCase.verifyError(@() mncavFullObserverConfig(DesignOverride=struct('unknownOption',5)), ...
                 'VehicleLocalization:UnknownDesignOption');
@@ -60,9 +60,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             c.invariantObserver.noise.gnssPositionM=.10;
             c=freshObserverTestConfig(c);b=c.invariantDesign;
             testCase.verifyEqual(b.P,a.P,AbsTol=1e-10);
-            testCase.verifyEqual([b.kappaR;b.auxiliaryWeights], ...
-                [a.kappaR;a.auxiliaryWeights],AbsTol=1e-10);
-            testCase.verifyGreaterThan(b.K(7,3),a.K(7,3));
+            testCase.verifyEqual([b.Y(8,4);b.auxiliaryWeights], ...
+                [a.Y(8,4);a.auxiliaryWeights],AbsTol=1e-10);
+            testCase.verifyGreaterThan(b.Y(7,3)/b.P(7,7),a.Y(7,3)/a.P(7,7));
             testCase.verifyEqual(b.gnssHeadingBandwidth.perSecond, ...
                 max(b.gnssHeadingBandwidth.dissipationFloorPerSecond, ...
                 c.invariantObserver.noise.upstreamRateRadps/.01),AbsTol=1e-12);
@@ -78,7 +78,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             c.invariantObserver.gnssBandwidthRatio=1.2;
             testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
             ready=freshObserverTestConfig(c);b=localizationSupport.runtime(ready);
-            testCase.verifyEqual(b.LG(1,1)/a.LG(1,1),1.2,AbsTol=1e-12);
+            testCase.verifyEqual(b.linearOutputGain(1,1)/a.linearOutputGain(1,1),1.2,AbsTol=1e-12);
             testCase.verifyTrue(b.nominalFusionLmiVerified);
         end
         function informativeLidarStillCorrectsAStationaryPose(testCase,dt)

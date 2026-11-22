@@ -112,8 +112,8 @@ function worst=globalAxisResidual(cfg)
             k=k([1,2,2,3]);Cmotion=D(active,active)*H(active,:)*T;
             motion=Cmotion.'*diag(k(active))*Cmotion;
             for gnss=[0,1]
-                W=d.P*predictor-motion-gnss*d.P*d.K*G ...
-                    -C.'*S*C-d.kappaR*E(:,8)*E(8,:);
+                W=d.P*predictor-motion-gnss*d.Y(:,1:3)*G ...
+                    -C.'*S*C-d.Y(8,4)*E(:,8)*E(8,:);
                 worst=max(worst,max(eig(W+W.'+d.lambda*eye(8))));
             end
         end

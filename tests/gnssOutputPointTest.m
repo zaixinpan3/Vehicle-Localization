@@ -50,7 +50,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) gnssOutputPointTest < 
         function independentPointConfigurationUsesTheSolvedGnssGain(testCase)
             cfg=freshObserverTestConfig();design=localizationSupport.designFullObserverGains(cfg);
             temporary=cfg.invariantDesign;
-            testCase.verifyEqual(design.LG,design.toPhysical*temporary.K,RelTol=1e-12);
+            testCase.verifyEqual(design.linearOutputGain(:,1:3), ...
+                design.toPhysical*localizationSupport.linearGain(cfg,temporary.P),AbsTol=1e-12);
             testCase.verifyEqual(temporary.inputs.gnssBodyOffset(:),cfg.gnss.outputPoint.bodyOffset(:),AbsTol=0);
             testCase.verifyFalse(cfg.gnss.outputPoint.evaluationDriveUsed);
             testCase.verifyTrue(design.nominalFusionLmiVerified);
