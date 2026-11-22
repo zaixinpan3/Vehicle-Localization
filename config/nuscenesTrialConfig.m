@@ -28,12 +28,13 @@ function trial=nuscenesTrialConfig(steeringRatio)
     lateral.simulation.lateralAccelerationNoiseStd=.05;
     lateral.synthesis.measurementErrorScale=[.25;.02]; % Physical [ay; r] scales.
     globalCfg=mncavFullObserverConfig();globalCfg.kind="nuscenes-overlap-development-trial";
-    globalCfg.invariantObserver.gnssHeadingAvailable=false;
-    globalCfg.invariantObserver.gnssPositionAvailable=false; % Declared GNSS-free nominal fusion.
     globalCfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2), ...
         'headingStdRad',0,'identifier',"nuScenes-rear-axle");
-    globalCfg.invariantObserver.noise=struct('lidarPositionM',.1,'lidarHeadingRad',.01, ...
-        'gnssPositionM',1,'upstreamRateRadps',lateral.synthesis.measurementErrorScale(2),'velocityMps',.3,'accelerationMps2',.3,'jerkMps3',1);
+    noise=globalCfg.invariantObserver.noise;
+    noise.lidarPositionM=.1;noise.lidarHeadingRad=.01;noise.gnssPositionM=1;
+    noise.upstreamRateRadps=lateral.synthesis.measurementErrorScale(2);
+    noise.velocityMps=.3;noise.accelerationMps2=.3;noise.jerkMps3=1;
+    globalCfg.invariantObserver.noise=noise;
     globalCfg.invariantObserver.provenance.noise="Declared transfer scales; no nuScenes reference-error tuning";
     trial=struct('vehicle',vehicle,'provenance',provenance,'lateral',lateral, ...
         'global',globalCfg,'steeringRatio',steeringRatio, ...

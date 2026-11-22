@@ -10,7 +10,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % Missing/invalid measurements withdraw their own correction for that frame.
 % Optional highRate.bodyVelocityValid and bodyAccelerationValid masks also
 % withdraw unavailable motion-output feedback. Absent masks mean all valid.
-% LateralInputs.yawRate is the lateral observer estimate in rad/s. Its
+% LateralInputs.yawRate is the upstream yaw-rate observation in rad/s. Its
 % difference from the internal rate enters the first (linear) feedback term.
 % A finite value is active when yawRateValid is true (defaults to true).
 % Missing or invalid rate holds the previous rate while heading integrates it.
@@ -19,8 +19,7 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % and delay=0; it is never inferred from a reference pose. Information metadata
 % is not used to weight position or heading corrections.
 % Optional LateralInputs.velocityValid gates the velocity-dependent innovations.
-% Optional highRate.rollingVelocity [vx,vy] (m/s) and rollingValid select
-% low-speed wheel/steering propagation when lateral velocity is unavailable.
+% Low-speed wheel/gyro packets enter through the same motion innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
 % diagnostics.lidarPoseSupport reports local geometry, not alignment correctness.
     arguments

@@ -45,6 +45,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyTrue(selectedDesign.invariantDesign.verification.nominalFusion.coversGnssAbsent);
             testCase.verifyEqual(downtown.rmseTargets.positionM,.1435);
         end
+        function staleAvailabilitySelectorsCannotCreateAnotherDesign(testCase)
+            for field=["gnssPositionAvailable","gnssHeadingAvailable","velocityAvailable","accelerationAvailable"]
+                c=mncavFullObserverConfig();c.invariantObserver.(field)=false;
+                testCase.verifyError(@()localizationSupport.synthesize(c),'VehicleLocalization:ObsoleteSensorAvailability');
+            end
+        end
         function obsoleteSearchIsRejectedExplicitly(testCase)
             c=mncavSmallOffsetObserverConfig();c.gainSelection=struct('enabled',true);
             testCase.verifyError(@()localizationSupport.invariantInputs(c),'VehicleLocalization:ObsoleteFusionDesign');

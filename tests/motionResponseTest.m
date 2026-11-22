@@ -24,13 +24,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
             v=localizationSupport.verifyInvariantDesign(d,c);
             testCase.verifyFalse(v.certified);
         end
-        function withdrawnMotionColumnsStillHaveANominalCertificate(testCase)
-            c=mncavFullObserverConfig();c.invariantObserver.velocityAvailable=false;
-            c.invariantObserver.accelerationAvailable=false;
-            ready=freshObserverTestConfig(c);v=ready.invariantDesign.verification;
-            testCase.verifyTrue(v.certified);
-            testCase.verifyFalse(v.allAuxiliaryOutputsRequired);
-            testCase.verifyFalse(v.motionAvailabilityConfigured);
+        function withdrawnMotionKeepsTheVerifiedGains(testCase)
+            c=freshObserverTestConfig();d=localizationSupport.runtime(c);
+            x=[0;9;1;0;4;.2;.7;.1];
+            packet=localizationSupport.measurements(NaN,NaN,NaN,NaN,false,false,c);
+            testCase.verifyFalse(any(packet.valid));
+            testCase.verifyEqual(localizationSupport.correct(x,packet,.1,d,c),x,AbsTol=0);
+            testCase.verifyTrue(d.continuousCertificate.verification.certified);
+            testCase.verifyFalse(d.continuousCertificate.verification.allAuxiliaryOutputsRequired);
         end
         function squaredSpeedCorrectionRotatesWithVelocity(testCase)
             c=freshObserverTestConfig();d=localizationSupport.runtime(c);

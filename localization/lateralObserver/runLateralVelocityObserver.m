@@ -121,6 +121,7 @@ function estimate = runLateralVelocityObserver(measurements, design, cfg, output
     estimate.velocityValid = velocityValid;
     estimate.innovation = innovationHistory;
     estimate.gainNorm = gainNorm;
+    estimate.minimumDesignSpeedMps = settings.speedRange(1);
     estimate.scheduledSpeed = measurements.longitudinalSpeed;
     estimate.scheduledSpeedRate = vxDot;
     % This physical rate estimate does not certify the derivative of noisy

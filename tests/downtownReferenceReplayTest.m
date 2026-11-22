@@ -62,13 +62,15 @@ classdef downtownReferenceReplayTest < matlab.unittest.TestCase
             test.verifyEqual(a.highRate,b.highRate);test.verifyEqual(a.lateral,b.lateral);
             test.verifyFalse(a.referenceUsed);test.verifyFalse(a.gnssUsed);
             test.verifyEqual(a.highRate.longitudinalSpeed,10*ones(size(a.highRate.time)),'AbsTol',1e-8);
-            test.verifyFalse(any(a.rollingValid));
+            test.verifyFalse(any(a.globalMeasurements.lowSpeedMeasurement));
             wheels{:,2:5}=repmat(.5./wheel.effectiveRadius,n,1);
             writetable(wheels,fullfile(folder,'sensors','wheel_speed_report.csv'));
             slow=prepareDowntownMotionInputs(folder,design);
-            test.verifyTrue(all(slow.rollingValid));
+            test.verifyTrue(all(slow.globalMeasurements.lowSpeedMeasurement));
             test.verifyFalse(any(slow.lateral.velocityValid));
-            test.verifyEqual(slow.rollingVelocity,repmat([.5,0],numel(slow.highRate.time),1),'AbsTol',1e-8);
+            test.verifyEqual(slow.globalMeasurements.longitudinalSpeed,.5*ones(size(slow.highRate.time)),'AbsTol',1e-8);
+            test.verifyEqual(slow.globalMeasurements.lateralVelocity,zeros(size(slow.highRate.time)));
+            test.verifyEqual(slow.globalMeasurements.yawRate,slow.highRate.yawRate);
         end
         function measuredDeskewUsesTranslationAndRejectsExtrapolation(test)
             frame=struct('x',single([3,3]),'y',single([0,0]),'z',single([0,0]), ...

@@ -9,19 +9,17 @@ function estimate=integrate(data,cfg,lateral,L)
         'VehicleLocalization:AlignedLateralRequired', ...
         'Supply the upstream lateral velocity.');
     reportedLateral=lateral;
+    if isfield(lateral,'minimumDesignSpeedMps')
+        lateral=globalObserverMotionMeasurements(lateral,lateral.measurements.longitudinalSpeed,lateral.measurements.yawRate);
+        low=lateral.lowSpeedMeasurement;
+        h.longitudinalSpeed(low)=lateral.longitudinalSpeed(low);
+    end
     [upstreamRate,rateValid]=observerInternal.upstreamYawRate(lateral);
     velocityValid=motionValidity(h,'bodyVelocityValid',n) ...
-        & motionValidity(lateral,'velocityValid',n) & cfg.invariantObserver.velocityAvailable;
+        & motionValidity(lateral,'velocityValid',n);
     accelerationValid=motionValidity(h,'bodyAccelerationValid',n);
-    rollingValid=false(n,1);
-    if isfield(h,'rollingVelocity') || isfield(h,'rollingValid')
-        assert(all(isfield(h,{'rollingVelocity','rollingValid'})) && isequal(size(h.rollingVelocity),[n,2]), ...
-            'VehicleLocalization:InvalidRollingMotion','Supply an aligned two-axis rolling velocity and validity mask.');
-        rollingValid=motionValidity(h,'rollingValid',n) & motionValidity(h,'bodyVelocityValid',n) ...
-            & cfg.invariantObserver.velocityAvailable & ~velocityValid;
-        assert(isreal(h.rollingVelocity) && all(isfinite(h.rollingVelocity(rollingValid,:)),'all'), ...
-            'VehicleLocalization:InvalidRollingMotion','Valid rolling velocities must be finite.');
-    end
+    assert(~any(isfield(h,{'rollingVelocity','rollingValid'})),'VehicleLocalization:RetiredRollingPrediction', ...
+        'Regenerate the motion inputs and supply low-speed measurements on the ordinary channels.');
     fields=["longitudinalSpeed","longitudinalAcceleration","lateralAcceleration"];
     for name=fields
         valid=true(n,1);
@@ -39,8 +37,6 @@ function estimate=integrate(data,cfg,lateral,L)
     end
     G=gnssPositionSource(data,t);
     heading=localizationSupport.headingMeasurements(data,t,cfg);
-    G.valid=G.valid & cfg.invariantObserver.gnssPositionAvailable;
-    heading.valid=heading.valid & cfg.invariantObserver.gnssHeadingAvailable;
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
         'minimumInformation',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3), ...
         'channels',{cell(n,1)});
@@ -86,21 +82,8 @@ function estimate=integrate(data,cfg,lateral,L)
         if G.valid(k)
             gnssPosition(k,:)=localizationSupport.correctGnssOutputPoint(G.values(k,:),[],yaw,alignment);
         end
-        previous=x;
         x=localizationSupport.predict(x,dt,cfg);
         intrinsicStates(k,:)=x.';
-        if rollingValid(k) && dt>0
-            % Integrate wheel/steering motion only outside LPV coverage. Apply
-            % pose corrections afterwards so a simultaneous GNSS fix survives.
-            R=[cos(x(7)),-sin(x(7));sin(x(7)),cos(x(7))];
-            v=R*h.rollingVelocity(k,:).';
-            x([1,4])=previous([1,4])+dt/2*(previous([2,5])+v);
-            x([2,5])=v;
-            x([3,6])=0;
-            if accelerationValid(k) && cfg.invariantObserver.accelerationAvailable
-                x([3,6])=R*[h.longitudinalAcceleration(k);h.lateralAcceleration(k)];
-            end
-        end
         gnssRate=zeros(2,1);
         if G.valid(k) || heading.valid(k) || rateValid(k)
             observation=linearOutput*x;
@@ -196,19 +179,17 @@ function estimate=integrate(data,cfg,lateral,L)
         'lidarChannel',L.name, ...
         'lidarOverlap',overlapDiagnostics, ...
         'lidarPoseSupport',lidarPoseSupport, ...
-        'motionOutputValidity',struct('bodyVelocity',velocityValid & cfg.invariantObserver.velocityAvailable, ...
-            'bodyAcceleration',velocityValid & accelerationValid ...
-                & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable), ...
+        'motionOutputValidity',struct('bodyVelocity',velocityValid, ...
+            'bodyAcceleration',velocityValid & accelerationValid), ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
         'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. The nominal design requires informative LiDAR, the configured direct rate input and a compact invariant operating set; low-speed execution uses a smooth denominator extension and is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
     estimate.internalState=z;estimate.yawRate=z(:,8);
     estimate.diagnostics.intrinsicPrediction=intrinsicStates;
-    estimate.diagnostics.rollingPredictionActive=rollingValid & [false;diff(t)>0];
     estimate.diagnostics.invariantOutputs=invariantAudits;
     estimate.diagnostics.invariantOutputNames=["speedSquared","velocityAccelerationDot", ...
         "velocityAccelerationCross","bodyLateralVelocity"];
     estimate.diagnostics.intrinsicPredictionUsesImu=false;
-    estimate.diagnostics.yawRateFeedbackSource="upstreamLateralObserver";
+    estimate.diagnostics.yawRateFeedbackSource="upstreamMotionPacket";
     estimate.diagnostics.upstreamYawRateValid=rateValid;
     estimate.diagnostics.upstreamYawRateInnovation=rateInnovation;
     estimate.diagnostics.packetCounts.upstreamYawRateValid=nnz(rateValid);
@@ -216,8 +197,7 @@ function estimate=integrate(data,cfg,lateral,L)
     certificate=continuous.continuousCertificate.verification;
     estimate.diagnostics.operatingSet=certificate.operatingSet;
     estimate.diagnostics.nominalFusionLmiVerified=certificate.nominalFusionLmiVerified;
-    estimate.diagnostics.allAuxiliaryOutputsAvailable=velocityValid & accelerationValid ...
-        & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable;
+    estimate.diagnostics.allAuxiliaryOutputsAvailable=velocityValid & accelerationValid;
     estimate.diagnostics.auxiliaryAvailabilityContractSatisfied= ...
         ~certificate.allAuxiliaryOutputsRequired || all(estimate.diagnostics.allAuxiliaryOutputsAvailable);
 end

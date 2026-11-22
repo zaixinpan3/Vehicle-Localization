@@ -80,20 +80,25 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             testCase.verifyEqual(aligned.gnss.position,data.gnss.position,AbsTol=0);
             testCase.verifyFalse(isfield(aligned.gnss,'information'));
         end
-        function headingAvailabilityChangesDesignAndCertificate(testCase)
-            c=freshObserverTestConfig();d=localizationSupport.runtime(c);
+        function intermittentGnssUsesOneDesign(testCase)
+            [data,c,l]=fixture();d=localizationSupport.runtime(c);
             testCase.verifySize(d.LG,[8,3]);
             g=c.invariantObserver.theta*c.invariantDesign.kappaR/c.invariantDesign.P(8,8);
             testCase.verifyEqual(d.linearOutputGain(8,:),[0,0,0,g]);
             testCase.verifyEqual(d.linearOutputGain(1:7,4),zeros(7,1));
             testCase.verifyEqual(d.linearOutputGain(:,1:3),d.LG);
-            lower=c;lower.invariantObserver.gnssHeadingAvailable=false;
-            a=localizationSupport.fusionBlocks(c.invariantDesign,c);
-            b=localizationSupport.fusionBlocks(c.invariantDesign,lower);
-            Y=c.invariantDesign.P*c.invariantDesign.K(:,3);e=zeros(8,1);e(7)=1;
-            delta=zeros(size(a{1}));delta(1:8,1:8)=-Y*e.'-e*Y.';
-            testCase.verifyEqual(a{1}-b{1},delta,AbsTol=1e-11);
-            testCase.verifyError(@()localizationSupport.runtime(lower),'VehicleLocalization:StaleInvariantDesign');
+            t=data.highRate.time;frames=(0:numel(t)-1).';
+            pos=mod(frames,4)<2;hdg=mod(frames,2)==0;
+            data.gnss=struct('time',t,'position',[12*t,zeros(size(t))],'valid',pos,'delay',0);
+            data.gnssHeading.valid=hdg;
+            a=runFullLocalizationObserver(data,c,LateralInputs=l);
+            testCase.verifyEqual(a.diagnostics.gnssPositionValid,pos);
+            testCase.verifyEqual(a.diagnostics.independentHeadingValid,hdg);
+            testCase.verifyEqual(a.observer.continuousDesign,d);
+            data.gnss.position(~pos,:)=NaN;
+            data.gnssHeading.heading(~hdg)=NaN;
+            b=runFullLocalizationObserver(data,c,LateralInputs=l);
+            testCase.verifyEqual(b.internalState,a.internalState,AbsTol=0);
         end
     end
 end

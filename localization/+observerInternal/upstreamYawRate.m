@@ -1,5 +1,5 @@
 function [rate,valid]=upstreamYawRate(lateral)
-% Only a finite rate from the upstream observer can enable this linear row.
+% Only a finite rate from the upstream motion packet can enable this linear row.
     n=numel(lateral.time);
     rate=nan(n,1);
     if isfield(lateral,'yawRate')

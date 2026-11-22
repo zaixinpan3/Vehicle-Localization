@@ -1,6 +1,11 @@
 function [aligned,lateral,metadata,selected]=alignFrameClock(data,lateralInput,cfg,t)
 % Align motion and GNSS on covered LiDAR timestamps.
     h=data.highRate;
+    if isfield(lateralInput,'minimumDesignSpeedMps')
+        lateralInput=globalObserverMotionMeasurements(lateralInput,lateralInput.measurements.longitudinalSpeed,lateralInput.measurements.yawRate);
+        low=lateralInput.lowSpeedMeasurement;
+        h.longitudinalSpeed(low)=lateralInput.longitudinalSpeed(low);
+    end
     assert(all(diff(t)>0) && all(isfinite(t)),'VehicleLocalization:InvalidSyncClock','Invalid LiDAR clock.');
     selected=t>=h.time(1) & t<=h.time(end);t=t(selected);
     assert(numel(t)>=2,'VehicleLocalization:SyncCoverage','Need two covered localization frames.');
@@ -9,7 +14,7 @@ function [aligned,lateral,metadata,selected]=alignFrameClock(data,lateralInput,c
     aligned=struct('highRate',struct('time',t));
     for name=string(fieldnames(h)).'
         if name=="time",continue;end
-        if any(name==["bodyVelocityValid","bodyAccelerationValid","yawRateValid","rollingValid"])
+        if any(name==["bodyVelocityValid","bodyAccelerationValid","yawRateValid"])
             mask=h.(name);
             assert(isvector(mask) && numel(mask)==numel(h.time) && all(ismember(mask(:),[0,1])), ...
                 'VehicleLocalization:InvalidMotionValidity','Invalid native motion validity mask.');

@@ -15,7 +15,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             omitted=execute(d,l,c);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
             testCase.verifyEqual(a.internalState,omitted.internalState,AbsTol=0);
-            testCase.verifyEqual(a.diagnostics.yawRateFeedbackSource,"upstreamLateralObserver");
+            testCase.verifyEqual(a.diagnostics.yawRateFeedbackSource,"upstreamMotionPacket");
         end
         function missingAndNonfiniteUpstreamRateHoldTheInitialRate(testCase)
             [d,l,c]=fixture();c.initialState(8)=.04;l.yawRate(:)=NaN;
@@ -60,26 +60,37 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             d.highRate.bodyAccelerationValid=true(size(l.time));b=execute(d,l,c);
             testCase.verifyEqual(a,b);
         end
-        function rollingVelocityBridgesOnlyTheLateralOutage(testCase)
-            [d,l,c]=fixture();n=numel(l.time);c.initialState=[0;1;0;0;0;0;0;.05];
-            l.yawRateValid=false(n,1);l.velocityValid=false(n,1);d.highRate.rollingValid=true(n,1);
-            d.highRate.rollingVelocity=zeros(n,2);
+        function lowSpeedMotionUsesTheOrdinaryInnovations(testCase)
+            [d,l,c]=fixture();n=numel(l.time);c.initialState=[0;1;0;0;0;0;0;0];
+            d.highRate.longitudinalSpeed(:)=0;l.lateralVelocity(:)=0;l.velocityValid=true(n,1);
+            l.yawRate(:)=.12;l.yawRateValid=true(n,1);
             e=execute(d,l,c);
-            testCase.verifyEqual(e.position(2:end,1),.05*ones(n-1,1),AbsTol=1e-12);
-            testCase.verifyEqual(e.velocity(2:end,:),zeros(n-1,2),AbsTol=0);
-            testCase.verifyEqual(e.yawRate,.05*ones(n,1),AbsTol=0);
-            testCase.verifyEqual(e.diagnostics.rollingPredictionActive,[false;true(n-1,1)]);
-            l.velocityValid(:)=true;d.highRate.rollingVelocity(:)=NaN;f=execute(d,l,c);
-            testCase.verifyFalse(any(f.diagnostics.rollingPredictionActive));
-        end
-        function rolledPredictionAcceptsASimultaneousPositionFix(testCase)
-            [d,l,c]=fixture();n=numel(l.time);l.velocityValid=false(n,1);
+            testCase.verifyTrue(all(e.diagnostics.upstreamYawRateValid));
+            testCase.verifyTrue(all(e.diagnostics.allAuxiliaryOutputsAvailable));
+            testCase.verifyGreaterThan(e.velocity(2,1),0);
+            testCase.verifyGreaterThan(e.yawRate(2),0);
+            testCase.verifyLessThan(e.yawRate(2),.12);
+            expected=localizationSupport.predict(c.initialState,l.time(2)-l.time(1),c);
+            testCase.verifyEqual(e.diagnostics.intrinsicPrediction(2,:).',expected,AbsTol=1e-12);
             d.highRate.rollingValid=true(n,1);d.highRate.rollingVelocity=zeros(n,2);
-            plain=execute(d,l,c);
-            d.gnss=struct('time',l.time,'position',repmat([5,1],n,1),'valid',true(n,1),'delay',0);
-            corrected=execute(d,l,c);
-            testCase.verifyGreaterThan(norm(corrected.position(end,:)-plain.position(end,:)),.1);
-            testCase.verifyEqual(corrected.yawRate,plain.yawRate,AbsTol=0);
+            testCase.verifyError(@()execute(d,l,c),'VehicleLocalization:RetiredRollingPrediction');
+        end
+        function lowSpeedPacketHonorsTheSpeedBoundaryAndSensorValidity(testCase)
+            t=(0:5).';u=[0;-.5;1;2;.4;.1];r=[.1;.2;.3;.4;NaN;.8];
+            dynamic=[false;false;true;true;false;false];
+            l=struct('time',t,'longitudinalSpeed',abs(u),'lateralVelocity',ones(6,1), ...
+                'yawRate',zeros(6,1),'velocityValid',dynamic,'yawRateValid',dynamic, ...
+                'minimumDesignSpeedMps',1,'measurements',struct('dynamicValid',[true(5,1);false]));
+            m=globalObserverMotionMeasurements(l,u,r);
+            testCase.verifyEqual(m.lowSpeedMeasurement,logical([1;1;0;0;1;0]));
+            testCase.verifyEqual(m.longitudinalSpeed(2),-.5);
+            testCase.verifyEqual(m.lateralVelocity,[0;0;1;1;0;1]);
+            testCase.verifyEqual(m.yawRateValid,logical([1;1;1;1;0;0]));
+            testCase.verifyEqual(m.yawRate(1:4),[.1;.2;0;0]);
+            testCase.verifyEqual(m.velocityValid,logical([1;1;1;1;1;0]));
+            l.measurements.yawRateValid=[false;true;false;true;true;true];
+            m=globalObserverMotionMeasurements(l,u,r);
+            testCase.verifyEqual(m.yawRateValid,logical([0;1;1;1;0;0]));
         end
         function absentOutputsPreserveFreePrediction(testCase)
             [d,l,c]=fixture();n=numel(l.time);

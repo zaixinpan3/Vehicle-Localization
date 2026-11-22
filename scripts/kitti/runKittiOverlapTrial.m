@@ -69,15 +69,12 @@ function [report,estimate,trial]=runKittiOverlapTrial(datasetFolder,outputFolder
     % transfer-trial assumptions. Design revisions used this development drive;
     % no navigation reference series enters prediction or innovations.
     cfg=mncavFullObserverConfig();cfg.kind="kitti-global-overlap-transfer-trial";
-    % Motion masks select columns of the fixed gain. The GNSS-free design
-    % still requires informative LiDAR and positive speed for its local bound.
-    cfg.invariantObserver.gnssHeadingAvailable=false;
-    cfg.invariantObserver.gnssPositionAvailable=false; % Declared GNSS-free nominal fusion.
     cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2), ...
         'headingStdRad',0,'identifier',"coincident-output-points");
-    cfg.invariantObserver.noise=struct('lidarPositionM',.1,'lidarHeadingRad',.01, ...
-        'gnssPositionM',1,'upstreamRateRadps',cfg.invariantObserver.noise.upstreamRateRadps,'velocityMps',1,'accelerationMps2',1, ...
-        'jerkMps3',cfg.iss.maximumAcceleration/2);
+    noise=cfg.invariantObserver.noise;
+    noise.lidarPositionM=.1;noise.lidarHeadingRad=.01;noise.gnssPositionM=1;
+    noise.velocityMps=1;noise.accelerationMps2=1;noise.jerkMps3=cfg.iss.maximumAcceleration/2;
+    cfg.invariantObserver.noise=noise;
     cfg.invariantObserver.provenance.noise="Declared transfer scales; jerk maximumAcceleration / 2 s, no velocity output, weak LiDAR without GNSS. Revised during this development trial; no independent holdout claim";
     cfg.invariantObserver.provenance.theta="Fixed theta 4 inherited from the current route; no KITTI sweep";
     [design,cfg]=synthesizeMncavInvariantDesign(cfg);

@@ -200,10 +200,8 @@ classdef localizationSupport
             D=diag([1/(2*V),1/V,1/V,1].*theta.^-[2,3,3,2]);
         end
 
-        function packet=measurements(speed,vy,ax,ay,velocityValid,accelerationValid,cfg)
+        function packet=measurements(speed,vy,ax,ay,velocityValid,accelerationValid,~)
         % Four additional motion outputs; no independent yaw-rate measurement.
-            velocityValid=velocityValid && cfg.invariantObserver.velocityAvailable;
-            accelerationValid=accelerationValid && cfg.invariantObserver.accelerationAvailable;
             value=zeros(4,1);valid=[velocityValid;velocityValid&&accelerationValid; ...
                 velocityValid&&accelerationValid;velocityValid];
             if valid(1),value(1)=speed^2+vy^2;end
@@ -237,6 +235,8 @@ classdef localizationSupport
         function inputs=invariantInputs(cfg)
         % Version every mathematical design input; reject retired designs.
             z=cfg.invariantObserver;
+            assert(~any(isfield(z,{'gnssPositionAvailable','gnssHeadingAvailable','velocityAvailable','accelerationAvailable'})), ...
+                'VehicleLocalization:ObsoleteSensorAvailability','Regenerate the config and gains. Set validity on measurement packets.');
             assert(isfield(z,'motionTimeConstantS'),'VehicleLocalization:StaleInvariantDesign', ...
                 'Regenerate the observer configuration for the matched motion update.');
             assert(~isfield(cfg,'gainSelection') && ~any(isfield(z, ...
@@ -246,7 +246,7 @@ classdef localizationSupport
             assert(~isfield(z,'yawRateGainPerSecond') && isfield(z.noise,'upstreamRateRadps'), ...
                 'VehicleLocalization:StaleInvariantDesign','Remove the prescribed yaw-rate gain and regenerate the shared design.');
             if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"matched-motion-v23", ...
+            inputs=jsondecode(jsonencode(struct('architecture',"fixed-design-v24", ...
                 'physicalOutputs',"squared-dot-cross-body-lateral", ...
                 'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
                 'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).','poseScales',cfg.lidar.poseScales(:).', ...
@@ -264,7 +264,7 @@ classdef localizationSupport
             K=localizationSupport.linearGain(cfg);
             constraints=[P>=eye(8),kL>=1,kR>=z.margin];
             leverSlack=0;
-            if z.gnssPositionAvailable && norm(cfg.gnss.outputPoint.bodyOffset)>0
+            if norm(cfg.gnss.outputPoint.bodyOffset)>0
                 leverSlack=sdpvar(1);
                 constraints=[constraints,leverSlack>=z.margin];
             end
@@ -274,7 +274,7 @@ classdef localizationSupport
             for j=1:numel(fusion)
                 constraints=[constraints,fusion{j}<=-z.margin*eye(size(fusion{j}))]; %#ok<AGROW>
             end
-            PG=[-kL*m.C.'*m.S*m.DL,-P*K(:,m.gnssActive)*m.DG];
+            PG=[-kL*m.C.'*m.S*m.DL,-P*K*m.DG];
             [cost,blocks]=invariantNoiseEnergy(PG,P);constraints=[constraints,blocks];
             [bound,blocks]=invariantNoiseEnergy(P*m.B*m.Dd,P);
             constraints=[constraints,blocks];cost=cost+bound;
@@ -300,7 +300,7 @@ classdef localizationSupport
             % Homogeneous scaling preserves feedback ratios and creates a
             % visible margin for the independently checked lambda-I condition.
             Pv=1.01*value(P);Pv=(Pv+Pv.')/2;
-            design=struct('architecture',"matched-motion-v23",'sigma',z.sigma,'P',Pv, ...
+            design=struct('architecture',"fixed-design-v24",'sigma',z.sigma,'P',Pv, ...
                 'kappaL',1.01*value(kL),'K',K,'leverSlack',1.01*value(leverSlack),'kappaR',1.01*value(kR),...
                 'lambda',z.lambda,'rateNoiseEnergy',1.01*value(rateEnergy),'templateNoiseEnergy',1.01*value(cost),'solverStatus',result.problem, ...
                 'solverInfo',string(result.info),'inputs',inputs, ...
@@ -317,7 +317,7 @@ classdef localizationSupport
         % Recompute every vertex numerically; stored solver claims are ignored.
             validateattributes(design.P,{'double'},{'real','finite','size',[8,8]});
             validateattributes(design.auxiliaryWeights,{'double'},{'real','finite','size',[3,1]});
-            m=invariantModel(cfg);z=cfg.invariantObserver;
+            invariantModel(cfg);z=cfg.invariantObserver;
             P=(design.P+design.P.')/2;
             expected=blkdiag(P(1:3,1:3),P(1:3,1:3),diag(diag(P(7:8,7:8))));
             structure=norm(P-expected,'fro');
@@ -337,7 +337,7 @@ classdef localizationSupport
                 && all(design.auxiliaryWeights>0) && structure<=1e-10*max(1,norm(P,'fro')) ...
                 && design.sigma==z.sigma && design.lambda==z.lambda ...
                 && norm(design.P-design.P.','fro')<=1e-10*max(1,norm(P,'fro'));
-            scope="Nominal continuous fusion on the declared positive-speed domain with valid upstream yaw rate and informative LiDAR. The common metric covers the configured GNSS packet and its complete withdrawal, with any subset of auxiliary columns. Nonlinear local use assumes a compact invariant operating set and sufficiently small errors/disturbances (Bessafa Remark 3). Invariance, a numerical attraction radius, loss of informative LiDAR, actual overlap maps, the lateral cascade and sampling are not certified.";
+            scope="Nominal continuous fusion on the declared positive-speed domain with valid upstream yaw rate and informative LiDAR. The common metric covers the full GNSS position/heading packet and its complete withdrawal, with any subset of auxiliary columns. Nonlinear local use assumes a compact invariant operating set and sufficiently small errors/disturbances (Bessafa Remark 3). Invariance, a numerical attraction radius, loss of informative LiDAR, actual overlap maps, the lateral cascade and sampling are not certified.";
             v=struct('certified',valid,'nominalFusionLmiVerified',worst<0, ...
                 'worstVertexEigenvalue',worst,'vertices',size(localizationSupport.fusionVertices(cfg),1),'matrixInequalities',numel(blocks), ...
                 'minimumEigenvalueP',min(eig(P)),'maximumEigenvalueP',max(eig(P)), ...
@@ -348,12 +348,12 @@ classdef localizationSupport
                     'nonlinearConclusionConditional',true), ...
                 'nominalFusion',struct('certified',worst<0,'vertices',size(localizationSupport.fusionVertices(cfg),1),'matrixInequalities',numel(blocks), ...
                     'coversGnssAbsent',true, ...
-                    'coversHeadingAbsent',~z.gnssHeadingAvailable,'coversZeroLidarInformation',false), ...
+                    'coversHeadingAbsent',false,'coversZeroLidarInformation',false), ...
                 'additionalOutputCount',4,'matchedAuxiliaryGain',true,'motionResponseVerified',responseVerified, ...
                 'worstMotionResponseEigenvalue',responseWorst, ...
                 'yawRateGainPerSecond',g,'rateNoiseEnergy',rateEnergy,'rateEnergyVerified',rateEnergyVerified, ...
                 'independentYawRateCorrection',true,'upstreamYawRateRequired',true,'allAuxiliaryOutputsRequired',false, ...
-                'motionAvailabilityConfigured',m.motionAvailable,'scope',scope);
+                'scope',scope);
         end
 
         function runtime=runtime(cfg)
@@ -525,20 +525,19 @@ classdef localizationSupport
         end
 
         function blocks=fusionBlocks(d,cfg,extraMargin)
-        % Check the configured GNSS packet and its withdrawal on all motion vertices.
+        % The same gain and metric satisfy the full-packet and zero-packet inequalities.
             z=cfg.invariantObserver;E=eye(8);C=E([1,4,7],:);
             % ||translation-heading coupling|| <= b implies this lower bound.
             S=diag([cfg.iss.minimumPositionStrength*[1,1],cfg.iss.minimumHeadingStrength]) ...
                 -(cfg.iss.maximumPositionHeadingCoupling+z.fusion.lidarOperatorMismatch)*eye(3);
             rho=norm(cfg.gnss.outputPoint.bodyOffset)/z.headingLengthM;
-            active=[z.gnssPositionAvailable,z.gnssPositionAvailable,z.gnssHeadingAvailable];
-            Y=d.P*d.K(:,active);G=Y*C(active,:);
+            Y=d.P*d.K;G=Y*C;
             sensor=-2*d.kappaL*C.'*S*C-G-G.'-2*d.kappaR*(E(:,8)*E(:,8).');
-            hasLever=z.gnssPositionAvailable && rho>0;
+            hasLever=rho>0;
             if hasLever
                 % Schur complement of Young's bound for the antenna-offset
                 % slope, whose normalized two-vector has norm at most rho.
-                Yp=d.P*d.K(:,1:2);
+                Yp=Y(:,1:2);
                 sensor=sensor+d.leverSlack*rho^2*(E(:,7)*E(:,7).');
             end
             if nargin<3
@@ -546,7 +545,7 @@ classdef localizationSupport
                 extraMargin=0;
             end
             vertices=localizationSupport.fusionVertices(cfg);
-            count=size(vertices,1);blocks=cell(1,count*(1+any(active)));
+            count=size(vertices,1);blocks=cell(1,2*count);
             % The replay accepts outages of the absolute GNSS packet.
             % Verify the informative-LiDAR mode with the same P and gains.
             withoutGnss=-2*d.kappaL*C.'*S*C-2*d.kappaR*(E(:,8)*E(:,8).');
@@ -560,9 +559,7 @@ classdef localizationSupport
                 else
                     blocks{j}=block;
                 end
-                if any(active)
-                    blocks{count+j}=M+M.'+withoutGnss+(z.lambda+extraMargin)*eye(8);
-                end
+                blocks{count+j}=M+M.'+withoutGnss+(z.lambda+extraMargin)*eye(8);
             end
         end
 
@@ -1847,13 +1844,8 @@ function m=invariantModel(cfg)
     z=cfg.invariantObserver;s=cfg.iss;ell=z.headingLengthM;sigma=z.sigma;n=z.noise;
     r=z.fusion;
     validateattributes([z.theta,ell,s.maximumSpeed],{'double'},{'real','finite','positive'});
-    validateattributes(z.gnssPositionAvailable,{'logical'},{'scalar'});
-    validateattributes(z.gnssHeadingAvailable,{'logical'},{'scalar'});
-    headingNoise=0;
-    if z.gnssHeadingAvailable
-        validateattributes(n.gnssHeadingRad,{'double'},{'real','finite','positive','scalar'});
-        headingNoise=ell*n.gnssHeadingRad;
-    end
+    validateattributes(n.gnssHeadingRad,{'double'},{'real','finite','positive','scalar'});
+    headingNoise=ell*n.gnssHeadingRad;
     validateattributes(r.minimumCourseSpeed,{'double'},{'real','finite','positive','scalar','<=',s.maximumSpeed});
     validateattributes([s.maximumAcceleration,cfg.maximumTrackAngleRate,r.lidarOperatorMismatch], ...
         {'double'},{'real','finite','nonnegative'});
@@ -1869,14 +1861,11 @@ function m=invariantModel(cfg)
     validateattributes(z.predictionMinimumSpeedMps,{'double'},{'real','finite','positive','scalar','<',r.minimumCourseSpeed});
     validateattributes([n.velocityMps,n.accelerationMps2],{'double'},{'real','finite','nonnegative'});
     validateattributes(z.motionTimeConstantS,{'double'},{'real','finite','positive','scalar'});
-    m.motionAvailable=z.velocityAvailable && z.accelerationAvailable;
     assert(z.noiseObjective=="normalizedFullState" && isequal(cfg.lidar.poseScales(:),[1;1;1/ell]), ...
         'VehicleLocalization:InvalidInvariantDesign','Require the declared full-state objective and consistent pose scaling.');
     m.C=zeros(3,8);m.C(1,1)=1;m.C(2,4)=1;m.C(3,7)=1;
     m.B=zeros(8,2);m.B(3,1)=1;m.B(6,2)=1;
     m.DL=diag([n.lidarPositionM,n.lidarPositionM,ell*n.lidarHeadingRad]);m.DG=diag([n.gnssPositionM,n.gnssPositionM,headingNoise]);
-    available=[z.gnssPositionAvailable,z.gnssPositionAvailable,z.gnssHeadingAvailable];
-    m.gnssActive=available;m.DG=m.DG(available,available);
     % Aggregate residual R(phi)*[sDoubleDot;s*qDot], not just speed curvature.
     % The objective scale is a design weight, not a certified physical bound.
     m.Dd=(n.jerkMps3/sigma^3)*eye(2);
