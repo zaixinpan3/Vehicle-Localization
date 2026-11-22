@@ -124,7 +124,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function squaredSpeedGainIsActiveAndHasNoScalarReplacement(testCase)
             c=freshObserverTestConfig();design=localizationSupport.runtime(c);
-            testCase.verifyGreaterThan(norm(design.M(:,1)),0);
+            testCase.verifyGreaterThan(design.auxiliaryWeights(1),0);
             testCase.verifyFalse(isfield(design,'speedGainNormalized'));
             testCase.verifyFalse(isfield(c.invariantDesign,'speedDesign'));
         end
@@ -146,10 +146,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
-        function withdrawingSquaredSpeedPreservesTheNormBound(testCase)
-            c=freshObserverTestConfig();c.invariantDesign.Z(:,1)=0;
+        function missingSquaredSpeedWeightRejectsMotionDesign(testCase)
+            c=freshObserverTestConfig();c.invariantDesign.auxiliaryWeights(1)=0;
             verification=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
-            testCase.verifyTrue(verification.certified);
+            testCase.verifyFalse(verification.certified);
         end
         function temporaryDesignVerificationRequiresNoSdpSolver(testCase)
             c=freshObserverTestConfig();

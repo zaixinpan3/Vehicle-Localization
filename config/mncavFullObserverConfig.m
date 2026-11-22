@@ -10,7 +10,7 @@ function cfg=mncavFullObserverConfig(options)
     assert(~isfield(options.DesignOverride,'yawRateGainPerSecond'),'VehicleLocalization:PrescribedRateGain', ...
         'The direct yaw-rate gain is a design output. Configure the physical noise scales and solve again.');
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-constant-output-v22",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-matched-motion-v23",'maximumTrackAngleRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('outputPoint', ...
@@ -29,6 +29,7 @@ function cfg=mncavFullObserverConfig(options)
         'headingLengthM',"Heading error weighted by a 10 m landmark range", ...
         'normalization',"lambda = 1 and P >= I");
     z.theta=options.Theta;z.sigma=z.theta;
+    z.motionTimeConstantS=.5; % Nominal longitudinal response used by the matched motion design.
     z.gnssBandwidthRatio=1; % Normalized poles of each measured position chain.
     z.yawAccelerationRadps2=cfg.maximumTrackAngleRate/2;
     z.predictionMinimumSpeedMps=.5;
@@ -39,7 +40,7 @@ function cfg=mncavFullObserverConfig(options)
     z.velocityAvailable=true;z.accelerationAvailable=true;
     z.fusion=struct('minimumCourseSpeed',10,'lidarOperatorMismatch',.001);
     z.provenance.operatingSet="Bessafa et al. (2026), Remark 3: compact invariant operating set assumed; invariance and numerical attraction radius are not computed or certified";
-    z.provenance.feedback="Constant linear and four-column motion gains, with independent GNSS and LiDAR strengths. The auxiliary slope bound covers arbitrary course headings.";
+    z.provenance.feedback="Fixed linear gain, independent LiDAR strength and Jacobian-matched motion correction in the primary metric.";
     z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]. The linear outputs are position, independent heading and estimated body yaw rate from the lateral observer. The four nonlinear motion outputs are squared speed, velocity-acceleration dot/cross and body-frame lateral velocity.";
     z.provenance.independentHeading="Independent heading input, e.g. dual-antenna GNSS; The 0.01 rad offline noise scale is a configurable design assumption, not a measured receiver specification. One fixed offline gain acts on valid linear outputs; no receiver-information reliability weight is used.";
     z.provenance.angularModel="Heading integrates the internal body rate. A valid upstream rate drives a finite-gain linear innovation on that state. A missing rate leaves its state constant.";

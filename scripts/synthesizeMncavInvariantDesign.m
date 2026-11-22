@@ -10,9 +10,9 @@ function [design,cfg]=synthesizeMncavInvariantDesign(cfg)
     design=localizationSupport.synthesize(cfg);
     cfg.invariantDesign=design;cfg.gainSource="fresh-lmi";
     runtime=localizationSupport.runtime(cfg);
-    fprintf('NOMINAL FUSION: %d vertices, worst %.9g; one SDP; gain-template noise proxy %.9g\n', ...
+    fprintf('NOMINAL FUSION: %d vertices, worst %.9g; primary SDP; gain-template noise proxy %.9g\n', ...
         runtime.continuousCertificate.verification.vertices,design.verification.worstVertexEigenvalue,design.templateNoiseEnergy);
     fprintf('DIRECT YAW RATE: solved %.9g /s; verified normalized rate-error energy %.9g\n', ...
         design.verification.yawRateGainPerSecond,design.verification.rateNoiseEnergy);
-    fprintf('CONSTANT OUTPUT GAINS: GNSS bandwidth ratio %.9g, LiDAR %.9g; four fixed auxiliary columns.\n',cfg.invariantObserver.gnssBandwidthRatio,design.kappaL);
+    fprintf('MATCHED MOTION: GNSS bandwidth ratio %.9g, LiDAR %.9g; implicit Jacobian-weighted motion update.\n',cfg.invariantObserver.gnssBandwidthRatio,design.kappaL);
 end

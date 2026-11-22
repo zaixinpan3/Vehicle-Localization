@@ -8,11 +8,15 @@ classdef squaredSpeedChannelTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function isolatedSquaredSpeedUsesItsFixedColumn(testCase)
-            [cfg,design,packet,state]=fixture();
-            actual=localizationSupport.correct(state,packet,.1,design,cfg);
-            expected=state+.1*design.M(:,1)*(64-25);
+        function isolatedSquaredSpeedCorrectionIsRadial(testCase)
+            [cfg,design,packet,state]=fixture();dt=.1;s=cfg.iss.maximumSpeed;
+            actual=localizationSupport.correct(state,packet,dt,design,cfg);
+            k=2*15^2/(10^2+64);
+            factor=1+dt*k*(64-25)/(2*s^2)/(1+dt*k*25/s^2);
+            expected=state;expected([2,5])=factor*state([2,5]);
             testCase.verifyEqual(actual,expected,AbsTol=1e-12);
+            testCase.verifyGreaterThan(norm(actual([2,5])),5);
+            testCase.verifyLessThan(norm(actual([2,5])),8);
         end
         function speedMagnitudeFeedbackDoesNotUseAHeadingProjection(testCase)
             [cfg,design,packet,state]=fixture();
@@ -23,22 +27,23 @@ classdef squaredSpeedChannelTest < matlab.unittest.TestCase
             testCase.verifyEqual(b(7),changed(7),AbsTol=0);
         end
         function removingMatchedWeightsLeavesNoHiddenSpeedCorrection(testCase)
-            [cfg,design,packet,state]=fixture();design.M(:,1)=0;
+            [cfg,design,packet,state]=fixture();design.auxiliaryWeights(:)=0;
             actual=localizationSupport.correct(state,packet,.1,design,cfg);
             testCase.verifyEqual(actual,state,AbsTol=0);
         end
-        function zeroVelocityUsesTheSameFixedColumn(testCase)
+        function zeroVelocityIsFiniteWithoutInventingAnEscapeDirection(testCase)
             [cfg,design,packet,~]=fixture();state=zeros(8,1);
             actual=localizationSupport.correct(state,packet,.1,design,cfg);
             testCase.verifyTrue(all(isfinite(actual)));
-            testCase.verifyEqual(actual,state+.1*64*design.M(:,1),AbsTol=1e-12);
+            testCase.verifyEqual(actual,state,AbsTol=0);
         end
     end
 end
 
 function [cfg,design,packet,state]=fixture()
     cfg=mncavFullObserverConfig();
-    M=zeros(8,4);M(2,1)=.15;design=struct('M',M,'toPhysical',eye(8));
+    design=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
+        'auxiliaryWeights',[2;0;0]);
     packet=localizationSupport.measurements(8,0,0,0,true,false,cfg);
     state=[0;3;0;0;4;0;.4;0];
 end

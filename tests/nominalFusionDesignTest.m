@@ -10,10 +10,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
         end
     end
     methods (Test)
-        function singleSolveReturnsIndependentlyVerifiedGains(testCase)
+        function separatePoseAndMotionSolvesReturnVerifiedGains(testCase)
             c=freshObserverTestConfig();d=c.invariantDesign;v=localizationSupport.verifyInvariantDesign(d,c);
-            testCase.verifyTrue(v.certified && v.constantAuxiliaryGain);
-            testCase.verifyEqual(d.solveAudit.optimizationCalls,1);
+            testCase.verifyTrue(v.certified && v.matchedAuxiliaryGain);
+            testCase.verifyEqual(d.solveAudit.optimizationCalls,2);
             testCase.verifyEqual(d.K(1:3,1),[3;3;1]);
             testCase.verifyEqual(v.vertices,32);
             testCase.verifyTrue(v.independentYawRateCorrection && v.upstreamYawRateRequired);

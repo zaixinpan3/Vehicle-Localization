@@ -69,13 +69,13 @@ classdef fourInvariantOutputsTest < matlab.unittest.TestCase
             y=localizationSupport.correct(x,p,.1,d,c);
             testCase.verifyEqual(y,x,AbsTol=0);
         end
-        function fixedColumnSelectsTheRecipientStates(testCase)
+        function motionInnovationCorrectsRateThroughTheHeadingMetric(testCase)
             c=mncavFullObserverConfig();d=correctionDesign();
             x=[0;12;0;0;0;0;.1;.03];
             p=localizationSupport.measurements(12,0,0,0,true,true,c);
             p.valid=logical([0;0;0;1]);
             uncoupled=localizationSupport.correct(x,p,.1,d,c);
-            d.M(7:8,4)=[-1;-1];
+            d.P(7:8,7:8)=[2,-1;-1,2];
             coupled=localizationSupport.correct(x,p,.1,d,c);
             testCase.verifyEqual(uncoupled(8),x(8),AbsTol=0);
             testCase.verifyLessThan(coupled(7),x(7));
@@ -95,5 +95,6 @@ classdef fourInvariantOutputsTest < matlab.unittest.TestCase
 end
 
 function d=correctionDesign()
-    d=struct('toPhysical',eye(8),'M',zeros(8,4));
+    d=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
+        'auxiliaryWeights',ones(3,1));
 end

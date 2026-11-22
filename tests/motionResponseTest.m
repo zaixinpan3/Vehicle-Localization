@@ -1,5 +1,5 @@
 classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < matlab.unittest.TestCase
-% Constant auxiliary gains, certificate rejection and motion-only behavior.
+% Matched auxiliary gains, certificate rejection and motion-only behavior.
     properties (TestParameter)
         dt={.05,.1}
     end
@@ -10,17 +10,17 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
         end
     end
     methods (Test)
-        function constantColumnsSatisfyTheReservedMargin(testCase)
+        function motionWeightsMeetTheResponseBounds(testCase)
             c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());d=c.invariantDesign;
-            testCase.verifyEqual(2*norm(d.Z)*localizationSupport.motionSlopeBound(c),d.lambda,AbsTol=1e-12);
+            testCase.verifyTrue(d.verification.motionResponseVerified);
             testCase.verifyTrue(d.verification.certified);
         end
         function physicalLinearizationsMeetCertifiedMarginInGlobalAxes(testCase)
             cfg=freshObserverTestConfig();
             testCase.verifyLessThan(globalAxisResidual(cfg),0);
         end
-        function excessiveAuxiliaryGainFailsIndependentVerification(testCase)
-            c=freshObserverTestConfig();d=c.invariantDesign;d.Z=1e4*d.Z;
+        function negativeAuxiliaryGainFailsIndependentVerification(testCase)
+            c=freshObserverTestConfig();d=c.invariantDesign;d.auxiliaryWeights(3)=-1;
             v=localizationSupport.verifyInvariantDesign(d,c);
             testCase.verifyFalse(v.certified);
         end
@@ -32,15 +32,28 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
             testCase.verifyFalse(v.allAuxiliaryOutputsRequired);
             testCase.verifyFalse(v.motionAvailabilityConfigured);
         end
-        function fixedGainIsIndependentOfSpeedAndHeading(testCase)
+        function squaredSpeedCorrectionRotatesWithVelocity(testCase)
             c=freshObserverTestConfig();d=localizationSupport.runtime(c);
-            a=[0;5;1;0;0;0;0;0];b=[0;0;0;0;14;2;pi/2;0];
-            u=[.2;1;-.4;.03];valid=true(4,1);
-            pa=struct('value',localizationSupport.outputs(a,c)+u,'valid',valid);
-            pb=struct('value',localizationSupport.outputs(b,c)+u,'valid',valid);
-            xa=localizationSupport.correct(a,pa,.1,d,c);xb=localizationSupport.correct(b,pb,.1,d,c);
-            testCase.verifyEqual(xa-a,.1*d.M*u,AbsTol=2e-14);
-            testCase.verifyEqual(xb-b,xa-a,AbsTol=2e-14);
+            a=[0;5;0;0;0;0;0;0];b=[0;0;0;0;5;0;pi/2;0];
+            packet=struct('value',[36;NaN;NaN;NaN],'valid',logical([1;0;0;0]));
+            xa=localizationSupport.correct(a,packet,.1,d,c)-a;
+            xb=localizationSupport.correct(b,packet,.1,d,c)-b;
+            testCase.verifyGreaterThan(xa(2),0);
+            testCase.verifyEqual(xa(1:3),xb(4:6),AbsTol=1e-12);
+            testCase.verifyEqual(xa(4:6),zeros(3,1),AbsTol=1e-12);
+            testCase.verifyEqual(xb(1:3),zeros(3,1),AbsTol=1e-12);
+        end
+        function restoredImplicitStepMatchesThePreviousUpdateEquation(testCase)
+            c=freshObserverTestConfig();d=localizationSupport.runtime(c);dt=.1;
+            x=[0;-4;1;0;8;-.2;1.9;-.04];
+            p=localizationSupport.measurements(8,.5,.8,-.3,true,true,c);
+            [value,H]=localizationSupport.outputs(x,c);D=localizationSupport.outputNormalization(c);
+            C=D*H*d.toPhysical;k=d.auxiliaryWeights;
+            k(1:2)=k(1:2)*c.iss.maximumSpeed^2/(c.invariantObserver.fusion.minimumCourseSpeed^2+p.value(1));
+            W=C.'*diag(k([1,2,2,3]));
+            Q=d.theta*W*C;rhs=dt*d.theta*(d.P\(W*D*(p.value-value)));
+            expected=x+d.toPhysical*((eye(8)+dt*(d.P\Q))\rhs);
+            testCase.verifyEqual(localizationSupport.correct(x,p,dt,d,c),expected,AbsTol=1e-12);
         end
         function brakeAndRestartAreTrackedWithoutPoseFeedback(testCase,dt)
             c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());
@@ -92,7 +105,11 @@ function worst=globalAxisResidual(cfg)
         G=[G;ell*E(7,:)]*T/t;
         for mask=0:15
             active=logical(bitget(mask,1:4));
-            motion=d.Z(:,active)*D(active,active)*H(active,:)*T;
+            k=d.auxiliaryWeights;
+            measuredSquaredSpeed=double(active(1))*s^2;
+            k(1:2)=k(1:2)*cfg.iss.maximumSpeed^2/(cfg.invariantObserver.fusion.minimumCourseSpeed^2+measuredSquaredSpeed);
+            k=k([1,2,2,3]);Cmotion=D(active,active)*H(active,:)*T;
+            motion=Cmotion.'*diag(k(active))*Cmotion;
             for gnss=[0,1]
                 W=d.P*predictor-motion-gnss*d.P*d.K*G ...
                     -d.kappaL*C.'*S*C-d.kappaR*E(:,8)*E(8,:);

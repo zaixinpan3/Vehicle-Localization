@@ -44,7 +44,7 @@ function [errors,minimum]=jacobianErrors()
             A=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c));
             expected=B\F*B/t;
             errors=max(errors,[norm(A-expected,'fro'),0]);
-            minimum=min(minimum,localizationSupport.motionSlopeBound(c)-norm(H,2));
+            minimum=min(minimum,min(eig(H.'*H)));
         end
     end
 end
