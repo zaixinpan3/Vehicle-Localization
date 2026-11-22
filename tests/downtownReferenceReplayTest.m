@@ -22,7 +22,7 @@ classdef downtownReferenceReplayTest < matlab.unittest.TestCase
             folder=string(tempname);mkdir(folder);cleanup=onCleanup(@()rmdir(folder,'s'));
             truth=table([2;4],[0;1],[0;0],[0;0],[1;1],[0;0],[0;0],[0;0], ...
                 'VariableNames',{'frame_index','pose_x_m','pose_y_m','pose_z_m','pose_qw','pose_qx','pose_qy','pose_qz'});
-            trajectory=table([2;4],[10;10.1],[.3;1],[.4;0],[0;0],[true;false],[1;2], ...
+            trajectory=table([2;4],[10;10.1],[.15;1],[.15;0],[0;0],[true;false],[1;2], ...
                 'VariableNames',{'frame_index','native_time_sec','x_m','y_m','yaw_rad','accepted','overlap_ms'});
             writetable(truth,fullfile(folder,'mapping_poses.csv'));
             writetable(trajectory,fullfile(folder,'trajectory.csv'));
@@ -31,7 +31,7 @@ classdef downtownReferenceReplayTest < matlab.unittest.TestCase
             test.verifyEqual(result.framesOutsideThresholds,1);
             test.verifyEqual(result.samples,2);
             test.verifyEqual(result.overlapAvailableFrames,1);
-            test.verifyEqual(result.positionRmseM,sqrt(.125),AbsTol=1e-12);
+            test.verifyEqual(result.positionRmseM,.15,AbsTol=1e-12);
             test.verifyEqual(result.headingRmseDeg,0);
         end
         function queryScheduleUsesSensorCoverageOnly(test)

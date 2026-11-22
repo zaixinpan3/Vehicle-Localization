@@ -5,16 +5,15 @@ function cfg=downtownReferenceReplayConfig()
 % The observer is the MnCAV configuration with LMI-solved gains (same vehicle).
 % Each class uses the single-scale overlap with uniform background in the crop.
 % Moving-start records lack stationary tilt alignment: sensor tilt is disabled.
+    % The nominal design covers GNSS withdrawal. The recording supplies no GNSS packets.
     cfg=struct('featureNames',["curb","pole","trafficSign","facade"], ...
         'initializationMode',"reference_pose_once",'motionStepSeconds',.01, ...
         'mapFrameParity',1,'queryFrameParity',0,'mapThinningResolutionM',.1, ...
         'sourceWindow',localizationSourceWindowConfig(),'overlap',overlapGradientConfig(UniformBackground=true), ...
-        'replayVersion',"downtown-matched-motion-v4", ...
+        'replayVersion',"downtown-nominal-matched-motion-v5", ...
         'observer',mncavFullObserverConfig());
-    cfg.observer.invariantObserver.gnssPositionAvailable=false;
-    cfg.observer.invariantObserver.gnssHeadingAvailable=false;
     cfg.mapPerceptionVersion="downtown-fine-curb-bends-v2";
-    cfg.rmseTargets=struct('positionM',.20,'headingDeg',1);
+    cfg.rmseTargets=struct('positionM',.1435,'headingDeg',1);
     cfg.tilt=lidarImuTiltConfig();cfg.tilt.mode="disabled";
     cfg.referenceKind="pseudo_ground_truth";
     cfg.evaluation="Same-drive interleaved disjoint acquisitions; neighboring observations and reference errors remain correlated";

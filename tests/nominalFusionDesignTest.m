@@ -26,9 +26,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
         function rateGainRespondsToNoiseAndRejectsPresetValues(testCase)
             c=freshObserverTestConfig();base=c.invariantDesign;
             testCase.verifyFalse(isfield(c.invariantObserver,'yawRateGainPerSecond'));
-            downtown=downtownReferenceReplayConfig();
-            testCase.verifyFalse(downtown.observer.invariantObserver.gnssPositionAvailable);
-            testCase.verifyFalse(downtown.observer.invariantObserver.gnssHeadingAvailable);
             testCase.verifyTrue(base.verification.rateEnergyVerified);
             c.invariantObserver.noise.upstreamRateRadps=2*c.invariantObserver.noise.upstreamRateRadps;
             testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
@@ -38,6 +35,15 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyFalse(localizationSupport.verifyInvariantDesign(broken,mncavFullObserverConfig()).certified);
             testCase.verifyError(@() mncavFullObserverConfig(DesignOverride=struct('yawRateGainPerSecond',5)), ...
                 'VehicleLocalization:PrescribedRateGain');
+        end
+        function downtownUsesTheNominalDesignDuringGnssWithdrawal(testCase)
+            downtown=downtownReferenceReplayConfig();
+            nominal=mncavFullObserverConfig();
+            testCase.verifyEqual(localizationSupport.invariantInputs(downtown.observer), ...
+                localizationSupport.invariantInputs(nominal));
+            selectedDesign=freshObserverTestConfig(nominal);
+            testCase.verifyTrue(selectedDesign.invariantDesign.verification.nominalFusion.coversGnssAbsent);
+            testCase.verifyEqual(downtown.rmseTargets.positionM,.1435);
         end
         function obsoleteSearchIsRejectedExplicitly(testCase)
             c=mncavSmallOffsetObserverConfig();c.gainSelection=struct('enabled',true);

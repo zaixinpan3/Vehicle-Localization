@@ -60,7 +60,8 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     timer=tic;estimate=runFullLocalizationObserver(data,cfg,LateralInputs=lat);runtime=toc(timer);
     accepted=estimate.diagnostics.lidarOverlap.available;overlapSeconds=estimate.diagnostics.lidarOverlap.seconds;overlapSeconds(~isfinite(overlapSeconds))=0;
     timings(:,2)=overlapSeconds;timings(:,3)=timings(:,1)+overlapSeconds;
-    assert(estimate.diagnostics.packetCounts.gnssValid==0 && all(ismember(estimate.diagnostics.mode,[0,2])));
+    assert(estimate.diagnostics.packetCounts.gnssValid==0 && ~any(estimate.diagnostics.independentHeadingValid) ...
+        && all(ismember(estimate.diagnostics.mode,[0,2])));
     estimate.diagnostics.referenceUsed=true; % One initialization pose, separately audited.
     estimate.diagnostics.referenceUsedForInitialization=true;
     estimate.diagnostics.referenceInitializationCount=1;
