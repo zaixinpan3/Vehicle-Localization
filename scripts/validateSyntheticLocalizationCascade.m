@@ -267,7 +267,7 @@ function m=scoreRun(estimate,truth,fine,lateral,data,s,mask)
     end
     m.modeCounts=arrayfun(@(v) nnz(estimate.diagnostics.mode==v),0:3);
     m.headingModeCountsGyroLidar=[nnz(estimate.diagnostics.headingMode==0),nnz(estimate.diagnostics.headingMode==2)];
-    m.maximumTrackAngleRate=estimate.diagnostics.maximumTrackAngleRate;
+    m.maximumBodyYawRate=estimate.diagnostics.maximumBodyYawRate;
     m.acceleration=vecnorm(estimate.acceleration-rotateBody(truth.outputAcceleration,truth.heading),2,2);
     m.settledAccelerationRmseMps2=rms(m.acceleration(settled));
 end

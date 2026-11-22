@@ -61,11 +61,9 @@ function errors=rotationErrors(c)
     errors=[norm(Fr-T*F*T.'),norm(Hr*T-H),norm(Gr*T-R*G)];
 end
 
-function y=drift(x,c)
-    z=x(2)^2+x(5)^2;cutoff=c.invariantObserver.predictionMinimumSpeedMps^2;
-    denominator=z+cutoff/3*max(1-z/cutoff,0)^3;
-    q=(x(2)*x(6)-x(5)*x(3))/denominator;y=zeros(8,1);y([1,4])=x([2,5]);y([2,5])=x([3,6]);
-    y([3,6])=q^2*x([2,5])+2*q*[0,-1;1,0]*x([3,6]);y(7)=x(8);
+function y=drift(x,~)
+    r=x(8);v=x([2,5]);a=x([3,6]);j=r^2*v+2*r*[-a(2);a(1)];
+    y=[v(1);a(1);j(1);v(2);a(2);j(2);r;0];
 end
 
 function d=direction(psi)

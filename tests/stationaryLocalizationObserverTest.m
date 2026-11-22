@@ -68,11 +68,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             cfg=mncavFullObserverConfig();I=[8,2,3;2,7,-1;3,-1,6]*1e3;
             filter=informationFilter(I,cfg);S=filter.S;s=localizationSupport.lidarPoseSupport(filter,cfg);
             expected=S(3,3)-S(3,1:2)*(S(1:2,1:2)\S(1:2,3));
-            testCase.verifyEqual(s.headingStrengthAfterPosition,expected,AbsTol=1e-12);
+            testCase.verifyEqual(s.headingStrengthAfterPosition,expected,RelTol=5e-14);
             testCase.verifyGreaterThan(s.minimumStrength,0);
         end
         function numericallyFullPoseCanFailConfiguredSector(testCase)
-            cfg=mncavFullObserverConfig();filter=informationFilter(eye(3),cfg);
+            cfg=mncavFullObserverConfig();filter=informationFilter(.5*eye(3),cfg);
             s=localizationSupport.lidarPoseSupport(filter,cfg);
             testCase.verifyTrue(s.fullPoseSupported);
             testCase.verifyFalse(s.sectorQualified);

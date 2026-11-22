@@ -1,6 +1,6 @@
 function cfg=mncavFullObserverConfig(options)
 % MnCAV intrinsic prediction with direct linear upstream yaw-rate feedback.
-% Autonomous translational prediction uses a C2 extension below its speed cutoff.
+% Body-rate translation has polynomial drift, including at zero speed.
 % This factory returns parameters only. Solve gains immediately before use
 % with [design,cfg]=synthesizeMncavInvariantDesign(cfg).
     arguments
@@ -10,12 +10,12 @@ function cfg=mncavFullObserverConfig(options)
     assert(~isfield(options.DesignOverride,'yawRateGainPerSecond'),'VehicleLocalization:PrescribedRateGain', ...
         'The direct yaw-rate gain is a design output. Configure the physical noise scales and solve again.');
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-fixed-design-v24",'maximumTrackAngleRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-body-geometry-v25",'maximumBodyYawRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('outputPoint', ...
         jsondecode(fileread(fullfile(here,'mncavBestposOutputPoint.json'))));
-    cfg.lidar=struct('poseScales',[1;1;.1],'gainInformationScale',64);
+    cfg.lidar=struct('poseScales',[1;1;.1]);
     cfg.iss=struct('maximumSpeed',15,'maximumAcceleration',2, ...
         'minimumPositionStrength',.25,'minimumHeadingStrength',.97, ...
         'maximumPositionHeadingCoupling',.06);
@@ -30,8 +30,7 @@ function cfg=mncavFullObserverConfig(options)
     z.theta=options.Theta;z.sigma=z.theta;
     z.motionTimeConstantS=.5; % Nominal longitudinal response used by the matched motion design.
     z.gnssBandwidthRatio=1; % Normalized poles of each measured position chain.
-    z.yawAccelerationRadps2=cfg.maximumTrackAngleRate/2;
-    z.predictionMinimumSpeedMps=.5;
+    z.yawAccelerationRadps2=cfg.maximumBodyYawRate/2;
     z.noiseObjective="normalizedFullState";
     lateral=lateralObserverConfig();
     z.noise.upstreamRateRadps=lateral.synthesis.measurementErrorScale(2);
@@ -42,8 +41,8 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]. The linear outputs are position, independent heading and body yaw rate from the motion packet. The packet uses the lateral estimate in its design range and the measured gyro rate below the minimum design speed. The four nonlinear motion outputs are squared speed, velocity-acceleration dot/cross and body-frame lateral velocity.";
     z.provenance.independentHeading="Independent heading input, e.g. dual-antenna GNSS; The 0.01 rad offline noise scale is a configurable design assumption, not a measured receiver specification. One fixed offline gain acts on valid linear outputs; no receiver-information reliability weight is used.";
     z.provenance.angularModel="Heading integrates the internal body rate. A valid upstream rate drives a finite-gain linear innovation on that state. A missing rate leaves its state constant.";
-    z.provenance.lowSpeed="C2 denominator extension equals squared speed above 0.5 m/s; the positive-speed nominal certificate does not certify this low-speed extension";
-    z.provenance.courseAcceleration="Unmeasured course acceleration is a process disturbance, never a differentiated predictor input. jerkMps3 scales the aggregate translational residual R(phi)*[sDoubleDot;s*qDot] in the noise objective; it is a design weight, not a verified physical upper bound";
+    z.provenance.lowSpeed="The body-rate drift is smooth at zero speed. The motion response design uses its declared speed range.";
+    z.provenance.bodyJerk="The jerkMps3 design weight scales the aggregate translational process disturbance R(psi)*uDoubleDot + rDot*J*v. A physical upper bound must be established separately.";
     z.provenance.metric="The SDP uses a diagonal angular metric so only the direct linear rate channel injects into body rate.";
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
     z.provenance.noiseObjective="Pose and process injection costs plus the scalar rate-channel H2 energy select a feasible certificate.";

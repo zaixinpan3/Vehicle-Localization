@@ -27,7 +27,7 @@ classdef mixedLidarCouplingTest < matlab.unittest.TestCase
         function productionFilterCanReturnAnAdmissibleCoupledCounterexample(testCase)
             cfg=mncavFullObserverConfig();h=(1+cfg.iss.minimumHeadingStrength)/2;
             c=[cfg.iss.maximumPositionHeadingCoupling;0];S=[c*c.'/h,c;c.',h];
-            D=diag(cfg.lidar.poseScales);H=cfg.lidar.gainInformationScale*S/(eye(3)-S);
+            D=diag(cfg.lidar.poseScales);H=S/sqrt(trace(S)); % Principal square root of this rank-one PSD matrix.
             information=D\((H+H.')/2)/D;
             filter=localizationSupport.filterLidarPoseInformation(information,cfg);
             support=localizationSupport.lidarPoseSupport(filter,cfg);

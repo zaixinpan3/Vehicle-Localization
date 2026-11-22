@@ -15,7 +15,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyTrue(v.certified && v.matchedAuxiliaryGain);
             testCase.verifyEqual(d.solveAudit.optimizationCalls,2);
             testCase.verifyEqual(d.K(1:3,1),[3;3;1]);
-            testCase.verifyEqual(v.vertices,32);
+            testCase.verifyEqual(v.vertices,16);
             testCase.verifyTrue(v.independentYawRateCorrection && v.upstreamYawRateRequired);
             testCase.verifyEqual(d.P(8,1:7),zeros(1,7));
             testCase.verifyFalse(isfield(d,'yawRateGainNormalized'));

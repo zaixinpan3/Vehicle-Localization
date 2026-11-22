@@ -77,12 +77,10 @@ classdef localizationSupport
                 filter (1,1) struct
                 cfg (1,1) struct
             end
-            U=filter.eigenvectors(:,4-filter.rank:3);
-            S=filter.S;weighted=U.'*S*U;
-            [V,E]=eig((weighted+weighted.')/2);
-            strengths=max(diag(E),0);threshold=1e-10;
+            kept=4-filter.rank:3;
+            strengths=filter.strengths(kept);threshold=1e-10;
             active=strengths>threshold;dimension=nnz(active);
-            B=diag(sqrt(strengths(active)))*V(:,active).'*U.';
+            B=diag(sqrt(strengths(active)))*filter.eigenvectors(:,kept(active)).';
             admitted=B.'*B;
             minimumStrength=0;
             if dimension==3,minimumStrength=min(strengths);end
@@ -153,33 +151,12 @@ classdef localizationSupport
         end
 
         %% Intrinsic observer and gain synthesis
-        function [next,q]=predict(state,dt,cfg)
-        % Unmeasured speed curvature and course angular acceleration enter the
-        % process disturbance, not a numerical derivative in the predictor.
-            q=localizationSupport.courseRate(state,cfg);
+        function [next,r]=predict(state,dt,~)
+        % Body yaw rate is an internal state, constant during the intrinsic step.
+            r=state(8);
             A=zeros(8);A(1,2)=1;A(2,3)=1;A(4,5)=1;A(5,6)=1;A(7,8)=1;
-            A([3,6],[2,5])=q^2*eye(2);A([3,6],[3,6])=2*q*[0,-1;1,0];
+            A([3,6],[2,5])=r^2*eye(2);A([3,6],[3,6])=2*r*[0,-1;1,0];
             next=(eye(8)-dt*A)\state;
-        end
-
-        function [q,gradient]=courseRate(state,cfg)
-        % Autonomous course rate. The C2 extension equals the physical ratio
-        % above the declared cutoff; low-speed execution is not certified.
-            v=state([2,5]);a=state([3,6]);J=[0,-1;1,0];
-            [denominator,slope]=localizationSupport.predictionDenominator(v.'*v,cfg);
-            q=(v(1)*a(2)-v(2)*a(1))/denominator;
-            if nargout>1
-                gradient=zeros(1,8);
-                gradient([2,5])=(-J*a-2*q*slope*v).'/denominator;
-                gradient([3,6])=(J*v).'/denominator;
-            end
-        end
-
-        function [denominator,slope]=predictionDenominator(speedSquared,cfg)
-            cutoffSquared=cfg.invariantObserver.predictionMinimumSpeedMps^2;
-            u=max(1-speedSquared/cutoffSquared,0);
-            denominator=speedSquared+cutoffSquared*u^3/3;
-            slope=1-u^2;
         end
 
         function [value,H]=outputs(state,cfg)
@@ -235,6 +212,8 @@ classdef localizationSupport
         function inputs=invariantInputs(cfg)
         % Version every mathematical design input; reject retired designs.
             z=cfg.invariantObserver;
+            assert(~isfield(cfg.lidar,'gainInformationScale') && ~isfield(z,'predictionMinimumSpeedMps'), ...
+                'VehicleLocalization:StaleInvariantDesign','Rebuild the geometry-weighted body-rate configuration.');
             assert(~any(isfield(z,{'gnssPositionAvailable','gnssHeadingAvailable','velocityAvailable','accelerationAvailable'})), ...
                 'VehicleLocalization:ObsoleteSensorAvailability','Regenerate the config and gains. Set validity on measurement packets.');
             assert(isfield(z,'motionTimeConstantS'),'VehicleLocalization:StaleInvariantDesign', ...
@@ -246,11 +225,10 @@ classdef localizationSupport
             assert(~isfield(z,'yawRateGainPerSecond') && isfield(z.noise,'upstreamRateRadps'), ...
                 'VehicleLocalization:StaleInvariantDesign','Remove the prescribed yaw-rate gain and regenerate the shared design.');
             if isfield(z,'provenance'),z=rmfield(z,'provenance');end
-            inputs=jsondecode(jsonencode(struct('architecture',"fixed-design-v24", ...
+            inputs=jsondecode(jsonencode(struct('architecture',"body-geometry-v25", ...
                 'physicalOutputs',"squared-dot-cross-body-lateral", ...
-                'observer',z,'iss',cfg.iss,'courseRateBound',cfg.maximumTrackAngleRate, ...
-                'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).','poseScales',cfg.lidar.poseScales(:).', ...
-                'informationScale',cfg.lidar.gainInformationScale)));
+                'observer',z,'iss',cfg.iss,'bodyYawRateBound',cfg.maximumBodyYawRate, ...
+                'gnssBodyOffset',cfg.gnss.outputPoint.bodyOffset(:).','poseScales',cfg.lidar.poseScales(:).')));
         end
 
         function design=synthesize(cfg)
@@ -268,12 +246,14 @@ classdef localizationSupport
                 leverSlack=sdpvar(1);
                 constraints=[constraints,leverSlack>=z.margin];
             end
-            % Keep the deployed primary design margin so restoring motion leaves the pose and rate gains intact.
+            % Use the same primary design margin for both GNSS availability cases.
             candidate=struct('P',P,'kappaL',kL,'K',K,'leverSlack',leverSlack,'kappaR',kR);
             fusion=localizationSupport.fusionBlocks(candidate,cfg,z.lambda);
             for j=1:numel(fusion)
                 constraints=[constraints,fusion{j}<=-z.margin*eye(size(fusion{j}))]; %#ok<AGROW>
             end
+            % Nominal pose-equivalent noise proxy for gain selection. The local ISS
+            % bound separately requires a bounded actual filtered gradient bias.
             PG=[-kL*m.C.'*m.S*m.DL,-P*K*m.DG];
             [cost,blocks]=invariantNoiseEnergy(PG,P);constraints=[constraints,blocks];
             [bound,blocks]=invariantNoiseEnergy(P*m.B*m.Dd,P);
@@ -300,7 +280,7 @@ classdef localizationSupport
             % Homogeneous scaling preserves feedback ratios and creates a
             % visible margin for the independently checked lambda-I condition.
             Pv=1.01*value(P);Pv=(Pv+Pv.')/2;
-            design=struct('architecture',"fixed-design-v24",'sigma',z.sigma,'P',Pv, ...
+            design=struct('architecture',"body-geometry-v25",'sigma',z.sigma,'P',Pv, ...
                 'kappaL',1.01*value(kL),'K',K,'leverSlack',1.01*value(leverSlack),'kappaR',1.01*value(kR),...
                 'lambda',z.lambda,'rateNoiseEnergy',1.01*value(rateEnergy),'templateNoiseEnergy',1.01*value(cost),'solverStatus',result.problem, ...
                 'solverInfo',string(result.info),'inputs',inputs, ...
@@ -389,26 +369,12 @@ classdef localizationSupport
             end
             e=x-xhat;m=(x+xhat)/2;v=m([2,5]);a=m([3,6]);
             J=[0,-1;1,0];half=e(7)/2;
-            q1=localizationSupport.courseRate(x,cfg);q0=localizationSupport.courseRate(xhat,cfg);
-            q=(q1+q0)/2;z1=sum(x([2,5]).^2);z0=sum(xhat([2,5]).^2);
-            d1=localizationSupport.predictionDenominator(z1,cfg);
-            d0=localizationSupport.predictionDenominator(z0,cfg);
-            cutoffSquared=cfg.invariantObserver.predictionMinimumSpeedMps^2;
-            if max(z1,z0)<=cutoffSquared
-                u1=1-z1/cutoffSquared;u0=1-z0/cutoffSquared;
-                slope=1-(u1^2+u1*u0+u0^2)/3;
-            elseif min(z1,z0)>=cutoffSquared
-                slope=1;
-            else
-                slope=(d1-d0)/(z1-z0);
-            end
-            K=zeros(1,8);K([2,5])=(-J*a-2*q*slope*v).'/((d1+d0)/2);
-            K([3,6])=(J*v).'/((d1+d0)/2);
+            r=x(8);rh=xhat(8);rm=(r+rh)/2;
             cardinal=1;if half~=0,cardinal=sin(half)/half;end
             c=cos(half);d=[cos(m(7));sin(m(7))];n=J*d;
             F=zeros(8);F(1,2)=1;F(2,3)=1;F(4,5)=1;F(5,6)=1;F(7,8)=1;
-            F([3,6],[2,5])=(q1^2+q0^2)/2*eye(2);
-            F([3,6],[3,6])=2*q*J;F([3,6],:)=F([3,6],:)+(2*q*v+2*J*a)*K;
+            F([3,6],[2,5])=(r^2+rh^2)/2*eye(2);
+            F([3,6],[3,6])=2*rm*J;F([3,6],8)=2*rm*v+2*J*a;
             H=zeros(4,8);H(1,[2,5])=2*v.';
             H(2,[2,5])=a.';H(2,[3,6])=v.';
             H(3,[2,5])=(-J*a).';H(3,[3,6])=(J*v).';
@@ -438,14 +404,10 @@ classdef localizationSupport
         % Analytic coefficient intervals, not endpoint samples of polynomials.
         % The affine nominal error matrix is enclosed by their Cartesian
         % vertices (the convexity step used after the DMVT in Lemma 1).
-            s0=cfg.invariantObserver.fusion.minimumCourseSpeed;V=cfg.iss.maximumSpeed;
-            validateattributes(s0,{'double'},{'real','finite','positive','scalar','<=',V});
-            validateattributes([cfg.iss.maximumAcceleration,cfg.maximumTrackAngleRate], ...
-                {'double'},{'real','finite','nonnegative'});
-            A=cfg.iss.maximumAcceleration;Q=min(cfg.maximumTrackAngleRate,A/s0);
-            K=A/s0;
-            qPeak=min(Q,K/sqrt(2));mixed=qPeak*sqrt(max(0,K^2-qPeak^2));
-            bounds=[-Q,Q;0,Q^2;-K,K;0,K^2;-mixed,mixed];
+            R=cfg.maximumBodyYawRate;V=cfg.iss.maximumSpeed;A=cfg.iss.maximumAcceleration;
+            validateattributes([R,V,A],{'double'},{'real','finite','nonnegative'});
+            coupling=2*(R*V+A);
+            bounds=[-R,R;0,R^2;-coupling,coupling;-coupling,coupling];
             vertices=localizationSupport.intervalVertices(bounds);
         end
 
@@ -459,17 +421,17 @@ classdef localizationSupport
             end
         end
 
-        function f=fusionFeatures(speed,courseRate,tangentialAcceleration,~)
-        % Coefficients at a physical nominal point, useful for independent checks.
-            k=tangentialAcceleration/speed;
-            f=[courseRate,courseRate^2,k,k^2,k*courseRate];
+        function f=fusionFeatures(v,a,r)
+        % Physical body-rate column of the Cartesian drift Jacobian.
+            c=2*(r*v(:)+[-a(2);a(1)]);
+            f=[r,r^2,c.'];
         end
 
         function A=fusionMatrices(cfg,f)
-            t=cfg.invariantObserver.theta;
+            t=cfg.invariantObserver.theta;ell=cfg.invariantObserver.headingLengthM;
             A=zeros(8);A(1,2)=1;A(2,3)=1;A(4,5)=1;A(5,6)=1;A(7,8)=1;
             A([3,6],[2,5])=f(2)/t^2*eye(2);A([3,6],[3,6])=2*f(1)/t*[0,-1;1,0];
-            A(6,2)=-2*f(5)/t^2;A(6,5)=A(6,5)-2*f(4)/t^2;A(6,6)=2*f(3)/t;
+            A([3,6],8)=f(3:4).'/(ell*t^2);
         end
 
         function [blocks,directionRate]=motionResponseBlocks(P,k,cfg)
@@ -565,7 +527,7 @@ classdef localizationSupport
 
         %% LiDAR measurement and correction
         function filter = filterLidarPoseInformation(information,cfg,frameReliability,directionReliability)
-        % filterLidarPoseInformation Bounded weighting of supported LiDAR directions.
+        % filterLidarPoseInformation Direct geometric weighting of supported LiDAR directions.
         % INFORMATION is an unregularized physical [X,Y,psi] information surrogate.
         % Direction reliabilities refer to ascending normalized information eigenvalues.
         % Repeated eigenspaces receive their minimum requested reliability, avoiding
@@ -582,8 +544,8 @@ classdef localizationSupport
                 'Use the geometric information filter; registration-error calibration is removed.');
             scales=cfg.lidar.poseScales(:);
             validateattributes(scales,{'double'},{'real','finite','positive','numel',3});
-            lambda=cfg.lidar.gainInformationScale;
-            validateattributes(lambda,{'numeric'},{'real','finite','positive','scalar'});
+            assert(~isfield(cfg.lidar,'gainInformationScale'),'VehicleLocalization:ObsoleteLidarRegularizer', ...
+                'Regenerate the LiDAR configuration for direct geometry weighting.');
             assert(frameReliability>=0 && frameReliability<=1 && ...
                 all(directionReliability>=0 & directionReliability<=1), ...
                 'VehicleLocalization:InvalidLidarReliability','Reliabilities must lie in [0,1].');
@@ -600,12 +562,14 @@ classdef localizationSupport
             first=1;
             while first<=3
                 last=first;
-                while last<3 && values(last+1)-values(first)<=tolerance,last=last+1;end
+                while last<3 && values(last+1)-values(first)<=64*eps(values(last+1)),last=last+1;end
                 directionReliability(first:last)=min(directionReliability(first:last));
                 first=last+1;
             end
             rho=frameReliability*directionReliability;
-            f=rho./(values+lambda);strengths=rho.*(values./(values+lambda));
+            f=rho.*values;strengths=f.*values;
+            assert(all(isfinite(strengths)),'VehicleLocalization:InvalidLidarInformation', ...
+                'Squared normalized geometric strengths exceed the floating-point range.');
             F=U*diag(f)*U.';S=U*diag(strengths)*U.';F=(F+F.')/2;
             informationTrace=sum(values);dimension=0;condition=Inf;
             if values(end)>0
@@ -619,7 +583,7 @@ classdef localizationSupport
                 'strengths',strengths,'rank',nnz(values>tolerance), ...
                 'trace',informationTrace,'minimumEigenvalue',values(1), ...
                 'conditionNumber',condition,'effectiveDimension',dimension, ...
-                'regularizer',lambda,'informationInterpretation',"Weighted geometric surrogate; not calibrated covariance");
+                'informationInterpretation',"Weighted geometric surrogate; not calibrated covariance");
         end
 
         function [correction,audit] = computeLidarMatchedCorrection(measurement,pose,G,design,cfg,options)
@@ -711,27 +675,36 @@ classdef localizationSupport
                 % Like a residual gradient J'*W*r, inject only where the cost has
                 % positive curvature; unsupported directions receive no correction.
                 normalized=filter.D.'*gradient;
-                active=filter.eigenvalues>1e-10*max(1,max(filter.eigenvalues));
+                active=filter.eigenvalues>0;
                 U=filter.eigenvectors(:,active);supported=U*(U.'*normalized);
                 xi=-filter.F*supported;representation="predictedPoseGradient";
                 unsupportedGradient=norm(normalized-supported);
             end
-            Q=kappa*(C.'*filter.S*C);Q=(Q+Q.')/2;
-            Z=L\Q/L.';Z=(Z+Z.')/2;
-            eigenvalues=max(eig(Z),0);largest=max(eigenvalues);
-            step=options.StepSize;v=kappa*(P\(C.'*xi));
+            % In metric coordinates the local curvature is B'*B. A thin SVD
+            % avoids forming the ill-conditioned normal equations of the implicit step.
+            B=diag(sqrt(kappa*filter.reliability).*filter.eigenvalues)*filter.eigenvectors.'*(C/L.');
+            [left,singular,right]=svd(B,'econ','vector');
+            y=-sqrt(kappa*filter.reliability).*(filter.eigenvectors.'*(filter.D.'*gradient));
+            if gradientMode,y(~active)=0;end
+            whitened=L\(kappa*(C.'*xi));
+            v=L.'\whitened;Q=(B*L.').'*(B*L.');
+            largest=max(singular)^2;step=options.StepSize;
+            gainBound=kappa*max(filter.reliability.*filter.eigenvalues);
+            contraction=eye(n);
             if options.Discretization=="continuous"
-                correction=T*v;transition=eye(n);gainBound=kappa/filter.regularizer;
+                correction=T*v;
+            elseif options.Discretization=="implicit"
+                h=sqrt(step)*singular;
+                attenuation=(h./hypot(1,h)).^2;
+                response=sqrt(step)*(h./hypot(1,h))./hypot(1,h);
+                delta=right*(response.*(left.'*y));
+                correction=T*(L.'\delta);
+                contraction=contraction-right*diag(attenuation)*right.';
             else
-                if options.Discretization=="explicit" && largest>0,step=min(step,1.8/largest);end
-                if options.Discretization=="implicit"
-                    A=eye(n)+step*(P\Q);scaled=A\(step*v);transition=A\eye(n);
-                else
-                    scaled=step*v;transition=eye(n)-step*(P\Q);
-                end
-                correction=T*scaled;gainBound=NaN;
+                if largest>0,step=min(step,1.8/largest);end
+                correction=T*(step*v);
+                contraction=contraction-right*diag(step*singular.^2)*right.';
             end
-            contraction=L.'*transition/L.';
             energyRatio=norm(contraction,2)^2;
             audit=struct('filter',filter,'C',C,'dissipationMatrix',Q, ...
                 'continuousCorrection',T*v,'effectiveStrengths',kappa*filter.strengths, ...
@@ -1847,7 +1820,7 @@ function m=invariantModel(cfg)
     validateattributes(n.gnssHeadingRad,{'double'},{'real','finite','positive','scalar'});
     headingNoise=ell*n.gnssHeadingRad;
     validateattributes(r.minimumCourseSpeed,{'double'},{'real','finite','positive','scalar','<=',s.maximumSpeed});
-    validateattributes([s.maximumAcceleration,cfg.maximumTrackAngleRate,r.lidarOperatorMismatch], ...
+    validateattributes([s.maximumAcceleration,cfg.maximumBodyYawRate,r.lidarOperatorMismatch], ...
         {'double'},{'real','finite','nonnegative'});
     validateattributes(z.yawAccelerationRadps2,{'double'},{'real','finite','nonnegative','scalar'});
     validateattributes(n.upstreamRateRadps,{'double'},{'real','finite','positive','scalar'});
@@ -1858,7 +1831,6 @@ function m=invariantModel(cfg)
         'VehicleLocalization:InvalidFusionDomain','The nominal fusion LiDAR lower bound must be positive.');
     assert(~isfield(z,'angularMetricDiagonal'),'VehicleLocalization:ObsoleteInvariantDesign', ...
         'Rebuild the observer configuration for the direct upstream rate channel.');
-    validateattributes(z.predictionMinimumSpeedMps,{'double'},{'real','finite','positive','scalar','<',r.minimumCourseSpeed});
     validateattributes([n.velocityMps,n.accelerationMps2],{'double'},{'real','finite','nonnegative'});
     validateattributes(z.motionTimeConstantS,{'double'},{'real','finite','positive','scalar'});
     assert(z.noiseObjective=="normalizedFullState" && isequal(cfg.lidar.poseScales(:),[1;1;1/ell]), ...
@@ -1866,7 +1838,7 @@ function m=invariantModel(cfg)
     m.C=zeros(3,8);m.C(1,1)=1;m.C(2,4)=1;m.C(3,7)=1;
     m.B=zeros(8,2);m.B(3,1)=1;m.B(6,2)=1;
     m.DL=diag([n.lidarPositionM,n.lidarPositionM,ell*n.lidarHeadingRad]);m.DG=diag([n.gnssPositionM,n.gnssPositionM,headingNoise]);
-    % Aggregate residual R(phi)*[sDoubleDot;s*qDot], not just speed curvature.
+    % Aggregate residual R(psi)*bodyVelocityDoubleDot + yawAcceleration*J*v.
     % The objective scale is a design weight, not a certified physical bound.
     m.Dd=(n.jerkMps3/sigma^3)*eye(2);
     m.S=diag([s.minimumPositionStrength*[1,1],s.minimumHeadingStrength]);

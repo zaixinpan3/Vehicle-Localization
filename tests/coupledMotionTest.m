@@ -18,10 +18,10 @@ classdef coupledMotionTest < matlab.unittest.TestCase
             testCase.verifyGreaterThanOrEqual(minimumWeight,-1e-14);
         end
         function degenerateDomainsHaveNoDuplicateVertices(testCase)
-            c=mncavFullObserverConfig();c.iss.maximumAcceleration=0;
+            c=mncavFullObserverConfig();c.iss.maximumAcceleration=0;c.maximumBodyYawRate=0;
             c.iss.maximumSpeed=c.invariantObserver.fusion.minimumCourseSpeed;
             [v,b]=localizationSupport.fusionVertices(c);
-            testCase.verifySize(v,[1,5]);testCase.verifyEqual(v,b(:,1).');
+            testCase.verifySize(v,[1,4]);testCase.verifyEqual(v,b(:,1).');
         end
         function affineVertexInterpolationPreservesTheWholeLmi(testCase)
             testCase.verifyLessThan(affineError(),1e-10);
@@ -35,13 +35,10 @@ function [errors,minimum]=jacobianErrors()
         c=cfg{1};t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;s0=c.invariantObserver.fusion.minimumCourseSpeed;
         B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=localizationSupport.outputNormalization(c);
         for j=1:200
-            s=s0+rand(stream)*(c.iss.maximumSpeed-s0);q=min(c.maximumTrackAngleRate,c.iss.maximumAcceleration/s)*(2*rand(stream)-1);
-            a=[sqrt(max(0,c.iss.maximumAcceleration^2-(s*q)^2))*(2*rand(stream)-1);s*q];
-            % Cover arbitrary body heading relative to true course, including
-            % headings with zero lateral-output heading sensitivity.
-            x=[0;s;a(1);0;0;a(2);-pi+2*pi*rand(stream);q];
+            [v,a,r]=sampleMotion(c,s0,stream);
+            x=[0;v(1);a(1);0;v(2);a(2);-pi+2*pi*rand(stream);r];
             [F,H]=localizationSupport.secants(x,x,c);H=D*H*B;
-            A=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c));
+            A=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(v,a,r));
             expected=B\F*B/t;
             errors=max(errors,[norm(A-expected,'fro'),0]);
             minimum=min(minimum,min(eig(H.'*H)));
@@ -54,9 +51,8 @@ function [error,minimumWeight]=containmentErrors()
     for cfg={mncavFullObserverConfig(),mncavSmallOffsetObserverConfig()}
         c=cfg{1};[vertices,b]=localizationSupport.fusionVertices(c);s0=c.invariantObserver.fusion.minimumCourseSpeed;
         for j=1:500
-            s=s0+(c.iss.maximumSpeed-s0)*rand(stream);q=min(c.maximumTrackAngleRate,c.iss.maximumAcceleration/s)*(2*rand(stream)-1);
-            a=sqrt(max(0,c.iss.maximumAcceleration^2-(s*q)^2))*(2*rand(stream)-1);
-            f=localizationSupport.fusionFeatures(s,q,a,c);w=vertexWeights(f,b);
+            [v,a,r]=sampleMotion(c,s0,stream);
+            f=localizationSupport.fusionFeatures(v,a,r);w=vertexWeights(f,b);
             error=max(error,max([norm(w.'*vertices-f,Inf),abs(sum(w)-1)]));minimumWeight=min(minimumWeight,min(w));
         end
     end
@@ -78,4 +74,11 @@ function error=affineError()
     end
     A=localizationSupport.fusionMatrices(c,f);M=P*A;
     error=norm(combined-M-M.','fro');
+end
+
+function [v,a,r]=sampleMotion(c,s0,stream)
+    phi=2*pi*rand(stream);alpha=2*pi*rand(stream);
+    v=(s0+(c.iss.maximumSpeed-s0)*rand(stream))*[cos(phi);sin(phi)];
+    a=c.iss.maximumAcceleration*rand(stream)*[cos(alpha);sin(alpha)];
+    r=c.maximumBodyYawRate*(2*rand(stream)-1);
 end

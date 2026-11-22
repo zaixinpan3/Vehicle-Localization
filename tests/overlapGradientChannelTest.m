@@ -261,7 +261,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
                 'information',repmat(eye(3),1,1,n),'valid',true(n,1),'delay',0);
             testCase.verifyError(@()runFullLocalizationObserver(ambiguous,f.cfg,LateralInputs=f.lateral), ...
                 'VehicleLocalization:AmbiguousLidarInput');
-            calibrated=f.cfg;calibrated.lidar=rmfield(calibrated.lidar,'gainInformationScale');
+            calibrated=f.cfg;
             calibrated.lidar.errorCalibration=struct('kind',"conditional-pose-second-moment-v1", ...
                 'referenceVariance',[.01;.001],'coefficients',[.01,1;.001,1]);
             testCase.verifyError(@()runFullLocalizationObserver(f.data,calibrated,LateralInputs=f.lateral), ...
@@ -326,5 +326,5 @@ end
 
 function cfg=filterConfig()
 % Standalone geometric-filter fixture; no observer implementation is selected.
-    cfg=struct('lidar',struct('poseScales',ones(3,1),'gainInformationScale',.001));
+    cfg=struct('lidar',struct('poseScales',ones(3,1)));
 end
