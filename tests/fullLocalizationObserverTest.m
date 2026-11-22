@@ -99,7 +99,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             testCase.verifyError(@()run(f),'VehicleLocalization:MissingFullIssDomain');
         end
         function uncertifiedGainsCannotReachNumericalIntegration(testCase)
-            f=fixture(1,"lidar");f.cfg.invariantDesign.kappaL=0;
+            f=fixture(1,"lidar");f.cfg.invariantDesign.P=100*f.cfg.invariantDesign.P;
             testCase.verifyError(@()run(f),'VehicleLocalization:InfeasibleInvariantDesign');
         end
     end

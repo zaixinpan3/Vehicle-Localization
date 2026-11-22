@@ -10,7 +10,7 @@ function cfg=mncavFullObserverConfig(options)
     assert(~isfield(options.DesignOverride,'yawRateGainPerSecond'),'VehicleLocalization:PrescribedRateGain', ...
         'The direct yaw-rate gain is a design output. Configure the physical noise scales and solve again.');
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-pose-four-vertex-v26",'maximumBodyYawRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-unit-lidar-metric-v27",'maximumBodyYawRate',.4,'initialState',[]);
     cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('outputPoint', ...
@@ -27,7 +27,7 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance=struct( ...
         'noise',"Inherited declared sensor priors: conditional registration moments on the first 60 s of the 2026-10-02 study; independent BESTPOS and HEADING2 calibration on 12-11-24; adopted lateral identification and independently corrected IMU on 12-11-24; these are design priors, not an overlap covariance certificate", ...
         'headingLengthM',"Heading error weighted by a 10 m landmark range", ...
-        'normalization',"lambda = 1 and P >= I");
+        'normalization',"Unit LiDAR coefficient. The verified absolute margin uses the solved certificate floor.");
     z.theta=options.Theta;z.sigma=z.theta;
     z.motionTimeConstantS=.5; % Nominal longitudinal response used by the matched motion design.
     z.gnssBandwidthRatio=1; % Normalized poles of each measured position chain.
@@ -38,7 +38,7 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.upstreamRateNoise="Use the lateral design's bias-plus-noise rate scale as an engineering proxy for upstream estimation error. The joint covariance with lateral velocity is unknown.";
     z.fusion=struct('minimumCourseSpeed',10,'lidarOperatorMismatch',.001);
     z.provenance.operatingSet="Bessafa et al. (2026), Remark 3: compact invariant operating set assumed; invariance and numerical attraction radius are not computed or certified";
-    z.provenance.feedback="Fixed linear gain, independent LiDAR strength and Jacobian-matched motion correction in the primary metric.";
+    z.provenance.feedback="Fixed linear gain, direct geometric LiDAR injection and Jacobian-matched motion correction in the primary metric.";
     z.provenance.architecture="State [X,VX,AX,Y,VY,AY,psi,r]. The GNSS output is antenna position and independent vehicle heading. The motion packet supplies body yaw rate. The packet uses the lateral estimate in its design range and the measured gyro rate below the minimum design speed. The four nonlinear motion outputs are squared speed, velocity-acceleration dot/cross and body-frame lateral velocity.";
     z.provenance.independentHeading="Position and vehicle heading form one GNSS measurement. The default heading scale is a cross-half error on the independent calibration drive. Synthetic receivers supply their generator prior. Every complete measurement uses the same constant gain.";
     z.provenance.angularModel="Heading integrates the internal body rate. A valid upstream rate drives a finite-gain linear innovation on that state. A missing rate leaves its state constant.";

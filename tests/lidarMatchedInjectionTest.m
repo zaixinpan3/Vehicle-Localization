@@ -18,6 +18,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyEqual(c,zeros(7,1),AbsTol=0);
             testCase.verifyEqual(a.filter.S*[1;0;0],zeros(3,1),AbsTol=0);
         end
+        function productionMetricGivesTheDirectPhysicalGain(testCase)
+            cfg=freshObserverTestConfig();r=localizationSupport.runtime(cfg);
+            G=eye(8);G=G([1,4,7],:);
+            m=struct('gradient',[.2;-.1;.04],'information',diag([3,2,.8]), ...
+                'linearizationPose',zeros(3,1));
+            [rate,a]=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,r.lidarMatched,cfg);
+            C=(a.filter.D\(G*r.toPhysical))/r.theta;
+            expected=-r.toPhysical*(r.P\(C.'*a.filter.F*a.filter.D.'*m.gradient));
+            testCase.verifyEqual(rate,expected,AbsTol=1e-10);
+            testCase.verifyFalse(isfield(r.lidarMatched,'kappa'));
+            stale=r.lidarMatched;stale.kappa=1;
+            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,stale,cfg), ...
+                'VehicleLocalization:StaleInvariantDesign');
+        end
         function oneLeverArmRetainsLateralYawAmbiguity(testCase)
             f=fixture();m=localizationSupport.buildLidarLineMeasurement([3,0;3,0],[3,0;3,0], ...
                 [0,1;0,1],[0;0;0],ones(2,1));
@@ -165,7 +179,7 @@ end
 
 function f=fixture()
     f.cfg=struct('lidar',struct('poseScales',ones(3,1)));
-    f.design=struct('P',eye(7),'T',eye(7),'kappa',4);
+    f.design=struct('P',eye(7)/4,'T',eye(7),'theta',1);
     f.G=zeros(3,7);f.G(1,1)=1;f.G(2,4)=1;f.G(3,7)=1;
 end
 

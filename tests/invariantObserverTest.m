@@ -53,9 +53,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyEqual(c.gainSource,"unsolved-invariant");
         end
         function publicScriptResolvesEvenWhenAnOldDesignIsSupplied(testCase)
-            c=freshObserverTestConfig();c.invariantDesign.kappaL=0;
+            c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='pose-four-vertex-v26';
             [d,ready]=synthesizeMncavInvariantDesign(c);
-            testCase.verifyGreaterThan(d.kappaL,0);
+            testCase.verifyFalse(isfield(d,'kappaL'));
             testCase.verifyTrue(d.verification.nominalFusionLmiVerified);
             testCase.verifyEqual(ready.invariantDesign,d);
             testCase.verifyEqual(ready.gainSource,"fresh-lmi");

@@ -321,7 +321,7 @@ function f=movingFixture(duration,offset)
 end
 
 function design=fullObserverDesign()
-    design=struct('P',blkdiag(eye(6),1),'T',eye(7),'kappa',4);
+    design=struct('P',eye(7)/4,'T',eye(7),'theta',1);
 end
 
 function cfg=filterConfig()

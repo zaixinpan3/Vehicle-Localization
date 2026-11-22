@@ -128,7 +128,7 @@ function estimate=integrate(data,cfg,lateral,L)
             for name=string(fieldnames(support)).'
                 lidarPoseSupport.(name)(k)=support.(name);
             end
-            lidarPoseSupport.correctionApplied(k)=support.rank>0 && lidarInjection.kappa>0 && dt>0;
+            lidarPoseSupport.correctionApplied(k)=support.rank>0 && dt>0;
             rateCorrection=audit.continuousCorrection;
             if dt>0,rateCorrection=delta/dt;end
             correction(k,3:4)=rateCorrection([1,4]).';yawCorrection(k)=rateCorrection(7);

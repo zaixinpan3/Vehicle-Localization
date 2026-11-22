@@ -13,10 +13,15 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
         function separatePoseAndMotionSolvesReturnVerifiedGains(testCase)
             c=freshObserverTestConfig();d=c.invariantDesign;v=localizationSupport.verifyInvariantDesign(d,c);
             testCase.verifyTrue(v.certified && v.matchedAuxiliaryGain);
-            testCase.verifyEqual(d.solveAudit.optimizationCalls,2);
+            testCase.verifyGreaterThanOrEqual(d.solveAudit.optimizationCalls,2);
             testCase.verifyEqual(d.K(1:3,1),[3;3;1]);
             testCase.verifyEqual([v.vertices,v.matrixInequalities],[4,4]);
             testCase.verifyLessThan(v.gnssDissipationDefect,1e-8);
+            raw=localizationSupport.fusionBlocks(d,c,0);
+            decay=-max(cellfun(@(b)max(eig(b)),raw));
+            z=c.invariantObserver;
+            floorBound=min([1,min(eig(d.P)),d.kappaR/z.margin,decay/(2*z.lambda+z.margin)]);
+            testCase.verifyEqual(d.lambda/z.lambda,floorBound,AbsTol=1e-7);
             testCase.verifyTrue(v.independentYawRateCorrection && v.upstreamYawRateRequired);
             testCase.verifyEqual(d.P(8,1:7),zeros(1,7));
             testCase.verifyFalse(isfield(d,'yawRateGainNormalized'));
@@ -70,8 +75,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             c.invariantObserver.noise.gnssPositionM=.10;
             c=freshObserverTestConfig(c);b=c.invariantDesign;
             testCase.verifyEqual(b.P,a.P,AbsTol=1e-10);
-            testCase.verifyEqual([b.kappaR;b.kappaL;b.auxiliaryWeights], ...
-                [a.kappaR;a.kappaL;a.auxiliaryWeights],AbsTol=1e-10);
+            testCase.verifyEqual([b.kappaR;b.auxiliaryWeights], ...
+                [a.kappaR;a.auxiliaryWeights],AbsTol=1e-10);
             testCase.verifyGreaterThan(b.K(7,3),a.K(7,3));
             testCase.verifyEqual(b.gnssHeadingBandwidth.perSecond, ...
                 max(b.gnssHeadingBandwidth.dissipationFloorPerSecond, ...
