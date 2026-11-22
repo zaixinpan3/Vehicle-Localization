@@ -30,9 +30,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,256);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,32);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,256);
+            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,32);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
             testCase.verifySize(d.P,[8,8]);
@@ -124,7 +124,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function squaredSpeedGainIsActiveAndHasNoScalarReplacement(testCase)
             c=freshObserverTestConfig();design=localizationSupport.runtime(c);
-            testCase.verifyGreaterThan(design.auxiliaryWeights(1),0);
+            testCase.verifyGreaterThan(norm(design.M(:,1)),0);
             testCase.verifyFalse(isfield(design,'speedGainNormalized'));
             testCase.verifyFalse(isfield(c.invariantDesign,'speedDesign'));
         end
@@ -132,9 +132,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             c=freshObserverTestConfig();v=c.invariantDesign.verification;
             testCase.verifyFalse(isfield(c.invariantObserver,'minimumDirectRatesPerSecond'));
             testCase.verifyFalse(isfield(c.invariantObserver.fusion,'nominalDecayRatePerSecond'));
-            testCase.verifyFalse(isfield(v.feedbackAuthority,'requiredDirectRatesPerSecond'));
+            testCase.verifyFalse(isfield(v,'motionResponse'));
             testCase.verifyFalse(isfield(v,'regionalIss'));
-            testCase.verifyTrue(v.allAuxiliaryOutputsRequired);
+            testCase.verifyFalse(v.allAuxiliaryOutputsRequired);
         end
         function eightOutputCertificateCannotBeReused(testCase)
             c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='intrinsic-vector-iss-v5';
@@ -146,10 +146,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
-        function disablingSquaredSpeedCannotReuseACertifiedClaim(testCase)
-            c=freshObserverTestConfig();c.invariantDesign.auxiliaryWeights(1)=0;
+        function withdrawingSquaredSpeedPreservesTheNormBound(testCase)
+            c=freshObserverTestConfig();c.invariantDesign.Z(:,1)=0;
             verification=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
-            testCase.verifyFalse(verification.certified);
+            testCase.verifyTrue(verification.certified);
         end
         function temporaryDesignVerificationRequiresNoSdpSolver(testCase)
             c=freshObserverTestConfig();

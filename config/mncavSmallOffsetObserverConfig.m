@@ -2,8 +2,7 @@ function cfg=mncavSmallOffsetObserverConfig(options)
 % Temporary [1,30] m/s global design with an explicitly assumed GNSS offset.
 % This is synthetic geometry, not a replacement for the measured BESTPOS
 % calibration. GNSS noise and alignment uncertainty retain the base priors.
-% The 1 m heading length also defines this scenario's LiDAR information
-% normalization. The L-position feedback cap is 16; other caps are retained.
+% A 1 m heading length sets the LiDAR pose-information normalization.
 % The same single nominal fusion SDP is used for this explicit scenario.
 % Solve gains after configuration with synthesizeMncavInvariantDesign(cfg).
     arguments
@@ -16,7 +15,6 @@ function cfg=mncavSmallOffsetObserverConfig(options)
     cfg.invariantObserver.fusion.minimumCourseSpeed=1;
     cfg.invariantObserver.headingLengthM=1;
     cfg.lidar.poseScales=[1;1;1];
-    cfg.invariantObserver.matchedGainLimits=[16,8,2];
     cfg.gnss.outputPoint=struct( ...
         'identifier',"mncav-hypothetical-small-gnss-offset-v1", ...
         'bodyOffset',options.GnssOffsetNormM*direction, ...
@@ -30,6 +28,4 @@ function cfg=mncavSmallOffsetObserverConfig(options)
         "Explicit small-offset design scenario; measured offset direction retained, magnitude overridden; noise priors unchanged";
     cfg.invariantObserver.provenance.headingLengthM= ...
         "Temporary 1 m heading length; information floors and coupling bounds are interpreted in this pose normalization";
-    cfg.invariantObserver.provenance.feedback= ...
-        "Small-offset design: L-position cap 16, G-position cap 8, velocity-direction cap 2; heading L/direction caps remain 8; no runtime gain clipping";
 end

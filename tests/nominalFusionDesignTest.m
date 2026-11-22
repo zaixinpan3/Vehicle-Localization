@@ -12,10 +12,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
     methods (Test)
         function singleSolveReturnsIndependentlyVerifiedGains(testCase)
             c=freshObserverTestConfig();d=c.invariantDesign;v=localizationSupport.verifyInvariantDesign(d,c);
-            testCase.verifyTrue(v.certified && v.motionResponse.verified);
+            testCase.verifyTrue(v.certified && v.constantAuxiliaryGain);
             testCase.verifyEqual(d.solveAudit.optimizationCalls,1);
-            testCase.verifyEqual(d.kappaG,d.kappaL,AbsTol=1e-9);
-            testCase.verifyEqual(v.vertices,256);
+            testCase.verifyEqual(d.K(1:3,1),[3;3;1]);
+            testCase.verifyEqual(v.vertices,32);
             testCase.verifyTrue(v.independentYawRateCorrection && v.upstreamYawRateRequired);
             testCase.verifyEqual(d.P(8,1:7),zeros(1,7));
             testCase.verifyFalse(isfield(d,'yawRateGainNormalized'));
@@ -27,7 +27,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             c=freshObserverTestConfig();base=c.invariantDesign;
             testCase.verifyFalse(isfield(c.invariantObserver,'yawRateGainPerSecond'));
             downtown=downtownReferenceReplayConfig();
-            testCase.verifyEqual(localizationSupport.invariantInputs(downtown.observer),base.inputs);
+            testCase.verifyFalse(downtown.observer.invariantObserver.gnssPositionAvailable);
+            testCase.verifyFalse(downtown.observer.invariantObserver.gnssHeadingAvailable);
             testCase.verifyTrue(base.verification.rateEnergyVerified);
             c.invariantObserver.noise.upstreamRateRadps=2*c.invariantObserver.noise.upstreamRateRadps;
             testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
@@ -46,15 +47,17 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             [d,~]=selected();v=d.verification;
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
-            testCase.verifyFalse(v.nominalFusion.coversGnssAbsent);
+            testCase.verifyTrue(v.nominalFusion.coversGnssAbsent);
             testCase.verifyFalse(v.nominalFusion.coversZeroLidarInformation);
             testCase.verifyFalse(isfield(v,'regionalIss'));
         end
-        function metricShearMakesMotionSchurComplementAffine(testCase)
-            [d,~]=selected();P=d.P;inverse=P\eye(8);
-            R=inverse(2:3,2:3)\eye(2);
-            testCase.verifyEqual(R,P(2:3,2:3)-P(1,1)*[1,-1;-1,1],AbsTol=1e-10);
-            testCase.verifyGreaterThan(abs(inverse(2,1)),0);
+        function independentGnssBandwidthChangesOnlyTheSpecifiedLinearDesign(testCase)
+            c=freshObserverTestConfig();a=localizationSupport.runtime(c);
+            c.invariantObserver.gnssBandwidthRatio=1.2;
+            testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
+            ready=freshObserverTestConfig(c);b=localizationSupport.runtime(ready);
+            testCase.verifyEqual(b.LG(1,1)/a.LG(1,1),1.2,AbsTol=1e-12);
+            testCase.verifyTrue(b.nominalFusionLmiVerified);
         end
         function informativeLidarStillCorrectsAStationaryPose(testCase,dt)
             [data,lateral,c]=constantMotionFixture(0,dt);

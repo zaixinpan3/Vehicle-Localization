@@ -21,7 +21,7 @@ classdef coupledMotionTest < matlab.unittest.TestCase
             c=mncavFullObserverConfig();c.iss.maximumAcceleration=0;
             c.iss.maximumSpeed=c.invariantObserver.fusion.minimumCourseSpeed;
             [v,b]=localizationSupport.fusionVertices(c);
-            testCase.verifySize(v,[1,8]);testCase.verifyEqual(v,b(:,1).');
+            testCase.verifySize(v,[1,5]);testCase.verifyEqual(v,b(:,1).');
         end
         function affineVertexInterpolationPreservesTheWholeLmi(testCase)
             testCase.verifyLessThan(affineError(),1e-10);
@@ -41,13 +41,10 @@ function [errors,minimum]=jacobianErrors()
             % headings with zero lateral-output heading sensitivity.
             x=[0;s;a(1);0;0;a(2);-pi+2*pi*rand(stream);q];
             [F,H]=localizationSupport.secants(x,x,c);H=D*H*B;
-            [A,speed,pair]=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c));
-            expected=B\F*B/t;factor=c.iss.maximumSpeed^2/(s0^2+s^2);
-            errors=max(errors,[norm(A-expected,'fro'),norm(speed-factor*H(1,:).'*H(1,:),'fro')]);
-            difference=factor*H(2:3,:).'*H(2:3,:)-pair;
-            minimum=min(minimum,min(eig((difference+difference.')/2)));
-            difference=H.'*diag([3*factor,4*factor,4*factor,5])*H-3*speed-4*pair;
-            minimum=min(minimum,min(eig((difference+difference.')/2)));
+            A=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(s,q,a(1),c));
+            expected=B\F*B/t;
+            errors=max(errors,[norm(A-expected,'fro'),0]);
+            minimum=min(minimum,localizationSupport.motionSlopeBound(c)-norm(H,2));
         end
     end
 end
@@ -76,9 +73,9 @@ function error=affineError()
     c=mncavFullObserverConfig();[vertices,b]=localizationSupport.fusionVertices(c);
     f=(.37*b(:,1)+.63*b(:,2)).';w=vertexWeights(f,b);P=diag(1:8);combined=zeros(8);
     for j=1:size(vertices,1)
-        [A,S,B]=localizationSupport.fusionMatrices(c,vertices(j,:));M=P*A-3*S-4*B;
+        A=localizationSupport.fusionMatrices(c,vertices(j,:));M=P*A;
         combined=combined+w(j)*(M+M.');
     end
-    [A,S,B]=localizationSupport.fusionMatrices(c,f);M=P*A-3*S-4*B;
+    A=localizationSupport.fusionMatrices(c,f);M=P*A;
     error=norm(combined-M-M.','fro');
 end

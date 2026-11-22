@@ -200,7 +200,7 @@ function estimate=integrate(data,cfg,lateral,L)
             'bodyAcceleration',velocityValid & accelerationValid ...
                 & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable), ...
         'allTheoremHypothesesVerified',false,'sampledSystemCertified',false, ...
-        'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. The nominal fusion design assumes simultaneous sources and a compact invariant operating set; low-speed execution uses a smooth denominator extension and is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
+        'scope',"Discretization of the continuous LMI-designed observer with unchanged gains. Recorded information conditions are audited; measured motion is only a proxy for true maneuver bounds. The nominal design requires informative LiDAR, the configured direct rate input and a compact invariant operating set; low-speed execution uses a smooth denominator extension and is outside this certificate. No automatic numerical or arbitrary-outage guarantee is asserted. Alignment remains offline.");
     estimate.internalState=z;estimate.yawRate=z(:,8);
     estimate.diagnostics.intrinsicPrediction=intrinsicStates;
     estimate.diagnostics.rollingPredictionActive=rollingValid & [false;diff(t)>0];
@@ -219,7 +219,7 @@ function estimate=integrate(data,cfg,lateral,L)
     estimate.diagnostics.allAuxiliaryOutputsAvailable=velocityValid & accelerationValid ...
         & cfg.invariantObserver.velocityAvailable & cfg.invariantObserver.accelerationAvailable;
     estimate.diagnostics.auxiliaryAvailabilityContractSatisfied= ...
-        all(estimate.diagnostics.allAuxiliaryOutputsAvailable);
+        ~certificate.allAuxiliaryOutputsRequired || all(estimate.diagnostics.allAuxiliaryOutputsAvailable);
 end
 
 function valid=motionValidity(h,name,n)

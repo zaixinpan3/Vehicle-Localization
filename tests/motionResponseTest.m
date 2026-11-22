@@ -1,5 +1,5 @@
 classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < matlab.unittest.TestCase
-% Performance and certificate regressions for bounded matched-gain scheduling.
+% Constant auxiliary gains, certificate rejection and motion-only behavior.
     properties (TestParameter)
         dt={.05,.1}
     end
@@ -10,39 +10,37 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
         end
     end
     methods (Test)
-        function oneSolveMeetsFusionAndMotionConstraints(testCase)
-            c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());v=c.invariantDesign.verification;
-            testCase.verifyTrue(v.certified && v.nominalFusionLmiVerified && v.motionResponse.verified);
-            testCase.verifyEqual(v.nominalFusion.vertices,256);
-            testCase.verifyFalse(v.motionResponse.longitudinalPoseFeedbackRequired);
-            testCase.verifyFalse(v.motionResponse.fullNonlinearResponseCertified);
-            testCase.verifyEqual(v.motionResponse.timeConstantS,.5,AbsTol=0);
-        end
-        function scheduleIsBoundedIncludingZeroAndLargeSpeed(testCase)
+        function constantColumnsSatisfyTheReservedMargin(testCase)
             c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());d=c.invariantDesign;
-            a=localizationSupport.weights(d,0);b=localizationSupport.weights(d,1e100);
-            testCase.verifyEqual(a(1:2),d.auxiliaryWeights(1:2)*30^2,RelTol=1e-14);
-            testCase.verifyGreaterThanOrEqual(a,d.auxiliaryWeights);
-            testCase.verifyLessThan(max(b(1:2)),1e-80);
-            testCase.verifyEqual(b(3),d.auxiliaryWeights(3));
-            testCase.verifyTrue(all(isfinite(a)));
+            testCase.verifyEqual(2*norm(d.Z)*localizationSupport.motionSlopeBound(c),d.lambda,AbsTol=1e-12);
+            testCase.verifyTrue(d.verification.certified);
         end
-        function removedScheduleCannotRetainThePerformanceClaim(testCase)
-            c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());d=rmfield(c.invariantDesign,'motionGainSchedule');
+        function physicalLinearizationsMeetCertifiedMarginInGlobalAxes(testCase)
+            cfg=freshObserverTestConfig();
+            testCase.verifyLessThan(globalAxisResidual(cfg),0);
+        end
+        function excessiveAuxiliaryGainFailsIndependentVerification(testCase)
+            c=freshObserverTestConfig();d=c.invariantDesign;d.Z=1e4*d.Z;
             v=localizationSupport.verifyInvariantDesign(d,c);
             testCase.verifyFalse(v.certified);
-            testCase.verifyFalse(v.motionResponse.scheduleVerified);
         end
-        function weakenedMotionGainsFailIndependentPerformanceVerification(testCase)
-            c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());d=c.invariantDesign;
-            d.auxiliaryWeights(1:2)=d.auxiliaryWeights(1:2)/100;
-            v=localizationSupport.verifyInvariantDesign(d,c);
-            testCase.verifyFalse(v.motionResponse.verified);
-            testCase.verifyFalse(v.certified);
+        function withdrawnMotionColumnsStillHaveANominalCertificate(testCase)
+            c=mncavFullObserverConfig();c.invariantObserver.velocityAvailable=false;
+            c.invariantObserver.accelerationAvailable=false;
+            ready=freshObserverTestConfig(c);v=ready.invariantDesign.verification;
+            testCase.verifyTrue(v.certified);
+            testCase.verifyFalse(v.allAuxiliaryOutputsRequired);
+            testCase.verifyFalse(v.motionAvailabilityConfigured);
         end
-        function changingResponseTargetInvalidatesStoredGains(testCase)
-            c=freshObserverTestConfig();c.invariantObserver.motionResponse.timeConstantS=2;
-            testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
+        function fixedGainIsIndependentOfSpeedAndHeading(testCase)
+            c=freshObserverTestConfig();d=localizationSupport.runtime(c);
+            a=[0;5;1;0;0;0;0;0];b=[0;0;0;0;14;2;pi/2;0];
+            u=[.2;1;-.4;.03];valid=true(4,1);
+            pa=struct('value',localizationSupport.outputs(a,c)+u,'valid',valid);
+            pb=struct('value',localizationSupport.outputs(b,c)+u,'valid',valid);
+            xa=localizationSupport.correct(a,pa,.1,d,c);xb=localizationSupport.correct(b,pb,.1,d,c);
+            testCase.verifyEqual(xa-a,.1*d.M*u,AbsTol=2e-14);
+            testCase.verifyEqual(xb-b,xa-a,AbsTol=2e-14);
         end
         function brakeAndRestartAreTrackedWithoutPoseFeedback(testCase,dt)
             c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());
@@ -56,18 +54,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
             testCase.verifyTrue(all(isfinite(errors),'all'));
             testCase.verifyLessThan(rms(errors(:,1)),.6);
             testCase.verifyLessThan(rms(errors(:,2)),1);
-        end
-        function independentDensePhysicalModelsMeetTheMetricRate(testCase)
-            c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());
-            violation=physicalResponseResidual(c);
-            testCase.verifyLessThan(max(violation),1e-8);
-        end
-        function alteredScheduleDomainCannotRetainTheCertificate(testCase)
-            c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());d=c.invariantDesign;
-            d.motionGainSchedule.maximumSpeedMps=31;
-            v=localizationSupport.verifyInvariantDesign(d,c);
-            testCase.verifyFalse(v.certified);
-            testCase.verifyFalse(v.motionResponse.scheduleVerified);
         end
     end
 end
@@ -89,18 +75,29 @@ function errors=braking(c,dt,noiseScale)
     end
 end
 
-function residual=physicalResponseResidual(c)
-    d=c.invariantDesign;t=c.invariantObserver.theta;M=d.P\eye(8);R=M(2:3,2:3)\eye(2);
-    T=diag([t^2,t^3]);Q=T'\R/T;rate=1/c.invariantObserver.motionResponse.timeConstantS;
-    speeds=linspace(1,30,91);accels=linspace(-2,2,17);residual=zeros(numel(speeds)*numel(accels),1);index=0;
-    D=localizationSupport.outputNormalization(c);
-    for s=speeds
-        for a=accels
-            x=[0;s;a;0;0;0;0;0];[~,H]=localizationSupport.outputs(x,c);
-            k=localizationSupport.weights(d,s^2);K=diag(k([1,2,2,3]));
-            B=diag(t.^[1,2,3,1,2,3,1,2]);C=D*H*B;
-            feedback=t*B*(d.P\(C.'*K*D*H));F=[0,1;0,0]-feedback(2:3,2:3);
-            W=Q*F+F.'*Q+2*rate*Q;index=index+1;residual(index)=max(eig((W+W.')/2))/norm(Q,2);
+function worst=globalAxisResidual(cfg)
+    stream=RandStream('mt19937ar','Seed',20261121);
+    r=localizationSupport.runtime(cfg);d=cfg.invariantDesign;
+    T=r.toPhysical;t=r.theta;D=localizationSupport.outputNormalization(cfg);
+    ell=cfg.invariantObserver.headingLengthM;E=eye(8);C=E([1,4,7],:);
+    S=diag([cfg.iss.minimumPositionStrength*[1,1],cfg.iss.minimumHeadingStrength]) ...
+        -(cfg.iss.maximumPositionHeadingCoupling+cfg.invariantObserver.fusion.lidarOperatorMismatch)*eye(3);
+    worst=-Inf;
+    for j=1:80
+        course=2*pi*rand(stream);heading=2*pi*rand(stream);s=10+5*rand(stream);
+        direction=[cos(course);sin(course)];a=2*sqrt(rand(stream))*[cos(heading);sin(heading)];
+        x=zeros(8,1);x([2,5])=s*direction;x([3,6])=a;x(7)=2*pi*rand(stream);
+        [F,H,G]=localizationSupport.secants(x,x,cfg);
+        predictor=T\(F*T)/t;
+        G=[G;ell*E(7,:)]*T/t;
+        for mask=0:15
+            active=logical(bitget(mask,1:4));
+            motion=d.Z(:,active)*D(active,active)*H(active,:)*T;
+            for gnss=[0,1]
+                W=d.P*predictor-motion-gnss*d.P*d.K*G ...
+                    -d.kappaL*C.'*S*C-d.kappaR*E(:,8)*E(8,:);
+                worst=max(worst,max(eig(W+W.'+d.lambda*eye(8))));
+            end
         end
     end
 end

@@ -39,7 +39,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             testCase.verifyEqual(a.yawRate,expected,AbsTol=1e-12);
             testCase.verifyEqual(a.diagnostics.upstreamYawRateValid,valid);
             testCase.verifyEqual(a.diagnostics.packetCounts.upstreamYawRateValid,nnz(valid));
-            testCase.verifyFalse(a.diagnostics.auxiliaryAvailabilityContractSatisfied);
+            testCase.verifyTrue(a.diagnostics.auxiliaryAvailabilityContractSatisfied);
         end
         function rateValiditySurvivesSynchronization(testCase)
             [d,l,c]=fixture();l.yawRate=.1+l.time;l.yawRateValid=true(size(l.time));l.yawRateValid(2)=false;
@@ -92,7 +92,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             testCase.verifyEqual(a.position(:,1),expectedPosition,AbsTol=1e-12);
             testCase.verifyEqual(a.diagnostics.packetCounts.bodyVelocityValid,0);
             testCase.verifyFalse(a.diagnostics.observedMotionEnvelopeSatisfied);
-            testCase.verifyFalse(a.diagnostics.auxiliaryAvailabilityContractSatisfied);
+            testCase.verifyTrue(a.diagnostics.auxiliaryAvailabilityContractSatisfied);
             testCase.verifyFalse(any(a.diagnostics.allAuxiliaryOutputsAvailable));
         end
         function withdrawnPayloadCannotInfluenceAnyState(testCase)

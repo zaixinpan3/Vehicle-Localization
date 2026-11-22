@@ -30,8 +30,6 @@ function trial=nuscenesTrialConfig(steeringRatio)
     globalCfg=mncavFullObserverConfig();globalCfg.kind="nuscenes-overlap-development-trial";
     globalCfg.invariantObserver.gnssHeadingAvailable=false;
     globalCfg.invariantObserver.gnssPositionAvailable=false; % Declared GNSS-free nominal fusion.
-    globalCfg.invariantObserver.balancedPoseMetric=true;
-    globalCfg.invariantObserver=rmfield(globalCfg.invariantObserver,{'headingGainLimits','matchedGainLimits'});
     globalCfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2), ...
         'headingStdRad',0,'identifier',"nuScenes-rear-axle");
     globalCfg.invariantObserver.noise=struct('lidarPositionM',.1,'lidarHeadingRad',.01, ...

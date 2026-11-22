@@ -14,6 +14,5 @@ function [design,cfg]=synthesizeMncavInvariantDesign(cfg)
         runtime.continuousCertificate.verification.vertices,design.verification.worstVertexEigenvalue,design.templateNoiseEnergy);
     fprintf('DIRECT YAW RATE: solved %.9g /s; verified normalized rate-error energy %.9g\n', ...
         design.verification.yawRateGainPerSecond,design.verification.rateNoiseEnergy);
-    fprintf('MOTION RESPONSE: required %d, nominal time constant %.3g s; operating-set invariance assumed, radius not certified\n', ...
-        design.verification.motionResponse.required,design.verification.motionResponse.timeConstantS);
+    fprintf('CONSTANT OUTPUT GAINS: GNSS bandwidth ratio %.9g, LiDAR %.9g; four fixed auxiliary columns.\n',cfg.invariantObserver.gnssBandwidthRatio,design.kappaL);
 end

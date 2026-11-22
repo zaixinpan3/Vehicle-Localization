@@ -90,7 +90,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             lower=c;lower.invariantObserver.gnssHeadingAvailable=false;
             a=localizationSupport.fusionBlocks(c.invariantDesign,c);
             b=localizationSupport.fusionBlocks(c.invariantDesign,lower);
-            delta=zeros(8);delta(7,7)=-2*c.invariantDesign.kappaG;
+            Y=c.invariantDesign.P*c.invariantDesign.K(:,3);e=zeros(8,1);e(7)=1;
+            delta=zeros(size(a{1}));delta(1:8,1:8)=-Y*e.'-e*Y.';
             testCase.verifyEqual(a{1}-b{1},delta,AbsTol=1e-11);
             testCase.verifyError(@()localizationSupport.runtime(lower),'VehicleLocalization:StaleInvariantDesign');
         end
