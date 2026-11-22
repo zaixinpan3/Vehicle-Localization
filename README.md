@@ -505,7 +505,7 @@ selfScore = localizationSupport.scoreSemanticProbabilityCloudAlignment( ...
 [scores, queryInfo] = queryTemporalStabilityGmmMap(probabilityCloudMap, queryXY, "pole");
 % queryInfo.valid identifies coverage; invalid scores are NaN.
 
-design = designLateralObserverGains(lateralObserverConfig("mncav")); % nominal MnCAV LPV ISS synthesis
+design = designLateralObserverGains(lateralObserverConfig()); % nominal MnCAV LPV ISS synthesis
 estimate = runLateralVelocityObserver(measurements, design);    % v_y, r, side slip
 
 report = runMncavFullObserverExperiment; % fresh gains and current overlap cascade

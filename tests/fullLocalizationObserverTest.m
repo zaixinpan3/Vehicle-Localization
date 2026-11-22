@@ -85,15 +85,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             f=fixture(1,"none");f.cfg.initialState=[];
             testCase.verifyError(@() run(f),'VehicleLocalization:FullInitializationRequired');
         end
-        function missingTimingCannotActivateAHistoricalFallback(testCase)
-            f=fixture(2,"both");a=run(f);f.cfg=rmfield(f.cfg,'timing');b=run(f);
-            testCase.verifyEqual(a,b);
-            testCase.verifyTrue(b.diagnostics.nominalFusionLmiVerified);
-        end
-        function historicalRuntimeIsRejected(testCase)
-            f=fixture(1,"both");f.cfg.timing="historical_transport";
-            testCase.verifyError(@()run(f),'VehicleLocalization:ObsoleteFullConfig');
-        end
         function missingIssDomainCannotBypassDesign(testCase)
             f=fixture(1,"both");f.cfg=rmfield(f.cfg,'iss');
             testCase.verifyError(@()run(f),'VehicleLocalization:MissingFullIssDomain');

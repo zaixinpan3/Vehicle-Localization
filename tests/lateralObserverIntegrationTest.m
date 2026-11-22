@@ -206,13 +206,6 @@ classdef lateralObserverIntegrationTest < matlab.unittest.TestCase
             testCase.verifyEqual(a.lateralVelocityRate,ones(3,1),AbsTol=1e-12);
         end
 
-        function obsoleteFilterSettingsAreRejected(testCase)
-            cfg = testCase.Design.cfg;
-            cfg.sideSlip = struct('naturalFrequency',12);
-            m = testCase.measurements([0;.1],10);
-            testCase.verifyError(@() runLateralVelocityObserver(m,testCase.Design,cfg), ...
-                'VehicleLocalization:ObsoleteLateralConfiguration');
-        end
 
     end
     methods (Static, Access = private)

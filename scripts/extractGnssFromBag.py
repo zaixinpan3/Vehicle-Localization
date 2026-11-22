@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-from bisect import bisect_left
 from pathlib import Path
 
 from rosbags.rosbag1 import Reader
@@ -38,18 +37,6 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("data/raw/Missisipi/gnss"),
         help="Directory where CSV and manifest files will be written.",
-    )
-    parser.add_argument(
-        "--frame-start",
-        type=int,
-        default=260,
-        help="One-based LiDAR frame index used for the matched-pose preview export.",
-    )
-    parser.add_argument(
-        "--frame-count",
-        type=int,
-        default=10,
-        help="Number of LiDAR frames used for the matched-pose preview export.",
     )
     return parser.parse_args()
 
@@ -251,59 +238,6 @@ def lidar_row(message: object, timestamp_ns: int, row_index: int) -> dict:
     }
 
 
-def nearest_row(rows: list[dict], stamps: list[float], target_stamp: float) -> tuple[dict, float]:
-    insert_idx = bisect_left(stamps, target_stamp)
-    candidate_indices = [max(0, insert_idx - 1), min(len(rows) - 1, insert_idx)]
-    nearest_idx = min(candidate_indices, key=lambda idx: abs(stamps[idx] - target_stamp))
-    return rows[nearest_idx], rows[nearest_idx]["stamp_sec"] - target_stamp
-
-
-def build_lidar_pose_matches(
-    lidar_rows: list[dict],
-    odom_rows: list[dict],
-    inspva_rows: list[dict],
-    frame_start: int,
-    frame_count: int,
-) -> list[dict]:
-    odom_stamps = [row["stamp_sec"] for row in odom_rows]
-    inspva_stamps = [row["stamp_sec"] for row in inspva_rows]
-    frame_end = frame_start + frame_count - 1
-    selected_lidar_rows = [
-        row for row in lidar_rows if frame_start <= int(row["frame_index"]) <= frame_end
-    ]
-    matches = []
-    for lidar in selected_lidar_rows:
-        odom, odom_dt = nearest_row(odom_rows, odom_stamps, lidar["stamp_sec"])
-        inspva, inspva_dt = nearest_row(inspva_rows, inspva_stamps, lidar["stamp_sec"])
-        matches.append(
-            {
-                "frame_index": int(lidar["frame_index"]),
-                "lidar_stamp_sec": float(lidar["stamp_sec"]),
-                "nearest_odom_index": int(odom["index"]),
-                "odom_stamp_sec": float(odom["stamp_sec"]),
-                "odom_dt_sec": float(odom_dt),
-                "odom_x_m": float(odom["x_m"]),
-                "odom_y_m": float(odom["y_m"]),
-                "odom_z_m": float(odom["z_m"]),
-                "odom_qx": float(odom["qx"]),
-                "odom_qy": float(odom["qy"]),
-                "odom_qz": float(odom["qz"]),
-                "odom_qw": float(odom["qw"]),
-                "nearest_inspva_index": int(inspva["index"]),
-                "inspva_stamp_sec": float(inspva["stamp_sec"]),
-                "inspva_dt_sec": float(inspva_dt),
-                "latitude_deg": float(inspva["latitude_deg"]),
-                "longitude_deg": float(inspva["longitude_deg"]),
-                "height_m": float(inspva["height_m"]),
-                "roll_deg": float(inspva["roll_deg"]),
-                "pitch_deg": float(inspva["pitch_deg"]),
-                "azimuth_deg": float(inspva["azimuth_deg"]),
-                "ins_status": int(inspva["ins_status"]),
-            }
-        )
-    return matches
-
-
 def summarize_topic(reader: Reader, topic: str) -> dict:
     connections = topic_connections(reader, topic)
     return {
@@ -331,14 +265,6 @@ def main() -> None:
             "odom": read_topic_rows(reader, typestore, GNSS_TOPICS["odom"], odom_row),
             "front_lidar_points": read_topic_rows(reader, typestore, GNSS_TOPICS["front_lidar_points"], lidar_row),
         }
-        matches = build_lidar_pose_matches(
-            rows_by_name["front_lidar_points"],
-            rows_by_name["odom"],
-            rows_by_name["inspva"],
-            args.frame_start,
-            args.frame_count,
-        )
-        rows_by_name[f"front_lidar_pose_match_{args.frame_start}_{args.frame_start + args.frame_count - 1}"] = matches
         output_paths = {}
         for name, rows in rows_by_name.items():
             output_path = output_dir / f"{bag_path.stem}_{name}.csv"
@@ -349,12 +275,6 @@ def main() -> None:
             "bag": str(bag_path),
             "output_dir": str(output_dir),
             "topics": {name: summarize_topic(reader, topic) for name, topic in GNSS_TOPICS.items()},
-            "frame_match": {
-                "frame_start": args.frame_start,
-                "frame_count": args.frame_count,
-                "frame_end": args.frame_start + args.frame_count - 1,
-                "matched_rows": len(matches),
-            },
             "outputs": output_paths,
         }
         manifest_path = output_dir / f"{bag_path.stem}_gnss_manifest.json"

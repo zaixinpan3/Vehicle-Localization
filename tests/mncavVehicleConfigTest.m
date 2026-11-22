@@ -17,7 +17,7 @@ classdef mncavVehicleConfigTest < matlab.unittest.TestCase
             testCase.verifyFalse(p.loadedVehicleParametersIdentified);
         end
         function mncavProfileBuildsTheIntendedBicycleModel(testCase)
-            p=mncavVehicleConfig();cfg=lateralObserverConfig("mncav");
+            p=mncavVehicleConfig();cfg=lateralObserverConfig();
             model=lateralObserverSupport.lateralBicycleModel(cfg.vehicle);
             testCase.verifyEqual(model.vehicle,p.vehicle);
             testCase.verifyEqual(model.B(1),p.vehicle.frontCorneringStiffness/p.vehicle.mass,AbsTol=1e-12);
@@ -26,17 +26,12 @@ classdef mncavVehicleConfigTest < matlab.unittest.TestCase
         function mncavProfileLoadsTheCalibratedOutputPoint(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             stored=jsondecode(fileread(fullfile(root,'config','mncavMotionOutputPoint.json')));
-            cfg=lateralObserverConfig("mncav");
+            cfg=lateralObserverConfig();
             testCase.verifyEqual(cfg.outputPoint.forwardOffsetM,stored.forwardOffsetM);
             testCase.verifyGreaterThan(cfg.outputPoint.forwardOffsetM,1);
             testCase.verifyLessThan(cfg.outputPoint.forwardOffsetM,4);
             testCase.verifyFalse(stored.evaluationDriveUsed);
             testCase.verifyFalse(stored.runtimeReferenceUsed);
-        end
-        function removedReferenceProfileIsRejected(testCase)
-            testCase.verifyError(@() lateralObserverConfig("reference"), ...
-                'VehicleLocalization:RemovedVehicleProfile');
-            testCase.verifyEqual(lateralObserverConfig().vehicle,lateralObserverConfig("mncav").vehicle);
         end
     end
 end

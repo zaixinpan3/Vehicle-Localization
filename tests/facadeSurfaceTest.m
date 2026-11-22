@@ -106,8 +106,8 @@ end
 
 function cfg=mappingScene(folder,frame)
     pointClouds=repmat(frame,1,3);save(fullfile(folder,'points.mat'),'pointClouds','-v7.3');
-    poses=table((1:3).',zeros(3,1),zeros(3,1),zeros(3,1),90*ones(3,1),zeros(3,1),zeros(3,1), ...
-        'VariableNames',{'frame_index','odom_x_m','odom_y_m','odom_z_m','azimuth_deg','roll_deg','pitch_deg'});
+    poses=table((1:3).',zeros(3,1),zeros(3,1),zeros(3,1),ones(3,1),zeros(3,1),zeros(3,1),zeros(3,1), ...
+        'VariableNames',{'frame_index','pose_x_m','pose_y_m','pose_z_m','pose_qw','pose_qx','pose_qy','pose_qz'});
     writetable(poses,fullfile(folder,'poses.csv'));
     cfg=featureMapBuildConfig();cfg.pointCloudMatPath="points.mat";cfg.poseMatchCsvPath="poses.csv";
     cfg.mapOutputPath="";cfg.frameIndices=1:3;cfg.batchFrameCount=3;cfg.batchFrameStride=3;

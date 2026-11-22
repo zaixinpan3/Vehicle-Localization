@@ -17,7 +17,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
         options.Scenarios (1,:) string=strings(1,0)
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
-    lateralCfg=lateralObserverConfig("mncav");design=designLateralObserverGains(lateralObserverConfig());
+    lateralCfg=lateralObserverConfig();design=designLateralObserverGains(lateralCfg);
     cfg=mncavFullObserverConfig();settings=scenarioSettings(lateralCfg,cfg);
     % Generate every stress case with the same design for the declared synthetic receiver.
     cfg.invariantObserver.noise.gnssHeadingRad=settings.noise.gnssHeadingStdRad;

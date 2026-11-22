@@ -28,7 +28,7 @@ classdef heightProbabilityCloudTest < matlab.unittest.TestCase
         end
         function heightReferenceMatchesOfflineCoordinateTransform(testCase)
             row=array2table([10 -20 123 cos(0.1) 0 sin(0.1) 0], ...
-                'VariableNames',{'odom_x_m','odom_y_m','odom_z_m','odom_qw','odom_qx','odom_qy','odom_qz'});
+                'VariableNames',{'pose_x_m','pose_y_m','pose_z_m','pose_qw','pose_qx','pose_qy','pose_qz'});
             [pose,tilt,height]=localizationSupport.poseRowToPlanarPose(row);
             points=[1 2 3;4 -1 2];
             yaw=[cos(pose(3)) -sin(pose(3)) 0;sin(pose(3)) cos(pose(3)) 0;0 0 1];

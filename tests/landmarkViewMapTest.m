@@ -51,7 +51,7 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
             actual=localizationSupport.conditionSemanticMapOnView(landmarkViewMapTest.example(),[0 0 pi]);
             t.verifyEqual(actual.components.viewReliability,[0;1]);
         end
-        function legacyCloudIsUnchanged(t)
+        function cloudWithoutViewsKeepsItsComponents(t)
             cloud=rmfield(landmarkViewMapTest.example(),'landmarkViews');
             [actual,details]=localizationSupport.conditionSemanticMapOnView(cloud,[0 0 0]);
             t.verifyEqual(actual,cloud);t.verifyFalse(details.enabled);
@@ -116,8 +116,8 @@ classdef landmarkViewMapTest < matlab.unittest.TestCase
         function [base,f]=mappingFixture()
             base=rmfield(landmarkViewMapTest.example(),'landmarkViews');
             p=[-.1 -.1 0;-.1 .1 1;.1 -.1 2;.1 .1 3];points={p,p+[.9 0 0],p+[.4 0 0];zeros(0,3),zeros(0,3),zeros(0,3)};
-            poses=table([10;20;30],[-2;0;2],zeros(3,1),zeros(3,1),90*ones(3,1),zeros(3,1),zeros(3,1), ...
-                VariableNames={'frame_index','odom_x_m','odom_y_m','odom_z_m','azimuth_deg','roll_deg','pitch_deg'});
+            poses=table([10;20;30],[-2;0;2],zeros(3,1),zeros(3,1),ones(3,1),zeros(3,1),zeros(3,1),zeros(3,1), ...
+                VariableNames={'frame_index','pose_x_m','pose_y_m','pose_z_m','pose_qw','pose_qx','pose_qy','pose_qz'});
             f=struct('featureNames',["pole";"curb"],'frameIndices',[10 20 30], ...
                 'framePoseTable',poses,'pointsByFeatureFrame',{points},'frameCalibration',base.frameCalibration);
         end

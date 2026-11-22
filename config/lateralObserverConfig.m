@@ -1,4 +1,4 @@
-function cfg = lateralObserverConfig(profile)
+function cfg = lateralObserverConfig()
 % lateralObserverConfig: Parameters of the LPV lateral-velocity observer.
 % Two-state nominal bicycle dynamics with outputs y = [Vx*ay; r].
 % P uses three speed vertices; Y=X*L uses a common recovery matrix X.
@@ -8,19 +8,9 @@ function cfg = lateralObserverConfig(profile)
 % Default vehicle parameters come from config/mncavVehicleParameters.json.
 % MnCAV is the only supported vehicle profile.
 %
-% Input:
-%   profile: optional "mncav" selector, retained for existing callers.
-%       All parameters come from the adopted identification and public geometry.
-%       Re-synthesize lateral gains after changing the vehicle configuration.
-%
 % Output:
 %   cfg: struct with vehicle, outputPoint, scheduling, synthesis, observer, and
 %       simulation groups
-    arguments
-        profile (1,1) string = "mncav"
-    end
-    assert(profile == "mncav", "VehicleLocalization:RemovedVehicleProfile", ...
-        "Only the current MnCAV configuration is supported. Use lateralObserverConfig().");
     cfg = struct();
 
     % Single source for the adopted 2-DOF lateral bicycle model.
@@ -66,8 +56,6 @@ function cfg = lateralObserverConfig(profile)
     % Freeze LPV coefficients at each interval midpoint and exponentiate
     % the resulting affine flow. This is a numerical implementation,
     % not an extension of the continuous ISS certificate to sampled data.
-    % Fixed implementation identifier retained in experiment metadata.
-    cfg.observer.integrationMethod = "exponentialMidpoint";
     cfg.observer.initialState = [0.0; 0.0];
     % Only the LPV [vy; r] state estimates velocity. Out-of-domain samples
     % hold that state and withdraw its exported velocity aiding.

@@ -42,20 +42,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
-        function headingOnlyMixedCertificateCannotBeReused(testCase)
-            c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='intrinsic-vector-iss-v3';
-            testCase.verifyError(@()localizationSupport.runtime(c), ...
-                'VehicleLocalization:StaleInvariantDesign');
-        end
         function parameterFactoryHasNoSolvedGains(testCase)
             c=mncavFullObserverConfig();
             testCase.verifyFalse(isfield(c,'invariantDesign'));
             testCase.verifyEqual(c.gainSource,"unsolved-invariant");
         end
         function publicScriptResolvesEvenWhenAnOldDesignIsSupplied(testCase)
-            c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='pose-four-vertex-v26';
+            c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='invalid';
             [d,ready]=synthesizeMncavInvariantDesign(c);
-            testCase.verifyFalse(isfield(d,'kappaL'));
             testCase.verifyTrue(d.verification.nominalFusionLmiVerified);
             testCase.verifyEqual(ready.invariantDesign,d);
             testCase.verifyEqual(ready.gainSource,"fresh-lmi");
@@ -75,13 +69,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function synchronizationRequiresOnlyLateralVelocity(testCase)
             [d,l,c]=fixture();t=(.05:.1:.95).';n=numel(t);
-            l.sideSlipAngleRate=.04*l.time;
             d.lidar=struct('time',t,'pose',zeros(n,3),'valid',true(n,1), ...
                 'information',repmat(eye(3),1,1,n),'delay',0);
             c.synchronization.motionMaximumBracket=.2;
             [~,aligned]=syntheticObserver.align(d,l,c);
             testCase.verifyFalse(isfield(aligned,'sideSlipAngle'));
-            testCase.verifyFalse(isfield(aligned,'sideSlipAngleRate'));
             testCase.verifyEqual(aligned.lateralVelocity,interp1(l.time,l.lateralVelocity,t),AbsTol=1e-12);
         end
         function bodyLateralOutputRequiresNoAnglePayload(testCase)
@@ -91,25 +83,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             first=supplied.diagnostics.invariantOutputs{1};
             testCase.verifyEqual(first.predicted(4),-8*sin(c.initialState(7)),AbsTol=1e-12);
             testCase.verifyFalse(isfield(supplied.lateral,'sideSlipAngle'));
-            l.sideSlipAngle=nan(size(l.time));
-            legacy=runFullLocalizationObserver(d,c,LateralInputs=l);
-            testCase.verifyEqual(legacy.internalState,supplied.internalState,AbsTol=0);
-        end
-        function sideslipRateIsNeitherRequiredNorConsumed(testCase)
-            [d,l,c]=fixture();baseline=runFullLocalizationObserver(d,c,LateralInputs=l);
-            l.sideSlipAngleRate(:)=NaN;
-            poisoned=runFullLocalizationObserver(d,c,LateralInputs=l);
-            l=rmfield(l,'sideSlipAngleRate');
-            omitted=runFullLocalizationObserver(d,c,LateralInputs=l);
-            testCase.verifyEqual(poisoned.internalState,baseline.internalState,AbsTol=0);
-            testCase.verifyEqual(omitted.internalState,baseline.internalState,AbsTol=0);
-        end
-        function withdrawnRatePayloadCannotAffectTheEstimate(testCase)
-            [d,l,c]=fixture();d.highRate.bodyVelocityValid=false(size(l.time));
-            baseline=runFullLocalizationObserver(d,c,LateralInputs=l);
-            l.sideSlipAngleRate(:)=NaN;
-            poisoned=runFullLocalizationObserver(d,c,LateralInputs=l);
-            testCase.verifyEqual(poisoned.internalState,baseline.internalState,AbsTol=1e-12);
         end
         function stoppedPacketHasOnlyFourMotionOutputs(testCase)
             c=freshObserverTestConfig();
@@ -125,26 +98,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         function squaredSpeedGainIsActiveAndHasNoScalarReplacement(testCase)
             c=freshObserverTestConfig();design=localizationSupport.runtime(c);
             testCase.verifyGreaterThan(design.auxiliaryWeights(1),0);
-            testCase.verifyFalse(isfield(design,'speedGainNormalized'));
-            testCase.verifyFalse(isfield(c.invariantDesign,'speedDesign'));
-        end
-        function nominalResponseReplacesRemovedRegionalDecayFields(testCase)
-            c=freshObserverTestConfig();v=c.invariantDesign.verification;
-            testCase.verifyFalse(isfield(c.invariantObserver,'minimumDirectRatesPerSecond'));
-            testCase.verifyFalse(isfield(c.invariantObserver.fusion,'nominalDecayRatePerSecond'));
-            testCase.verifyFalse(isfield(v,'motionResponse'));
-            testCase.verifyFalse(isfield(v,'regionalIss'));
-            testCase.verifyFalse(v.allAuxiliaryOutputsRequired);
-        end
-        function eightOutputCertificateCannotBeReused(testCase)
-            c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='intrinsic-vector-iss-v5';
-            testCase.verifyError(@()localizationSupport.runtime(c), ...
-                'VehicleLocalization:StaleInvariantDesign');
-        end
-        function projectedSpeedCertificateCannotBeReused(testCase)
-            c=freshObserverTestConfig();c.invariantDesign.inputs.architecture='intrinsic-vector-iss-v4';
-            testCase.verifyError(@()localizationSupport.runtime(c), ...
-                'VehicleLocalization:StaleInvariantDesign');
         end
         function missingSquaredSpeedWeightRejectsMotionDesign(testCase)
             c=freshObserverTestConfig();c.invariantDesign.auxiliaryWeights(1)=0;
@@ -199,7 +152,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
                 'lateralAcceleration',zero,'yawRate',zero));
             d.lidar=struct('time',t,'pose',[5*t,zero,zero],'valid',true(n,1), ...
                 'information',repmat(1e6*eye(3),1,1,n),'delay',0);
-            l=struct('time',t,'lateralVelocity',nan(n,1),'sideSlipAngleRate',zero);
+            l=struct('time',t,'lateralVelocity',nan(n,1));
             c=freshObserverTestConfig();c.initialState=[.2;0;0;-.1;0;0;.02];
             a=syntheticObserver.run(d,c,LateralInputs=l);
             fprintf('POSE-ONLY 20 s: position %.9g m, velocity %.9g m/s\n', ...
@@ -226,9 +179,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyEqual(H,numerical,AbsTol=1e-8);
         end
         function bodyMeasurementsMatchInvariantsWithoutKnowingGlobalYaw(testCase)
-            c=freshObserverTestConfig();v=[8;.4];a=[.2;1.3];psi=.7;betaRate=.015;
+            c=freshObserverTestConfig();v=[8;.4];a=[.2;1.3];psi=.7;r=.14;
             R=[cos(psi),-sin(psi);sin(psi),cos(psi)];vg=R*v;ag=R*a;
-            r=(v(1)*a(2)-v(2)*a(1))/(v.'*v)-betaRate;x=[0;vg(1);ag(1);0;vg(2);ag(2);psi;r];
+            x=[0;vg(1);ag(1);0;vg(2);ag(2);psi;r];
             packet=localizationSupport.measurements(v(1),v(2),a(1),a(2),true,true,c);
             y=localizationSupport.outputs(x,c);
             testCase.verifyEqual(y,packet.value,AbsTol=1e-12);
@@ -240,6 +193,6 @@ function [d,l,c]=fixture()
     t=(0:.1:1).';zero=zeros(size(t));
     d=struct('highRate',struct('time',t,'longitudinalSpeed',8+zero, ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero));
-    l=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngleRate',zero);
+    l=struct('time',t,'lateralVelocity',zero,'yawRate',zero);
     c=freshObserverTestConfig();c.initialState=[0;8;0;0;0;0;.1];
 end

@@ -43,9 +43,9 @@ classdef temporalStabilityGmmMapTest < matlab.unittest.TestCase
             testCase.verifyEqual(map.layers.referenceMass,size(cells,1)*p.defaultParams.referenceResolution^2,'AbsTol',1e-12);
             testCase.verifyGreaterThan(numel(map.layers.tiles),1);
         end
-        function removedSamplingConfigurationIsRejected(testCase)
-            [p,x,l,b]=testCase.fixture(2); p.defaultParams.temporalReliabilitySamplingFloor=0.05;
-            testCase.verifyError(@() buildTemporalStabilityGmmMap(x,l,b,p),'buildTemporalStabilityGmmMap:RemovedParameter');
+        function unknownClassParameterIsRejected(testCase)
+            [p,x,l,b]=testCase.fixture(2); p.defaultParams.unknownOption=0.05;
+            testCase.verifyError(@() buildTemporalStabilityGmmMap(x,l,b,p),'buildTemporalStabilityGmmMap:UnknownParameter');
         end
         function backgroundKeepsUnexplainedReferenceMass(testCase)
             [p,x,l,b]=testCase.fixture(3); map=buildTemporalStabilityGmmMap(x,l,b,p);

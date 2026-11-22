@@ -27,59 +27,49 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
             buildPillarShapeScores(maps.supportEvidence,maps.occupiedMask,cfg,maps.dx,maps.dy);
     end
     maps.moments=projectStatistics(stats,prod(mapSize),cloudCfg);
-    % Pole evidence: either the legacy density core or a supported shaft.
+    % Pole evidence: density-core statistics or validated shaft support.
     maps.coreFraction=zeros(mapSize); maps.coreHeight=zeros(mapSize); maps.coreIsolation=zeros(mapSize);
     maps.corePeakX=nan(mapSize); maps.corePeakY=nan(mapSize);
     maps.corePointCount=zeros(mapSize);
-    validatedMode=isfield(cfg.pole,'detector') && cfg.pole.detector=="validatedShaft";
-    jointMode=validatedMode && isfield(cfg.pole,'distributionValidation') && cfg.pole.distributionValidation.enabled;
-    shaftMode=isfield(cfg.pole,'detector') && any(cfg.pole.detector==["shaft","validatedShaft"]);
-    subsetMode=isfield(cfg.pole,'detector') && any(cfg.pole.detector==["subset","shaft","validatedShaft"]);
-    if any(cloudCfg.semanticNames=="pole") && subsetMode
-        if shaftMode
-            polePointScore=maps.pointScore;poleLineScore=maps.lineScore;
-            if jointMode
-                [polePointScore,poleLineScore]=originalLatticeShape(pillars,maps,cfg);
-            end
-            shaftCfg=cfg.pole.shaft;shaftCfg.useNativeKernels=useNative;
-            shaftCfg.columnMinimumScores=min(shaftCfg.strongScore, ...
-                shaftCfg.minimumShapeProduct./max(double(polePointScore(ids)),eps));
-            maps.poleModes=findPillarShaftModes(pillars.points,pillars.pointPillarLinIdx,geometry,shaftCfg);
-            [maps.poleSubset,maps.poleShaftGroups]=assignPillarShaftSupport( ...
-                pillars.points,pillars.pointPillarLinIdx,geometry,maps.poleModes,shaftCfg);
-            if validatedMode
-                structuralMask=true(size(pillars.points,1),1);
-                if isfield(pillars.pointAttributes,'intensity')
-                    intensity=pillars.pointAttributes.intensity;
-                    structuralMask=~(isfinite(intensity) & intensity>cfg.trafficSignIntensityThreshold);
-                end
-                % Reuse the inexpensive legacy statistic gates only to limit
-                % extra proposals. No legacy label bypasses validation.
-                tall=stats.count>=cfg.pole.minimumPoints & stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.pole.minimumHeight;
-                [maps.coreFraction(ids),maps.coreHeight(ids),maps.coreIsolation(ids),peak,maps.corePointCount(ids)]=computePillarDensityCore( ...
-                    pillars.points,pillars.pointPillarLinIdx,geometry,cfg.pole.densityPeakBinMeters,cfg.pole.coreRadius,cfg.pole.isolationRadius,tall);
-                maps.corePeakX(ids)=peak(:,1);maps.corePeakY(ids)=peak(:,2);
-                proposalCfg=cfg.pole;proposalCfg.detector="pillar";
-                proposalCandidates=detectPolePillars(maps,false(mapSize),proposalCfg);
-                maps.poleValidationProposals=completePoleProposals(maps.poleSubset,stats,cfg.pole,proposalCandidates.candidateMask(ids));
-                if jointMode
-                    maps.poleValidation=classifyPillarPoleSupport(pillars.points,pillars.pointPillarLinIdx, ...
-                        geometry,maps.poleValidationProposals,cfg.pole.validation,structuralMask, ...
-                        polePointScore,poleLineScore,cfg.pole.distributionValidation);
-                else
-                    maps.poleValidation=validatePillarPoleSupport(pillars.points,pillars.pointPillarLinIdx, ...
-                        geometry,maps.poleValidationProposals,cfg.pole.validation,structuralMask,double(maps.pointScore(ids)));
-                end
-            end
-        else
-            subsetCfg=cfg.pole.subset; subsetCfg.useNativeKernels=useNative;
-            maps.poleSubset=findPillarPoleSubsets(pillars.points,pillars.pointPillarLinIdx,geometry,subsetCfg);
+    validatedMode=cfg.pole.detector=="validatedShaft";
+    jointMode=validatedMode && cfg.pole.distributionValidation.enabled;
+    if any(cloudCfg.semanticNames=="pole") && validatedMode
+        polePointScore=maps.pointScore;poleLineScore=maps.lineScore;
+        if jointMode
+            [polePointScore,poleLineScore]=originalLatticeShape(pillars,maps,cfg);
         end
-        maps.coreHeight(ids)=maps.poleSubset.height;
-        maps.corePointCount(ids)=maps.poleSubset.supportCount;
-        maps.corePeakX(ids)=maps.poleSubset.axisXY(:,1); maps.corePeakY(ids)=maps.poleSubset.axisXY(:,2);
+        shaftCfg=cfg.pole.shaft;shaftCfg.useNativeKernels=useNative;
+        shaftCfg.columnMinimumScores=min(shaftCfg.strongScore, ...
+            shaftCfg.minimumShapeProduct./max(double(polePointScore(ids)),eps));
+        maps.poleModes=findPillarShaftModes(pillars.points,pillars.pointPillarLinIdx,geometry,shaftCfg);
+        [maps.poleShaftSupport,maps.poleShaftGroups]=assignPillarShaftSupport( ...
+            pillars.points,pillars.pointPillarLinIdx,geometry,maps.poleModes,shaftCfg);
+        structuralMask=true(size(pillars.points,1),1);
+        if isfield(pillars.pointAttributes,'intensity')
+            intensity=pillars.pointAttributes.intensity;
+            structuralMask=~(isfinite(intensity) & intensity>cfg.trafficSignIntensityThreshold);
+        end
+        % The density-core gates propose additional shafts for the same validation.
+        tall=stats.count>=cfg.pole.minimumPoints & stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.pole.minimumHeight;
+        [maps.coreFraction(ids),maps.coreHeight(ids),maps.coreIsolation(ids),peak,maps.corePointCount(ids)]=computePillarDensityCore( ...
+            pillars.points,pillars.pointPillarLinIdx,geometry,cfg.pole.densityPeakBinMeters,cfg.pole.coreRadius,cfg.pole.isolationRadius,tall);
+        maps.corePeakX(ids)=peak(:,1);maps.corePeakY(ids)=peak(:,2);
+        proposalCfg=cfg.pole;proposalCfg.detector="pillar";
+        proposalCandidates=detectPolePillars(maps,false(mapSize),proposalCfg);
+        maps.poleValidationProposals=completePoleProposals(maps.poleShaftSupport,stats,cfg.pole,proposalCandidates.candidateMask(ids));
+        if jointMode
+            maps.poleValidation=classifyPillarPoleSupport(pillars.points,pillars.pointPillarLinIdx, ...
+                geometry,maps.poleValidationProposals,cfg.pole.validation,structuralMask, ...
+                polePointScore,poleLineScore,cfg.pole.distributionValidation);
+        else
+            maps.poleValidation=validatePillarPoleSupport(pillars.points,pillars.pointPillarLinIdx, ...
+                geometry,maps.poleValidationProposals,cfg.pole.validation,structuralMask,double(maps.pointScore(ids)));
+        end
+        maps.coreHeight(ids)=maps.poleShaftSupport.height;
+        maps.corePointCount(ids)=maps.poleShaftSupport.supportCount;
+        maps.corePeakX(ids)=maps.poleShaftSupport.axisXY(:,1); maps.corePeakY(ids)=maps.poleShaftSupport.axisXY(:,2);
     end
-    if any(cloudCfg.semanticNames=="pole") && (~subsetMode || (shaftMode && ~validatedMode))
+    if any(cloudCfg.semanticNames=="pole") && ~validatedMode
         % The core is measured only where the cheap whole-pillar gates can pass.
         tall=stats.count>=cfg.pole.minimumPoints & stats.maximumXYZ(:,3)-stats.minimumXYZ(:,3)>=cfg.pole.minimumHeight;
         [maps.coreFraction(ids),maps.coreHeight(ids),maps.coreIsolation(ids),peak,maps.corePointCount(ids)]=computePillarDensityCore( ...
@@ -153,14 +143,6 @@ function result=analyzeStructuralPillars(pillars,cfg,cloudCfg)
     poleEvidence=double(maps.pointScore).*(1-double(maps.lineScore));
     if validatedMode && isfield(maps,'poleValidation') && cfg.pole.probabilityEvidence=="validatedShaft"
         poleEvidence=zeros(mapSize);poleEvidence(ids)=maps.poleValidation.score;
-    elseif subsetMode && isfield(maps,'poleSubset') && any(cfg.pole.probabilityEvidence==["subset","shaft"])
-        poleEvidence=zeros(mapSize); poleEvidence(ids)=maps.poleSubset.score;
-        if shaftMode && isfield(candidates,'legacyCandidateMask') && any(candidates.legacyCandidateMask(:))
-            peak=[maps.corePeakX(ids),maps.corePeakY(ids)];
-            legacyEvidence=scorePolePillarDistributions(pillars.points,pillars.pointPillarLinIdx, ...
-                geometry,peak,candidates.legacyCandidateMask(ids),cfg.pole.distribution);
-            poleEvidence(ids)=max(poleEvidence(ids),legacyEvidence.score);
-        end
     elseif isfield(cfg.pole,'probabilityEvidence') && cfg.pole.probabilityEvidence=="distribution" && any(poleMask(:))
         peak=[maps.corePeakX(ids),maps.corePeakY(ids)];
         maps.poleDistribution=scorePolePillarDistributions(pillars.points,pillars.pointPillarLinIdx, ...
@@ -194,7 +176,7 @@ end
 
 function modes=completePoleProposals(modes,stats,cfg,eligible)
 % Whole-pillar axes rescue search omissions; they still require validation.
-% This is a proposal mechanism, never a union with legacy accepted labels.
+% Every proposed axis goes through shaft validation.
     covariance=stats.covarianceXYZ;
     slope=covariance(:,4:5)./max(covariance(:,6),eps);
     variance=max(0,covariance(:,1)+covariance(:,3)- ...

@@ -79,9 +79,6 @@ classdef carlaProfileTest < matlab.unittest.TestCase
             open=perceiveFrame(frame,cfg).featureMasks.pole;
             cfg.fine.poleStructureRejectionEnabled=true;
             gated=perceiveFrame(frame,cfg).featureMasks.pole;
-            cfg.fine=rmfield(cfg.fine,'poleStructureRejectionEnabled');
-            legacy=perceiveFrame(frame,cfg).featureMasks.pole;
-            testCase.verifyEqual(open,legacy);
             nearPole=hypot(xyz(:,1)-8,xyz(:,2)-4)<0.5;nearTrunk=hypot(xyz(:,1)-8,xyz(:,2)+4)<0.5;
             testCase.verifyGreaterThan(nnz(gated&nearPole),50);
             testCase.verifyEqual(nnz(gated&nearPole),nnz(open&nearPole));

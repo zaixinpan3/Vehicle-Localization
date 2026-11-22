@@ -19,9 +19,9 @@ classdef currentPerceptionReferenceTest < matlab.unittest.TestCase
             actual=perceiveFrame(frame,cfg);
             testCase.verifyEqual(actual.featureMasks,expected.featureMasks);
         end
-        function rejectsRemovedExecutionMode(testCase)
+        function rejectsUnknownExecutionMode(testCase)
             frame=struct('x',10,'y',2,'z',1);
-            cfg=perceptionConfig(); cfg.executionMode="legacyFull";
+            cfg=perceptionConfig(); cfg.executionMode="unknown";
             testCase.verifyError(@() perceiveFrame(frame,cfg),'perception:InvalidExecutionMode');
         end
     end

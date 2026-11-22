@@ -1,15 +1,13 @@
 classdef inspvaMappingPoseTest < matlab.unittest.TestCase
-% inspvaMappingPoseTest Pose precedence and cached-feature reprojection.
+% inspvaMappingPoseTest Synchronized mapping poses and cached-feature reprojection.
     methods (TestClassSetup)
         function paths(~)
             setupVehicleLocalization();
         end
     end
     methods (Test)
-        function explicitPoseOverridesStaleOdom(testCase)
+        function quaternionRotatesLocalPointsIntoTheMap(testCase)
             row=inspvaMappingPoseTest.canonicalPose();
-            row.odom_x_m=1e6;row.odom_y_m=-1e6;row.odom_z_m=100;
-            row.odom_qw=1;row.odom_qx=0;row.odom_qy=0;row.odom_qz=0;
             actual=registerPointsToGlobalFrame([1,0,0;0,1,0],row);
             [pose,tilt,height]=localizationSupport.poseRowToPlanarPose(row);
             testCase.verifyEqual(actual,[10,21,30;9,20,30],'AbsTol',1e-12);
@@ -17,9 +15,8 @@ classdef inspvaMappingPoseTest < matlab.unittest.TestCase
             testCase.verifyEqual(tilt,eye(3),'AbsTol',1e-12);
             testCase.verifyEqual(height,30,'AbsTol',0);
         end
-        function incompleteCanonicalPoseCannotFallBack(testCase)
+        function incompleteQuaternionIsRejected(testCase)
             row=inspvaMappingPoseTest.canonicalPose();row.pose_qz=[];
-            row.odom_x_m=0;row.odom_y_m=0;row.azimuth_deg=0;
             testCase.verifyError(@()localizationSupport.poseRowToPlanarPose(row),'VehicleLocalization:IncompletePose');
         end
         function invalidCanonicalQuaternionIsRejected(testCase)
@@ -28,7 +25,7 @@ classdef inspvaMappingPoseTest < matlab.unittest.TestCase
         end
         function reprojectionPreservesLocalFeatureGeometry(testCase)
             old=array2table([1,100,-20,4,1,0,0,0],VariableNames= ...
-                {'frame_index','odom_x_m','odom_y_m','odom_z_m','odom_qw','odom_qx','odom_qy','odom_qz'});
+                {'frame_index','pose_x_m','pose_y_m','pose_z_m','pose_qw','pose_qx','pose_qy','pose_qz'});
             data=struct('frameIndices',1,'featureNames',"curb",'framePoseTable',old, ...
                 'pointsByFeatureFrame',{{[101,-18,7;104,-21,6]}},'counts',2);
             replacement=inspvaMappingPoseTest.canonicalPose();replacement.frame_index=1;

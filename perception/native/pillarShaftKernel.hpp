@@ -1,10 +1,10 @@
 // Bounded shaft modes on original pillar points; mirrors findPillarShaftModes.m.
 namespace pillar_shaft {
-using pole_subset::Point;
-using pole_subset::Axis;
-using pole_subset::balancedAxis;
-using pole_subset::distance;
-using pole_subset::quantile;
+struct Point { double x,y,z; bool owned; };
+struct Axis { double x,y,z,sx,sy; };
+double distance(const Point& p,const Axis& a) {
+    return std::hypot(p.x-a.x-(p.z-a.z)*a.sx,p.y-a.y-(p.z-a.z)*a.sy);
+}
 
 struct FitScratch {
     std::vector<Point> sorted;

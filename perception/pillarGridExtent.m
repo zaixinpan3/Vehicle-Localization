@@ -4,8 +4,6 @@ function extent = pillarGridExtent(cfg)
 % sensor origin plus latticeOffset. There is no separate region of interest: returns outside the
 % lattice are ignored by pillarizePointCloud. An optional cfg.latticeOffset
 % [dx dy] sets its center without introducing a second geometry path.
-    assert(~isfield(cfg, "roiLimits"), "perception:ObsoleteRoiLimits", ...
-        "The pillar lattice is fixed by gridDims and voxelSize; remove roiLimits.");
     spacing = double(cfg.voxelSize(:).');
     dims = double(cfg.gridDims(:).');
     assert(numel(spacing) == 2, "perception:InvalidPillarSpacing", ...

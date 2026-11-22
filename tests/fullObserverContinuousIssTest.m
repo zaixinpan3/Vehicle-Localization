@@ -12,19 +12,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             testCase.verifyTrue(d.nominalFusionLmiVerified);
             testCase.verifyLessThan(d.continuousCertificate.verification.worstVertexEigenvalue,0);
         end
-        function timingDoesNotSelectAnotherGainDesign(testCase)
-            c=freshObserverTestConfig();a=localizationSupport.designFullObserverGains(c);
-            b=localizationSupport.designFullObserverGains(rmfield(c,'timing'));
-            testCase.verifyEqual(a,b);
-            c.timing="historical_transport";
-            testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:ObsoleteFullConfig');
-        end
-        function retiredConfigurationsCannotSelectAnAlternative(testCase)
-            c=struct('kind',"old-seven-state",'gains',[4,4,12,4]);
-            testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
-            c=freshObserverTestConfig();c.hgo=struct();
-            testCase.verifyError(@()localizationSupport.designFullObserverGains(c),'VehicleLocalization:RemovedFullObserverConfig');
-        end
         function changedNoiseCannotReuseTemporaryGains(testCase)
             c=freshObserverTestConfig();c.invariantObserver.noise.accelerationMps2=2*c.invariantObserver.noise.accelerationMps2;
             testCase.verifyError(@()localizationSupport.runtime(c), ...

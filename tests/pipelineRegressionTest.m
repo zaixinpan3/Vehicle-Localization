@@ -1,8 +1,8 @@
 classdef pipelineRegressionTest < matlab.unittest.TestCase
 % pipelineRegressionTest: Current perception and mapping on recorded scenarios.
 % Point masks are compared with immutable current-output JSON. The original
-% MAT reference supplies scenario indices and matched poses without executing
-% its historical implementation. Set VEHICLE_LOCALIZATION_DATA_ROOT to the
+% MAT reference supplies scenario indices and queries. Mapping reads synchronized
+% poses from the dataset. Set VEHICLE_LOCALIZATION_DATA_ROOT to the
 % folder holding raw/MissisipiPointClouds.mat and raw/downTownPointClouds.mat.
 
     properties (Access = private)
@@ -54,8 +54,7 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
         end
 
         function mappingBuildsRepeatableFieldFromReferenceObservations(testCase)
-        % The archived noisy-OR scores are historical evidence, not the target
-        % of the new model. Keep the original reference artifact unchanged.
+        % Check the mapped field on the recorded query points.
             testCase.assumeDataAvailable();
             reference = testCase.Reference.map;
             matPath = fullfile(testCase.DataRoot, testCase.Reference.mississippi.matFile);
@@ -65,7 +64,8 @@ classdef pipelineRegressionTest < matlab.unittest.TestCase
             cfg.frameIndices = reference.frameIndices;
             perceptionCfg=perceptionConfig("Mississippi","offline");
             perceptionCfg.featureNames = cfg.featureNames;
-            featureData = collectFeatureObservations(matPath, reference.frameIndices, reference.poseTable, perceptionCfg, cfg);
+            poses = readFramePoseTable(fullfile(testCase.DataRoot,cfg.poseMatchCsvPath),reference.frameIndices);
+            featureData = collectFeatureObservations(matPath, reference.frameIndices, poses, perceptionCfg, cfg);
             probabilityCloudMap = buildSlidingWindowMap(featureData, cfg);
             gmmMap = probabilityCloudMap.canonicalMap;
             cloud = temporalMapToProbabilityCloud(probabilityCloudMap);

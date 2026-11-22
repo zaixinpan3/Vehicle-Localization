@@ -28,10 +28,6 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
         cfg (1,1) struct=mncavFullObserverConfig()
         options.LateralInputs (1,1) struct=struct()
     end
-    assert(~isfield(data,'lidarMatcher'),'VehicleLocalization:ArchivedRegistration', ...
-        'Pose-registration callbacks are removed. Supply overlap-gradient sources.');
-    assert(~isfield(cfg.lidar,'errorCalibration'),'VehicleLocalization:ArchivedRegistrationMeasurement', ...
-        'Use the geometric information filter; registration-error calibration is removed.');
     localizationSupport.rejectExternalLidar(data);
     valid=false(numel(data.highRate.time),1);
     lidar=struct('valid',valid,'name',"none");

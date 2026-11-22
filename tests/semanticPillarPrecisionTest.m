@@ -6,7 +6,7 @@ classdef semanticPillarPrecisionTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
-        function downtownUsesGeometricSupportInsteadOfLegacyModels(testCase)
+        function downtownUsesGeometricSupport(testCase)
             online=perceptionConfig('Downtown');offline=perceptionConfig('Downtown','offline');
             testCase.verifyFalse(online.semanticPrecision.enabled);
             testCase.verifyFalse(offline.semanticPrecision.enabled);

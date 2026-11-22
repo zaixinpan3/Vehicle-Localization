@@ -12,10 +12,6 @@ classdef downtownStatisticsModelTest < matlab.unittest.TestCase
                 c=cfg.downtownCandidates;
                 testCase.verifyEqual(c.precisionFilter.rules,jsondecode(fileread( ...
                     fullfile(fileparts(which('perceptionConfig')),'downtownBalancedRules.json'))));
-                testCase.verifyFalse(isfield(c,'candidatePolicy'));
-                c.candidatePolicy="strictPrecision";
-                testCase.verifyError(@()classifyDowntownPillarStatistics(struct(),struct(),"pole",c), ...
-                    'perception:RetiredCandidatePolicy');
             end
         end
         function pooledPoleGateRejectsSpreadAndIgnoresCoordinateTranslation(testCase)

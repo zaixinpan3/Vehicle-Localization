@@ -24,14 +24,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyEqual(d.lambda/z.lambda,floorBound,AbsTol=1e-7);
             testCase.verifyTrue(v.independentYawRateCorrection && v.upstreamYawRateRequired);
             testCase.verifyEqual(d.P(8,1:7),zeros(1,7));
-            testCase.verifyFalse(isfield(d,'yawRateGainNormalized'));
-            testCase.verifyFalse(isfield(d,'gainSelection'));
-            testCase.verifyFalse(isfield(d,'constraintGeneration'));
-            testCase.verifyFalse(isfield(d,'accelerationMultipliers'));
         end
         function rateGainRespondsToNoiseAndRejectsPresetValues(testCase)
             c=freshObserverTestConfig();base=c.invariantDesign;
-            testCase.verifyFalse(isfield(c.invariantObserver,'yawRateGainPerSecond'));
             testCase.verifyTrue(base.verification.rateEnergyVerified);
             c.invariantObserver.noise.upstreamRateRadps=2*c.invariantObserver.noise.upstreamRateRadps;
             testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
@@ -39,8 +34,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyLessThan(other.invariantDesign.verification.yawRateGainPerSecond,base.verification.yawRateGainPerSecond);
             broken=base;broken.kappaR=0;
             testCase.verifyFalse(localizationSupport.verifyInvariantDesign(broken,mncavFullObserverConfig()).certified);
-            testCase.verifyError(@() mncavFullObserverConfig(DesignOverride=struct('yawRateGainPerSecond',5)), ...
-                'VehicleLocalization:PrescribedRateGain');
+            testCase.verifyError(@() mncavFullObserverConfig(DesignOverride=struct('unknownOption',5)), ...
+                'VehicleLocalization:UnknownDesignOption');
         end
         function downtownUsesTheNominalDesignDuringGnssWithdrawal(testCase)
             downtown=downtownReferenceReplayConfig();
@@ -50,16 +45,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             selectedDesign=freshObserverTestConfig(nominal);
             testCase.verifyTrue(selectedDesign.invariantDesign.verification.nominalFusion.coversGnssAbsent);
             testCase.verifyEqual(downtown.rmseTargets.positionM,.1435);
-        end
-        function staleAvailabilitySelectorsCannotCreateAnotherDesign(testCase)
-            for field=["gnssPositionAvailable","gnssHeadingAvailable","velocityAvailable","accelerationAvailable"]
-                c=mncavFullObserverConfig();c.invariantObserver.(field)=false;
-                testCase.verifyError(@()localizationSupport.synthesize(c),'VehicleLocalization:ObsoleteSensorAvailability');
-            end
-        end
-        function obsoleteSearchIsRejectedExplicitly(testCase)
-            c=mncavSmallOffsetObserverConfig();c.gainSelection=struct('enabled',true);
-            testCase.verifyError(@()localizationSupport.invariantInputs(c),'VehicleLocalization:ObsoleteFusionDesign');
         end
         function operatingSetAssumptionIsNotAnInvariantSetCertificate(testCase)
             [d,~]=selected();v=d.verification;

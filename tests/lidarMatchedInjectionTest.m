@@ -27,8 +27,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             C=(a.filter.D\(G*r.toPhysical))/r.theta;
             expected=-r.toPhysical*(r.P\(C.'*a.filter.F*a.filter.D.'*m.gradient));
             testCase.verifyEqual(rate,expected,AbsTol=1e-10);
-            testCase.verifyFalse(isfield(r.lidarMatched,'kappa'));
-            stale=r.lidarMatched;stale.kappa=1;
+            stale=r.lidarMatched;stale.unknownOption=1;
             testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,stale,cfg), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end

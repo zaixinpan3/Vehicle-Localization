@@ -72,8 +72,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             testCase.verifyLessThan(e.yawRate(2),.12);
             expected=localizationSupport.predict(c.initialState,l.time(2)-l.time(1),c);
             testCase.verifyEqual(e.diagnostics.intrinsicPrediction(2,:).',expected,AbsTol=1e-12);
-            d.highRate.rollingValid=true(n,1);d.highRate.rollingVelocity=zeros(n,2);
-            testCase.verifyError(@()execute(d,l,c),'VehicleLocalization:RetiredRollingPrediction');
         end
         function lowSpeedPacketHonorsTheSpeedBoundaryAndSensorValidity(testCase)
             t=(0:5).';u=[0;-.5;1;2;.4;.1];r=[.1;.2;.3;.4;NaN;.8];

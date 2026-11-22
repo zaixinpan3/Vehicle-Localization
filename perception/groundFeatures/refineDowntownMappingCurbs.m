@@ -5,11 +5,7 @@ function data=refineDowntownMappingCurbs(data,perceptionCfg,loadFrame)
     c=find(string(data.featureNames)=="curb");
     if isempty(c) || ~isfield(perceptionCfg,'downtownCurb'), return; end
     poses=data.framePoseTable;
-    if all(ismember({'pose_x_m','pose_y_m'},poses.Properties.VariableNames))
-        path=poses{:,{'pose_x_m','pose_y_m'}};
-    else
-        path=poses{:,{'odom_x_m','odom_y_m'}};
-    end
+    path=poses{:,{'pose_x_m','pose_y_m'}};
     validate=[];
     if nargin>=3 && ~isempty(loadFrame)
         calibration=data.frameCalibration;

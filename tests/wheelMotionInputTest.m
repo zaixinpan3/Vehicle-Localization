@@ -14,16 +14,8 @@ classdef wheelMotionInputTest < matlab.unittest.TestCase
             testCase.verifyFalse(m.alternativeSpeedFallback);
             testCase.verifyFalse(isfile(fullfile(f.folder,'twist.csv')));
         end
-        function UnusedLegacyFilesAndSpeedFieldsCannotAffectVx(testCase)
-            f=fixture(testCase);a=prepare(f);
-            fid=fopen(fullfile(f.folder,'twist.csv'),'w');fprintf(fid,'invalid obsolete speed data');fclose(fid);
-            steering=readtable(fullfile(f.folder,'steering.csv'));steering.speed_mps(:)=9000;
-            writetable(steering,fullfile(f.folder,'steering.csv'));b=prepare(f);
-            testCase.verifyEqual(a.longitudinalSpeed,b.longitudinalSpeed,AbsTol=0);
-        end
         function missingWheelFileNeverFallsBack(testCase)
             f=fixture(testCase);delete(fullfile(f.folder,'wheel_speed_report.csv'));
-            writetable(table([0;2],[10;10],VariableNames={'stamp_sec','linear_x_mps'}),fullfile(f.folder,'twist.csv'));
             testCase.verifyError(@()prepare(f),'VehicleLocalization:MissingWheelSpeed');
         end
         function expiredWheelPacketsDoNotShortenTheExperiment(testCase)

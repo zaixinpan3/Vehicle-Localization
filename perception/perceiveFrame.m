@@ -17,10 +17,6 @@ function perception = perceiveFrame(frame, cfg)
 
     mode = string(cfg.executionMode);
     featureNames = validatePerceptionFeatureNames(cfg.featureNames);
-    assert(~isfield(cfg.offGroundFeatures,"facadeDetectionEnabled") && ...
-        (~isfield(cfg,"coarseProbabilityCloud") || ~isfield(cfg.coarseProbabilityCloud,"semanticNames")), ...
-        "perception:ObsoleteFeatureSelection", ...
-        "Select all invocation channels with cfg.featureNames; remove the old nested selectors.");
     backend = "auto";
     if isfield(cfg, "executionBackend"), backend = cfg.executionBackend; end
     useNative = perceptionNativeAvailable(backend);

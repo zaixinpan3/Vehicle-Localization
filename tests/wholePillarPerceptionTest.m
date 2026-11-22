@@ -49,12 +49,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             testCase.verifyEqual(grid.gridConfig.dims,[100 100]);
             testCase.verifyEqual(grid.pointIndices,int32([1;2;5]));
             testCase.verifyEqual(grid.pointPillarSub,int32([1 1;100 1;70 59]));
-            testCase.verifyError(@() pillarGridConfig("legacyFull"),'perception:InvalidExecutionMode');
-        end
-        function obsoleteRoiLimitsAreRejected(testCase)
-            cfg=pillarGridConfig(); cfg.roiLimits=[0 1 0 1];
-            testCase.verifyError(@() pillarizePointCloud([0.5 0.5 0],cfg),'perception:ObsoleteRoiLimits');
-            testCase.verifyError(@() pillarGridExtent(cfg),'perception:ObsoleteRoiLimits');
+            testCase.verifyError(@() pillarGridConfig("unknown"),'perception:InvalidExecutionMode');
         end
         function rejectsVerticalPillarSpacing(testCase)
             cfg=pillarGridConfig(); cfg.voxelSize(3)=0.5;
@@ -123,7 +118,7 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
         end
         function hedgeIsolationDoesNotVetoAnExistingShaft(testCase)
             % The shaft's own pillar is clean, but a hedge fills the next
-            % pillar within 0.6 m of the peak: the legacy global isolation is low,
+            % pillar within 0.6 m of the peak: the whole-pillar isolation is low,
             % but an independently supported shaft must remain detectable.
             angle=linspace(0,2*pi,41).'; angle(end)=[];
             shaft=[1.6+0.05*cos(angle),1.6+0.05*sin(angle),linspace(-1,3,40).'];
@@ -144,10 +139,6 @@ classdef wholePillarPerceptionTest < matlab.unittest.TestCase
             cfg=pillarGridConfig(); cfg.exclusionHalfSize=0;
             cloudCfg=coarseSemanticProbabilityCloudConfig(); cloudCfg.semanticNames="pole";
             structural=structuralPillarConfig(cfg.voxelSize(1));
-            structural.pole.detector="pillar";structural.pole.probabilityEvidence="distribution";
-            legacy=analyzeStructuralPillars(pillarizePointCloud(both,cfg),structural,cloudCfg);
-            testCase.verifyFalse(any(legacy.poleCellMask,'all'));
-            structural.pole.detector="subset"; structural.pole.probabilityEvidence="subset";
             result=analyzeStructuralPillars(pillarizePointCloud(shaft,cfg),structural,cloudCfg);
             testCase.verifyEqual(nnz(result.poleCellMask),1);
             result=analyzeStructuralPillars(pillarizePointCloud(both,cfg),structural,cloudCfg);

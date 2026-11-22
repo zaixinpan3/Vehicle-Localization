@@ -7,7 +7,7 @@ into a script, use an old `output/*/vehicle_parameters.json` as the nominal
 vehicle, or reuse another vehicle's saved gains.
 
 - `mncavVehicleConfig()` loads the current physical parameters.
-- `lateralObserverConfig()` and `lateralObserverConfig("mncav")` select the same
+- `lateralObserverConfig()` selects the
   current vehicle and configured lateral-output point.
 - `mncavReplayConfig()` adds canonical steering conversion and the fixed DBW
   sensor corrections in `mncavInputCorrections.json`.

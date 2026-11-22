@@ -14,9 +14,8 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
         outputFolder
         lateralDesign
         options.InitialPosePacket (1,1) struct=struct()
-        options.LidarChannel (1,1) string="overlapGradient"
     end
-    setupVehicleLocalization();options.LidarChannel=activeLocalizationChannel(options.LidarChannel);
+    setupVehicleLocalization();
     if ~isfolder(outputFolder),mkdir(outputFolder);end
     protocol=downtownReferenceReplayConfig();metadata=jsondecode(fileread(fullfile(datasetFolder,'metadata.json')));
     assert(metadata.measurementOnly && ~metadata.gnssExported && ~metadata.clock.referencePoseUsed);
@@ -69,7 +68,7 @@ function report=replayDowntownGnssFreeLocalization(datasetFolder,mapFile,outputF
     trajectory=array2table([ids,native,t,estimate.pose,deadReckoning,accepted,timings*1000], ...
         'VariableNames',{'frame_index','native_time_sec','elapsed_sec','x_m','y_m','yaw_rad','dead_reckoning_x_m','dead_reckoning_y_m','dead_reckoning_yaw_rad','accepted','perception_ms','overlap_ms','total_ms'});
     writetable(trajectory,fullfile(outputFolder,'trajectory.csv'));
-    report=struct('frames',n,'replayVersion',protocol.replayVersion,'observerArchitecture',cfg.kind,'lidarChannel',options.LidarChannel,'sourcePreparationSeconds',sourcePreparationSeconds, ...
+    report=struct('frames',n,'replayVersion',protocol.replayVersion,'observerArchitecture',cfg.kind,'lidarChannel',"overlapGradient",'sourcePreparationSeconds',sourcePreparationSeconds, ...
         'durationSeconds',t(end)-t(1),'accepted',nnz(accepted), ...
         'gnssValidPackets',estimate.diagnostics.packetCounts.gnssValid,'gnssInitializationUsed',false, ...
         'lowSpeedMeasurementFrames',nnz(lowSpeedContribution & lat.velocityValid), ...

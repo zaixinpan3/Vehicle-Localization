@@ -66,7 +66,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
                 ["curb"; "pole"; "trafficSign"]);
         end
 
-        function legacyProposalsPreserveGroundPerception(testCase)
+        function coarseProposalsPreserveGroundPerception(testCase)
         % referenceFramesTrackFullPerception: Tuned frames retain the full
         % baseline support after projection to cells and NDT components.
             testCase.assumeMississippiData();
@@ -84,7 +84,7 @@ classdef coarseSemanticProbabilityCloudTest < matlab.unittest.TestCase
             testCase.verifyGreaterThanOrEqual(metrics.ndt.curb.recall, 0.80);
         end
 
-        function legacyProposalsPreserveGroundRecall(testCase)
+        function coarseProposalsPreserveGroundRecall(testCase)
         % dispersedFramesPreserveHighRecall: Dispersed Mississippi
         % frames retain high feature support against the historical baseline.
             testCase.assumeMississippiData();

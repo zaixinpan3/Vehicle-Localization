@@ -90,11 +90,6 @@ classdef perceptionFeatureSelectionTest < matlab.unittest.TestCase
             testCase.verifyEqual(actual.candidates.semanticNames,["curb";"pole";"trafficSign"]);
             testCase.verifyEqual(actual.probabilityCloud.semanticNames,["curb";"pole";"trafficSign"]);
         end
-        function removedMarkingChannelIsRejected(testCase)
-            cfg=perceptionConfig(); cfg.featureNames="roadMarking";
-            testCase.verifyError(@() perceiveFrame(testCase.Frame,cfg),'perception:InvalidFeatureNames');
-            testCase.verifyFalse(isfield(cfg.groundFeatures,'roadMarking'));
-        end
         function preservesCallerOrderAndAcceptsCellArrays(testCase)
             cfg=perceptionConfig(); cfg.featureNames={'trafficSign';'curb'};
             p=perceiveFrame(testCase.Frame,cfg);
@@ -108,14 +103,6 @@ classdef perceptionFeatureSelectionTest < matlab.unittest.TestCase
         function rejectsDuplicateChannels(testCase)
             cfg=perceptionConfig(); cfg.featureNames=["curb","curb"];
             testCase.verifyError(@() perceiveFrame(testCase.Frame,cfg),'perception:DuplicateFeatureNames');
-        end
-        function rejectsObsoleteNestedSelector(testCase)
-            cfg=perceptionConfig(); cfg.coarseProbabilityCloud.semanticNames="pole";
-            testCase.verifyError(@() perceiveFrame(testCase.Frame,cfg),'perception:ObsoleteFeatureSelection');
-        end
-        function rejectsObsoleteFacadeSwitch(testCase)
-            cfg=perceptionConfig(); cfg.offGroundFeatures.facadeDetectionEnabled=true;
-            testCase.verifyError(@() perceiveFrame(testCase.Frame,cfg),'perception:ObsoleteFeatureSelection');
         end
     end
 end

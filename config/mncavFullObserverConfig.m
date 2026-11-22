@@ -7,11 +7,8 @@ function cfg=mncavFullObserverConfig(options)
         options.DesignOverride (1,1) struct=struct()
         options.Theta (1,1) double {mustBeReal,mustBeFinite,mustBePositive}=4
     end
-    assert(~isfield(options.DesignOverride,'yawRateGainPerSecond'),'VehicleLocalization:PrescribedRateGain', ...
-        'The direct yaw-rate gain is a design output. Configure the physical noise scales and solve again.');
     here=fileparts(mfilename('fullpath'));
     cfg=struct('kind',"mncav-unit-lidar-metric-v27",'maximumBodyYawRate',.4,'initialState',[]);
-    cfg.timing="synchronous";
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     cfg.gnss=struct('outputPoint', ...
         jsondecode(fileread(fullfile(here,'mncavBestposOutputPoint.json'))));
@@ -48,6 +45,8 @@ function cfg=mncavFullObserverConfig(options)
     z.provenance.theta="theta = sigma = 4 fixed for the intrinsic design; runtime scale inherited from the preceding route, no new theta sweep";
     z.provenance.noiseObjective="LiDAR, process and rate injection costs select the common metric. The GNSS heading bandwidth minimizes a scalar noise proxy subject to packet dissipation.";
     z.provenance.fusion="Four drift inequalities use one rotation-invariant planar metric. Each complete GNSS pose adds a positive semidefinite output Gram term. The nominal certificate assumes the declared motion and LiDAR bounds.";
+    assert(all(ismember(fieldnames(options.DesignOverride),fieldnames(z))), ...
+        'VehicleLocalization:UnknownDesignOption','Design overrides must name an existing observer option.');
     for name=string(fieldnames(options.DesignOverride)).',z.(name)=options.DesignOverride.(name);end
     cfg.lidar.poseScales=[1;1;1/z.headingLengthM];
     cfg.invariantObserver=z;cfg.gainSource="unsolved-invariant";

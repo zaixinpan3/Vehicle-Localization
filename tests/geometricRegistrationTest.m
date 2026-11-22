@@ -35,7 +35,7 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
         end
         function refusesStationaryCalibrationData(testCase)
             [observations,~]=geometricRegistrationTest.calibrationFixture();
-            observations.framePoseTable.odom_x_m(:)=0;
+            observations.framePoseTable.pose_x_m(:)=0;
             testCase.verifyError(@() localizationSupport.fitLidarPitchCalibration(observations), ...
                 'VehicleLocalization:InsufficientCalibrationExcitation');
         end
@@ -59,7 +59,7 @@ classdef geometricRegistrationTest < matlab.unittest.TestCase
                 points{j}=stored+position;
             end
             poses=table(positions,zeros(4,1),zeros(4,1),ones(4,1),zeros(4,1),zeros(4,1),zeros(4,1), ...
-                'VariableNames',{'odom_x_m','odom_y_m','odom_z_m','odom_qw','odom_qx','odom_qy','odom_qz'});
+                'VariableNames',{'pose_x_m','pose_y_m','pose_z_m','pose_qw','pose_qx','pose_qy','pose_qz'});
             observations=struct('featureNames',"curb",'pointsByFeatureFrame',{points}, ...
                 'frameIndices',1:4,'framePoseTable',poses);
         end

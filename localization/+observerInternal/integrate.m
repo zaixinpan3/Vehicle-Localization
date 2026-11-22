@@ -18,8 +18,6 @@ function estimate=integrate(data,cfg,lateral,L)
     velocityValid=motionValidity(h,'bodyVelocityValid',n) ...
         & motionValidity(lateral,'velocityValid',n);
     accelerationValid=motionValidity(h,'bodyAccelerationValid',n);
-    assert(~any(isfield(h,{'rollingVelocity','rollingValid'})),'VehicleLocalization:RetiredRollingPrediction', ...
-        'Regenerate the motion inputs and supply low-speed measurements on the ordinary channels.');
     fields=["longitudinalSpeed","longitudinalAcceleration","lateralAcceleration"];
     for name=fields
         valid=true(n,1);

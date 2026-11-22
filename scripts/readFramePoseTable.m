@@ -1,8 +1,7 @@
 function framePoseTable = readFramePoseTable(poseMatchCsvPath, frameIndices)
 % readFramePoseTable: Load the pre-extracted LiDAR-to-GNSS/INS pose
 % match table and validate one global pose for every requested frame.
-% Explicit pose_* XYZ/quaternion fields are preferred. Legacy ODOM tables
-% remain readable for reproducing historical maps.
+% Each frame carries synchronized pose_* translation and quaternion fields.
 %
 % Input:
 %   poseMatchCsvPath: absolute path to the frame pose match CSV
@@ -12,15 +11,9 @@ function framePoseTable = readFramePoseTable(poseMatchCsvPath, frameIndices)
 %   framePoseTable: selected pose rows in the requested frame order
     assert(isfile(poseMatchCsvPath), "Pose match CSV not found: %s. Prepare the selected pose table first.", poseMatchCsvPath);
     framePoseTable = readtable(poseMatchCsvPath, "TextType", "string");
-    if any(startsWith(string(framePoseTable.Properties.VariableNames),"pose_"))
-        requiredFields=["frame_index","pose_x_m","pose_y_m","pose_z_m","pose_qw","pose_qx","pose_qy","pose_qz"];
-    else
-        requiredFields=["frame_index","odom_x_m","odom_y_m","odom_z_m","azimuth_deg","roll_deg","pitch_deg"];
-    end
-    for fieldName = requiredFields
-        assert(any(string(framePoseTable.Properties.VariableNames) == fieldName), ...
-            "Pose match CSV is missing required field: %s.", fieldName);
-    end
+    required=["frame_index","pose_x_m","pose_y_m","pose_z_m","pose_qw","pose_qx","pose_qy","pose_qz"];
+    assert(all(ismember(required,string(framePoseTable.Properties.VariableNames))), ...
+        'VehicleLocalization:IncompletePose','The frame table must contain indexed, synchronized SE(3) poses.');
     availableFrames = double(framePoseTable.frame_index(:));
     assert(numel(unique(availableFrames))==numel(availableFrames), ...
         'VehicleLocalization:DuplicateFrame','Pose table has duplicate frame indices.');

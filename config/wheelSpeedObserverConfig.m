@@ -1,6 +1,5 @@
 function cfg=wheelSpeedObserverConfig()
 % wheelSpeedObserverConfig MnCAV wheel geometry and independent-drive fit.
-% The method label identifies the fixed robust wheel-consensus estimator.
 % Effective radii/lag coefficients are empirical input corrections, not
 % independently measured tire radii or physical sensor delivery delays.
     root=fileparts(mfilename('fullpath'));
@@ -13,5 +12,5 @@ function cfg=wheelSpeedObserverConfig()
         'rearCgDistance',parameters.vehicle.lr,'filterTimeConstant',.01, ...
         'maximumWheelAge',.15,'consensusThreshold',.15,'maximumWheelRate',200, ...
         'maximumSteeringAngle',.6,'stationaryWheelRate',.05, ...
-        'stationaryYawRate',.03,'method',"robust",'initialSpeed',NaN);
+        'stationaryYawRate',.03,'initialSpeed',NaN);
 end

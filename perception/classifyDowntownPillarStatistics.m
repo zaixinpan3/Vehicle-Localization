@@ -2,8 +2,6 @@ function [ground,offGround]=classifyDowntownPillarStatistics(ground,offGround,na
 % classifyDowntownPillarStatistics: Select pillars using distribution summaries.
 % Only branch rasters and whole-pillar statistics are read. Fine geometry,
 % source point labels and reference data are unavailable to this classifier.
-    assert(~isfield(cfg,'candidatePolicy') || isequal(string(cfg.candidatePolicy),"precision"), ...
-        'perception:RetiredCandidatePolicy','Rebuild the Downtown configuration with perceptionConfig.');
     assert(abs(cfg.spacing-.3)<1e-12,'perception:DowntownRuleLattice', ...
         'Rebuild the Downtown configuration on the 0.3 m lattice.');
     if any(names=="curb")

@@ -51,7 +51,7 @@ function summary=judgeReceiverContradictions()
     assert(height(inspva)==height(samples),'Consistency table and INSPVA log differ in length.');
     prepared=prepareMncavMotionInputs("output/mncav_wheel_only_20260916/sensors");
     h=prepared.highRate;
-    lateral=runLateralVelocityObserver(h,designLateralObserverGains(lateralObserverConfig()),lateralObserverConfig("mncav"));
+    lateral=runLateralVelocityObserver(h,designLateralObserverGains(lateralObserverConfig()),lateralObserverConfig());
     interface=jsondecode(fileread(fullfile(root,'config','mncavReplayInterface.json')));vehicle=mncavVehicleConfig();
     % Vehicle dead reckoning at 100 Hz, on the receiver clock.
     t=h.time;u=h.longitudinalSpeed;r=h.yawRate;w=lateral.lateralVelocity;

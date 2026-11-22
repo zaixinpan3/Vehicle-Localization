@@ -11,12 +11,6 @@ classdef localizationSupport
             arguments
                 cfg (1,1) struct=mncavFullObserverConfig()
             end
-            assert(isfield(cfg,'invariantObserver') ...
-                && ~isfield(cfg,'hgo') && ~isfield(cfg,'thetaFramework'), ...
-                'VehicleLocalization:RemovedFullObserverConfig', ...
-                'Only the intrinsic eight-state observer is supported; regenerate old replay configurations.');
-            assert(~isfield(cfg,'timing') || string(cfg.timing)=="synchronous", ...
-                'VehicleLocalization:ObsoleteFullConfig','Only the common frame clock is supported.');
             assert(isfield(cfg,'iss'),'VehicleLocalization:MissingFullIssDomain','Declare the current continuous design domain.');
             if ~isfield(cfg,'invariantDesign')
                 [~,cfg]=synthesizeMncavInvariantDesign(cfg);
@@ -52,8 +46,6 @@ classdef localizationSupport
             if isfield(data,'lidar')
                 assert(~isfield(data,'lidarOverlap'),'VehicleLocalization:AmbiguousLidarInput', ...
                     'Supply only the map and scan clouds in lidarOverlap.');
-                assert(~any(isfield(data.lidar,{'residualModels','poseErrorVariance'})), ...
-                    'VehicleLocalization:ArchivedRegistrationMeasurement','Frozen registration inputs are retired.');
                 error('VehicleLocalization:ExternalLidarPose','Provide a map and scan clouds for LiDAR feedback.');
             end
             if isfield(data,'lidarOverlap')
@@ -219,20 +211,12 @@ classdef localizationSupport
         end
 
         function inputs=invariantInputs(cfg)
-        % Version every mathematical design input; reject retired designs.
+        % Capture the mathematical inputs used to synthesize and verify the gains.
             z=cfg.invariantObserver;
-            assert(~isfield(cfg.lidar,'gainInformationScale') && ~isfield(z,'predictionMinimumSpeedMps'), ...
-                'VehicleLocalization:StaleInvariantDesign','Rebuild the geometry-weighted body-rate configuration.');
-            assert(~any(isfield(z,{'gnssPositionAvailable','gnssHeadingAvailable','velocityAvailable','accelerationAvailable'})), ...
-                'VehicleLocalization:ObsoleteSensorAvailability','Regenerate the config and gains. Set validity on measurement packets.');
-            assert(isfield(z,'motionTimeConstantS'),'VehicleLocalization:StaleInvariantDesign', ...
-                'Regenerate the observer configuration for the matched motion update.');
-            assert(~isfield(cfg,'gainSelection') && ~any(isfield(z, ...
-                {'redundancy','regionalRadiusCap','maximumMotionPositionNoiseRatio','motionResponse','matchedGainLimits','headingGainLimits','balancedPoseMetric'})), ...
-                'VehicleLocalization:ObsoleteFusionDesign', ...
-                'Regenerate the nominal fusion configuration; legacy searches and certificates are removed.');
-            assert(~isfield(z,'yawRateGainPerSecond') && isfield(z.noise,'upstreamRateRadps'), ...
-                'VehicleLocalization:StaleInvariantDesign','Remove the prescribed yaw-rate gain and regenerate the shared design.');
+            defaults=mncavFullObserverConfig();
+            assert(all(ismember(fieldnames(z),fieldnames(defaults.invariantObserver))) && ...
+                all(ismember(fieldnames(cfg.lidar),fieldnames(defaults.lidar))), ...
+                'VehicleLocalization:UnknownDesignOption','Unknown observer or LiDAR design option.');
             if isfield(z,'provenance'),z=rmfield(z,'provenance');end
             inputs=jsondecode(jsonencode(struct('architecture',"unit-lidar-metric-v27", ...
                 'physicalOutputs',"squared-dot-cross-body-lateral", ...
@@ -466,7 +450,7 @@ classdef localizationSupport
         end
 
         function weights=solveMotionWeights(P,cfg,options)
-        % Minimize the historical motion-noise objective with fixed pose/rate gains.
+        % Minimize the motion-noise objective with fixed pose/rate gains.
             z=cfg.invariantObserver;t=z.theta;s0=z.fusion.minimumCourseSpeed;V=cfg.iss.maximumSpeed;
             D=localizationSupport.outputNormalization(cfg,t);
             T=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),z.headingLengthM,z.headingLengthM]);
@@ -545,12 +529,8 @@ classdef localizationSupport
                 frameReliability (1,1) double {mustBeReal,mustBeFinite} = 1
                 directionReliability (3,1) double {mustBeReal,mustBeFinite} = ones(3,1)
             end
-            assert(~isfield(cfg.lidar,'errorCalibration'),'VehicleLocalization:ArchivedRegistrationMeasurement', ...
-                'Use the geometric information filter; registration-error calibration is removed.');
             scales=cfg.lidar.poseScales(:);
             validateattributes(scales,{'double'},{'real','finite','positive','numel',3});
-            assert(~isfield(cfg.lidar,'gainInformationScale'),'VehicleLocalization:ObsoleteLidarRegularizer', ...
-                'Regenerate the LiDAR configuration for direct geometry weighting.');
             assert(frameReliability>=0 && frameReliability<=1 && ...
                 all(directionReliability>=0 & directionReliability<=1), ...
                 'VehicleLocalization:InvalidLidarReliability','Reliabilities must lie in [0,1].');
@@ -618,7 +598,8 @@ classdef localizationSupport
                 options.StepSize (1,1) double {mustBeReal,mustBeFinite,mustBeNonnegative} = 0
                 options.Discretization (1,1) string {mustBeMember(options.Discretization,["continuous","implicit","explicit"])} = "continuous"
             end
-            assert(isfield(design,'theta') && ~isfield(design,'kappa'), ...
+            assert(isfield(design,'theta') && all(ismember(fieldnames(design), ...
+                {'P','T','theta','scalingExponents','metricSource'})), ...
                 'VehicleLocalization:StaleInvariantDesign','Regenerate the LiDAR-normalized metric.');
             P=design.P;T=design.T;theta=design.theta;n=size(P,1);
             assert(isreal(P) && isequal(size(P),[n,n]) && all(isfinite(P),'all') && ...
@@ -672,8 +653,6 @@ classdef localizationSupport
             frame=1;direction=ones(3,1);
             if isfield(measurement,'frameReliability'),frame=measurement.frameReliability;end
             if isfield(measurement,'directionReliability'),direction=measurement.directionReliability(:);end
-            assert(~isfield(measurement,'poseErrorVariance'),'VehicleLocalization:ArchivedRegistrationMeasurement', ...
-                'Pose-error calibration no longer selects LiDAR weights.');
             filter=localizationSupport.filterLidarPoseInformation(information,cfg,frame,direction);
             C=filter.D\(G*T);
             if residualMode
@@ -740,9 +719,6 @@ classdef localizationSupport
                 pose (3,1) double {mustBeReal,mustBeFinite}
                 cfg (1,1) struct = overlapGradientConfig()
             end
-            assert(isfield(cfg,'geometry') && ~any(isfield(cfg, ...
-                {'registration','aggregation','orientation','outlierDensity','viewConditioning','evidenceWeights','scaleLadder'})), ...
-                'VehicleLocalization:ObsoleteOverlapConfig','Rebuild overlap settings with overlapGradientConfig.');
             timer=tic;linearization=pose;pose=pose(:).';
             assert(isequal(string(cfg.geometry.heightMode),"xy"),'VehicleLocalization:PlanarOverlapRequired', ...
                 'Feature-channel feedback requires the XY marginal.');
@@ -1531,8 +1507,7 @@ classdef localizationSupport
         function [pose, tiltRotation, heightTranslation] = poseRowToPlanarPose(row)
         % poseRowToPlanarPose Split the selected mapping pose into SE(2) and tilt.
         % Uses exactly the transform consumed by registerPointsToGlobalFrame.
-        % R_global = R_yaw * tiltRotation. Height is external mapping metadata,
-        % not a registration state; it is NaN for legacy records without height.
+        % R_global = R_yaw * tiltRotation. Height is external mapping metadata.
             [rotation,translation]=localizationSupport.poseRowToRigidTransform(row);
             yaw=atan2(rotation(2,1),rotation(1,1));
             r=[cos(yaw),-sin(yaw),0;sin(yaw),cos(yaw),0;0,0,1];
@@ -1542,33 +1517,15 @@ classdef localizationSupport
         end
 
         function [rotation,translation] = poseRowToRigidTransform(row)
-        % poseRowToRigidTransform Resolve explicit mapping poses or legacy ODOM rows.
-        % Canonical pose_* fields take precedence and must be complete and finite.
-        % Legacy records retain their original quaternion or yaw-only interpretation.
-            names=string(row.Properties.VariableNames);
+        % Convert the synchronized map pose at one LiDAR acquisition to SE(3).
             assert(height(row)==1,'VehicleLocalization:PoseRow','Exactly one pose row is required.');
-            canonical=any(startsWith(names,"pose_"));
-            if canonical
-                fields=["pose_x_m","pose_y_m","pose_z_m","pose_qw","pose_qx","pose_qy","pose_qz"];
-                assert(all(ismember(fields,names)),'VehicleLocalization:IncompletePose','Canonical pose is incomplete.');
-                values=double(row{1,cellstr(fields)});
-                assert(all(isfinite(values)),'VehicleLocalization:InvalidPose','Canonical pose must be finite.');
-                translation=values(1:3);q=values(4:7);
-                assert(norm(q)>0,'VehicleLocalization:InvalidPose','Quaternion must be nonzero.');
-            else
-                translation=[double(row.odom_x_m(1)),double(row.odom_y_m(1)),NaN];
-                if ismember("odom_z_m",names),translation(3)=double(row.odom_z_m(1));end
-                q=[];fields=["odom_qw","odom_qx","odom_qy","odom_qz"];
-                if all(ismember(fields,names))
-                    candidate=double(row{1,cellstr(fields)});
-                    if all(isfinite(candidate)) && norm(candidate)>0,q=candidate;end
-                end
-                if isempty(q)
-                    yaw=deg2rad(90-double(row.azimuth_deg(1)));
-                    rotation=[cos(yaw),-sin(yaw),0;sin(yaw),cos(yaw),0;0,0,1];
-                    return;
-                end
-            end
+            fields=["pose_x_m","pose_y_m","pose_z_m","pose_qw","pose_qx","pose_qy","pose_qz"];
+            assert(all(ismember(fields,string(row.Properties.VariableNames))), ...
+                'VehicleLocalization:IncompletePose','Require XYZ translation and a unit-or-normalizable quaternion.');
+            values=double(row{1,cellstr(fields)});
+            assert(all(isfinite(values)),'VehicleLocalization:InvalidPose','The map pose must be finite.');
+            translation=values(1:3);q=values(4:7);
+            assert(norm(q)>0,'VehicleLocalization:InvalidPose','Quaternion must be nonzero.');
             q=q/norm(q);w=q(1);x=q(2);y=q(3);z=q(4);
             rotation=[1-2*(y*y+z*z),2*(x*y-z*w),2*(x*z+y*w); ...
                 2*(x*y+z*w),1-2*(x*x+z*z),2*(y*z-x*w); ...
@@ -1603,8 +1560,7 @@ classdef localizationSupport
                 all(isfinite(settings)) && all(settings>=0) && isscalar(cfg.initialSpeed) && ...
                 cfg.wheelbase>0 && cfg.frontTrack>0 && cfg.rearTrack>0 && cfg.rearCgDistance>=0 && ...
                 cfg.filterTimeConstant>0 && cfg.maximumWheelAge>0 && cfg.consensusThreshold>0 && ...
-                cfg.maximumWheelRate>0 && cfg.maximumSteeringAngle>0 && cfg.maximumSteeringAngle<pi/2 && ...
-                isequal(string(cfg.method),"robust"), ...
+                cfg.maximumWheelRate>0 && cfg.maximumSteeringAngle>0 && cfg.maximumSteeringAngle<pi/2, ...
                 'VehicleLocalization:InvalidWheelConfig','Invalid wheel observer configuration.');
             pre=find(wt<=t(1),1,'last');
             if isempty(pre) || t(1)-wt(pre)>cfg.maximumWheelAge
@@ -1837,8 +1793,6 @@ function m=invariantModel(cfg)
     assert(min([s.minimumPositionStrength,s.minimumHeadingStrength])> ...
         s.maximumPositionHeadingCoupling+r.lidarOperatorMismatch, ...
         'VehicleLocalization:InvalidFusionDomain','The nominal fusion LiDAR lower bound must be positive.');
-    assert(~isfield(z,'angularMetricDiagonal'),'VehicleLocalization:ObsoleteInvariantDesign', ...
-        'Rebuild the observer configuration for the direct upstream rate channel.');
     validateattributes([n.velocityMps,n.accelerationMps2],{'double'},{'real','finite','nonnegative'});
     validateattributes(z.motionTimeConstantS,{'double'},{'real','finite','positive','scalar'});
     assert(z.noiseObjective=="normalizedFullState" && isequal(cfg.lidar.poseScales(:),[1;1;1/ell]), ...

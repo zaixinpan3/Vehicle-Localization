@@ -12,14 +12,6 @@ classdef wheelLongitudinalSpeedTest < matlab.unittest.TestCase
             testCase.verifyEqual(e.longitudinalSpeed,10*ones(size(d.time)),AbsTol=1e-12);
             testCase.verifyTrue(all(e.valid));
         end
-        function rejectsRetiredFusionMethods(testCase)
-            [data,cfg]=fixture(10,0,0);
-            for method=["mean","rear"]
-                cfg.method=method;
-                testCase.verifyError(@()localizationSupport.estimateWheelLongitudinalSpeed(data,cfg), ...
-                    'VehicleLocalization:InvalidWheelConfig');
-            end
-        end
         function acceleratingMotionHasNoFilterLag(testCase)
             [d,c]=fixture(5,1,0);e=localizationSupport.estimateWheelLongitudinalSpeed(d,c);
             testCase.verifyEqual(e.longitudinalSpeed,5+d.time,AbsTol=1e-10);

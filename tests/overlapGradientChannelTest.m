@@ -220,52 +220,19 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             noPoles=localizationSupport.evaluateOverlapGradient(map,zeroed,pose);
             testCase.verifyFalse(ismember("pole",noPoles.sharedClasses));
         end
-        function retiredOverlapSelectorsAreRejected(testCase)
-            [map,source,pose]=scene();
-            retired=struct('aggregation',"frame",'orientation',true,'outlierDensity',1e-4, ...
-                'viewConditioning',false,'evidenceWeights',false,'scaleLadder',[0 0.5 1 2]);
-            settings=overlapGradientConfig();
-            for name=string(fieldnames(retired)).'
-                testCase.verifyFalse(isfield(settings,name));
-                stale=settings;stale.(name)=retired.(name);
-                testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,pose(:),stale), ...
-                    'VehicleLocalization:ObsoleteOverlapConfig');
-            end
+        function overlapUsesPlanarGeometry(testCase)
+            [map,source,pose]=scene();settings=overlapGradientConfig();
             settings.geometry.heightMode="auto";
             testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(map,source,pose(:),settings), ...
                 'VehicleLocalization:PlanarOverlapRequired');
         end
-        function retiredSolverConfigurationCannotReachOverlap(testCase)
-            cloud=distributionRegistrationTest.exampleCloud();cfg=overlapGradientConfig();
-            cfg.registration=cfg.geometry;cfg=rmfield(cfg,'geometry');
-            testCase.verifyError(@()localizationSupport.evaluateOverlapGradient(cloud,cloud,zeros(3,1),cfg), ...
-                'VehicleLocalization:ObsoleteOverlapConfig');
-        end
-        function frozenRegistrationPayloadsCannotBeReplayedOrAligned(testCase)
-            f=movingFixture(1);t=f.lateral.time;n=numel(t);
-            data=rmfield(f.data,'lidarOverlap');
-            for name=["residualModels","poseErrorVariance"]
-                data.lidar=struct('time',t,'pose',zeros(n,3),'valid',true(n,1), ...
-                    'information',repmat(eye(3),1,1,n),'delay',0);
-                data.lidar.(name)=zeros(n,2);
-                testCase.verifyError(@()runFullLocalizationObserver(data,f.cfg,LateralInputs=f.lateral), ...
-                    'VehicleLocalization:ArchivedRegistrationMeasurement');
-                testCase.verifyError(@()localizationSupport.synchronizeLocalizationInputs(data,f.lateral,f.cfg), ...
-                    'VehicleLocalization:ArchivedRegistrationMeasurement');
-            end
-        end
-        function overlapChannelIsExclusiveAndRejectsCalibratedWeights(testCase)
+        function overlapChannelIsExclusive(testCase)
             f=movingFixture(1);
             ambiguous=f.data;n=numel(f.lateral.time);
             ambiguous.lidar=struct('time',f.lateral.time,'pose',zeros(n,3), ...
                 'information',repmat(eye(3),1,1,n),'valid',true(n,1),'delay',0);
             testCase.verifyError(@()runFullLocalizationObserver(ambiguous,f.cfg,LateralInputs=f.lateral), ...
                 'VehicleLocalization:AmbiguousLidarInput');
-            calibrated=f.cfg;
-            calibrated.lidar.errorCalibration=struct('kind',"conditional-pose-second-moment-v1", ...
-                'referenceVariance',[.01;.001],'coefficients',[.01,1;.001,1]);
-            testCase.verifyError(@()runFullLocalizationObserver(f.data,calibrated,LateralInputs=f.lateral), ...
-                'VehicleLocalization:ArchivedRegistrationMeasurement');
         end
     end
 end

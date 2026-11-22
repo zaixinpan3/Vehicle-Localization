@@ -46,16 +46,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(actual.innovation(1), 1.2, AbsTol=1e-12);
         end
 
-        function rejectsRetiredIntegrators(testCase)
-            design=testCase.CurrentDesign;
-            for name=["rk4","euler"]
-                cfg=design.cfg;cfg.observer.integrationMethod=name;
-                testCase.verifyError(@()runLateralVelocityObserver( ...
-                    testCase.constantSpeedMeasurements(.1,12),design,cfg), ...
-                    'VehicleLocalization:RetiredLateralIntegrator');
-            end
-        end
-
         function missingLateralAccelerationIsRejected(testCase)
             measurements = rmfield(testCase.constantSpeedMeasurements(.1, 12), 'lateralAcceleration');
             testCase.verifyError(@() runLateralVelocityObserver( ...
@@ -77,49 +67,9 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyLessThan(testCase.maximumCertificateEigenvalue(design), 0);
             testCase.verifyLessThan(design.maximumCertificateEigenvalue, 0);
             testCase.verifyEqual(design.certificateDomain.numLmis, 12);
-            testCase.verifyFalse(isfield(design.gainBasis, 'accelerationConstant'));
+
             testCase.verifyEqual(design.certificateDomain.numRateVertices, 4);
-            testCase.verifyFalse(isfield(design, 'stiffnessUncertainty'));
-            testCase.verifyFalse(isfield(design.cfg.synthesis, 'stiffnessRelativeErrorBound'));
-        end
 
-        function obsoleteSingleOutputGainsAreRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.vertexGains = zeros(2, 1, 3);
-            testCase.verifyError(@() runLateralVelocityObserver( ...
-                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
-                'VehicleLocalization:ObsoleteLateralDesign');
-        end
-
-        function obsoleteNoiseScalesAreRejected(testCase)
-            cfg = testCase.CurrentDesign.cfg;
-            cfg.synthesis.measurementErrorScale = .3;
-            testCase.verifyError(@() designLateralObserverGains(cfg), ...
-                'VehicleLocalization:ObsoleteLateralConfiguration');
-        end
-
-        function obsoleteNonlinearConfigurationsAreRejected(testCase)
-            baseline = testCase.CurrentDesign.cfg;
-            cfgs = {baseline, baseline};
-            cfgs{1}.synthesis.lipschitzConstant = .5;
-            cfgs{2}.observer.nonlinearity = @(x) .1*x;
-            measurements = testCase.constantSpeedMeasurements(.1, 10);
-            for idx = 1:numel(cfgs)
-                cfg = cfgs{idx};
-                testCase.verifyError(@() designLateralObserverGains(cfg), ...
-                    'VehicleLocalization:ObsoleteLateralConfiguration');
-                testCase.verifyError(@() runLateralVelocityObserver( ...
-                    measurements, testCase.CurrentDesign, cfg), ...
-                    'VehicleLocalization:ObsoleteLateralConfiguration');
-            end
-        end
-
-        function obsoleteNonlinearDesignFormatIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.certificateMethod = "column-affine-expanded-iss-v3";
-            testCase.verifyError(@() runLateralVelocityObserver( ...
-                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
-                'VehicleLocalization:ObsoleteLateralDesign');
         end
 
         function coordinateTransportPrecedesAlgebraicSideslip(testCase)
@@ -175,14 +125,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(all(isfinite(estimate.state), 'all'));
         end
 
-        function obsoleteStiffnessDesignIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.certificateMethod = "yaw-rate-stiffness-regressor-iss-v1";
-            testCase.verifyError(@() runLateralVelocityObserver( ...
-                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
-                'VehicleLocalization:ObsoleteLateralDesign');
-        end
-
         function invalidProcessScalesAreRejected(testCase)
             cfg = testCase.CurrentDesign.cfg;
             cfg.synthesis.processErrorScale = [1;0];
@@ -191,22 +133,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             cfg.synthesis = rmfield(cfg.synthesis, 'processErrorScale');
             testCase.verifyError(@() designLateralObserverGains(cfg), ...
                 'VehicleLocalization:InvalidProcessScale');
-        end
-
-        function noiseOnlyCertificateIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.certificateMethod = "column-affine-expanded-iss-noise-v7";
-            testCase.verifyError(@() runLateralVelocityObserver( ...
-                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
-                'VehicleLocalization:ObsoleteLateralDesign');
-        end
-
-        function obsoleteProcessDesignIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.certificateMethod = "column-affine-expanded-iss-process-v8";
-            testCase.verifyError(@() runLateralVelocityObserver( ...
-                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
-                'VehicleLocalization:ObsoleteLateralDesign');
         end
 
         function invalidAccelerationColumnIsRejected(testCase)
@@ -256,35 +182,12 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             end
         end
 
-        function weightedObjectiveConfigurationIsRejected(testCase)
-            cfg = testCase.CurrentDesign.cfg;
-            cfg.synthesis.initialErrorWeight = 1;
-            testCase.verifyError(@() designLateralObserverGains(cfg), ...
-                'VehicleLocalization:ObsoleteLateralConfiguration');
-        end
-
-        function secondStageConfigurationIsRejected(testCase)
-            cfg = testCase.CurrentDesign.cfg;
-            cfg.synthesis.issGainRelaxation = .05;
-            testCase.verifyError(@() designLateralObserverGains(cfg), ...
-                'VehicleLocalization:ObsoleteLateralConfiguration');
-        end
-
-        function twoStageDesignIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.certificateMethod = "column-affine-expanded-iss-reciprocal-v5";
-            testCase.verifyError(@() runLateralVelocityObserver( ...
-                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
-                'VehicleLocalization:ObsoleteLateralDesign');
-        end
-
         function singleStageSolutionRetainsTheObjectiveAndNoiseDiagnostics(testCase)
             design = testCase.CurrentDesign;
-            testCase.verifyFalse(isfield(design, 'objectiveLimit'));
-            testCase.verifyFalse(isfield(design, 'firstStageIssGain'));
+
             testCase.verifyEqual(design.issGain^2, design.optimalObjective, AbsTol=1e-10);
             testCase.verifyEqual(design.normalizedInputSize, 4);
-            testCase.verifyFalse(isfield(design.cfg.synthesis, 'initialErrorWeight'));
+
             for speed = linspace(1, 30, 31)
                 L = lateralObserverSupport.scheduleLateralObserverGain(design, speed);
                 injection = L*diag([speed;1].*design.measurementErrorScale);
@@ -497,29 +400,6 @@ classdef lateralObserverTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(norm(wrongBlend-actual),1e-3);
         end
 
-        function accelerationConstantOptionIsRejected(testCase)
-            cfg = testCase.CurrentDesign.cfg;
-            cfg.synthesis.accelerationGainConstant = true;
-            testCase.verifyError(@() designLateralObserverGains(cfg), ...
-                'VehicleLocalization:ObsoleteLateralConfiguration');
-        end
-
-        function optionalAccelerationDesignIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.certificateMethod = "column-affine-expanded-iss-linear-v4";
-            testCase.verifyError(@() runLateralVelocityObserver( ...
-                testCase.constantSpeedMeasurements(.1, 10), design, design.cfg), ...
-                'VehicleLocalization:ObsoleteLateralDesign');
-        end
-
-        function obsoleteMetricRecoveryDesignIsRejected(testCase)
-            design = testCase.CurrentDesign;
-            design.certificateMethod = "virtual-ay-yaw-scheduled-metric-iss-v2";
-            testCase.verifyError(@()runLateralVelocityObserver( ...
-                testCase.constantSpeedMeasurements(.1,10),design,design.cfg), ...
-                'VehicleLocalization:ObsoleteLateralDesign');
-        end
-
         function sideslipRateUsesAccelerationNotObserverStateDerivative(testCase)
             design=testCase.CurrentDesign;cfg=design.cfg;
             cfg.outputPoint.forwardOffsetM=0;cfg.observer.initialState=[1;.2];
@@ -579,8 +459,7 @@ classdef lateralObserverTest < matlab.unittest.TestCase
         end
 
         function missingOutputPointConfigurationIsRejected(testCase)
-        % missingOutputPointConfigurationIsRejected: A configuration without
-        % the output-point group is an obsolete contract, not a zero offset.
+        % missingOutputPointConfigurationIsRejected: The velocity export requires a defined vehicle reference point.
             design = testCase.CurrentDesign;
             cfg = rmfield(design.cfg, "outputPoint");
             measurements = lateralObserverTest.constantSpeedMeasurements(1.0, 8.0);

@@ -14,7 +14,6 @@ classdef mncavDefaultsTest < matlab.unittest.TestCase
             testCase.verifyEqual(cfg.scheduling.speedRange,[1,30]);
             trial=nuscenesTrialConfig(15);
             testCase.verifyEqual(trial.lateral.scheduling.speedRange,cfg.scheduling.speedRange);
-            testCase.verifyEqual(cfg.outputPoint,lateralObserverConfig("mncav").outputPoint);
         end
         function wheelGeometryUsesTheSameVehicle(testCase)
             p=mncavVehicleConfig();wheel=wheelSpeedObserverConfig();

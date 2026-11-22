@@ -72,7 +72,7 @@ classdef lidarImuTiltTest < matlab.unittest.TestCase
             testCase.verifyError(@()localizationSupport.estimateLidarImuTilt(imu,wheel,[0;3]), ...
                 'VehicleLocalization:TiltImuGap');
         end
-        function legacyAndReferenceCachesAreRejected(testCase)
+        function tiltRequiresDocumentedSensorOnlyProvenance(testCase)
             testCase.verifyError(@()localizationSupport.assertSensorOnlyLidarTilt(struct()), ...
                 'VehicleLocalization:ReferenceTiltCache');
             s=struct('schemaVersion',1,'source',"reference",'referencePoseUsed',true, ...
@@ -80,7 +80,7 @@ classdef lidarImuTiltTest < matlab.unittest.TestCase
             testCase.verifyError(@()localizationSupport.assertSensorOnlyLidarTilt(s), ...
                 'VehicleLocalization:ReferenceTiltCache');
         end
-        function oldWheelSecantTiltCacheIsRejected(tc)
+        function tiltConfigurationMustIdentifyAccelerationSource(tc)
             [imu,wheel]=lidarImuTiltTest.fixture();tilt=localizationSupport.estimateLidarImuTilt(imu,wheel,[0;.02]);
             localizationSupport.assertSensorOnlyLidarTilt(tilt);
             tilt.configuration=rmfield(tilt.configuration,'accelerationSource');

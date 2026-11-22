@@ -45,10 +45,13 @@ def main():
             for k, j in enumerate(index)
         ])
     best_match = closest["bestpos"] < .001
-    pose_table = read(str(BASE) + "_front_lidar_pose_match_1_1170.csv")
-    best_indices = set(odom["index"][best_match])
-    mixed_map_frames = [int(row["frame_index"]) for row in pose_table
-                        if row["nearest_odom_index"] in best_indices]
+    lidar = read(str(BASE) + "_front_lidar_points.csv")
+    following = np.searchsorted(odom["stamp_sec"], lidar["stamp_sec"]).clip(0, len(odom) - 1)
+    preceding = (following - 1).clip(0)
+    before = np.abs(lidar["stamp_sec"] - odom["stamp_sec"][preceding])
+    after = np.abs(odom["stamp_sec"][following] - lidar["stamp_sec"])
+    nearest = np.where(before <= after, preceding, following)
+    mixed_map_frames = lidar["frame_index"][best_match[nearest]].astype(int).tolist()
     starts = np.flatnonzero(best_match & np.r_[True, ~best_match[:-1]])
     ends = np.flatnonzero(best_match & np.r_[~best_match[1:], True])
     intervals = [[float(odom_time[a]), float(odom_time[b])] for a, b in zip(starts, ends)]

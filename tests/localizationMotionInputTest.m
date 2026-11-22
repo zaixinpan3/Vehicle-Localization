@@ -14,12 +14,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) localizationMotionInpu
             testCase.verifyEqual(b.lateral,f.lateral);
             testCase.verifyGreaterThan(norm(b.internalState(end,:)-a.internalState(end,:)),.01);
         end
-        function removedLearnerHasNoConfigurationOrDiagnostics(testCase)
-            f=fixture();r=run(f);
-            testCase.verifyFalse(isfield(f.cfg,'bias'));
-            testCase.verifyFalse(any(isfield(r.diagnostics, ...
-                {'lidarLongitudinalVelocityBias','lidarVelocityBias','lidarBiasUpdates','motionBiasSource'})));
-        end
     end
 end
 
@@ -32,7 +26,7 @@ function f=fixture()
     cfg=freshObserverTestConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8.4;0;0;-.25;0;0];
     cfg=freshObserverTestConfig(cfg);
     f=struct('time',t,'data',struct('highRate',h,'lidar',l),'cfg',cfg, ...
-        'lateral',struct('time',t,'lateralVelocity',-.25+z,'sideSlipAngleRate',z));
+        'lateral',struct('time',t,'lateralVelocity',-.25+z));
 end
 function r=run(f)
     r=syntheticObserver.run(f.data,f.cfg,LateralInputs=f.lateral);

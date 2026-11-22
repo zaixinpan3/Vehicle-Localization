@@ -1,10 +1,9 @@
 function candidates=detectPolePillars(maps,facadeMask,cfg)
 % detectPolePillars: Select supported poles on the shared pillar lattice.
 % Continuous validation checks the complete support of shaft proposals before
-% assigning labels to owners. Legacy modes remain available for comparisons.
-% All modes share existing XY pillars; none introduces a finer lattice.
+% assigning labels to owners. The fine lattice uses density-core statistics.
     stats=maps.statistics; ids=double(stats.pillarIndices);
-    if isfield(cfg,'detector') && cfg.detector=="validatedShaft"
+    if cfg.detector=="validatedShaft"
         core=false(maps.mapSize);core(ids)=maps.poleValidation.found;
         evidence=zeros(maps.mapSize);evidence(ids)=maps.poleValidation.score;
         candidates=struct('eligibleMask',maps.occupiedMask,'coreMask',core,'supportMask',core, ...
@@ -13,22 +12,7 @@ function candidates=detectPolePillars(maps,facadeMask,cfg)
             'contextEvidence',evidence,'candidateMask',core,'shaftCandidateMask',core);
         return;
     end
-    if isfield(cfg,'detector') && cfg.detector=="shaft"
-        legacyCfg=cfg;legacyCfg.detector="pillar";
-        legacy=detectPolePillars(maps,facadeMask,legacyCfg);
-        core=false(maps.mapSize);core(ids)=maps.poleSubset.found;
-        evidence=zeros(maps.mapSize);evidence(ids)=maps.poleSubset.score;
-        combined=core | legacy.candidateMask;
-        candidates=struct('eligibleMask',maps.occupiedMask,'coreMask',core|legacy.coreMask,'supportMask',combined, ...
-            'footprintCandidateMask',combined,'contextCandidateMask',combined, ...
-            'contextFraction',double(core),'componentEvidence',evidence, ...
-            'contextEvidence',evidence,'candidateMask',combined, ...
-            'legacyCandidateMask',legacy.candidateMask,'shaftCandidateMask',core);
-        return;
-    end
-    if isfield(cfg,'detector') && cfg.detector=="subset"
-        candidates=detectSupportedSubsets(maps,cfg,ids); return;
-    end
+    assert(cfg.detector=="pillar",'perception:InvalidPoleDetector','Unknown pole detector.');
     covariance=stats.covarianceXYZ;
     slope=covariance(:,4:5)./max(covariance(:,6),eps);
     radialVariance=max(0,covariance(:,1)+covariance(:,3)- ...
@@ -86,19 +70,4 @@ function mask=completeSplitShafts(mask,core,maps,cfg)
         best(closer)=neighbour(closer); bestDistance(closer)=gap(closer);
     end
     mask(best(best>0))=true;
-end
-
-function candidates=detectSupportedSubsets(maps,cfg,ids)
-% A supported point bundle is sufficient even when the whole pillar is broad,
-% dense with clutter, or also overlaps a facade. Only supported owner cells
-% participate in footprint selection; a neighboring shaft cannot lend a label.
-    eligible=maps.occupiedMask; core=false(maps.mapSize);
-    core(ids)=maps.poleSubset.found;
-    evidence=zeros(maps.mapSize); evidence(ids)=maps.poleSubset.ownCount.*maps.poleSubset.score;
-    [footprint,context,mask,ratio,componentSum,contextSum]=selectPillarFootprints( ...
-        core,core,evidence,evidence,cfg,false(maps.mapSize));
-    mask=completeSplitShafts(mask,core,maps,cfg);
-    candidates=struct('eligibleMask',eligible,'coreMask',core,'supportMask',core, ...
-        'footprintCandidateMask',footprint,'contextCandidateMask',context, ...
-        'contextFraction',ratio,'componentEvidence',componentSum,'contextEvidence',contextSum,'candidateMask',mask);
 end
