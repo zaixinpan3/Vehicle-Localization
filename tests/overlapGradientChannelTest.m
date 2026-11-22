@@ -201,7 +201,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             f=movingFixture(2);f.data.lidarOverlap.valid=true(numel(f.data.highRate.time),1);
             f.data.lidarOverlap.valid(8:12)=false;
             r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
-            testCase.verifyEqual(r.diagnostics.mode(8:12),zeros(5,1));
+            testCase.verifyEqual(r.diagnostics.gnssPoseValid(8:12) | r.diagnostics.lidarValid(8:12),false(5,1));
             testCase.verifyFalse(any(r.diagnostics.lidarOverlap.evaluated(8:12)));
             testCase.verifyEqual(r.diagnostics.positionCorrection(8:12,3:4),zeros(5,2));
         end

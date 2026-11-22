@@ -9,16 +9,16 @@ classdef mncavVdbIsolationTest < matlab.unittest.TestCase
     methods(Test)
         function futureGnssAndReferenceFieldsCannotAffectInitialization(tc)
             [s,i]=fixture();first=initializeMncavVdbFromGnss(s,i,8);
-            s.gnssX(s.time>8)=1e8;s.gnssY(s.time>8)=-1e9;
+            s.gnssHeadingRad(s.time>8)=pi;s.gnssX(s.time>8)=1e8;s.gnssY(s.time>8)=-1e9;
             s.trueHeading=nan(height(s),1);s.trueVelocity=1e12*ones(height(s),1);
             s.refX=-1e12*ones(height(s),1);s.refY=1e12*ones(height(s),1);
             second=initializeMncavVdbFromGnss(s,i,8);
             tc.verifyEqual(first,second);
             tc.verifyEqual(first.pose,[34 52 atan2(4,3)],AbsTol=1e-12);
         end
-        function initializationRequiresObservableMeasuredMotion(tc)
-            [s,i]=fixture();s.gnssX(:)=0;s.gnssY(:)=0;
-            tc.verifyError(@()initializeMncavVdbFromGnss(s,i,8),'VehicleLocalization:InitializationUnavailable');
+        function headingAtStandstillInitializesTheState(tc)
+            [s,i]=fixture();s.gnssX(:)=0;s.gnssY(:)=0;s.gnssHeadingRad(:)=.2;i.highRate.longitudinalSpeed(:)=0;
+            a=initializeMncavVdbFromGnss(s,i,8);tc.verifyEqual(a.pose,[0 0 .2]);
         end
         function invalidGnssPacketsDoNotInitializeHeading(tc)
             [s,i]=fixture();s.gnssValid(:)=0;
@@ -80,8 +80,8 @@ classdef mncavVdbIsolationTest < matlab.unittest.TestCase
     end
 end
 function [s,i]=fixture()
-    t=(0:.1:12).';s=table(t,10+3*t,20+4*t,ones(size(t)), ...
-        'VariableNames',{'time','gnssX','gnssY','gnssValid'});
+    t=(0:.1:12).';s=table(t,10+3*t,20+4*t,atan2(4,3)*ones(size(t)),ones(size(t)), ...
+        'VariableNames',{'time','gnssX','gnssY','gnssHeadingRad','gnssValid'});
     h=struct('time',t,'longitudinalSpeed',5*ones(size(t)),'longitudinalAcceleration',zeros(size(t)), ...
         'lateralAcceleration',zeros(size(t)),'yawRate',zeros(size(t)));
     i=struct('highRate',h,'lateral',struct('lateralVelocity',zeros(size(t))));

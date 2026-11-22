@@ -100,10 +100,10 @@ function worst=globalAxisResidual(cfg)
     for j=1:80
         course=2*pi*rand(stream);heading=2*pi*rand(stream);s=10+5*rand(stream);
         direction=[cos(course);sin(course)];a=2*sqrt(rand(stream))*[cos(heading);sin(heading)];
-        x=zeros(8,1);x([2,5])=s*direction;x([3,6])=a;x(7)=2*pi*rand(stream);
+        x=zeros(8,1);x([2,5])=s*direction;x([3,6])=a;x(7)=2*pi*rand(stream);x(8)=cfg.maximumBodyYawRate*(2*rand(stream)-1);
         [F,H,G]=localizationSupport.secants(x,x,cfg);
         predictor=T\(F*T)/t;
-        G=[G;ell*E(7,:)]*T/t;
+        G=diag([1,1,ell])*G*T/t;
         for mask=0:15
             active=logical(bitget(mask,1:4));
             k=d.auxiliaryWeights;

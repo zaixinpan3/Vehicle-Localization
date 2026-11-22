@@ -32,7 +32,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) gnssOutputPointTest < 
             testCase.verifyEqual(aligned.z,ideal.z,AbsTol=0);
             testCase.verifyTrue(all(isnan(aligned.diagnostics.gnssPositionAtObserverPoint),'all'));
         end
-        function runtimeUsesItsIntrinsicHeadingForPointCorrection(testCase)
+        function runtimePredictsTheAntennaAtTheEstimatedHeading(testCase)
             f=offsetInput(fixture());f.cfg.initialState(7)=.1;r=run(f);
             expected=zeros(numel(r.time),2);
             for k=1:numel(r.time)
@@ -42,10 +42,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) gnssOutputPointTest < 
             end
             testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint,expected,AbsTol=1e-12);
         end
-        function estimatedAttitudeControlsCorrection(testCase)
+        function antennaInnovationUsesTheInitialPredictedYaw(testCase)
             f=offsetInput(fixture());f.cfg.initialState(7)=.1;f.data=rmfield(f.data,'lidar');r=run(f);
             testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint(1,:), ...
-                f.data.gnss.position(1,:)-([cos(.1),-sin(.1);sin(.1),cos(.1)]*f.cfg.gnss.outputPoint.bodyOffset(:)).',AbsTol=1e-12);
+                localizationSupport.correctGnssOutputPoint(f.data.gnss.position(1,:),[],.1,f.cfg.gnss.outputPoint),AbsTol=1e-12);
         end
         function independentPointConfigurationUsesTheSolvedGnssGain(testCase)
             cfg=freshObserverTestConfig();design=localizationSupport.designFullObserverGains(cfg);
@@ -62,7 +62,7 @@ function f=fixture()
     t=(0:.1:6).';n=numel(t);z=zeros(n,1);yaw=.2*t;v=8;r=.2;
     position=[v/r*sin(yaw),v/r*(1-cos(yaw))];
     h=struct('time',t,'longitudinalSpeed',v+z,'longitudinalAcceleration',z,'lateralAcceleration',v*r+z,'yawRate',r+z);
-    g=struct('time',t,'position',position,'valid',true(n,1),'information',repmat(100*eye(2),1,1,n),'delay',0);
+    g=struct('time',t,'position',position,'heading',yaw,'valid',true(n,1),'information',repmat(100*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[position,yaw],'valid',true(n,1),'information',repmat(100*eye(3),1,1,n),'delay',0);
     lateral=struct('time',t,'lateralVelocity',z,'yawRate',z,'sideSlipAngleRate',z);
     cfg=freshObserverTestConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;v;0;0;0;v*r;0];

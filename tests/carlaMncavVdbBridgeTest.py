@@ -16,7 +16,7 @@ class VdbBridgeTest(unittest.TestCase):
 
     def noise(self):
         return dict(accelerometerNoiseStdMps2=0., gyroNoiseStdRadps=0., wheelNoiseStdRadps=0.,
-                    steeringNoiseStdRad=0., gnssNoiseStdM=0.)
+                    steeringNoiseStdRad=0., gnssNoiseStdM=0., gnssHeadingStdRad=0.)
 
     def test_full_attitude_matches_carla_matrix(self):
         data=self.row();data['roll']=.13;data['pitch']=-.07;data['yaw']=1.2
@@ -43,5 +43,6 @@ class VdbBridgeTest(unittest.TestCase):
         self.assertAlmostEqual(s[0,2],-2.);self.assertAlmostEqual(s[0,6],-.2)
         self.assertAlmostEqual(s[0,11],-.1)
         np.testing.assert_allclose(s[0,12:14],[0,2.3],atol=1e-14)
+        self.assertAlmostEqual(s[0,16], -np.pi/2)
 
 if __name__=='__main__':unittest.main()

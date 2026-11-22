@@ -72,7 +72,7 @@ function [report,estimate,trial]=runKittiOverlapTrial(datasetFolder,outputFolder
     cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2), ...
         'headingStdRad',0,'identifier',"coincident-output-points");
     noise=cfg.invariantObserver.noise;
-    noise.lidarPositionM=.1;noise.lidarHeadingRad=.01;noise.gnssPositionM=1;
+    noise.lidarPositionM=.1;noise.lidarHeadingRad=.01;
     noise.velocityMps=1;noise.accelerationMps2=1;noise.jerkMps3=cfg.iss.maximumAcceleration/2;
     cfg.invariantObserver.noise=noise;
     cfg.invariantObserver.provenance.noise="Declared transfer scales; jerk maximumAcceleration / 2 s, no velocity output, weak LiDAR without GNSS. Revised during this development trial; no independent holdout claim";

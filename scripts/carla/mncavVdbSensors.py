@@ -11,7 +11,7 @@ SAE_TO_PROJECT = np.diag([1., -1., -1.])
 Z_FLIP = np.diag([1., 1., -1.])
 SENSOR_COLUMNS = ['time','specificX','specificY','specificZ','gyroX','gyroY','gyroZ',
                   'omegaFL','omegaFR','omegaRL','omegaRR','roadWheelAngle',
-                  'gnssX','gnssY','gnssVariance','gnssValid','reserved']
+                  'gnssX','gnssY','gnssVariance','gnssValid','gnssHeadingRad']
 
 
 def rotations(row):
@@ -37,7 +37,7 @@ def synthesize_sensors(truth, cfg, offset, seed, errors=None):
     n = len(truth)
     dt = np.r_[0., np.diff(truth['time'])]
     assert n > 0 and np.all(dt[1:] > 0)
-    rng = [np.random.default_rng(x) for x in np.random.SeedSequence(seed).spawn(10)]
+    rng = [np.random.default_rng(x) for x in np.random.SeedSequence(seed).spawn(11)]
     values = np.zeros((n, 17));values[:, 0] = truth['time']
     for k, row in enumerate(truth):
         _, rp = rotations(row)
@@ -68,6 +68,8 @@ def synthesize_sensors(truth, cfg, offset, seed, errors=None):
     values[:, 14] = cfg['gnssNoiseStdM']**2 + sigma**2
     period = cfg.get('gnssPeriodSeconds',0.)
     valid = np.ones(n,dtype=bool) if period == 0 else np.isclose(truth['time']/period,np.round(truth['time']/period),atol=1e-7,rtol=0)
+    yaw = -truth['yaw'] + rng[10].normal(0., cfg['gnssHeadingStdRad'], n)
+    values[:, 16] = np.where(valid, np.arctan2(np.sin(yaw), np.cos(yaw)), np.nan)
     values[:, 15] = valid
     values[~valid, 12:14] = np.nan
     return values

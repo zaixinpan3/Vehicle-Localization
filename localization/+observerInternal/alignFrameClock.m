@@ -58,9 +58,14 @@ function [aligned,lateral,metadata,selected]=alignFrameClock(data,lateralInput,c
             'sourceLeftTime',g.time(a),'sourceRightTime',g.time(b));
         if ~isfield(g,'information'),aligned.gnss=rmfield(aligned.gnss,'information');end
     end
-    if isfield(data,'gnssHeading')
+    if isfield(data,'gnssHeading') || (isfield(data,'gnss') && isfield(data.gnss,'heading'))
         heading=localizationSupport.headingMeasurements(data,t,cfg);
-        aligned.gnssHeading=rmfield(heading,{'waitSeconds'});
+        if isfield(data,'gnssHeading')
+            aligned.gnssHeading=rmfield(heading,{'waitSeconds'});
+        else
+            aligned.gnss.heading=heading.heading;
+            aligned.gnss.valid=aligned.gnss.valid & heading.valid;
+        end
         gnssWait=max(gnssWait,heading.waitSeconds);
     end
     metadata=struct('clock',"Native LiDAR frames; no synthetic inter-frame localization outputs", ...

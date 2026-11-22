@@ -33,7 +33,7 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(v.certified);
             testCase.verifyTrue(v.matchedAuxiliaryGain);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
-            testCase.verifyEqual(v.nominalFusion.vertices,16);
+            testCase.verifyEqual(v.nominalFusion.vertices,4);
             testCase.verifyLessThan(v.worstVertexEigenvalue,-.009);
         end
         function measuredOffsetCannotReuseThisTemporaryDesign(testCase)
@@ -63,7 +63,7 @@ function [estimate,initialError,finalError]=runScenario(cfg,speed,mode)
     high=struct('time',time,'longitudinalSpeed',speed*ones(n,1), ...
         'longitudinalAcceleration',zero,'lateralAcceleration',zero,'yawRate',zero);
     lateral=struct('time',time,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngleRate',zero);
-    gnss=struct('time',time,'position',truth(:,1:2)+cfg.gnss.outputPoint.bodyOffset(:).', ...
+    gnss=struct('time',time,'heading',truth(:,3),'position',truth(:,1:2)+cfg.gnss.outputPoint.bodyOffset(:).', ...
         'information',repmat(1e6*eye(2),1,1,n),'valid',true(n,1),'delay',0);
     lidar=struct('time',time,'pose',truth,'information',repmat(1e6*eye(3),1,1,n), ...
         'valid',true(n,1),'delay',0);

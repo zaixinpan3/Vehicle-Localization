@@ -20,8 +20,8 @@ classdef coupledMotionTest < matlab.unittest.TestCase
         function degenerateDomainsHaveNoDuplicateVertices(testCase)
             c=mncavFullObserverConfig();c.iss.maximumAcceleration=0;c.maximumBodyYawRate=0;
             c.iss.maximumSpeed=c.invariantObserver.fusion.minimumCourseSpeed;
-            [v,b]=localizationSupport.fusionVertices(c);
-            testCase.verifySize(v,[1,4]);testCase.verifyEqual(v,b(:,1).');
+            v=localizationSupport.fusionVertices(c);
+            testCase.verifySize(v,[1,4]);testCase.verifyEqual(v,zeros(1,4));
         end
         function affineVertexInterpolationPreservesTheWholeLmi(testCase)
             testCase.verifyLessThan(affineError(),1e-10);
@@ -49,31 +49,36 @@ end
 function [error,minimumWeight]=containmentErrors()
     stream=RandStream('mt19937ar','Seed',3110);error=0;minimumWeight=1;
     for cfg={mncavFullObserverConfig(),mncavSmallOffsetObserverConfig()}
-        c=cfg{1};[vertices,b]=localizationSupport.fusionVertices(c);s0=c.invariantObserver.fusion.minimumCourseSpeed;
+        c=cfg{1};vertices=localizationSupport.fusionVertices(c);s0=c.invariantObserver.fusion.minimumCourseSpeed;
         for j=1:500
-            [v,a,r]=sampleMotion(c,s0,stream);
-            f=localizationSupport.fusionFeatures(v,a,r);w=vertexWeights(f,b);
-            error=max(error,max([norm(w.'*vertices-f,Inf),abs(sum(w)-1)]));minimumWeight=min(minimumWeight,min(w));
+            [v,a,r]=sampleMotion(c,s0,stream);f=localizationSupport.fusionFeatures(v,a,r);
+            u=abs(r);B=2*(u*c.iss.maximumSpeed+c.iss.maximumAcceleration);
+            % Independent barycentric recovery on the polygon's two triangles.
+            lift=[u;u^2;1];w=zeros(4,1);
+            for tri={[1,2,3],[1,3,4]}
+                ix=tri{1};weights=[vertices(ix,1:2).';ones(1,3)]\lift;
+                if min(weights)>=-1e-13,w(ix)=weights;break;end
+            end
+            minimumWeight=min([minimumWeight;w]);f0=w.'*vertices;
+            error=max(error,norm(f0-[u,u^2,B,0],Inf));
+            % Reflection changes the sign of r. Rotations put the rate column along x.
+            d=f(3:4).';dNorm=norm(d);sgn=1;if r<0,sgn=-1;end
+            angle=atan2(d(2),d(1));Q=[cos(angle),sin(angle);-sgn*sin(angle),sgn*cos(angle)]*sgn;
+            S=blkdiag(kron(Q,eye(3)),sgn*eye(2));physical=localizationSupport.fusionMatrices(c,f);
+            aligned=localizationSupport.fusionMatrices(c,[u,u^2,dNorm,0]);
+            error=max([error,norm(aligned-S*physical*S.'),max(0,dNorm-B)]);
         end
     end
 end
 
-function w=vertexWeights(f,b)
-    u=(f(:)-b(:,1))./(b(:,2)-b(:,1));w=ones(2^numel(u),1);
-    for j=1:numel(u)
-        high=bitget((0:numel(w)-1).',j);w=w.*(high*u(j)+(1-high)*(1-u(j)));
-    end
-end
-
 function error=affineError()
-    c=mncavFullObserverConfig();[vertices,b]=localizationSupport.fusionVertices(c);
-    f=(.37*b(:,1)+.63*b(:,2)).';w=vertexWeights(f,b);P=diag(1:8);combined=zeros(8);
-    for j=1:size(vertices,1)
+    c=mncavFullObserverConfig();vertices=localizationSupport.fusionVertices(c);
+    w=[.11;.23;.29;.37];P=diag([1:3,1:3,7,8]);combined=zeros(8);
+    for j=1:numel(w)
         A=localizationSupport.fusionMatrices(c,vertices(j,:));M=P*A;
         combined=combined+w(j)*(M+M.');
     end
-    A=localizationSupport.fusionMatrices(c,f);M=P*A;
-    error=norm(combined-M-M.','fro');
+    A=localizationSupport.fusionMatrices(c,w.'*vertices);M=P*A;error=norm(combined-M-M.','fro');
 end
 
 function [v,a,r]=sampleMotion(c,s0,stream)

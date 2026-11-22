@@ -15,7 +15,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyTrue(v.certified && v.matchedAuxiliaryGain);
             testCase.verifyEqual(d.solveAudit.optimizationCalls,2);
             testCase.verifyEqual(d.K(1:3,1),[3;3;1]);
-            testCase.verifyEqual(v.vertices,16);
+            testCase.verifyEqual([v.vertices,v.matrixInequalities],[4,4]);
+            testCase.verifyLessThan(v.gnssDissipationDefect,1e-8);
             testCase.verifyTrue(v.independentYawRateCorrection && v.upstreamYawRateRequired);
             testCase.verifyEqual(d.P(8,1:7),zeros(1,7));
             testCase.verifyFalse(isfield(d,'yawRateGainNormalized'));
@@ -63,6 +64,25 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyFalse(v.nominalFusion.coversZeroLidarInformation);
             testCase.verifyFalse(isfield(v,'regionalIss'));
         end
+        function receiverUncertaintyCannotChangeGnssFreeGains(testCase)
+            c=freshObserverTestConfig();a=c.invariantDesign;
+            c.invariantObserver.noise.gnssHeadingRad=.01;
+            c.invariantObserver.noise.gnssPositionM=.10;
+            c=freshObserverTestConfig(c);b=c.invariantDesign;
+            testCase.verifyEqual(b.P,a.P,AbsTol=1e-10);
+            testCase.verifyEqual([b.kappaR;b.kappaL;b.auxiliaryWeights], ...
+                [a.kappaR;a.kappaL;a.auxiliaryWeights],AbsTol=1e-10);
+            testCase.verifyGreaterThan(b.K(7,3),a.K(7,3));
+            testCase.verifyEqual(b.gnssHeadingBandwidth.perSecond, ...
+                max(b.gnssHeadingBandwidth.dissipationFloorPerSecond, ...
+                c.invariantObserver.noise.upstreamRateRadps/.01),AbsTol=1e-12);
+            c.invariantObserver.noise.gnssHeadingRad=1e5;
+            [K,bound]=localizationSupport.linearGain(c,b.P);
+            testCase.verifyEqual(bound.perSecond,bound.dissipationFloorPerSecond);
+            gammaP=b.P(1,1:3)*K(1:3,1);gammaH=b.P(7,7)*K(7,3);
+            testCase.verifyEqual(4*gammaH,gammaP*(norm(c.gnss.outputPoint.bodyOffset)/ ...
+                c.invariantObserver.headingLengthM)^2,AbsTol=1e-12);
+        end
         function independentGnssBandwidthChangesOnlyTheSpecifiedLinearDesign(testCase)
             c=freshObserverTestConfig();a=localizationSupport.runtime(c);
             c.invariantObserver.gnssBandwidthRatio=1.2;
@@ -90,10 +110,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyLessThan(abs(estimate.heading(end)),.03);
         end
         function gnssOnlyRetainsAccuracyWithoutAnOutageCertificate(testCase,dt)
-            [data,lateral,c]=constantMotionFixture(5,dt);
+            sensor=mncavSensorConfig();synthetic=mncavFullObserverConfig();
+            synthetic.invariantObserver.noise.gnssHeadingRad=sensor.referenceGnssIns.headingErrorSimulationPriorRad;
+            [data,lateral,c]=constantMotionFixture(5,dt,freshObserverTestConfig(synthetic));
             data=rmfield(data,'lidar');n=numel(lateral.time);
             data.gnss=struct('time',lateral.time, ...
-                'position',[5*lateral.time,zeros(n,1)]+c.gnss.outputPoint.bodyOffset(:).', ...
+                'heading',zeros(n,1),'position',[5*lateral.time,zeros(n,1)]+c.gnss.outputPoint.bodyOffset(:).', ...
                 'information',repmat(1e6*eye(2),1,1,n),'valid',true(n,1),'delay',0);
             c.initialState=[.2;5;0;-.1;0;0;.03];
             e=runFullLocalizationObserver(data,c,LateralInputs=lateral);

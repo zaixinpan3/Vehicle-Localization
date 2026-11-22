@@ -29,6 +29,10 @@ def prepare(args):
     rows=raw[np.isclose(raw['time']/dt,np.round(raw['time']/dt),atol=1e-7,rtol=0)]
     assert np.allclose(np.diff(rows['time']),dt)
     offset=json.loads((root/'config/mncavMotionOutputPoint.json').read_text())['forwardOffsetM']
+    # Older captures predate the simulated independent GNSS heading channel.
+    if 'gnssHeadingStdRad' not in cfg['sensors']:
+        sensors = json.loads((root/'config/mncavSensorParameters.json').read_text())
+        cfg['sensors']['gnssHeadingStdRad'] = sensors['referenceGnssIns']['headingErrorSimulationPriorRad']
     measured=synthesize_sensors(rows,cfg['sensors'],offset,args.seed,noise[args.profile])
     args.output.mkdir(parents=True,exist_ok=False);(args.output/'points').mkdir()
     np.savetxt(args.output/'sensors.csv',measured,delimiter=',',header=','.join(SENSOR_COLUMNS),comments='')
@@ -50,7 +54,7 @@ def prepare(args):
         parameters=dict(config=cfg),outputPointForwardOffsetM=offset,
         noiseProfile=args.profile,seed=args.seed,sensorErrorModel=noise[args.profile],
         lidarNoise='Reused fixed CARLA ray-cast measurements with the original independent 0.015 m radial noise',
-        initialization='No supplied pose or heading. Bootstrap from native noisy GNSS observations before evaluation.',
+        initialization='Initialize from a native noisy GNSS pose at the first evaluation timestamp.',
         sourceCaptureFingerprint=hashlib.sha256((args.capture/'metadata.json').read_bytes()).hexdigest())
     (args.output/'metadata.json').write_text(json.dumps(metadata,indent=2)+'\n')
     print(json.dumps(dict(output=str(args.output),frames=len(frames),sensorSamples=len(measured),profile=args.profile,seed=args.seed)))

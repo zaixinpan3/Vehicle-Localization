@@ -21,7 +21,7 @@ class SensorNoiseTest(unittest.TestCase):
         cls.truth['time'] = np.arange(len(cls.truth)) * .02
         cls.cfg = dict(accelerometerNoiseStdMps2=.05, gyroNoiseStdRadps=.002,
                        wheelNoiseStdRadps=.01, steeringNoiseStdRad=.0005,
-                       gnssNoiseStdM=.1, gnssPeriodSeconds=.1)
+                       gnssNoiseStdM=.1, gnssHeadingStdRad=.01, gnssPeriodSeconds=.1)
         cls.profiles = json.loads((ROOT / 'config/mncavVdbSensorNoise.json').read_text())
         cls.white = synthesize_sensors(cls.truth, cls.cfg, 0., 57, cls.profiles['white'])
         cls.moderate = synthesize_sensors(cls.truth, cls.cfg, 0., 57, cls.profiles['moderate'])
@@ -49,6 +49,8 @@ class SensorNoiseTest(unittest.TestCase):
         np.testing.assert_array_equal(np.flatnonzero(valid), np.arange(0, len(valid), 5))
         self.assertTrue(np.all(np.isnan(self.white[~valid, 12:14])))
         self.assertTrue(np.all(np.isfinite(self.white[valid, 12:14])))
+        self.assertTrue(np.all(np.isnan(self.white[~valid, 16])))
+        self.assertAlmostEqual(np.std(self.white[valid, 16]), .01, delta=.001)
 
     def test_correlated_gnss_error_and_marginal_variance(self):
         valid = self.white[:, 15].astype(bool)

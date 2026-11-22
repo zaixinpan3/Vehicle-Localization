@@ -35,11 +35,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyFalse(any(r.diagnostics.observedSpeedWithinIssDomain));
             testCase.verifyFalse(r.diagnostics.observedMotionEnvelopeSatisfied);
         end
-        function gnssPositionAndGyroLeaveStationaryYawOffset(testCase)
+        function consistentGnssPoseAtRestHasZeroInnovation(testCase)
             f=fixture();f.data=rmfield(f.data,'lidar');t=f.data.highRate.time;n=numel(t);
             yaw=f.cfg.initialState(7);R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];
             receiver=(R*f.cfg.gnss.outputPoint.bodyOffset(:)).';
-            f.data.gnss=struct('time',t,'position',repmat(receiver,n,1),'information',repmat(1e6*eye(2),1,1,n), ...
+            f.data.gnss=struct('time',t,'heading',repmat(yaw,n,1),'position',repmat(receiver,n,1),'information',repmat(1e6*eye(2),1,1,n), ...
                 'valid',true(n,1),'delay',0);
             f.cfg.initialState([1,4])=0;r=execute(f);
             testCase.verifyEqual(r.headingUnwrapped,repmat(f.cfg.initialState(7),n,1),AbsTol=1e-12);

@@ -14,6 +14,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             testCase.verifyEqual(abs(p.heading(2)),pi,AbsTol=1e-12);
             testCase.verifyEqual(p.waitSeconds(2),.05,AbsTol=1e-12);
         end
+        function singleFixAppliesOnlyAtAcquisition(testCase)
+            p=localizationSupport.headingMeasurements(struct('gnssHeading',packet(.1,.3)),[0;.1;.2],mncavFullObserverConfig());
+            testCase.verifyEqual(p.valid,[false;true;false]);
+            testCase.verifyEqual(p.heading(2),.3,AbsTol=1e-15);
+        end
         function rejectsInvalidEndpointsAndExtrapolation(testCase)
             c=mncavFullObserverConfig();h=packet([0;.1],[0;0]);h.valid(2)=false;
             p=localizationSupport.headingMeasurements(struct('gnssHeading',h),[-.1;0;.05;.1;.2],c);
@@ -30,9 +35,19 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
                 'valid',false(n,1),'delay',0);
             [aligned,~,~]=syntheticObserver.align(data,l,c);
             testCase.verifyTrue(all(aligned.gnssHeading.valid));
-            testCase.verifyFalse(isfield(aligned,'gnss'));
+            testCase.verifyTrue(all(aligned.gnss.valid));
             testCase.verifyEqual(aligned.gnssHeading.heading,data.gnssHeading.heading,AbsTol=1e-12);
             testCase.verifyFalse(isfield(aligned.gnssHeading,'waitSeconds'));
+        end
+        function packedPoseMatchesTwoNativeStreams(testCase)
+            [data,c,l]=fixture();data.gnssHeading.heading(:)=.1;
+            same=data;same.gnss.heading=data.gnssHeading.heading;same=rmfield(same,'gnssHeading');
+            a=runFullLocalizationObserver(data,c,LateralInputs=l);b=runFullLocalizationObserver(same,c,LateralInputs=l);
+            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
+            incomplete=rmfield(data,'gnssHeading');empty=rmfield(incomplete,'gnss');
+            a=runFullLocalizationObserver(incomplete,c,LateralInputs=l);b=runFullLocalizationObserver(empty,c,LateralInputs=l);
+            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
+            testCase.verifyFalse(any(a.diagnostics.gnssPoseValid));
         end
         function missingHeadingMatchesInvalidHeading(testCase)
             [data,c,l]=fixture();data=rmfield(data,'gnssHeading');
@@ -92,8 +107,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             data.gnss=struct('time',t,'position',[12*t,zeros(size(t))],'valid',pos,'delay',0);
             data.gnssHeading.valid=hdg;
             a=runFullLocalizationObserver(data,c,LateralInputs=l);
-            testCase.verifyEqual(a.diagnostics.gnssPositionValid,pos);
-            testCase.verifyEqual(a.diagnostics.independentHeadingValid,hdg);
+            testCase.verifyEqual(a.diagnostics.gnssPositionValid,pos & hdg);
+            testCase.verifyEqual(a.diagnostics.independentHeadingValid,pos & hdg);
             testCase.verifyEqual(a.observer.continuousDesign,d);
             data.gnss.position(~pos,:)=NaN;
             data.gnssHeading.heading(~hdg)=NaN;
@@ -110,6 +125,7 @@ function [data,c,l]=fixture()
     c.initialState=[0;12;0;0;0;0;0;0];
     h=struct('time',t,'longitudinalSpeed',12+z,'longitudinalAcceleration',z,'lateralAcceleration',z, ...
         'bodyVelocityValid',false(size(t)),'bodyAccelerationValid',false(size(t)));
-    data=struct('highRate',h,'gnssHeading',packet(t,z));
+    data=struct('highRate',h,'gnssHeading',packet(t,z), ...
+        'gnss',struct('time',t,'position',[12*t,z],'valid',true(size(t)),'delay',0));
     l=struct('time',t,'lateralVelocity',z);
 end

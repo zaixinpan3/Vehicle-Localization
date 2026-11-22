@@ -37,6 +37,7 @@ function estimate=integrate(data,cfg,lateral,L)
     end
     G=gnssPositionSource(data,t);
     heading=localizationSupport.headingMeasurements(data,t,cfg);
+    poseValid=G.valid & heading.valid;
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
         'minimumInformation',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3), ...
         'channels',{cell(n,1)});
@@ -59,7 +60,7 @@ function estimate=integrate(data,cfg,lateral,L)
     assert(ismember(numel(x),[7,stateCount]) && all(isfinite(x)),'VehicleLocalization:FullInitializationRequired', ...
         'Supply an explicit common initial state.');x=x(:);
     if numel(x)==7,x(8)=0;end
-    z=zeros(n,stateCount);mode=zeros(n,1);headingMode=zeros(n,1);correction=zeros(n,4);
+    z=zeros(n,stateCount);correction=zeros(n,4);
     yawCorrection=zeros(n,1);gnssPosition=nan(n,2);
     headingInnovation=nan(n,1);
     rateInnovation=nan(n,1);
@@ -75,33 +76,24 @@ function estimate=integrate(data,cfg,lateral,L)
         dt=0;if k>1,dt=t(k)-t(k-1);end
         speed=h.longitudinalSpeed(k);vy=lateral.lateralVelocity(k);
         rate=x(8);
-        predYaw=x(7)+rate*dt;
         maximumRate=max(maximumRate,abs(rate));
-        yaw=predYaw;
-        if G.valid(k)
-            gnssPosition(k,:)=localizationSupport.correctGnssOutputPoint(G.values(k,:),[],yaw,alignment);
-        end
         x=localizationSupport.predict(x,dt,cfg);
         intrinsicStates(k,:)=x.';
-        gnssRate=zeros(2,1);
-        if G.valid(k) || heading.valid(k) || rateValid(k)
-            observation=linearOutput*x;
-            if G.valid(k),observation(1:2)=gnssPosition(k,:).';end
-            if heading.valid(k)
-                headingInnovation(k)=atan2(sin(heading.heading(k)-x(7)),cos(heading.heading(k)-x(7)));
-                observation(3)=linearOutput(3,7)*(x(7)+headingInnovation(k));
-            end
-            if rateValid(k)
-                observation(4)=upstreamRate(k);
-                rateInnovation(k)=upstreamRate(k)-x(8);
-            end
-            active=[G.valid(k),G.valid(k),heading.valid(k),rateValid(k)];
-            Kg=continuous.linearOutputGain(:,active);Cg=linearOutput(active,:);observation=observation(active);
-            % The prediction already integrated the prior rate. Complete
-            % psi-dot = r with only the endpoint rate increment in this solve.
-            x=x+(eye(8)+dt*(Kg*Cg-headingKinematics))\(dt*Kg*(observation-Cg*x));
-            gnssRate=Kg([1,4],:)*(observation-Cg*x);
+        observation=linearOutput*x;
+        if poseValid(k)
+            measuredYaw=heading.heading(k);
+            gnssPosition(k,:)=localizationSupport.correctGnssOutputPoint(G.values(k,:),[],x(7),alignment);
+            headingInnovation(k)=atan2(sin(measuredYaw-x(7)),cos(measuredYaw-x(7)));
+            observation(1:3)=[gnssPosition(k,:).';linearOutput(3,7)*(x(7)+headingInnovation(k))];
         end
+        if rateValid(k)
+            observation(4)=upstreamRate(k);rateInnovation(k)=upstreamRate(k)-x(8);
+        end
+        rows=[repmat(poseValid(k),1,3),rateValid(k)];
+        Kg=continuous.linearOutputGain(:,rows);Cg=linearOutput(rows,:);observation=observation(rows);
+        % The empty packet contributes a zero right-hand side to the same solve.
+        x=x+(eye(8)+dt*(Kg*Cg-headingKinematics))\(dt*Kg*(observation-Cg*x));
+        gnssRate=Kg([1,4],:)*(observation-Cg*x);
         packet=localizationSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
             h.lateralAcceleration(k), ...
             velocityValid(k),accelerationValid(k),cfg);
@@ -141,11 +133,10 @@ function estimate=integrate(data,cfg,lateral,L)
             if dt>0,rateCorrection=delta/dt;end
             correction(k,3:4)=rateCorrection([1,4]).';yawCorrection(k)=rateCorrection(7);
             lidarStrength(k)=min(audit.filter.strengths);
-            if audit.filter.S(3,3)>0,headingMode(k)=2;end
         end
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Synchronous update became nonfinite.');
-        if G.valid(k),correction(k,1:2)=gnssRate.';end
-        z(k,:)=x.';mode(k)=double(G.valid(k))+2*double(L.valid(k));
+        correction(k,1:2)=gnssRate.';
+        z(k,:)=x.';
     end
     lidarPoseSupport.sourceValid=L.valid;
     estimate=struct('time',t,'z',z(:,1:7),'pose',[z(:,[1,4]),wrap(z(:,7))], ...
@@ -154,12 +145,12 @@ function estimate=integrate(data,cfg,lateral,L)
     measuredSpeed=hypot(h.longitudinalSpeed(:),lateral.lateralVelocity(:));
     speedInterval=[cfg.invariantObserver.fusion.minimumCourseSpeed,cfg.iss.maximumSpeed];
     speedInDomain=velocityValid & measuredSpeed>=speedInterval(1) & measuredSpeed<=speedInterval(2);
-    estimate.diagnostics=struct('mode',mode,'headingMode',headingMode,'positionCorrection',correction, ...
+    estimate.diagnostics=struct('gnssPoseValid',poseValid,'lidarValid',logical(L.valid(:)),'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition, ...
         'yawCorrection',yawCorrection, ...
         'lidarMatched',{lidarAudits},'poseWeight',poseWeights,'preLidarState',preLidarStates, ...
         'lidarInformationBounds',informationBounds, ...
-        'independentHeadingValid',heading.valid, ...
+        'independentHeadingValid',poseValid, ...
         'independentHeadingInnovation',headingInnovation, ...
         'observedMotionEnvelopeSatisfied', ...
             all(velocityValid) && all(accelerationValid) ...
@@ -167,10 +158,10 @@ function estimate=integrate(data,cfg,lateral,L)
             && all(hypot(h.longitudinalAcceleration(:),h.lateralAcceleration(:))<=cfg.iss.maximumAcceleration) ...
             && maximumRate<=cfg.maximumBodyYawRate, ...
         'issSpeedInterval',speedInterval,'observedSpeedWithinIssDomain',speedInDomain, ...
-        'zeroSpeedCertified',false,'minimumLidarStrength',lidarStrength,'gnssPositionValid',G.valid, ...
+        'zeroSpeedCertified',false,'minimumLidarStrength',lidarStrength,'gnssPositionValid',poseValid, ...
         'maximumBodyYawRate',maximumRate, ...
         'rateEnvelopeSatisfied',maximumRate<=cfg.maximumBodyYawRate, ...
-        'packetCounts',struct('gnssValid',nnz(G.valid),'gnssInvalid',nnz(~G.valid), ...
+        'packetCounts',struct('gnssValid',nnz(poseValid),'gnssInvalid',nnz(~poseValid), ...
         'lidarValid',nnz(L.valid),'lidarInvalid',nnz(~L.valid), ...
         'bodyVelocityValid',nnz(velocityValid),'bodyAccelerationValid',nnz(accelerationValid)), ...
         'localizationUpdates',n-1, ...

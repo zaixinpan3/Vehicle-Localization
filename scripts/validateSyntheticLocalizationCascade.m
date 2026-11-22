@@ -5,7 +5,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
 % 10 Hz synthetic quadratic LiDAR residuals exercise the LPV and eight-state
 % observer dynamics. The simulation uses its own sensor model and shares
 % the frame-clock interpolation and time integration with map-based localization.
-% GNSS corrects position; gyro and LiDAR supply heading/rate innovations.
+% GNSS supplies a full pose and the upstream motion packet supplies body yaw rate.
 % Scenarios separate convention errors (clean signals), noise/bias accuracy,
 % source availability and lateral-model mismatch.
 % All signals are synthetic; no recorded data or reference trajectory is read.
@@ -18,7 +18,11 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
     end
     setupVehicleLocalization();if ~isfolder(outputFolder),mkdir(outputFolder);end
     lateralCfg=lateralObserverConfig("mncav");design=designLateralObserverGains(lateralObserverConfig());
-    [~,cfg]=synthesizeMncavInvariantDesign(mncavFullObserverConfig());settings=scenarioSettings(lateralCfg,cfg);
+    cfg=mncavFullObserverConfig();settings=scenarioSettings(lateralCfg,cfg);
+    % Generate every stress case with the same design for the declared synthetic receiver.
+    cfg.invariantObserver.noise.gnssHeadingRad=settings.noise.gnssHeadingStdRad;
+    cfg.invariantObserver.noise.gnssPositionM=hypot(settings.noise.gnssWhiteStdM,settings.noise.gnssMarkovStdM);
+    [~,cfg]=synthesizeMncavInvariantDesign(cfg);
     for name=string(fieldnames(options.NoiseOverrides)).'
         assert(isfield(settings.noise,name),'VehicleLocalization:UnknownNoiseSetting','Unknown noise setting %s.',name);
         settings.noise.(name)=options.NoiseOverrides.(name);
@@ -115,7 +119,7 @@ function s=scenarioSettings(lateralCfg,cfg)
         'longitudinalAccelerationStdMps2',.05, ...
         'lateralAccelerationStdMps2',sensors.lateralSimulation.lateralAccelerationNoiseStdMps2, ...
         'lateralAccelerationBiasMps2',.1,'yawRateStdRadps',sensors.lateralSimulation.yawRateNoiseStdRadps, ...
-        'yawRateBiasRadps',.001,'gnssWhiteStdM',.02,'gnssMarkovStdM',.03,'gnssMarkovTimeS',20, ...
+        'yawRateBiasRadps',.001,'gnssHeadingStdRad',sensors.referenceGnssIns.headingErrorSimulationPriorRad,'gnssWhiteStdM',.02,'gnssMarkovStdM',.03,'gnssMarkovTimeS',20, ...
         'lidarAlongStdM',.10,'lidarCrossStdM',.04,'lidarYawStdRad',deg2rad(.3), ...
         'lidarRejectFraction',.05,'lidarJitterS',.003);
     s.gnss=struct('periodS',.05,'offsetS',.013);s.lidar=struct('periodS',.1,'offsetS',.05);
@@ -204,6 +208,8 @@ function signals=synthesizeSignals(truth,s,noise)
         lidarError(k,:)=e.';pose(k,:)=[l.position(k,:),l.heading(k)]+e.';
     end
     valid=rand(stream,nl,1)>=q.lidarRejectFraction;pose(~valid,:)=NaN;
+    % Draw this independent synthetic channel after the existing sensor sequences.
+    signals.gnss.heading=g.heading+q.gnssHeadingStdRad*randn(stream,ng,1);
     signals.highRate=h;
     signals.lidar=struct('time',tl,'pose',pose,'valid',valid,'information',information,'delay',0, ...
         'headingConvention',"unwrapped",'truthError',lidarError);
@@ -265,8 +271,8 @@ function m=scoreRun(estimate,truth,fine,lateral,data,s,mask)
     if isfield(data,'lidar')
         ok=data.lidar.valid & settled;m.rawLidarRmseM=rms(vecnorm(data.lidar.pose(ok,1:2)-truth.position(ok,:),2,2));
     end
-    m.modeCounts=arrayfun(@(v) nnz(estimate.diagnostics.mode==v),0:3);
-    m.headingModeCountsGyroLidar=[nnz(estimate.diagnostics.headingMode==0),nnz(estimate.diagnostics.headingMode==2)];
+    m.gnssPoseSamples=nnz(estimate.diagnostics.gnssPoseValid);
+    m.lidarSamples=nnz(estimate.diagnostics.lidarValid);
     m.maximumBodyYawRate=estimate.diagnostics.maximumBodyYawRate;
     m.acceleration=vecnorm(estimate.acceleration-rotateBody(truth.outputAcceleration,truth.heading),2,2);
     m.settledAccelerationRmseMps2=rms(m.acceleration(settled));

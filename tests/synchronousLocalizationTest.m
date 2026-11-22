@@ -18,18 +18,18 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
         end
         function missingChannelDoesNotWaitForTheOther(testCase)
             f=fixture();f.data.gnss.valid(5:end)=false;f.data.gnss.position(5:end,:)=NaN;
-            r=run(f);testCase.verifyEqual(r.diagnostics.mode(5:end),2*ones(17,1));
+            r=run(f);testCase.verifyEqual(~r.diagnostics.gnssPoseValid(5:end) & r.diagnostics.lidarValid(5:end),true(17,1));
             testCase.verifyEqual(r.position(:,1),8*r.time,AbsTol=1e-10);
         end
         function invalidLidarDoesNotCreateAPredictedMeasurement(testCase)
             f=fixture();f.data.lidar.valid(5:end)=false;f.data.lidar.pose(5:end,:)=NaN;
-            r=run(f);testCase.verifyEqual(r.diagnostics.mode(5:end),ones(17,1));
+            r=run(f);testCase.verifyEqual(r.diagnostics.gnssPoseValid(5:end) & ~r.diagnostics.lidarValid(5:end),true(17,1));
             testCase.verifyEqual(r.diagnostics.positionCorrection(5:end,3:4),zeros(17,2),AbsTol=0);
         end
         function bothMissingUseOnlyStateDynamics(testCase)
             f=fixture();f.data.gnss.valid(:)=false;f.data.lidar.valid(:)=false;r=run(f);
             testCase.verifyEqual(r.position(:,1),8*r.time,AbsTol=1e-10);
-            testCase.verifyEqual(r.diagnostics.mode,zeros(21,1));
+            testCase.verifyEqual(r.diagnostics.gnssPoseValid | r.diagnostics.lidarValid,false(21,1));
         end
         function noFutureFrameChangesThePast(testCase)
             f=fixture();a=run(f);f.data.gnss.position(12:end,:)=100;f.data.lidar.pose(12:end,:)=100;b=run(f);
@@ -174,7 +174,7 @@ function f=turning(step)
     f.data.highRate=struct('time',t,'longitudinalSpeed',v+z,'longitudinalAcceleration',z, ...
         'lateralAcceleration',v*r+z,'yawRate',r+z);
     f.lateral=struct('time',t,'lateralVelocity',z,'yawRate',r+z,'sideSlipAngleRate',z);
-    f.data.gnss=struct('time',t,'position',f.truth,'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
+    f.data.gnss=struct('time',t,'heading',r*t,'position',f.truth,'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
     f.data.lidar=struct('time',t,'pose',[f.truth,r*t],'valid',true(n,1),'information',repmat(1e6*eye(3),1,1,n),'delay',0);
     f.cfg.initialState=[0;v;0;0;0;v*r;0];
 end
@@ -186,7 +186,7 @@ function f=fixture(duration)
     t=(0:.1:duration).';z=zeros(size(t));n=numel(t);
     h=struct('time',t,'longitudinalSpeed',8+z,'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z);
     lateral=struct('time',t,'lateralVelocity',z,'yawRate',z,'sideSlipAngleRate',z);
-    g=struct('time',t,'position',[8*t,z],'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
+    g=struct('time',t,'heading',z,'position',[8*t,z],'valid',true(n,1),'information',repmat(1e6*eye(2),1,1,n),'delay',0);
     l=struct('time',t,'pose',[8*t,z,z],'valid',true(n,1),'information',repmat(1e6*eye(3),1,1,n),'delay',0);
     cfg=freshObserverTestConfig();cfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);cfg.initialState=[0;8;0;0;0;0;0];
     cfg=freshObserverTestConfig(cfg);
@@ -202,6 +202,6 @@ function f=unaligned()
     f.data.highRate=struct('time',t,'longitudinalSpeed',8+z,'longitudinalAcceleration',z,'lateralAcceleration',z,'yawRate',z);
     f.lateral=struct('time',t,'lateralVelocity',z,'yawRate',z,'sideSlipAngleRate',z);
     g=(-.01:.02:2.01).';n=numel(g);
-    f.data.gnss=struct('time',g,'position',[8*g,zeros(n,1)],'valid',true(n,1), ...
+    f.data.gnss=struct('time',g,'heading',zeros(n,1),'position',[8*g,zeros(n,1)],'valid',true(n,1), ...
         'information',repmat(1e6*eye(2),1,1,n),'delay',0);
 end

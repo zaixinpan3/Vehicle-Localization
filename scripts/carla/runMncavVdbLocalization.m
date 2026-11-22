@@ -6,7 +6,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
 % Logical acquisition-time replay is not a real-time latency experiment.
 % Prepare the dataset with prepareMncavVdbMeasurements.py followed by
 % buildMncavVdbMeasurementClouds. The default t=8 s start follows stationary
-% IMU alignment and a three-second measured GNSS course bootstrap. Scenarios
+% IMU alignment and uses the measured GNSS position and independent heading. Scenarios
 % named lidar_only/dead_reckoning withdraw GNSS only after that bootstrap.
 % gnss_only keeps GNSS and withdraws LiDAR: the same sensors as a GNSS and
 % vehicle-motion observer, for algorithm-level comparisons.
@@ -64,6 +64,9 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     sourceConfig=struct('perception',p,'sourceWindow',localizationSourceWindowConfig());
     store=matfile(fullfile(datasetFolder,'pointClouds.mat'));
     base=mncavFullObserverConfig();base.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
+    noise=metadata.parameters.config.sensors;
+    base.invariantObserver.noise.gnssHeadingRad=noise.gnssHeadingStdRad;
+    base.invariantObserver.noise.gnssPositionM=hypot(noise.gnssNoiseStdM,metadata.sensorErrorModel.gnssCorrelatedErrorStdM);
     [~,base]=synthesizeMncavInvariantDesign(base);
     initial=initializeMncavVdbFromGnss(inputs.sensorTable,inputs,t(1));base.initialState=initial.state;
     s=inputs.sensorTable;timings=zeros(n,3);accepted=false(n,1);
@@ -75,8 +78,9 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
         data=struct('highRate',h);
         if ismember(scenario,["fused","gnss_outage","gnss_only"])
             valid=logical(s.gnssValid(idx));if scenario=="gnss_outage",valid(t>=35 & t<65)=false;end
+            receiverYaw=s.gnssHeadingRad(idx);
             data.gnss=struct('time',t,'position',[s.gnssX(idx),s.gnssY(idx)], ...
-                'information',eye(2).*reshape(1./s.gnssVariance(idx),1,1,n),'valid',valid,'delay',0);
+                'heading',receiverYaw,'valid',valid & isfinite(receiverYaw),'delay',0);
         else
             assert(ismember(scenario,["lidar_only","dead_reckoning"]),'Unknown scenario.');
         end
@@ -90,7 +94,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
             timings(~isfinite(timings))=0;
         end
         row=struct('scenario',scenario,'lidarChannel',options.LidarChannel,'frames',n,'durationSeconds',t(end)-t(1), ...
-            'referenceUsed',false, ...
+            'referenceUsed',false,'completeGnssPosePackets',nnz(estimate.diagnostics.gnssPoseValid), ...
             'accepted',nnz(accepted), ...
             'medianPerceptionMs',median(timings(:,1))*1000,'medianOverlapMs',median(timings(:,2))*1000, ...
             'medianFrameMs',median(timings(:,3))*1000,'runtimeSeconds',runtime, ...

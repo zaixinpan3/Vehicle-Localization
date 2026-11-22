@@ -19,13 +19,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             f=fixture(1,"both");f.data.gnss.position(:,2)=1;f.data.lidar.pose(:,2)=-1;
             r=run(f);c=r.diagnostics.positionCorrection(2,:);
             testCase.verifyGreaterThan(c(2),0);testCase.verifyLessThan(c(4),0);
-            testCase.verifyEqual(r.diagnostics.mode,3*ones(size(r.time)));
+            testCase.verifyEqual(r.diagnostics.gnssPoseValid & r.diagnostics.lidarValid,true(size(r.time)));
         end
         function invalidNanPayloadImmediatelyWithdrawsTheSource(testCase)
             f=fixture(2,"both");f.data.gnss.valid(6:end)=false;
             f.data.gnss.position(6:end,:)=NaN;f.data.gnss.information(:,:,6:end)=NaN;
             r=run(f);ix=r.time>=.5;
-            testCase.verifyEqual(r.diagnostics.mode(ix),2*ones(nnz(ix),1));
+            testCase.verifyEqual(~r.diagnostics.gnssPoseValid(ix) & r.diagnostics.lidarValid(ix),true(nnz(ix),1));
             testCase.verifyEqual(r.diagnostics.positionCorrection(ix,1:2),zeros(nnz(ix),2));
         end
         function unalignedPacketsCannotSelectAnotherRuntime(testCase)
@@ -42,13 +42,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             f=fixture(4,"both");f.data.gnss.valid(2:2:end)=false;f.data.lidar.valid(1:2:end)=false;
             r=run(f);
             testCase.verifyEqual(r.position,f.truth(:,1:2),AbsTol=1e-9);
-            testCase.verifyTrue(all(ismember(r.diagnostics.mode,[1,2])));
+            testCase.verifyTrue(all(xor(r.diagnostics.gnssPoseValid,r.diagnostics.lidarValid)));
         end
-        function stationaryGnssDoesNotInventHeadingObservability(testCase)
+        function completeGnssPoseCorrectsHeadingAtRest(testCase)
             f=fixture(4,"gnss");f.data.highRate.longitudinalSpeed(:)=0;
             f.data.gnss.position(:)=0;f.cfg.initialState(:)=0;f.cfg.initialState(7)=.2;
             r=run(f);
-            testCase.verifyEqual(r.heading,.2*ones(size(r.time)),AbsTol=1e-12);
+            gain=f.cfg.invariantDesign.gnssHeadingBandwidth.perSecond;
+            testCase.verifyEqual(r.heading,.2*(1+gain*.1).^(-(0:numel(r.time)-1).'),AbsTol=1e-12);
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end
         function publicEntryIsDeterministic(testCase)
@@ -59,14 +60,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
         function invalidGnssDoesNotEraseLidarHeading(testCase)
             f=fixture(8,"lidar");f.cfg.initialState(7)=.1;r=run(f);
             testCase.verifyLessThan(abs(r.heading(end)),1e-4*abs(f.cfg.initialState(7)));
-            testCase.verifyEqual(r.diagnostics.headingMode,2*ones(size(r.time)));
+            testCase.verifyEqual(r.diagnostics.lidarValid,true(size(r.time)));
         end
         function upstreamRateStillCorrectsDuringAPoseOutage(testCase)
             f=fixture(8,"both");mask=f.data.lidar.time>=2 & f.data.lidar.time<4;
             f.data.lidar.valid(mask)=false;f.data.gnss.valid(mask)=false;
             f.lateral.yawRate(f.data.highRate.time>=2 & f.data.highRate.time<4)=.02;r=run(f);
             outage=r.time>=2 & r.time<4;
-            testCase.verifyEqual(r.diagnostics.mode(outage),zeros(nnz(outage),1));
+            testCase.verifyEqual(r.diagnostics.gnssPoseValid(outage) | r.diagnostics.lidarValid(outage),false(nnz(outage),1));
             gain=f.cfg.invariantDesign.verification.yawRateGainPerSecond;
             dt=[0;diff(r.time)];expected=.02*(1-cumprod(1./(1+gain*dt(outage))));
             testCase.verifyEqual(r.yawRate(outage),expected,AbsTol=1e-12);
@@ -109,7 +110,7 @@ function f=fixture(duration,mode)
     high=struct('time',t,'longitudinalSpeed',8+zero,'longitudinalAcceleration',zero, ...
         'lateralAcceleration',zero,'yawRate',zero);
     lateral=struct('time',t,'lateralVelocity',zero,'yawRate',zero,'sideSlipAngleRate',zero);
-    gnss=struct('time',m,'position',[8*m,zeros(size(m))],'information',repmat(1e6*eye(2),1,1,numel(m)), ...
+    gnss=struct('time',m,'heading',zeros(size(m)),'position',[8*m,zeros(size(m))],'information',repmat(1e6*eye(2),1,1,numel(m)), ...
         'valid',true(size(m)),'delay',0);
     lidar=struct('time',m,'pose',[8*m,zeros(numel(m),2)],'information',repmat(1e6*eye(3),1,1,numel(m)), ...
         'valid',true(size(m)),'delay',0);
@@ -137,5 +138,5 @@ function f=turnFixture(duration)
     f.lateral.yawRate(:)=r;f.data.highRate.yawRate(:)=r;f.data.highRate.lateralAcceleration(:)=v*r;
     f.truth=[v/r*sin(r*t),v/r*(1-cos(r*t)),r*t];
     f.data.lidar.pose=[v/r*sin(r*m),v/r*(1-cos(r*m)),r*m];
-    f.data.gnss.position=f.data.lidar.pose(:,1:2);f.cfg.initialState=[0;v;0;0;0;v*r;0];
+    f.data.gnss.heading=r*m;f.data.gnss.position=f.data.lidar.pose(:,1:2);f.cfg.initialState=[0;v;0;0;0;v*r;0];
 end

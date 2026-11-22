@@ -37,6 +37,7 @@
     ]
   },
   "referenceGnssIns": {
+    "headingErrorSimulationPriorRad": 0.01,
     "receiverFamily": "NovAtel OEM7 SPAN",
     "enclosureCandidate": "PwrPak7D-E1",
     "enclosureConfirmed": false,

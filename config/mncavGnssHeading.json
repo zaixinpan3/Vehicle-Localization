@@ -1,0 +1,14 @@
+{
+  "clockwiseBodyToReportedBaselineDeg": 92.26092687901887,
+  "source": "NovAtel HEADING2 base-to-rover baseline azimuth",
+  "calibrationDrive": "raw_data_2024-06-07-12-11-24_0",
+  "method": "Inverse-reported-variance circular mean of baseline azimuth minus time-aligned INS-good azimuth on the separate calibration recording.",
+  "samples": 57,
+  "firstHalfDeg": 96.244813965265,
+  "secondHalfDeg": 84.34980001456938,
+  "interpretation": "Empirical effective installation offset. No surveyed mounting angle is available.",
+  "headingErrorScaleRad": 0.5973704341168539,
+  "headingErrorScaleMethod": "Opposite-half wrapped RMS on the separate calibration drive, applying each half's offset to the other. Includes reference, mounting and synchronization error.",
+  "positionErrorScaleM": 0.18728937301823662,
+  "positionErrorScaleMethod": "Median of the RMS of receiver-reported north and east standard deviations on the calibration drive."
+}

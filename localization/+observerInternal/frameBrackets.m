@@ -1,5 +1,5 @@
 function [a,b,w,ok]=frameBrackets(source,target,maximum)
-    source=source(:);assert(numel(source)>=2 && all(isfinite(source)) && all(diff(source)>0), ...
+    source=source(:);assert(~isempty(source) && all(isfinite(source)) && all(diff(source)>0), ...
         'VehicleLocalization:InvalidSyncClock','Need an increasing finite source clock.');
     a=ones(size(target));b=a;w=zeros(size(target));ok=false(size(target));j=1;
     for k=1:numel(target)

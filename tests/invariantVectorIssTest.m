@@ -45,7 +45,9 @@ function errors=finiteIdentityErrors(c)
         if k<=30,x([2,5])=x([2,5])/100;y([2,5])=y([2,5])/100;end
         [F,H,G]=localizationSupport.secants(x,y,c);e=x-y;
         dh=localizationSupport.outputs(x,c)-localizationSupport.outputs(y,c);
-        dg=antenna(x,c)-antenna(y,c);df=drift(x,c)-drift(y,c);
+        dg=x([1,4,7])-y([1,4,7]);
+        rx=[direction(x(7)),direction(x(7)+pi/2)];ry=[direction(y(7)),direction(y(7)+pi/2)];
+        dg(1:2)=dg(1:2)+(rx-ry)*c.gnss.outputPoint.bodyOffset(:);df=drift(x,c)-drift(y,c);
         errors(k,:)=[norm(F*e-df)/max(1,norm(df)),norm(H*e-dh)/max(1,norm(dh)), ...
             norm(G*e-dg)/max(1,norm(dg))];
     end
@@ -58,7 +60,7 @@ function errors=rotationErrors(c)
     xr=T*x;yr=T*y;xr(7)=xr(7)+angle;yr(7)=yr(7)+angle;
     [F,H,G]=localizationSupport.secants(x,y,c);
     [Fr,Hr,Gr]=localizationSupport.secants(xr,yr,c);
-    errors=[norm(Fr-T*F*T.'),norm(Hr*T-H),norm(Gr*T-R*G)];
+    errors=[norm(Fr-T*F*T.'),norm(Hr*T-H),norm(Gr*T-blkdiag(R,1)*G)];
 end
 
 function y=drift(x,~)
@@ -68,8 +70,4 @@ end
 
 function d=direction(psi)
     d=[cos(psi);sin(psi)];
-end
-
-function y=antenna(x,c)
-    d=direction(x(7));R=[d,[-d(2);d(1)]];y=x([1,4])+R*c.gnss.outputPoint.bodyOffset(:);
 end
