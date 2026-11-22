@@ -18,6 +18,7 @@ classdef carlaProfileTest < matlab.unittest.TestCase
             end
             coarse=perceptionConfig("Carla");
             testCase.verifyEqual(coarse.groundFeatures.curb.minPointsPerCell,1);
+            testCase.verifyEqual(coarse.groundFeatures.curb.extractionHeightStepMinMeters,.04);
             testCase.verifyEqual(coarse.offGroundFeatures.pole.distributionValidation.minimumScore,0.70);
             testCase.verifyEqual(coarse.offGroundFeatures.pole.distributionValidation.modelFile, ...
                 pillarPoleDistributionConfig("mississippi").modelFile);

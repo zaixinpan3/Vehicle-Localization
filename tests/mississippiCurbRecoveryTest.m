@@ -7,7 +7,6 @@ classdef mississippiCurbRecoveryTest < matlab.unittest.TestCase
         function paths(testCase)
             root=fileparts(fileparts(mfilename('fullpath')));
             testCase.applyFixture(matlab.unittest.fixtures.PathFixture(root));setupVehicleLocalization;
-            testCase.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(root,'research','pillar_fine_alignment_20260926')));
         end
     end
     methods (Test)

@@ -13,7 +13,7 @@ function cfg=carlaPerceptionProfile(cfg)
 %     local ground, instead of raw return counts. This removes tree canopies,
 %     fences and low clutter and keeps online facades consistent with the
 %     mapped facades (offline planes of at least 2.5 m).
-% Values were selected by seeded random search against CARLA semantic labels
+% The original values were selected by seeded random search against CARLA semantic labels
 % on 40 mapping-drive sweeps (curb: stage-2 sample 27; pole: stage-1 sample
 % 131; coarse facade: stage-2 sample 57 with the span and ground-contact
 % gate raised for map consistency; offline facade: sample 82) and checked
@@ -39,6 +39,7 @@ function c=coarseCurb(c)
 % Curb energy on 0.6 m pillars. CARLA curbs are 10-15 cm smooth steps:
 % every ground return counts, and the energy rests on the height step and
 % on the within-pillar height spread of pillars that straddle the step.
+% The 4 cm extraction threshold suppresses shallow road returns on inner_s.
     c.minPointsPerCell=1;
     c.heightStepMinMeters=0.065;c.heightStepTargetMeters=0.094;c.heightStepSigmaMeters=0.065;
     c.roughnessTargetMeters=0.048;c.roughnessSigmaMeters=0.017;
@@ -48,7 +49,7 @@ function c=coarseCurb(c)
     c.weights.heightStep=0.43;c.weights.residualSlope=0.047;c.weights.curvature=0.097;
     c.weights.roughness=0.63;c.weights.relativeHeight=0.12;
     c.extractionEnergyThreshold=0.63;c.extractionBaseEnergyThreshold=0.26;
-    c.extractionHeightStepMinMeters=0.016;c.extractionCenterEvidenceMin=0.49;
+    c.extractionHeightStepMinMeters=0.040;c.extractionCenterEvidenceMin=0.49;
     c.linearityEnergyThreshold=0.24;
 end
 

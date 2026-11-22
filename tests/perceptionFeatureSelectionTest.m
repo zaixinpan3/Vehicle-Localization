@@ -17,6 +17,25 @@ classdef perceptionFeatureSelectionTest < matlab.unittest.TestCase
         end
     end
     methods (Test)
+        function transferDataUseTheirCalibratedVehicleFrames(testCase)
+            for mode=["coarseProbabilityCloud","offline"]
+                kitti=perceptionConfig("KITTI",mode);
+                nuscenes=perceptionConfig("nuScenes",mode);
+                for cfg={kitti,nuscenes}
+                    profile=cfg{1};
+                    testCase.verifyEqual(profile.featureNames,["curb","pole","facade"]);
+                    testCase.verifyEqual(profile.frameCalibration,lidarFrameCalibrationConfig());
+                    testCase.verifyEqual(profile.voxel.voxelSize,[.3 .3]);
+                    testCase.verifyEqual(profile.downtownCandidates.curbExtensionMeters,16);
+                    testCase.verifyEqual(profile.groundSegmentation.groundSeedMaxZ, ...
+                        profile.groundSegmentation.slopeGridPriorHeight);
+                end
+                testCase.verifyEqual(kitti.groundSegmentation.slopeGridPriorHeight,-1.44);
+                testCase.verifyEqual(nuscenes.groundSegmentation.slopeGridPriorHeight,.01);
+                testCase.verifyEqual(kitti.groundFeatures.curb.extractionHeightStepMinMeters,.035);
+                testCase.verifyEqual(nuscenes.groundFeatures.curb.extractionHeightStepMinMeters,.035);
+            end
+        end
         function datasetDefaultsSelectExactlyTheRequiredChannels(testCase)
             suburban=perceptionConfig("Mississippi"); urban=perceptionConfig("Downtown");
             testCase.verifyEqual(suburban.featureNames,["curb","pole","trafficSign"]);

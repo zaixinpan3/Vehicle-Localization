@@ -104,7 +104,7 @@ function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDes
         reference(k,:)=[pose.translation(1:2).',angles(3),pose.translation(3)];tilt(k,:)=angles(1:2);
     end
     reference(:,1:2)=reference(:,1:2)-reference(1,1:2);
-    names=["curb","pole","facade"];p=profile("offline",names);
+    p=perceptionConfig("nuScenes","offline");names=p.featureNames;
     mapCfg=featureMapBuildConfig();mapCfg.frameCalibration=p.frameCalibration;mapCfg.featureNames=names;
     mapCfg.temporalMap.frameCalibration=p.frameCalibration;mapCfg.logEnabled=false;
     observations=struct('featureNames',names,'frameIndices',ids(training).', ...
@@ -146,7 +146,7 @@ function [report,estimate]=runScene(folder,out,sceneName,tables,trial,lateralDes
     l=struct('time',t,'yawRate',m.yawRate(nativeIndex),'lateralVelocity',m.lateralVelocity(nativeIndex), ...
         'yawRateValid',m.yawRateValid(nativeIndex),'velocityValid',m.velocityValid(nativeIndex));
     queryTilt=aux.tilt(nativeIndex,:);queryTilt=queryTilt-queryTilt(1,:)+initial.tilt;
-    p=profile("coarseProbabilityCloud",names);sources=cell(numel(query),1);timer=tic;
+    p=perceptionConfig("nuScenes");sources=cell(numel(query),1);timer=tic;
     for j=1:numel(query)
         xyz=readScan(folder,frames(query(j)),tables.calibrations);
         sources{j}=perceiveCoarseProbabilityCloud(asFrame(xyz*tiltRotation(queryTilt(j,:)).'),p);
@@ -244,12 +244,6 @@ function tables=loadTables(folder)
     names={'scene','sample','sample_data','ego_pose','calibrated_sensor'};
     fields={'scenes','samples','frames','poses','calibrations'};tables=struct();
     for k=1:numel(names),tables.(fields{k})=jsondecode(fileread(fullfile(folder,'v1.0-mini',names{k}+".json")));end
-end
-
-function p=profile(mode,names)
-    p=perceptionConfig("Downtown",mode);p.featureNames=names;p.frameCalibration=lidarFrameCalibrationConfig();
-    % Points are already transformed to the rear axle, whose road is near z=0.
-    p.groundSegmentation.groundSeedMaxZ=0;p.groundSegmentation.slopeGridPriorHeight=0;
 end
 
 function xyz=readScan(folder,frame,calibrations)
