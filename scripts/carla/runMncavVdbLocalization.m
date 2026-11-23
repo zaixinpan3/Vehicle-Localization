@@ -76,7 +76,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
             valid=logical(s.gnssValid(idx));if scenario=="gnss_outage",valid(t>=35 & t<65)=false;end
             receiverYaw=s.gnssHeadingRad(idx);
             data.gnss=struct('time',t,'position',[s.gnssX(idx),s.gnssY(idx)], ...
-                'heading',receiverYaw,'valid',valid & isfinite(receiverYaw),'delay',0);
+                'heading',receiverYaw,'valid',valid,'delay',0);
         else
             assert(ismember(scenario,["lidar_only","dead_reckoning"]),'Unknown scenario.');
         end

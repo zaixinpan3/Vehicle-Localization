@@ -44,10 +44,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             same=data;same.gnss.heading=data.gnssHeading.heading;same=rmfield(same,'gnssHeading');
             a=runFullLocalizationObserver(data,c,LateralInputs=l);b=runFullLocalizationObserver(same,c,LateralInputs=l);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
-            incomplete=rmfield(data,'gnssHeading');empty=rmfield(incomplete,'gnss');
-            a=runFullLocalizationObserver(incomplete,c,LateralInputs=l);b=runFullLocalizationObserver(empty,c,LateralInputs=l);
-            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
-            testCase.verifyFalse(any(a.diagnostics.gnssPoseValid));
         end
         function missingHeadingMatchesInvalidHeading(testCase)
             [data,c,l]=fixture();data=rmfield(data,'gnssHeading');
@@ -57,6 +53,22 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             b=runFullLocalizationObserver(data,c,LateralInputs=l);
             testCase.verifyEqual(a.headingUnwrapped,b.headingUnwrapped,AbsTol=0);
             testCase.verifyEqual(a.position,b.position,AbsTol=0);
+        end
+        function packedHeadingGapKeepsPositionAndRate(testCase)
+            [data,c,l]=fixture();t=data.highRate.time;
+            c.initialState(1)=1;c.gnss.outputPoint.bodyOffset=[0;0];
+            l.yawRate=.2*ones(size(t));
+            data.gnss.heading=data.gnssHeading.heading;data=rmfield(data,'gnssHeading');
+            data.gnss.heading(2:end-1)=NaN;
+            [aligned,l]=observerInternal.alignFrameClock(data,l,c,t);
+            a=runFullLocalizationObserver(aligned,c,LateralInputs=l);
+            gap=2:numel(t)-1;
+            testCase.verifyTrue(all(a.diagnostics.gnssPositionValid(gap)));
+            testCase.verifyTrue(all(isnan(a.diagnostics.independentHeadingInnovation(gap))));
+            testCase.verifyEqual(find(a.diagnostics.gnssPoseValid),[1;numel(t)]);
+            testCase.verifyTrue(all(a.diagnostics.upstreamYawRateValid(gap)));
+            testCase.verifyGreaterThan(a.headingUnwrapped(gap(end)),.05);
+            testCase.verifyLessThan(abs(a.position(gap(end),1)-12*t(gap(end))),.1);
         end
         function headingCorrectsHeadingWhileRateIsHeld(testCase)
             [data,c,l]=fixture();c.initialState(7)=.2;
@@ -106,8 +118,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             data.gnss=struct('time',t,'position',[12*t,zeros(size(t))],'valid',pos,'delay',0);
             data.gnssHeading.valid=hdg;
             a=runFullLocalizationObserver(data,c,LateralInputs=l);
-            testCase.verifyEqual(a.diagnostics.gnssPositionValid,pos & hdg);
-            testCase.verifyEqual(a.diagnostics.independentHeadingValid,pos & hdg);
+            testCase.verifyEqual(a.diagnostics.gnssPositionValid,pos);
+            testCase.verifyEqual(a.diagnostics.independentHeadingValid,hdg);
+            testCase.verifyEqual(a.diagnostics.gnssPoseValid,pos & hdg);
             testCase.verifyEqual(a.observer.continuousDesign,d);
             data.gnss.position(~pos,:)=NaN;
             data.gnssHeading.heading(~hdg)=NaN;

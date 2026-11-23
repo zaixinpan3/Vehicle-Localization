@@ -58,7 +58,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'map',sourceCache.fixed,'sources',{sourceCache.sources},'valid',true(n,1),'config',overlapConfig));
     [~,cfg]=synthesizeMncavInvariantDesign(mncavFullObserverConfig());
     [data,lateral,synchronization]=localizationSupport.synchronizeLocalizationInputs(data,lateral,cfg);
-    h=data.highRate;t=h.time;n=numel(t);gnss=data.gnss;time=gnss.time;valid=gnss.valid;
+    h=data.highRate;t=h.time;n=numel(t);
     [covered,sourceIndex]=ismember(t,calls.timeSeconds);
     assert(all(covered),'VehicleLocalization:CoarseCacheMismatch','Source clocks must cover every aligned frame.');
     sourceClouds=sourceCache.sources(sourceIndex);
@@ -72,28 +72,32 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     runs=cell(numel(scenarios),1);rows=cell(0,12);
     for k=1:numel(scenarios)
         current=data;name=scenarios(k);
-        if name=="lidar_only",current=rmfield(current,'gnss');end
         if name=="gnss_only",current=rmfield(current,'lidarOverlap');end
-        if ismember(name,["gnss_outage","both_outage"]),current.gnss.valid(time>=40 & time<60)=false;end
+        gnssAvailable=true(n,1);
+        if name=="lidar_only",gnssAvailable(:)=false;end
+        if ismember(name,["gnss_outage","both_outage"]),gnssAvailable(t>=40 & t<60)=false;end
         if ismember(name,["lidar_outage","both_outage"]),current.lidarOverlap.valid(t>=40 & t<60)=false;end
         if name=="alternating"
-            current.gnss.valid=valid & mod(floor(time),2)==0;
+            gnssAvailable=mod(floor(t),2)==0;
             current.lidarOverlap.valid=mod(floor(t),2)==1;
         end
+        current.gnss.valid=current.gnss.valid & gnssAvailable;
+        current.gnssHeading.valid=current.gnssHeading.valid & gnssAvailable;
         timer=tic;estimate=runFullLocalizationObserver(current,cfg,LateralInputs=lateral);seconds=toc(timer);
+        gnssActive=estimate.diagnostics.gnssPositionValid | estimate.diagnostics.independentHeadingValid;
         runs{k}=struct('scenario',name,'estimate',estimate,'seconds',seconds);
         populations={"full",true(size(t));"outage_40_60",t>=40 & t<60;"recovery_60_70",t>=60 & t<70};
         for j=1:size(populations,1)
             mask=populations{j,2};metrics=score(estimate.pose(mask,:),reference(mask,:));
             rows(end+1,:)=[{name,populations{j,1},nnz(mask)},num2cell(metrics), ...
-                {nnz(estimate.diagnostics.gnssPoseValid(mask) & estimate.diagnostics.lidarValid(mask)),nnz(~estimate.diagnostics.gnssPoseValid(mask) & ~estimate.diagnostics.lidarValid(mask)),seconds}]; %#ok<AGROW>
+                {nnz(gnssActive(mask) & estimate.diagnostics.lidarValid(mask)),nnz(~gnssActive(mask) & ~estimate.diagnostics.lidarValid(mask)),seconds}]; %#ok<AGROW>
         end
         fprintf('%s: position %.5f m, heading %.4f deg, %.2f s.\n',name,rows{end-2,4},rows{end-2,9},seconds);
     end
     metrics=cell2table(rows,VariableNames={'scenario','population','samples','positionRmseM', ...
         'positionMedianM','positionP95M','positionMaximumM','fractionAtMost10cm','headingRmseDeg', ...
         'bothActiveSamples','neitherActiveSamples','runtimeSeconds'});
-    report=struct('metadata',struct('gnssSource',"Complete BESTPOS position and HEADING2 heading in UTM 15N", ...
+    report=struct('metadata',struct('gnssSource',"BESTPOS position and available HEADING2 heading in UTM 15N", ...
         'lidarSource',"Fresh measured-motion coarse horizons and overlap gradient", ...
         'headingSource',rmfield(receiverHeading,{'time','heading','valid'}),'inputMetadata',inputMetadata,'synchronization',synchronization, ...
         'evaluation',"corrected same-drive receiver reference on native LiDAR timestamps", ...

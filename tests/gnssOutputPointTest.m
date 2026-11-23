@@ -42,10 +42,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) gnssOutputPointTest < 
             end
             testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint,expected,AbsTol=1e-12);
         end
-        function antennaInnovationUsesTheMeasuredYaw(testCase)
-            f=offsetInput(fixture());f.cfg.initialState(7)=.1;f.data=rmfield(f.data,'lidar');r=run(f);
-            testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint(1,:), ...
-                localizationSupport.correctGnssOutputPoint(f.data.gnss.position(1,:),[],f.data.gnss.heading(1),f.cfg.gnss.outputPoint),AbsTol=1e-12);
+        function predictedHeadingTransportsAntennaDuringGap(testCase)
+            f=offsetInput(fixture());f.cfg.initialState(7)=.1;f.data=rmfield(f.data,'lidar');
+            f.data.gnss.heading(2)=NaN;r=run(f);
+            yaw=r.diagnostics.intrinsicPrediction(2,7);
+            testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint(2,:), ...
+                localizationSupport.correctGnssOutputPoint(f.data.gnss.position(2,:),[],yaw,f.cfg.gnss.outputPoint),AbsTol=1e-12);
+            testCase.verifyTrue(isnan(r.diagnostics.independentHeadingInnovation(2)));
         end
         function independentPointConfigurationUsesTheSolvedGnssGain(testCase)
             cfg=freshObserverTestConfig();design=localizationSupport.designFullObserverGains(cfg);

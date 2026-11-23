@@ -64,7 +64,6 @@ function [aligned,lateral,metadata,selected]=alignFrameClock(data,lateralInput,c
             aligned.gnssHeading=rmfield(heading,{'waitSeconds'});
         else
             aligned.gnss.heading=heading.heading;
-            aligned.gnss.valid=aligned.gnss.valid & heading.valid;
         end
         gnssWait=max(gnssWait,heading.waitSeconds);
     end

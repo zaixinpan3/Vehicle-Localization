@@ -15,10 +15,12 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % A finite value is active when yawRateValid is true (defaults to true).
 % Missing or invalid rate holds the previous rate while heading integrates it.
 % Motion, LiDAR and GNSS have zero gain into the rate state.
-% GNSS updates require position and receiver heading (rad). Supply gnss.heading
-% on the position clock or data.gnssHeading with its own time, valid
-% and delay=0; it is never inferred from a reference pose. Information metadata
-% is not used to weight position or heading corrections.
+% gnss.valid enables position feedback. Optional gnss.heading is in radians
+% on that packet's clock; NaN means heading is unavailable. A separate
+% data.gnssHeading stream can instead supply its own time, valid and delay=0.
+% A missing heading omits the angular innovation. The predicted heading then
+% rotates the antenna offset for any valid position. The initial state
+% supplies the starting heading. Information metadata does not weight feedback.
 % Optional LateralInputs.velocityValid gates the velocity-dependent innovations.
 % Low-speed wheel/gyro packets enter through the same motion innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
