@@ -10,16 +10,17 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
         end
     end
     methods (Test)
-        function feasiblePairDeterminesEveryLinearColumn(testCase)
+        function metricDeterminesEveryLinearColumn(testCase)
             c=freshObserverTestConfig();d=c.invariantDesign;r=localizationSupport.runtime(c);
             E=eye(8);theta=r.theta;
             testCase.verifyEqual(r.linearOutputGain(:,1:3),r.toPhysical*(d.P\E(:,[1,4,7])),AbsTol=1e-13);
-            testCase.verifyEqual(r.linearOutputGain(:,4),theta^5*d.cr/d.P(8,8)*E(:,8),AbsTol=1e-13);
+            testCase.verifyEqual(r.linearOutputGain(:,4),theta^5/d.P(8,8)*E(:,8),AbsTol=1e-13);
             testCase.verifyEqual(d.verification.matrixInequalities,4);
-            testCase.verifyGreaterThan(theta^4*d.cr,d.lambda/2);
+            testCase.verifyGreaterThan(theta^4,d.lambda/2);
         end
-        function removingRateFeedbackFailsTheCertificate(testCase)
-            c=freshObserverTestConfig();d=c.invariantDesign;d.cr=0;
+        function excessiveDecayMarginFailsTheRateDiagonal(testCase)
+            c=freshObserverTestConfig();d=c.invariantDesign;c.invariantObserver.lambda=2*c.invariantObserver.theta^4;
+            d.lambda=c.invariantObserver.lambda;
             testCase.verifyFalse(localizationSupport.verifyInvariantDesign(d,c).certified);
         end
         function downtownUsesTheNominalDesignDuringGnssWithdrawal(testCase)

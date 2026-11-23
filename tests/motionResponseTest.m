@@ -89,7 +89,7 @@ function worst=globalAxisResidual(cfg)
         for mask=0:15
             Ct=H(logical(bitget(mask,1:4)),:)*T;
             for gnss=[0,1]
-                W=d.P*predictor-Ct.'*Ct-gnss*(C.'*C)-C.'*S*C-t^4*d.cr*E(:,8)*E(8,:);
+                W=d.P*predictor-Ct.'*Ct-gnss*(C.'*C)-C.'*S*C-t^4*E(:,8)*E(8,:);
                 worst=max(worst,max(eig(W+W.'+d.lambda*eye(8))));
             end
         end

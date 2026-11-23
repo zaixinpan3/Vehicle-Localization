@@ -8,7 +8,7 @@ function cfg=mncavFullObserverConfig(options)
         options.Theta (1,1) double {mustBeReal,mustBeFinite,mustBePositive}=4
     end
     here=fileparts(mfilename('fullpath'));
-    cfg=struct('kind',"mncav-physical-pose-unit-motion-v1",'maximumBodyYawRate',.4,'initialState',[]);
+    cfg=struct('kind',"mncav-physical-pose-unit-motion-v2",'maximumBodyYawRate',.4,'initialState',[]);
     cfg.synchronization=struct('gnssMaximumBracket',.15,'motionMaximumBracket',.025);
     receiver=jsondecode(fileread(fullfile(here,'mncavGnssHeading.json')));
     cfg.gnss=struct('positionStdM',receiver.positionErrorScaleM,'outputPoint', ...
