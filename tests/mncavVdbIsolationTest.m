@@ -24,6 +24,11 @@ classdef mncavVdbIsolationTest < matlab.unittest.TestCase
             [s,i]=fixture();s.gnssValid(:)=0;
             tc.verifyError(@()initializeMncavVdbFromGnss(s,i,8),'VehicleLocalization:InitializationUnavailable');
         end
+        function missingHeadingStartsWithAnExplicitPrior(tc)
+            [s,i]=fixture();s=removevars(s,'gnssHeadingRad');
+            a=initializeMncavVdbFromGnss(s,i,8);
+            tc.verifyEqual(a.pose,[34 52 0]);tc.verifySubstring(a.source,"prior");
+        end
         function oracleWheelStateCalibrationIsRejected(tc)
             folder=tempname;mkdir(folder);cleanup=onCleanup(@()rmdir(folder,'s'));
             s=table([2;3],'VariableNames',{'time'});writetable(s,fullfile(folder,'sensors.csv'));

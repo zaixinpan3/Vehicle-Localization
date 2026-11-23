@@ -85,6 +85,36 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             testCase.verifyEqual(a.diagnostics.independentHeadingInnovation(1),.02,AbsTol=1e-12);
             testCase.verifyLessThan(max(abs(diff(a.headingUnwrapped))),.02);
         end
+        function reversingTurnRecoversYawWithOffsetAndSideslip(testCase)
+            [data,c,l,truth]=reverseTurn();
+            a=runFullLocalizationObserver(data,c,LateralInputs=l);
+            actual=a.diagnostics.recoveredHeading;
+            testCase.verifyTrue(isnan(actual(1)));
+            testCase.verifyEqual(angle(exp(1i*(actual(2:end)-truth(2:end)))),zeros(numel(truth)-1,1),AbsTol=1e-12);
+            testCase.verifyLessThan(abs(angle(exp(1i*(a.heading(end)-truth(end))))),.05);
+            testCase.verifyFalse(any(a.diagnostics.independentHeadingValid));
+        end
+        function delayedFixUsesOnlyDeliveredPositions(testCase)
+            [data,c,l,truth]=reverseTurn();t=data.highRate.time;
+            data.gnss.sourceRightTime=t+.01;
+            a=runFullLocalizationObserver(data,c,LateralInputs=l);
+            testCase.verifyTrue(all(isnan(a.diagnostics.recoveredHeading(1:2))));
+            testCase.verifyEqual(a.diagnostics.recoveredHeading(3),angle(exp(1i*truth(3))),AbsTol=1e-12);
+            data.gnss.position(3:end,1)=data.gnss.position(3:end,1)+.4;
+            b=runFullLocalizationObserver(data,c,LateralInputs=l);
+            testCase.verifyEqual(b.diagnostics.recoveredHeading(1:3),a.diagnostics.recoveredHeading(1:3));
+        end
+        function missingRateBreaksTheDisplacementBaseline(testCase)
+            [data,c,l]=reverseTurn();l.yawRateValid=true(size(l.time));l.yawRateValid(5)=false;
+            data.gnssHeading=packet(l.time,zeros(size(l.time)));data.gnssHeading.valid(:)=false;
+            data.gnssHeading.valid(8)=true;
+            a=runFullLocalizationObserver(data,c,LateralInputs=l);
+            testCase.verifyEqual(isfinite(a.diagnostics.recoveredHeading(4:9)),[true;false;false;true;false;true]);
+            testCase.verifyTrue(a.diagnostics.independentHeadingValid(8));
+            data.highRate.longitudinalSpeed(:)=0;l.lateralVelocity(:)=0;l.yawRate(:)=0;
+            b=runFullLocalizationObserver(data,c,LateralInputs=l);
+            testCase.verifyTrue(all(isnan(b.diagnostics.recoveredHeading)));
+        end
         function reliabilityMetadataCannotChangeTheState(testCase)
             [data,c,l]=fixture();t=data.highRate.time;n=numel(t);
             c.initialState([1,7])=[.1;.1];
@@ -129,11 +159,25 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
         end
     end
 end
+function [data,c,l,truth]=reverseTurn()
+    [data,c,l]=fixture(4);data=rmfield(data,'gnssHeading');t=l.time;
+    offset=[1.2;-.4];yaw0=3;rate=.4;u=-8;vy=.6;
+    truth=yaw0+rate*t;rot=exp(1i*truth);
+    path=(rot-exp(1i*yaw0))*(u+1i*vy)/(1i*rate);
+    antenna=path+rot*complex(offset(1),offset(2));
+    data.gnss.position=[real(antenna),imag(antenna)];
+    c.gnss.outputPoint.bodyOffset=offset;c.gnss.positionStdM=.04;
+    velocity=exp(1i*yaw0)*(u+1i*vy);
+    c.initialState=[0;real(velocity);-rate*imag(velocity);0;imag(velocity);rate*real(velocity);yaw0+pi;rate];
+    data.highRate.longitudinalSpeed(:)=u;data.highRate.bodyVelocityValid(:)=true;
+    l.lateralVelocity(:)=vy;l.yawRate=rate*ones(size(t));
+end
 function h=packet(t,heading)
     h=struct('time',t,'heading',heading,'valid',true(size(t)),'delay',0);
 end
-function [data,c,l]=fixture()
-    c=freshObserverTestConfig();t=(0:.05:1).';z=zeros(size(t));
+function [data,c,l]=fixture(duration)
+    if nargin==0,duration=1;end
+    c=freshObserverTestConfig();t=(0:.05:duration).';z=zeros(size(t));
     c.initialState=[0;12;0;0;0;0;0;0];
     h=struct('time',t,'longitudinalSpeed',12+z,'longitudinalAcceleration',z,'lateralAcceleration',z, ...
         'bodyVelocityValid',false(size(t)),'bodyAccelerationValid',false(size(t)));

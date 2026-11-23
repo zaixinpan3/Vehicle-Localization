@@ -41,6 +41,19 @@ function estimate=integrate(data,cfg,lateral,L)
         'channels',{cell(n,1)});
     alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
+    recoveredHeading=nan(n,1);
+    if any(G.valid & ~heading.valid & velocityValid & rateValid)
+        if ~isfield(cfg.gnss,'positionStdM')
+            defaults=mncavFullObserverConfig();cfg.gnss.positionStdM=defaults.gnss.positionStdM;
+        end
+        twist=[h.longitudinalSpeed,lateral.lateralVelocity,upstreamRate];
+        recoveredHeading=observerInternal.displacementHeading(t,G,heading.valid, ...
+            twist,velocityValid & rateValid,alignment.bodyOffset,cfg.gnss.positionStdM);
+    end
+    angularObservation=heading.heading;
+    recovered=isfinite(recoveredHeading);
+    angularObservation(recovered)=recoveredHeading(recovered);
+    angularValid=heading.valid | recovered;
     [continuous,cfg]=localizationSupport.designFullObserverGains(cfg);
     lidarInjection=continuous.lidarMatched;
     stateCount=8;
@@ -78,8 +91,8 @@ function estimate=integrate(data,cfg,lateral,L)
         intrinsicStates(k,:)=x.';
         observation=linearOutput*x;
         antennaYaw=x(7);
-        if heading.valid(k)
-            antennaYaw=heading.heading(k);
+        if angularValid(k)
+            antennaYaw=angularObservation(k);
             headingInnovation(k)=atan2(sin(antennaYaw-x(7)),cos(antennaYaw-x(7)));
             observation(3)=x(7)+headingInnovation(k);
         end
@@ -90,7 +103,7 @@ function estimate=integrate(data,cfg,lateral,L)
         if rateValid(k)
             observation(4)=upstreamRate(k);rateInnovation(k)=upstreamRate(k)-x(8);
         end
-        rows=[G.valid(k),G.valid(k),heading.valid(k),rateValid(k)];
+        rows=[G.valid(k),G.valid(k),angularValid(k),rateValid(k)];
         Kg=continuous.linearOutputGain(:,rows);Cg=linearOutput(rows,:);observation=observation(rows);
         % The empty packet contributes a zero right-hand side to the same solve.
         x=x+(eye(8)+dt*(Kg*Cg-headingKinematics))\(dt*Kg*(observation-Cg*x));
@@ -142,13 +155,14 @@ function estimate=integrate(data,cfg,lateral,L)
     measuredSpeed=hypot(h.longitudinalSpeed(:),lateral.lateralVelocity(:));
     speedInterval=[0,cfg.iss.maximumSpeed];
     speedInDomain=velocityValid & measuredSpeed>=speedInterval(1) & measuredSpeed<=speedInterval(2);
+    measuredInnovation=headingInnovation;measuredInnovation(~heading.valid)=NaN;
     estimate.diagnostics=struct('gnssPoseValid',poseValid,'lidarValid',logical(L.valid(:)),'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition, ...
         'yawCorrection',yawCorrection, ...
         'lidarMatched',{lidarAudits},'poseWeight',poseWeights,'preLidarState',preLidarStates, ...
         'lidarInformationBounds',informationBounds, ...
         'independentHeadingValid',heading.valid, ...
-        'independentHeadingInnovation',headingInnovation, ...
+        'independentHeadingInnovation',measuredInnovation,'recoveredHeading',recoveredHeading, ...
         'observedMotionEnvelopeSatisfied', ...
             all(velocityValid) && all(accelerationValid) ...
             && all(speedInDomain) ...
@@ -200,7 +214,7 @@ function valid=motionValidity(h,name,n)
 end
 
 function s=gnssPositionSource(data,t)
-    n=numel(t);s=struct('valid',false(n,1),'values',nan(n,2));
+    n=numel(t);s=struct('valid',false(n,1),'values',nan(n,2),'availableAt',t);
     if ~isfield(data,'gnss'),return;end
     a=data.gnss;
     assert(isfield(a,'delay') && isequal(a.delay,0),'VehicleLocalization:FullZeroDelayRequired','Declare zero perception delay.');
@@ -208,6 +222,12 @@ function s=gnssPositionSource(data,t)
     assert(isequal(size(a.position),[n,2]) && numel(a.valid)==n && all(ismember(a.valid,[0,1])), ...
             'VehicleLocalization:InvalidFullSource','Invalid position packet dimensions.');
     s.valid=logical(a.valid(:));s.values=a.position;
+    if isfield(a,'sourceRightTime')
+        right=a.sourceRightTime(:);
+        assert(numel(right)==n && all(isfinite(right(s.valid))) && all(right(s.valid)>=t(s.valid)), ...
+            'VehicleLocalization:InvalidFullSource','Valid GNSS interpolation endpoints must cover the frame.');
+        s.availableAt(s.valid)=right(s.valid);
+    end
     assert(isreal(s.values) && all(isfinite(s.values(s.valid,:)),'all'), ...
             'VehicleLocalization:InvalidFullSource','Valid position packets must be finite.');
 end

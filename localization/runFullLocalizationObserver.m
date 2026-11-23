@@ -18,9 +18,12 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % gnss.valid enables position feedback. Optional gnss.heading is in radians
 % on that packet's clock; NaN means heading is unavailable. A separate
 % data.gnssHeading stream can instead supply its own time, valid and delay=0.
-% A missing heading omits the angular innovation. The predicted heading then
-% rotates the antenna offset for any valid position. The initial state
-% supplies the starting heading. Information metadata does not weight feedback.
+% During receiver-heading gaps, signed wheel/lateral motion and yaw rate
+% align a resolved antenna displacement between two available position fixes.
+% The recovered angle uses the same angular gain and rotates the antenna
+% offset. Until such a chord is available, position uses predicted yaw.
+% cfg.gnss.positionStdM is the receiver position error scale in meters.
+% diagnostics.recoveredHeading is NaN on frames without a derived angle.
 % Optional LateralInputs.velocityValid gates the velocity-dependent innovations.
 % Low-speed wheel/gyro packets enter through the same motion innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
