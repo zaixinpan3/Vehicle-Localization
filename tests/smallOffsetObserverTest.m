@@ -22,24 +22,23 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(norm(c.gnss.outputPoint.bodyOffset),.01,AbsTol=1e-14);
             testCase.verifyGreaterThan(norm(original.gnss.outputPoint.bodyOffset),1);
             testCase.verifyEqual(c.gnss.outputPoint.bodyCovariance,original.gnss.outputPoint.bodyCovariance);
-            testCase.verifyEqual(c.invariantObserver.noise,original.invariantObserver.noise);
-            testCase.verifyEqual(c.invariantObserver.fusion.lidarOperatorMismatch, ...
-                original.invariantObserver.fusion.lidarOperatorMismatch);
+            testCase.verifyEqual(c.iss.lidarOperatorMismatch, ...
+                original.iss.lidarOperatorMismatch);
             testCase.verifyFalse(isfield(c,'invariantDesign'));
         end
         function commonCertificateCoversTheDeclaredMovingDomain(testCase)
             c=testCase.Config;v=c.invariantDesign.verification;
-            testCase.verifyEqual([c.invariantObserver.fusion.minimumCourseSpeed,c.iss.maximumSpeed],[1,30]);
+            testCase.verifyEqual(v.operatingSet.speedInterval,[0,30]);
             testCase.verifyTrue(v.certified);
             testCase.verifyTrue(v.matchedAuxiliaryGain);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyEqual(v.nominalFusion.vertices,4);
             testCase.verifyLessThan(v.worstVertexEigenvalue,-.009);
         end
-        function measuredOffsetCannotReuseThisTemporaryDesign(testCase)
-            c=testCase.Config;original=mncavFullObserverConfig();
-            c.gnss.outputPoint=original.gnss.outputPoint;
-            testCase.verifyError(@()localizationSupport.runtime(c),'VehicleLocalization:StaleInvariantDesign');
+        function receiverTransportUsesTheSameGains(testCase)
+            c=testCase.Config;original=mncavFullObserverConfig();a=localizationSupport.runtime(c);
+            c.gnss.outputPoint=original.gnss.outputPoint;b=localizationSupport.runtime(c);
+            testCase.verifyEqual(a.linearOutputGain,b.linearOutputGain);
         end
         function enlargedDomainCannotReuseThisTemporaryDesign(testCase)
             c=testCase.Config;c.iss.maximumSpeed=31;

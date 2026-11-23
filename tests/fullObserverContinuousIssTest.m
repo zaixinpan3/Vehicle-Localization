@@ -12,8 +12,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             testCase.verifyTrue(d.nominalFusionLmiVerified);
             testCase.verifyLessThan(d.continuousCertificate.verification.worstVertexEigenvalue,0);
         end
-        function changedNoiseCannotReuseTemporaryGains(testCase)
-            c=freshObserverTestConfig();c.invariantObserver.noise.accelerationMps2=2*c.invariantObserver.noise.accelerationMps2;
+        function changedMarginRequiresSynthesis(testCase)
+            c=freshObserverTestConfig();c.invariantObserver.lambda=2*c.invariantObserver.lambda;
             testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end

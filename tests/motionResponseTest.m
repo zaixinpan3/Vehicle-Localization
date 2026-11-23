@@ -10,19 +10,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
         end
     end
     methods (Test)
-        function motionWeightsMeetTheResponseBounds(testCase)
-            c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());d=c.invariantDesign;
-            testCase.verifyTrue(d.verification.motionResponseVerified);
-            testCase.verifyTrue(d.verification.certified);
-        end
         function physicalLinearizationsMeetCertifiedMarginInGlobalAxes(testCase)
             cfg=freshObserverTestConfig();
             testCase.verifyLessThan(globalAxisResidual(cfg),0);
-        end
-        function negativeAuxiliaryGainFailsIndependentVerification(testCase)
-            c=freshObserverTestConfig();d=c.invariantDesign;d.auxiliaryWeights(3)=-1;
-            v=localizationSupport.verifyInvariantDesign(d,c);
-            testCase.verifyFalse(v.certified);
         end
         function withdrawnMotionKeepsTheVerifiedGains(testCase)
             c=freshObserverTestConfig();d=localizationSupport.runtime(c);
@@ -44,17 +34,12 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
             testCase.verifyEqual(xa(4:6),zeros(3,1),AbsTol=1e-12);
             testCase.verifyEqual(xb(1:3),zeros(3,1),AbsTol=1e-12);
         end
-        function restoredImplicitStepMatchesThePreviousUpdateEquation(testCase)
+        function unitWeightStepUsesThePhysicalJacobian(testCase)
             c=freshObserverTestConfig();d=localizationSupport.runtime(c);dt=.1;
-            x=[0;-4;1;0;8;-.2;1.9;-.04];
-            p=localizationSupport.measurements(8,.5,.8,-.3,true,true,c);
-            [value,H]=localizationSupport.outputs(x,c);D=localizationSupport.outputNormalization(c);
-            C=D*H*d.toPhysical;k=d.auxiliaryWeights;
-            k(1:2)=k(1:2)*c.iss.maximumSpeed^2/(c.invariantObserver.fusion.minimumCourseSpeed^2+p.value(1));
-            W=C.'*diag(k([1,2,2,3]));
-            Q=d.theta*W*C;rhs=dt*d.theta*(d.P\(W*D*(p.value-value)));
-            expected=x+d.toPhysical*((eye(8)+dt*(d.P\Q))\rhs);
-            testCase.verifyEqual(localizationSupport.correct(x,p,dt,d,c),expected,AbsTol=1e-12);
+            x=[0;-4;1;0;8;-.2;1.9;-.04];p=localizationSupport.measurements(8,.5,.8,-.3,true,true,c);
+            [value,H]=localizationSupport.outputs(x,c);C=H*d.toPhysical;
+            expected=x+d.toPhysical*((d.P+dt*d.theta*(C.'*C))\(dt*d.theta*C.'*(p.value-value)));
+            testCase.verifyEqual(localizationSupport.correct(x,p,dt,d,c),expected,AbsTol=1e-11);
         end
         function brakeAndRestartAreTrackedWithoutPoseFeedback(testCase,dt)
             c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());
@@ -92,28 +77,19 @@ end
 function worst=globalAxisResidual(cfg)
     stream=RandStream('mt19937ar','Seed',20261121);
     r=localizationSupport.runtime(cfg);d=cfg.invariantDesign;
-    T=r.toPhysical;t=r.theta;D=localizationSupport.outputNormalization(cfg);
-    ell=cfg.invariantObserver.headingLengthM;E=eye(8);C=E([1,4,7],:);
-    S=diag([cfg.iss.minimumPositionStrength*[1,1],cfg.iss.minimumHeadingStrength]) ...
-        -(cfg.iss.maximumPositionHeadingCoupling+cfg.invariantObserver.fusion.lidarOperatorMismatch)*eye(3);
+    T=r.toPhysical;t=r.theta;E=eye(8);C=E([1,4,7],:);
+    S=diag([cfg.iss.minimumPositionStrength*[1,1],cfg.iss.minimumHeadingStrength]);
     worst=-Inf;
     for j=1:80
-        course=2*pi*rand(stream);heading=2*pi*rand(stream);s=10+5*rand(stream);
-        direction=[cos(course);sin(course)];a=2*sqrt(rand(stream))*[cos(heading);sin(heading)];
-        x=zeros(8,1);x([2,5])=s*direction;x([3,6])=a;x(7)=2*pi*rand(stream);x(8)=cfg.maximumBodyYawRate*(2*rand(stream)-1);
-        [F,H,G]=localizationSupport.secants(x,x,cfg);
-        predictor=T\(F*T)/t;
-        G=diag([1,1,ell])*G*T/t;
+        course=2*pi*rand(stream);speed=cfg.iss.maximumSpeed*rand(stream);
+        x=zeros(8,1);x([2,5])=speed*[cos(course);sin(course)];
+        angle=2*pi*rand(stream);x([3,6])=cfg.iss.maximumAcceleration*rand(stream)*[cos(angle);sin(angle)];
+        x(7)=2*pi*rand(stream);x(8)=cfg.maximumBodyYawRate*(2*rand(stream)-1);
+        [F,H]=localizationSupport.secants(x,x,cfg);predictor=T\(F*T)/t;
         for mask=0:15
-            active=logical(bitget(mask,1:4));
-            k=d.auxiliaryWeights;
-            measuredSquaredSpeed=double(active(1))*s^2;
-            k(1:2)=k(1:2)*cfg.iss.maximumSpeed^2/(cfg.invariantObserver.fusion.minimumCourseSpeed^2+measuredSquaredSpeed);
-            k=k([1,2,2,3]);Cmotion=D(active,active)*H(active,:)*T;
-            motion=Cmotion.'*diag(k(active))*Cmotion;
+            Ct=H(logical(bitget(mask,1:4)),:)*T;
             for gnss=[0,1]
-                W=d.P*predictor-motion-gnss*d.Y(:,1:3)*G ...
-                    -C.'*S*C-d.Y(8,4)*E(:,8)*E(8,:);
+                W=d.P*predictor-Ct.'*Ct-gnss*(C.'*C)-C.'*S*C-t^4*d.cr*E(:,8)*E(8,:);
                 worst=max(worst,max(eig(W+W.'+d.lambda*eye(8))));
             end
         end

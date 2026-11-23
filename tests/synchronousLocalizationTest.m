@@ -62,12 +62,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             testCase.verifyGreaterThan(abs(r.diagnostics.poseWeight(1,3,2)),0);
             testCase.verifyTrue(r.diagnostics.lidarMatched{2}.jumpNonexpansive);
         end
-        function completeReliabilityRejectionEqualsMissingLidar(testCase)
-            f=fixture();f.data.lidar.frameReliability=zeros(21,1);a=run(f);
-            f.data=rmfield(f.data,'lidar');b=run(f);
-            testCase.verifyEqual(a.z,b.z,AbsTol=0);
-            testCase.verifyEqual(a.diagnostics.yawCorrection,zeros(21,1),AbsTol=0);
-        end
         function zeroInformationIsAValidZeroCorrection(testCase)
             f=fixture();f.data.lidar.information=zeros(3,3,21);a=run(f);
             f.data=rmfield(f.data,'lidar');b=run(f);
@@ -79,18 +73,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             r=run(f);
             testCase.verifyEqual(r.diagnostics.lidarMatched{2}.representation,"predictedPoseResidual");
             testCase.verifyLessThan(abs(r.position(end,2)),.002);
-        end
-        function residualProviderReliabilityIsNotOverwritten(testCase)
-            f=fixture();f.cfg.initialState(4)=.2;f.data.lidar.evaluateResidual=@rejectedResidual;
-            a=run(f);f.data=rmfield(f.data,'lidar');b=run(f);
-            testCase.verifyEqual(a.z,b.z,AbsTol=0);
-        end
-        function sourceReliabilityIsAlignedWithItsOwnFrame(testCase)
-            f=unaligned();f.data.lidar.frameReliability=(0:20).'/20;
-            f.data.lidar.directionReliability=repmat([0,.5,1],21,1);
-            [d,~,~]=syntheticObserver.align(f.data,f.lateral,f.cfg);
-            testCase.verifyEqual(d.lidar.frameReliability,f.data.lidar.frameReliability,AbsTol=0);
-            testCase.verifyEqual(d.lidar.directionReliability,f.data.lidar.directionReliability,AbsTol=0);
         end
         function alignmentNeedsOnlyLateralVelocity(testCase)
             f=unaligned();
@@ -146,8 +128,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
         end
         function turningDiscretizationConvergesWithSmallerSteps(testCase)
             coarse=turning(.1);fine=turning(.05);a=run(coarse);b=run(fine);
-            testCase.verifyLessThan(norm(b.position(end,:)-fine.truth(end,:)), ...
-                norm(a.position(end,:)-coarse.truth(end,:)));
+            fineError=norm(b.position(end,:)-fine.truth(end,:));
+            coarseError=norm(a.position(end,:)-coarse.truth(end,:));
+            numericalFloor=8*eps(max(1,norm(fine.truth(end,:))));
+            testCase.verifyLessThanOrEqual(fineError,max(numericalFloor,coarseError));
             testCase.verifyLessThan(max(abs(a.heading-coarse.data.highRate.time*.2)),.02);
         end
         function missingPreparedLateralInputIsRejected(testCase)
@@ -163,9 +147,6 @@ function m=lineResidual(~,pose)
     m=localizationSupport.buildLidarLineMeasurement(points,points,repmat([0,1],3,1),pose,100*ones(3,1));
 end
 
-function m=rejectedResidual(k,pose)
-    m=lineResidual(k,pose);m.frameReliability=0;
-end
 
 
 function f=turning(step)

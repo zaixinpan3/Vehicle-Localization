@@ -179,10 +179,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(both,[0;0;0],G,design,cfg), ...
                 'VehicleLocalization:AmbiguousLidarMeasurement');
         end
-        function channelOverlapReducesErrorOutsideTheIssSpeedDomain(testCase)
-            % This 2 m/s finite-landmark scene is outside the default ISS
-            % interval. Check finite execution and finite-horizon reduction;
-            % neither asymptotic convergence nor old settling rates follow.
+        function channelOverlapReducesErrorOnTheTwoMetrePerSecondRoute(testCase)
             f=movingFixture(20);r=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
             error=r.pose-f.truth;error(:,3)=atan2(sin(error(:,3)),cos(error(:,3)));
             testCase.verifyEqual(r.diagnostics.lidarChannel,"overlapGradient");
@@ -193,7 +190,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
             testCase.verifyLessThan(norm(error(end,1:2)),.1*norm(error(1,1:2)));
             testCase.verifyLessThan(abs(error(end,3)),.1*abs(error(1,3)));
-            testCase.verifyFalse(any(r.diagnostics.observedSpeedWithinIssDomain));
+            testCase.verifyTrue(all(r.diagnostics.observedSpeedWithinIssDomain));
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
             testCase.verifyEqual(r.diagnostics.lidarMatched{end}.representation,"predictedPoseGradient");
         end
@@ -293,5 +290,5 @@ end
 
 function cfg=filterConfig()
 % Standalone geometric-filter fixture; no observer implementation is selected.
-    cfg=struct('lidar',struct('poseScales',ones(3,1)));
+    cfg=struct();
 end

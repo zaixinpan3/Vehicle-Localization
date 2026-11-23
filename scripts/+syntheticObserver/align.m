@@ -7,7 +7,7 @@ function [aligned,lateral,metadata]=align(data,lateralInput,cfg)
     a=data.lidar;
     [aligned,lateral,metadata,selected]=observerInternal.alignFrameClock(data,lateralInput,cfg,a.time(:));
     aligned.lidar=a;aligned.lidar.time=aligned.highRate.time;
-    for name=["pose","valid","frameReliability","directionReliability"]
+    for name=["pose","valid"]
         if isfield(a,name),aligned.lidar.(name)=a.(name)(selected,:);end
     end
     aligned.lidar.information=a.information(:,:,selected);

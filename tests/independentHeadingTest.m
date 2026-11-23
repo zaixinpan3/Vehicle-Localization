@@ -98,7 +98,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
         function intermittentGnssUsesOneDesign(testCase)
             [data,c,l]=fixture();d=localizationSupport.runtime(c);
             testCase.verifySize(d.linearOutputGain,[8,4]);
-            g=c.invariantObserver.theta*c.invariantDesign.Y(8,4)/c.invariantDesign.P(8,8);
+            g=c.invariantObserver.theta^5*c.invariantDesign.cr/c.invariantDesign.P(8,8);
             testCase.verifyEqual(d.linearOutputGain(8,:),[0,0,0,g],RelTol=1e-13);
             testCase.verifyEqual(d.linearOutputGain(1:7,4),zeros(7,1));
             t=data.highRate.time;frames=(0:numel(t)-1).';

@@ -13,7 +13,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
         function idealCurbRetainsLongitudinalNullspace(testCase)
             f=fixture();m=curb([0;0;0]);
             [c,a]=localizationSupport.computeLidarMatchedCorrection(m,[0;0;0],f.G,f.design,f.cfg);
-            testCase.verifyEqual(a.filter.normalizedInformation,diag([0,3,8]),AbsTol=1e-12);
+            testCase.verifyEqual(a.filter.F,diag([0,3,8]),AbsTol=1e-12);
             testCase.verifyEqual(a.filter.rank,2);
             testCase.verifyEqual(c,zeros(7,1),AbsTol=0);
             testCase.verifyEqual(a.filter.S*[1;0;0],zeros(3,1),AbsTol=0);
@@ -24,8 +24,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             m=struct('gradient',[.2;-.1;.04],'information',diag([3,2,.8]), ...
                 'linearizationPose',zeros(3,1));
             [rate,a]=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,r.lidarMatched,cfg);
-            C=(a.filter.D\(G*r.toPhysical))/r.theta;
-            expected=-r.toPhysical*(r.P\(C.'*a.filter.F*a.filter.D.'*m.gradient));
+            C=(G*r.toPhysical)/r.theta;
+            expected=-r.toPhysical*(r.P\(C.'*m.information*m.gradient));
             testCase.verifyEqual(rate,expected,AbsTol=1e-10);
             stale=r.lidarMatched;stale.unknownOption=1;
             testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,stale,cfg), ...
@@ -59,7 +59,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             [a,aa]=localizationSupport.computeLidarMatchedCorrection(single,zeros(3,1),f.G,f.design,f.cfg);
             [b,bb]=localizationSupport.computeLidarMatchedCorrection(duplicate,zeros(3,1),f.G,f.design,f.cfg);
             testCase.verifyEqual(a,b,AbsTol=1e-12);
-            testCase.verifyEqual(aa.filter.normalizedInformation,bb.filter.normalizedInformation,AbsTol=1e-12);
+            testCase.verifyEqual(aa.filter.F,bb.filter.F,AbsTol=1e-12);
         end
         function changingDirectionsDissipateInANondiagonalMetric(testCase,angle)
             f=rotatedFixture(angle);e=-(f.design.T\f.state);
@@ -95,27 +95,17 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyEqual(a.filter.rank,0);
             testCase.verifyEqual(a.jumpMaximumEnergyRatio,1,AbsTol=1e-12);
         end
-        function frameRejectionWithdrawsAllCorrection(testCase)
-            f=fixture();m=struct('gradient',ones(3,1),'linearizationPose',zeros(3,1),'information',1e8*eye(3),'frameReliability',0);
-            c=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),f.G,f.design,f.cfg);
-            testCase.verifyEqual(c,zeros(7,1),AbsTol=0);
-        end
-        function repeatedEigenspacesUseEqualReliability(testCase)
-            f=fixture();a=localizationSupport.filterLidarPoseInformation(10*eye(3),f.cfg,1,[0;.5;1]);
-            testCase.verifyEqual(a.S,zeros(3),AbsTol=0);
-            testCase.verifyEqual(a.reliability,zeros(3,1),AbsTol=0);
-        end
         function directGeometryScalesGradientAndDissipationDifferently(testCase)
-            f=fixture();a=localizationSupport.filterLidarPoseInformation(diag([0,1,1e12]),f.cfg,.5,[1;0;1]);
-            testCase.verifyEqual(a.strengths(1:2),zeros(2,1),AbsTol=0);
-            testCase.verifyEqual(a.F,diag([0,0,5e11]));
-            testCase.verifyEqual(a.strengths(3),.5e24,RelTol=1e-14);
+            a=localizationSupport.filterLidarPoseInformation(diag([0,1,1e12]));
+            testCase.verifyEqual(a.strengths(1:2),[0;1],AbsTol=0);
+            testCase.verifyEqual(a.F,diag([0,1,1e12]));
+            testCase.verifyEqual(a.strengths(3),1e24,RelTol=1e-14);
         end
         function scalingInformationScalesTheGainAndItsMatchedStrength(testCase)
-            f=fixture();theta=.52;R=[cos(theta),0,-sin(theta);0,1,0;sin(theta),0,cos(theta)];
-            I=R*diag([0,3,8])*R.';reliability=[1;.25;.75];
-            a=localizationSupport.filterLidarPoseInformation(I,f.cfg,.6,reliability);
-            b=localizationSupport.filterLidarPoseInformation(7*I,f.cfg,.6,reliability);
+            theta=.52;R=[cos(theta),0,-sin(theta);0,1,0;sin(theta),0,cos(theta)];
+            I=R*diag([0,3,8])*R.';
+            a=localizationSupport.filterLidarPoseInformation(I);
+            b=localizationSupport.filterLidarPoseInformation(7*I);
             testCase.verifyEqual(a.F*I,a.S,AbsTol=2e-13);
             testCase.verifyEqual(b.F,7*a.F,AbsTol=3e-14);
             testCase.verifyEqual(b.S,49*a.S,AbsTol=2e-12);
@@ -129,20 +119,11 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyEqual(d([1,7]),zeros(2,1),AbsTol=1e-12);
             testCase.verifyTrue(a.jumpNonexpansive);
         end
-        function normalizationSeparatesMetresAndRadians(testCase)
-            f=fixture();f.cfg.lidar.poseScales=[2;3;.1];
-            a=localizationSupport.filterLidarPoseInformation(diag([1,2,3]),f.cfg);
-            testCase.verifyEqual(a.normalizedInformation,diag([4,18,.03]),AbsTol=1e-12);
-            testCase.verifyEqual(a.trace,22.03,AbsTol=1e-12);
-        end
-        function indefiniteInformationAndReliabilityAreRejected(testCase)
-            f=fixture();
-            testCase.verifyError(@()localizationSupport.filterLidarPoseInformation(diag([1,1,-.1]),f.cfg), ...
+        function indefiniteAndOverflowingInformationAreRejected(testCase)
+            testCase.verifyError(@()localizationSupport.filterLidarPoseInformation(diag([1,1,-.1])), ...
                 'VehicleLocalization:InvalidLidarInformation');
-            testCase.verifyError(@()localizationSupport.filterLidarPoseInformation(1e170*eye(3),f.cfg), ...
+            testCase.verifyError(@()localizationSupport.filterLidarPoseInformation(1e170*eye(3)), ...
                 'VehicleLocalization:InvalidLidarInformation');
-            testCase.verifyError(@()localizationSupport.filterLidarPoseInformation(eye(3),f.cfg,1.1), ...
-                'VehicleLocalization:InvalidLidarReliability');
         end
         function currentDesignDoesNotInventBaselineYawCertificate(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.designFullObserverGains(cfg);
@@ -177,7 +158,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
 end
 
 function f=fixture()
-    f.cfg=struct('lidar',struct('poseScales',ones(3,1)));
+    f.cfg=struct();
     f.design=struct('P',eye(7)/4,'T',eye(7),'theta',1);
     f.G=zeros(3,7);f.G(1,1)=1;f.G(2,4)=1;f.G(3,7)=1;
 end
@@ -211,8 +192,7 @@ function changes=switchingEnergy()
     for k=1:numel(changes)
         [U,~]=qr(randn(3));values=10.^(-4+8*rand(3,1));values(1:mod(k,4))=0;
         p=f.G*state;information=U*diag(values)*U.';
-        m=struct('gradient',information*p,'linearizationPose',p,'information',information, ...
-            'frameReliability',double(mod(k,7)~=0),'directionReliability',rand(3,1));
+        m=struct('gradient',information*p,'linearizationPose',p,'information',information);
         before=f.design.T\state;
         delta=localizationSupport.computeLidarMatchedCorrection(m,f.G*state,f.G,f.design,f.cfg, ...
             StepSize=.01+rand,Discretization="implicit");

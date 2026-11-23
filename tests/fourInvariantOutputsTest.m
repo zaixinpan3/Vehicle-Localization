@@ -84,17 +84,15 @@ classdef fourInvariantOutputsTest < matlab.unittest.TestCase
             withdrawn=localizationSupport.correct(x,p,.1,d,c);
             testCase.verifyEqual(withdrawn,x,AbsTol=0);
         end
-        function numericalNormalizationPreservesThePhysicalOutputs(testCase)
+        function outputsUsePhysicalUnits(testCase)
             c=mncavFullObserverConfig();x=[0;3;1;0;4;-2;.2;.3];
-            h=localizationSupport.outputs(x,c);D=localizationSupport.outputNormalization(c,1);
-            V=c.iss.maximumSpeed;
-            expected=[25/(2*V);-5/V;-10/V;-3*sin(.2)+4*cos(.2)];
-            testCase.verifyEqual(D*h,expected,AbsTol=1e-13);
+            h=localizationSupport.outputs(x,c);
+            expected=[25;-5;-10;-3*sin(.2)+4*cos(.2)];
+            testCase.verifyEqual(h,expected,AbsTol=1e-13);
         end
     end
 end
 
 function d=correctionDesign()
-    d=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
-        'auxiliaryWeights',ones(3,1));
+    d=struct('theta',1,'P',eye(8),'toPhysical',eye(8));
 end

@@ -46,8 +46,7 @@ function errors=finiteIdentityErrors(c)
         [F,H,G]=localizationSupport.secants(x,y,c);e=x-y;
         dh=localizationSupport.outputs(x,c)-localizationSupport.outputs(y,c);
         dg=x([1,4,7])-y([1,4,7]);
-        rx=[direction(x(7)),direction(x(7)+pi/2)];ry=[direction(y(7)),direction(y(7)+pi/2)];
-        dg(1:2)=dg(1:2)+(rx-ry)*c.gnss.outputPoint.bodyOffset(:);df=drift(x,c)-drift(y,c);
+        df=drift(x,c)-drift(y,c);
         errors(k,:)=[norm(F*e-df)/max(1,norm(df)),norm(H*e-dh)/max(1,norm(dh)), ...
             norm(G*e-dg)/max(1,norm(dg))];
     end

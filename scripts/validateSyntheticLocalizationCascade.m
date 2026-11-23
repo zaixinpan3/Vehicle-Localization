@@ -20,8 +20,6 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
     lateralCfg=lateralObserverConfig();design=designLateralObserverGains(lateralCfg);
     cfg=mncavFullObserverConfig();settings=scenarioSettings(lateralCfg,cfg);
     % Generate every stress case with the same design for the declared synthetic receiver.
-    cfg.invariantObserver.noise.gnssHeadingRad=settings.noise.gnssHeadingStdRad;
-    cfg.invariantObserver.noise.gnssPositionM=hypot(settings.noise.gnssWhiteStdM,settings.noise.gnssMarkovStdM);
     [~,cfg]=synthesizeMncavInvariantDesign(cfg);
     for name=string(fieldnames(options.NoiseOverrides)).'
         assert(isfield(settings.noise,name),'VehicleLocalization:UnknownNoiseSetting','Unknown noise setting %s.',name);

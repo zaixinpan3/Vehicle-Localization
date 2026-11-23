@@ -47,7 +47,6 @@ function estimate=integrate(data,cfg,lateral,L)
     poseJacobian=zeros(3,stateCount);poseJacobian(1,1)=1;poseJacobian(2,4)=1;poseJacobian(3,7)=1;
     linearOutput=zeros(4,stateCount);
     linearOutput(1:3,:)=poseJacobian;
-    linearOutput(3,7)=cfg.invariantObserver.headingLengthM;
     linearOutput(4,8)=1;
     headingKinematics=zeros(stateCount);headingKinematics(7,8)=1;
     design=struct('kind',"nominal-fusion-implicit",'continuousDesign',continuous, ...
@@ -80,9 +79,9 @@ function estimate=integrate(data,cfg,lateral,L)
         observation=linearOutput*x;
         if poseValid(k)
             measuredYaw=heading.heading(k);
-            gnssPosition(k,:)=localizationSupport.correctGnssOutputPoint(G.values(k,:),[],x(7),alignment);
+            gnssPosition(k,:)=localizationSupport.correctGnssOutputPoint(G.values(k,:),[],measuredYaw,alignment);
             headingInnovation(k)=atan2(sin(measuredYaw-x(7)),cos(measuredYaw-x(7)));
-            observation(1:3)=[gnssPosition(k,:).';linearOutput(3,7)*(x(7)+headingInnovation(k))];
+            observation(1:3)=[gnssPosition(k,:).';x(7)+headingInnovation(k)];
         end
         if rateValid(k)
             observation(4)=upstreamRate(k);rateInnovation(k)=upstreamRate(k)-x(8);
@@ -111,10 +110,6 @@ function estimate=integrate(data,cfg,lateral,L)
             end
         end
         if L.valid(k)
-            if ~isfield(measurement,'frameReliability'),measurement.frameReliability=1;end
-            if ~isfield(measurement,'directionReliability'),measurement.directionReliability=ones(3,1);end
-            measurement.frameReliability=measurement.frameReliability*L.frameReliability(k);
-            measurement.directionReliability=measurement.directionReliability(:).*L.directionReliability(k,:).';
             [delta,audit]=localizationSupport.computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
                 lidarInjection,cfg,StepSize=dt,Discretization="implicit");
             assert(audit.jumpNonexpansive,'VehicleLocalization:LidarJumpCertificateFailed', ...
@@ -141,7 +136,7 @@ function estimate=integrate(data,cfg,lateral,L)
         'position',z(:,[1,4]),'velocity',z(:,[2,5]),'acceleration',z(:,[3,6]), ...
         'heading',wrap(z(:,7)),'headingUnwrapped',z(:,7),'lateral',reportedLateral,'observer',design);
     measuredSpeed=hypot(h.longitudinalSpeed(:),lateral.lateralVelocity(:));
-    speedInterval=[cfg.invariantObserver.fusion.minimumCourseSpeed,cfg.iss.maximumSpeed];
+    speedInterval=[0,cfg.iss.maximumSpeed];
     speedInDomain=velocityValid & measuredSpeed>=speedInterval(1) & measuredSpeed<=speedInterval(2);
     estimate.diagnostics=struct('gnssPoseValid',poseValid,'lidarValid',logical(L.valid(:)),'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition, ...

@@ -22,9 +22,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             drift=(xp-x)/h;
             testCase.verifyEqual(drift([3,6]),q^2*xp([2,5])+2*q*J*xp([3,6]),AbsTol=1e-12);
         end
-        function processResidualScaleRejectsStaleGains(testCase)
+        function changeOfOperatingDomainRejectsStaleGains(testCase)
             c=freshObserverTestConfig();
-            c.invariantObserver.noise.jerkMps3=.2;
+            c.iss.maximumAcceleration=3;
             testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
@@ -38,7 +38,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifySize(d.P,[8,8]);
         end
         function staleArchitectureInputsCannotReuseTheGain(testCase)
-            c=freshObserverTestConfig();c.invariantObserver.headingLengthM=20;
+            c=freshObserverTestConfig();c.invariantObserver.theta=3;
             testCase.verifyError(@()localizationSupport.runtime(c), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
@@ -94,15 +94,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             x=[0;.1;0;0;.2;0;0;0];design=localizationSupport.runtime(c);
             corrected=localizationSupport.correct(x,packet,.1,design,c);
             testCase.verifyTrue(all(isfinite(corrected)));
-        end
-        function squaredSpeedGainIsActiveAndHasNoScalarReplacement(testCase)
-            c=freshObserverTestConfig();design=localizationSupport.runtime(c);
-            testCase.verifyGreaterThan(design.auxiliaryWeights(1),0);
-        end
-        function missingSquaredSpeedWeightRejectsMotionDesign(testCase)
-            c=freshObserverTestConfig();c.invariantDesign.auxiliaryWeights(1)=0;
-            verification=localizationSupport.verifyInvariantDesign(c.invariantDesign,c);
-            testCase.verifyFalse(verification.certified);
         end
         function temporaryDesignVerificationRequiresNoSdpSolver(testCase)
             c=freshObserverTestConfig();

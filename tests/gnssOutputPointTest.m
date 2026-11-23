@@ -32,27 +32,27 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) gnssOutputPointTest < 
             testCase.verifyEqual(aligned.z,ideal.z,AbsTol=0);
             testCase.verifyTrue(all(isnan(aligned.diagnostics.gnssPositionAtObserverPoint),'all'));
         end
-        function runtimePredictsTheAntennaAtTheEstimatedHeading(testCase)
+        function receiverHeadingTransportsTheAntenna(testCase)
             f=offsetInput(fixture());f.cfg.initialState(7)=.1;r=run(f);
             expected=zeros(numel(r.time),2);
             for k=1:numel(r.time)
-                yaw=r.diagnostics.intrinsicPrediction(k,7);
+                yaw=f.data.gnss.heading(k);
                 R=[cos(yaw),-sin(yaw);sin(yaw),cos(yaw)];
                 expected(k,:)=f.data.gnss.position(k,:)-(R*f.cfg.gnss.outputPoint.bodyOffset(:)).';
             end
             testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint,expected,AbsTol=1e-12);
         end
-        function antennaInnovationUsesTheInitialPredictedYaw(testCase)
+        function antennaInnovationUsesTheMeasuredYaw(testCase)
             f=offsetInput(fixture());f.cfg.initialState(7)=.1;f.data=rmfield(f.data,'lidar');r=run(f);
             testCase.verifyEqual(r.diagnostics.gnssPositionAtObserverPoint(1,:), ...
-                localizationSupport.correctGnssOutputPoint(f.data.gnss.position(1,:),[],.1,f.cfg.gnss.outputPoint),AbsTol=1e-12);
+                localizationSupport.correctGnssOutputPoint(f.data.gnss.position(1,:),[],f.data.gnss.heading(1),f.cfg.gnss.outputPoint),AbsTol=1e-12);
         end
         function independentPointConfigurationUsesTheSolvedGnssGain(testCase)
             cfg=freshObserverTestConfig();design=localizationSupport.designFullObserverGains(cfg);
-            temporary=cfg.invariantDesign;
+            temporary=cfg.invariantDesign;E=eye(8);
             testCase.verifyEqual(design.linearOutputGain(:,1:3), ...
-                design.toPhysical*localizationSupport.linearGain(cfg,temporary.P),AbsTol=1e-12);
-            testCase.verifyEqual(temporary.inputs.gnssBodyOffset(:),cfg.gnss.outputPoint.bodyOffset(:),AbsTol=0);
+                design.toPhysical*(temporary.P\E(:,[1,4,7])),AbsTol=1e-12);
+            testCase.verifyEqual(temporary.inputs,localizationSupport.invariantInputs(cfg));
             testCase.verifyFalse(cfg.gnss.outputPoint.evaluationDriveUsed);
             testCase.verifyTrue(design.nominalFusionLmiVerified);
         end

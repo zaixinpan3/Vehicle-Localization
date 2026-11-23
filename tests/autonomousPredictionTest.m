@@ -25,8 +25,8 @@ classdef autonomousPredictionTest < matlab.unittest.TestCase
             testCase.verifyGreaterThan(norm(residual),.1);
         end
         function zeroSpeedAndArbitrarySideslipJacobiansMatchFiniteDifferences(testCase)
-            c=mncavFullObserverConfig();t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;
-            T=diag([t,t^2,t^3,t,t^2,t^3,t/ell,t^2/ell]);
+            c=mncavFullObserverConfig();t=c.invariantObserver.theta;
+            T=diag([t,t^2,t^3,t,t^2,t^3,t,t^2]);
             for speed=[0,.2,2,12]
                 for r=[-.31,0,.23]
                     v=speed*[.8;-.6];a=[.3;.7];x=[1;v(1);a(1);2;v(2);a(2);.2;r];

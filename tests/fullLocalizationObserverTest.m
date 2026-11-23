@@ -48,7 +48,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             f=fixture(4,"gnss");f.data.highRate.longitudinalSpeed(:)=0;
             f.data.gnss.position(:)=0;f.cfg.initialState(:)=0;f.cfg.initialState(7)=.2;
             r=run(f);
-            gain=f.cfg.invariantDesign.gnssHeadingBandwidth.perSecond;
+            gain=f.cfg.invariantObserver.theta/f.cfg.invariantDesign.P(7,7);
             testCase.verifyEqual(r.heading,.2*(1+gain*.1).^(-(0:numel(r.time)-1).'),AbsTol=1e-12);
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end

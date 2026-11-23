@@ -107,10 +107,8 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
         'design',runs{1}.estimate.observer,'metrics',metrics);
     accepted=runs{1}.estimate.diagnostics.lidarOverlap.available;
     % Old timestamp-warped trajectories are not paired with corrected epochs.
-    % Each changed lever arm needs gains solved for its own geometry; runtime
-    % uncertainty changes alone do not alter synthesis inputs.
+    % Receiver transport changes the measured point while sharing the same metric.
     zeroPointCfg=cfg;zeroPointCfg.gnss.outputPoint.bodyOffset=[0;0];
-    [~,zeroPointCfg]=synthesizeMncavInvariantDesign(zeroPointCfg);
     controlRows=cell(0,8);controlNames=["unaligned","uncertainty_only","geometry_only","aligned"];
     for k=1:numel(controlNames)
         controlCfg=cfg;
@@ -126,7 +124,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     end
     report.alignmentControls=cell2table(controlRows,VariableNames={'method','positionRmseM', ...
         'positionMedianM','positionP95M','positionMaximumM','fractionAtMost10cm','headingRmseDeg','acceptedPositionRmseM'});
-    report.alignmentControlGainPolicy="Fresh gains for each lever arm; shared within equal synthesis inputs";
+    report.alignmentControlGainPolicy="One four-vertex design shared by all receiver geometry controls";
     writetable(report.alignmentControls,fullfile(outputFolder,'alignment_controls.csv'));
     wheel=prepared.wheelVelocity;
     save(fullfile(outputFolder,'experiment.mat'),'data','lateral','lateralDesign','cfg','runs','reference','wheel','report','bestpos','-v7.3');

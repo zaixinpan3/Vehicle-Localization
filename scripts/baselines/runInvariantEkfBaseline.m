@@ -14,7 +14,9 @@ function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
     end
     t=data.highRate.time;n=numel(t);x=cfg.initialState(:);if numel(x)==7,x(8)=0;end
     P=diag([.5,.5,1,.5,.5,1,deg2rad(2),.02].^2);Z=nan(n,8);seconds=zeros(n,1);
-    G=zeros(3,8);G(:,[1,4,7])=eye(3);noise=cfg.invariantObserver.noise;
+    G=zeros(3,8);G(:,[1,4,7])=eye(3);
+    % Nominal process and sensor scales of the comparison filter.
+    noise=struct('jerkMps3',.05,'velocityMps',.256,'accelerationMps2',.233);
     for k=1:n
         timer=tic;dt=0;if k>1,dt=t(k)-t(k-1);end
         valid=lateral.velocityValid(k);

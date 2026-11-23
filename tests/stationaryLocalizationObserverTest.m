@@ -9,7 +9,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             'positionOnly',struct('information',diag([1e6,2e6,0]),'rank',2,'heading',false), ...
             'zero',struct('information',zeros(3),'rank',0,'heading',false), ...
             'largeRawScale',struct('information',diag([1,1e15,2e15]),'rank',2,'heading',true));
-        invalidReliability=struct('nan',NaN,'negative',-.1,'aboveOne',1.1,'complex',1i);
     end
     methods (TestClassSetup)
         function paths(testCase)
@@ -48,7 +47,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
         end
         function supportRespectsCouplingAndRawAdmission(testCase,supportCase)
             cfg=mncavFullObserverConfig();
-            filter=informationFilter(supportCase.information,cfg);
+            filter=informationFilter(supportCase.information);
             s=localizationSupport.lidarPoseSupport(filter,cfg);
             testCase.verifyEqual(s.rank,supportCase.rank);
             testCase.verifyEqual(s.fullPoseSupported,supportCase.rank==3);
@@ -56,8 +55,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyLessThanOrEqual(s.rank,filter.rank);
         end
         function coupledYawDiagonalIsNotIndependentHeading(testCase)
-            f=fixture();D=diag(f.cfg.lidar.poseScales);
-            f.data.lidar.information=repmat(D\[1e6,0,1e6;0,2e6,0;1e6,0,1e6]/D,1,1,numel(f.lateral.time));
+            f=fixture();
+            f.data.lidar.information=repmat([1e6,0,1e6;0,2e6,0;1e6,0,1e6],1,1,numel(f.lateral.time));
             r=execute(f);s=r.diagnostics.lidarPoseSupport;
             testCase.verifyGreaterThan(min(squeeze(r.diagnostics.poseWeight(3,3,:))),0);
             testCase.verifyFalse(any(s.headingSupported));
@@ -66,40 +65,22 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
         end
         function headingStrengthMatchesMarginalInformation(testCase)
             cfg=mncavFullObserverConfig();I=[8,2,3;2,7,-1;3,-1,6]*1e3;
-            filter=informationFilter(I,cfg);S=filter.S;s=localizationSupport.lidarPoseSupport(filter,cfg);
+            filter=informationFilter(I);S=filter.S;s=localizationSupport.lidarPoseSupport(filter,cfg);
             expected=S(3,3)-S(3,1:2)*(S(1:2,1:2)\S(1:2,3));
             testCase.verifyEqual(s.headingStrengthAfterPosition,expected,RelTol=5e-14);
             testCase.verifyGreaterThan(s.minimumStrength,0);
         end
         function numericallyFullPoseCanFailConfiguredSector(testCase)
-            cfg=mncavFullObserverConfig();filter=informationFilter(.5*eye(3),cfg);
+            cfg=mncavFullObserverConfig();filter=informationFilter(.5*eye(3));
             s=localizationSupport.lidarPoseSupport(filter,cfg);
             testCase.verifyTrue(s.fullPoseSupported);
             testCase.verifyFalse(s.sectorQualified);
-        end
-        function directionalReliabilityWithdrawsHeading(testCase)
-            f=fixture();f.data.lidar.directionReliability=repmat([1,1,0],numel(f.lateral.time),1);
-            r=execute(f);s=r.diagnostics.lidarPoseSupport;
-            testCase.verifyEqual(s.rank,2*ones(size(r.time)));
-            testCase.verifyFalse(any(s.headingSupported));
-            testCase.verifyEqual(r.headingUnwrapped,repmat(f.cfg.initialState(7),numel(r.time),1),AbsTol=1e-12);
-        end
-        function zeroReliabilityEqualsMissingRecordedLidar(testCase)
-            f=fixture();f.data.lidar.frameReliability=zeros(size(f.lateral.time));a=execute(f);
-            f.data=rmfield(f.data,'lidar');b=execute(f);s=a.diagnostics.lidarPoseSupport;
-            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
-            testCase.verifyTrue(all(s.sourceValid));
-            testCase.verifyFalse(any(s.fullPoseSupported | s.headingSupported | s.correctionApplied));
         end
         function unavailableFramesSkipInvalidPayloads(testCase)
             f=fixture();f.data.lidar.valid(:)=false;f.data.lidar.pose(:)=NaN;
             f.data.lidar.information(:)=NaN;r=execute(f);
             testCase.verifyFalse(any(r.diagnostics.lidarPoseSupport.sourceValid));
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
-        end
-        function reliabilityZeroStillValidatesAvailablePayload(testCase)
-            f=fixture();f.data.lidar.frameReliability=zeros(size(f.lateral.time));f.data.lidar.pose(:)=NaN;
-            testCase.verifyError(@()execute(f),'VehicleLocalization:InvalidFullSource');
         end
         function yawInnovationCrossesTheShortWrappedArc(testCase)
             f=fixture();f.cfg.initialState([1,4])=0;f.cfg.initialState(7)=pi-.02;
@@ -121,27 +102,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             fprintf('STATIONARY OVERLAP t=30 position=%.12g headingDeg=%.12g\n', ...
                 norm(r.position(end,:)),abs(rad2deg(r.heading(end))));
         end
-        function overlapReliabilityZeroEqualsMissingLidar(testCase)
-            f=overlapFixture();f.data.lidarOverlap.frameReliability=zeros(size(f.lateral.time));a=execute(f);
-            f.data=rmfield(f.data,'lidarOverlap');b=execute(f);
-            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
-            testCase.verifyTrue(all(a.diagnostics.lidarPoseSupport.sourceValid));
-            testCase.verifyFalse(any(a.diagnostics.lidarPoseSupport.correctionApplied));
-        end
-        function overlapDirectionRejectionWithdrawsAllSupport(testCase)
-            f=overlapFixture();f.data.lidarOverlap.directionReliability=zeros(numel(f.lateral.time),3);
-            a=execute(f);f.data=rmfield(f.data,'lidarOverlap');b=execute(f);
-            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
-            testCase.verifyEqual(a.diagnostics.lidarPoseSupport.rank,zeros(size(a.time)));
-        end
-        function overlapRejectsInvalidReliability(testCase,invalidReliability)
-            f=overlapFixture();f.data.lidarOverlap.frameReliability=repmat(invalidReliability,size(f.lateral.time));
-            testCase.verifyError(@()execute(f),'VehicleLocalization:InvalidLidarReliability');
-        end
-        function overlapRejectsMalformedDirectionReliability(testCase)
-            f=overlapFixture();f.data.lidarOverlap.directionReliability=ones(numel(f.lateral.time),2);
-            testCase.verifyError(@()execute(f),'VehicleLocalization:InvalidLidarReliability');
-        end
         function overlapRejectsMismatchedClock(testCase)
             f=overlapFixture();f.data.lidarOverlap.time=f.lateral.time+.01;
             testCase.verifyError(@()execute(f),'VehicleLocalization:SynchronousInputsRequired');
@@ -155,18 +115,16 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             f.data.lidarOverlap.delay=0;b=execute(f);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
         end
-        function synchronizationCropsRecordedQuality(testCase)
+        function synchronizationCropsRecordedFrames(testCase)
             f=croppedFixture(false);[d,l]=syntheticObserver.align(f.data,f.lateral,f.cfg);
-            testCase.verifyEqual(d.lidar.frameReliability,[.2;.4;.6],AbsTol=0);
-            testCase.verifyEqual(d.lidar.directionReliability,repmat([.2,.5,.9],3,1),AbsTol=0);
+
             testCase.verifyFalse(any(l.velocityValid));
             r=syntheticObserver.run(d,f.cfg,LateralInputs=l);
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
         end
-        function synchronizationCropsOverlapQualityAndSources(testCase)
+        function synchronizationCropsOverlapSources(testCase)
             f=croppedFixture(true);[d,l]=localizationSupport.synchronizeLocalizationInputs(f.data,f.lateral,f.cfg);
-            testCase.verifyEqual(d.lidarOverlap.frameReliability,[.2;.4;.6],AbsTol=0);
-            testCase.verifyEqual(d.lidarOverlap.directionReliability,repmat([.2,.5,.9],3,1),AbsTol=0);
+
             testCase.verifyEqual(numel(d.lidarOverlap.sources),3);
             testCase.verifyEqual(d.lidarOverlap.time,[0;.1;.2],AbsTol=0);
             r=runFullLocalizationObserver(d,f.cfg,LateralInputs=l);
@@ -175,9 +133,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
     end
 end
 
-function filter=informationFilter(normalized,cfg)
-    D=diag(cfg.lidar.poseScales);
-    filter=localizationSupport.filterLidarPoseInformation(D\normalized/D,cfg);
+function filter=informationFilter(normalized)
+    filter=localizationSupport.filterLidarPoseInformation(normalized);
 end
 
 function f=fixture(duration)
@@ -190,7 +147,7 @@ function f=fixture(duration)
     lateral=struct('time',t,'lateralVelocity',nan(n,1), ...
         'sideSlipAngleRate',nan(n,1),'velocityValid',false(n,1));
     cfg=freshObserverTestConfig();cfg.initialState=[.4;0;0;-.3;0;0;deg2rad(2);0];
-    D=diag(cfg.lidar.poseScales);I=D\diag([1e6,1.5e6,2e6])/D;
+    I=diag([1e6,1.5e6,2e6]);
     lidar=struct('time',t,'pose',zeros(n,3),'information',repmat(I,1,1,n),'valid',true(n,1),'delay',0);
     f=struct('data',struct('highRate',h,'lidar',lidar),'lateral',lateral,'cfg',cfg);
 end
@@ -222,16 +179,16 @@ function f=croppedFixture(overlap)
         'lateralAcceleration',zero,'yawRate',zero);
     f.lateral=struct('time',t,'lateralVelocity',zero,'yawRate',zero, ...
         'sideSlipAngleRate',zero,'velocityValid',false(n,1));
-    time=[-.1;0;.1;.2;.3];frame=[0;.2;.4;.6;.8];direction=repmat([.2,.5,.9],5,1);
+    time=[-.1;0;.1;.2;.3];
     if overlap
         template=overlapFixture();channel=template.data.lidarOverlap;
         channel.sources=channel.sources(1:5);f.data=rmfield(f.data,'lidar');
-        channel.time=time;channel.frameReliability=frame;channel.directionReliability=direction;
+        channel.time=time;
         f.data.lidarOverlap=channel;
     else
         channel=f.data.lidar;channel.time=time;channel.pose=channel.pose(1:5,:);
         channel.valid=channel.valid(1:5);channel.information=channel.information(:,:,1:5);
-        channel.frameReliability=frame;channel.directionReliability=direction;
+
         f.data.lidar=channel;
     end
 end

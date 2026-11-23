@@ -9,14 +9,14 @@ classdef squaredSpeedChannelTest < matlab.unittest.TestCase
     end
     methods (Test)
         function isolatedSquaredSpeedCorrectionIsRadial(testCase)
-            [cfg,design,packet,state]=fixture();dt=.1;s=cfg.iss.maximumSpeed;
+            [cfg,design,packet,state]=fixture();dt=.1;
             actual=localizationSupport.correct(state,packet,dt,design,cfg);
-            k=2*15^2/(10^2+64);
-            factor=1+dt*k*(64-25)/(2*s^2)/(1+dt*k*25/s^2);
+            factor=1+2*dt*(64-25)/(1+4*dt*25);
             expected=state;expected([2,5])=factor*state([2,5]);
             testCase.verifyEqual(actual,expected,AbsTol=1e-12);
             testCase.verifyGreaterThan(norm(actual([2,5])),5);
-            testCase.verifyLessThan(norm(actual([2,5])),8);
+            % A frozen squared-speed Jacobian may overshoot the speed target.
+            testCase.verifyLessThan(abs(norm(actual([2,5]))^2-64),abs(norm(state([2,5]))^2-64));
         end
         function speedMagnitudeFeedbackDoesNotUseAHeadingProjection(testCase)
             [cfg,design,packet,state]=fixture();
@@ -25,11 +25,6 @@ classdef squaredSpeedChannelTest < matlab.unittest.TestCase
             b=localizationSupport.correct(changed,packet,.1,design,cfg);
             testCase.verifyEqual(b([1:6,8]),a([1:6,8]),AbsTol=1e-12);
             testCase.verifyEqual(b(7),changed(7),AbsTol=0);
-        end
-        function removingMatchedWeightsLeavesNoHiddenSpeedCorrection(testCase)
-            [cfg,design,packet,state]=fixture();design.auxiliaryWeights(:)=0;
-            actual=localizationSupport.correct(state,packet,.1,design,cfg);
-            testCase.verifyEqual(actual,state,AbsTol=0);
         end
         function zeroVelocityIsFiniteWithoutInventingAnEscapeDirection(testCase)
             [cfg,design,packet,~]=fixture();state=zeros(8,1);
@@ -42,8 +37,8 @@ end
 
 function [cfg,design,packet,state]=fixture()
     cfg=mncavFullObserverConfig();
-    design=struct('theta',1,'P',eye(8),'toPhysical',eye(8), ...
-        'auxiliaryWeights',[2;0;0]);
+    design=struct('theta',1,'P',eye(8),'toPhysical',eye(8));
     packet=localizationSupport.measurements(8,0,0,0,true,false,cfg);
+    packet.valid(4)=false;
     state=[0;3;0;0;4;0;.4;0];
 end

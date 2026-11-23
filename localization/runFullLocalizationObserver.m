@@ -58,13 +58,5 @@ function o=overlapSource(o,t)
         assert(isequal(o.delay,0),'VehicleLocalization:FullZeroDelayRequired', ...
             'Overlap sources require zero perception delay.');
     end
-    defaults=struct('frameReliability',ones(n,1),'directionReliability',ones(n,3));
-    for name=["frameReliability","directionReliability"]
-        if ~isfield(o,name),o.(name)=defaults.(name);end
-        value=o.(name);
-        assert(isequal(size(value),size(defaults.(name))) && isreal(value) && ...
-            all(isfinite(value),'all') && all(value>=0 & value<=1,'all'), ...
-            'VehicleLocalization:InvalidLidarReliability','Invalid aligned reliability array.');
-    end
     if ~isfield(o,'config'),o.config=overlapGradientConfig();end
 end

@@ -19,7 +19,6 @@ classdef coupledMotionTest < matlab.unittest.TestCase
         end
         function degenerateDomainsHaveNoDuplicateVertices(testCase)
             c=mncavFullObserverConfig();c.iss.maximumAcceleration=0;c.maximumBodyYawRate=0;
-            c.iss.maximumSpeed=c.invariantObserver.fusion.minimumCourseSpeed;
             v=localizationSupport.fusionVertices(c);
             testCase.verifySize(v,[1,4]);testCase.verifyEqual(v,zeros(1,4));
         end
@@ -32,16 +31,16 @@ end
 function [errors,minimum]=jacobianErrors()
     stream=RandStream('mt19937ar','Seed',20261031);errors=zeros(1,2);minimum=Inf;
     for cfg={mncavFullObserverConfig(),mncavSmallOffsetObserverConfig()}
-        c=cfg{1};t=c.invariantObserver.theta;ell=c.invariantObserver.headingLengthM;s0=c.invariantObserver.fusion.minimumCourseSpeed;
-        B=diag(t.^[1,2,3,1,2,3,1,2]./[ones(1,6),ell,ell]);D=localizationSupport.outputNormalization(c);
+        c=cfg{1};t=c.invariantObserver.theta;s0=0;
+        B=diag(t.^[1,2,3,1,2,3,1,2]);
         for j=1:200
             [v,a,r]=sampleMotion(c,s0,stream);
             x=[0;v(1);a(1);0;v(2);a(2);-pi+2*pi*rand(stream);r];
-            [F,H]=localizationSupport.secants(x,x,c);H=D*H*B;
+            [F,H]=localizationSupport.secants(x,x,c);H=H*B;
             A=localizationSupport.fusionMatrices(c,localizationSupport.fusionFeatures(v,a,r));
             expected=B\F*B/t;
             errors=max(errors,[norm(A-expected,'fro'),0]);
-            minimum=min(minimum,min(eig(H.'*H)));
+            minimum=min(minimum,min(eig(H.'*H))/max(1,norm(H)^2));
         end
     end
 end
@@ -49,7 +48,7 @@ end
 function [error,minimumWeight]=containmentErrors()
     stream=RandStream('mt19937ar','Seed',3110);error=0;minimumWeight=1;
     for cfg={mncavFullObserverConfig(),mncavSmallOffsetObserverConfig()}
-        c=cfg{1};vertices=localizationSupport.fusionVertices(c);s0=c.invariantObserver.fusion.minimumCourseSpeed;
+        c=cfg{1};vertices=localizationSupport.fusionVertices(c);s0=0;
         for j=1:500
             [v,a,r]=sampleMotion(c,s0,stream);f=localizationSupport.fusionFeatures(v,a,r);
             u=abs(r);B=2*(u*c.iss.maximumSpeed+c.iss.maximumAcceleration);

@@ -30,12 +30,6 @@ function trial=nuscenesTrialConfig(steeringRatio)
     globalCfg=mncavFullObserverConfig();globalCfg.kind="nuscenes-overlap-development-trial";
     globalCfg.gnss.outputPoint=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2), ...
         'headingStdRad',0,'identifier',"nuScenes-rear-axle");
-    noise=globalCfg.invariantObserver.noise;
-    noise.lidarPositionM=.1;noise.lidarHeadingRad=.01;noise.gnssPositionM=1;
-    noise.upstreamRateRadps=lateral.synthesis.measurementErrorScale(2);
-    noise.velocityMps=.3;noise.accelerationMps2=.3;noise.jerkMps3=1;
-    globalCfg.invariantObserver.noise=noise;
-    globalCfg.invariantObserver.provenance.noise="Declared transfer scales; no nuScenes reference-error tuning";
     trial=struct('vehicle',vehicle,'provenance',provenance,'lateral',lateral, ...
         'global',globalCfg,'steeringRatio',steeringRatio, ...
         'maximumCanAgeS',.1);
