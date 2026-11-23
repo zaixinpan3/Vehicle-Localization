@@ -22,6 +22,7 @@ function runMississippiBaselines(outputFolder,options)
     cfg.initialState=[reference(1,1);v(1);0;reference(1,2);v(2);0;reference(1,3);0];
     meta.gnssPreprocessing="Measured-to-design lever correction using one initialized gyro-integrated heading; uncertainty remains a measurement disturbance";
     meta.globalCertificate=localizationSupport.verifyInvariantDesign(cfg.invariantDesign,cfg);meta.actualMapCertified=false;
+    meta.gnssPositionFrames=nnz(data.gnss.valid);meta.receiverHeadingFrames=nnz(data.gnssHeading.valid);
     meta.queryFrames=numel(t);meta.queryIntervalMedianS=median(diff(t));meta.evaluationDurationS=t(end)-t(1);
     meta.mapComponents=data.lidarOverlap.map.components.numComponents;meta.velocityValidFrames=nnz(lateral.velocityValid);
     meta.currentScanOnly=false;meta.referenceSource="Corrected receiver reference";if options.Drive==2,meta.referenceSource="Original INSPVA; post-40s evaluation";end
@@ -32,79 +33,62 @@ function runMississippiBaselines(outputFolder,options)
     tuningFile=fullfile(outputFolder,'ekf_tuning.json');
     assert(isfile(tuningFile),'VehicleLocalization:BaselineTuningRequired','Run tuneMississippiEkf on the declared calibration prefix before test replays.');
     tuning=jsondecode(fileread(tuningFile));
-    if ~isfield(tuning,'gridVersion') || tuning.gridVersion<2
+    if ~isfield(tuning,'gridVersion') || tuning.gridVersion~=4
         tuneMississippiEkf(outputFolder,options.TemporaryFolder);tuning=jsondecode(fileread(tuningFile));
     end
-    if tuning.gridVersion<3
-        tuning=refineMississippiEkfTuning(outputFolder,options.TemporaryFolder);
-    end
     meta.ekfTuning=tuning;
-    t=t-t(1);rows={};scenarios=["both","gnss_loss","lidar_loss","alternating","no_gnss","random80_1","random80_2","random80_3"];
-    methods=["proposed","overlap_ekf","overlap_iekf","gnss_ekf","no_lidar","no_acceleration","zero_lateral"];
-    curves=struct();
-    for s=scenarios
-        d=data;middle=t>=t(end)*.35 & t<t(end)*.65;
-        if s=="gnss_loss",d.gnss.valid(middle)=false;end
-        if s=="lidar_loss",d.lidarOverlap.valid(middle)=false;end
-        if s=="alternating",d.gnss.valid=d.gnss.valid & mod(floor(t/2),2)==0;d.lidarOverlap.valid=mod(floor(t/2),2)==1;end
-        if s=="no_gnss",d.gnss.valid(:)=false;end
-        if startsWith(s,"random80"),rng(20261030+str2double(extractAfter(s,"_")),'twister');d.gnss.valid=d.gnss.valid & rand(size(t))>=.8;end
-        for method=methods
-            dd=d;ll=lateral;
-            if any(method==["gnss_ekf","no_lidar"]),dd=rmfield(dd,'lidarOverlap');end
-            if method=="no_acceleration",dd.highRate.bodyAccelerationValid=false(size(t));end
-            if method=="zero_lateral",ll.lateralVelocity(:)=0;end
-            timer=tic;
-            if any(method==["overlap_ekf","overlap_iekf","gnss_ekf"])
-                its=1;if method=="overlap_iekf",its=5;end
-                chosen=tuning;
-                if isfield(tuning,'ekf')
-                    chosen=tuning.ekf;
-                    if method=="overlap_iekf",chosen=tuning.iekf;end
-                    if method=="gnss_ekf" && isfield(tuning,'gnss_ekf'),chosen=tuning.gnss_ekf;end
-                end
-                e=runInvariantEkfBaseline(dd,ll,cfg,LidarTemperature=chosen.temperature,ProcessScale=chosen.processScale,Iterations=its);
-            else
-                e=runFullLocalizationObserver(dd,cfg,LateralInputs=ll);
-            end
-            seconds=toc(timer);err=vecnorm(e.pose(:,1:2)-reference(:,1:2),2,2);ang=atan2(sin(e.pose(:,3)-reference(:,3)),cos(e.pose(:,3)-reference(:,3)));
-            windows=["all","after_2s","middle_30pct","recovery"];
-            for window=windows
-                mask=true(size(t));if window=="after_2s",mask=t>=t(1)+2;elseif window=="middle_30pct",mask=middle;elseif window=="recovery",mask=t>=t(end)*.65 & t<t(end)*.65+10;end
-                good=mask & all(isfinite(e.pose),2);complete=nnz(good)==nnz(mask);m=[Inf,Inf,Inf,Inf];if complete,m=[rms(err(mask)),prctile(err(mask),95),max(err(mask)),rad2deg(rms(ang(mask)))];end
-                rows(end+1,:)={options.Drive,s,method,window,nnz(mask),m(1),m(2),m(3),m(4),complete,seconds,nnz(err(mask)>1)}; %#ok<AGROW>
-            end
-            fprintf('BASELINE drive%d %s %s RMSE %.5f max %.5f %.1fs\n',options.Drive,s,method,rows{end-3,6},rows{end-3,8},seconds);
-            curves.(s).(method)=err;
-            tab=cell2table(rows,VariableNames={'drive','scenario','method','window','frames','rmseM','p95M','maximumM','headingRmseDeg','complete','runtimeS','framesAbove1m'});writetable(tab,fullfile(outputFolder,"drive"+options.Drive+"_metrics.csv"));
+    t=t-t(1);rows={};
+    methods=["proposed","overlap_ekf","overlap_iekf"];
+    f=figure('Visible','off','Color','w');hold on;
+    for method=methods
+        timer=tic;
+        if method=="proposed"
+            e=runFullLocalizationObserver(data,cfg,LateralInputs=lateral);
+        else
+            iterations=1;chosen=tuning.ekf;
+            if method=="overlap_iekf",iterations=5;chosen=tuning.iekf;end
+            e=runInvariantEkfBaseline(data,lateral,cfg,LidarTemperature=chosen.temperature, ...
+                ProcessScale=chosen.processScale,Iterations=iterations);
         end
+        seconds=toc(timer);
+        err=vecnorm(e.pose(:,1:2)-reference(:,1:2),2,2);
+        delta=e.pose(:,3)-reference(:,3);angle=atan2(sin(delta),cos(delta));
+        for window=["all","after_2s"]
+            mask=true(size(t));if window=="after_2s",mask=t>=2;end
+            complete=all(isfinite(e.pose(mask,:)),'all');
+            m=[Inf,Inf,Inf,Inf];
+            if complete,m=[rms(err(mask)),prctile(err(mask),95),max(err(mask)),rad2deg(rms(angle(mask)))];end
+            rows(end+1,:)={options.Drive,"both",method,window,nnz(mask),m(1),m(2),m(3),m(4),complete,seconds,nnz(err(mask)>1)}; %#ok<AGROW>
+        end
+        plot(t,err,DisplayName=method);
     end
-    f=figure('Visible','off','Color','w','Position',[20,20,1000,800]);tiledlayout(3,1);
-    for s=["both","gnss_loss","lidar_loss"]
-        nexttile;hold on;for m=methods(1:5),plot(t,curves.(s).(m),DisplayName=m);end;grid on;title(s,Interpreter='none');ylabel('Position discrepancy (m)');xlabel('Time (s)');legend(Interpreter='none');
-    end
+    grid on;ylabel('Position discrepancy (m)');xlabel('Time (s)');legend(Interpreter='none');
+    tab=cell2table(rows,VariableNames={'drive','scenario','method','window','frames','rmseM','p95M','maximumM','headingRmseDeg','complete','runtimeS','framesAbove1m'});
+    writetable(tab,fullfile(outputFolder,"drive"+options.Drive+"_metrics.csv"));
     set(findall(f,'Type','axes'),'Color','w','XColor','k','YColor','k','GridColor',[.7,.7,.7]);set(findall(f,'Type','text'),'Color','k');set(findall(f,'Type','legend'),'Color','w','TextColor','k');
     exportgraphics(f,fullfile(outputFolder,"drive"+options.Drive+"_comparison.png"),Resolution=160);close(f);
     fid=fopen(fullfile(outputFolder,"drive"+options.Drive+"_summary.json"),'w');fprintf(fid,'%s',jsonencode(meta,PrettyPrint=true));fclose(fid);
 end
 function [data,lateral,reference,meta]=inputs(drive,tmp,ld,lc,cfg)
     rawPath=fullfile(tmp,"drive"+drive+"_raw.mat");
-    pairedPath=fullfile(tmp,"drive"+drive+"_paired.mat");
-    if drive==1 && ~isfile(rawPath) && isfile(pairedPath)
-        b=load(pairedPath,'data','lateral','reference','meta');data=b.data;lateral=b.lateral;reference=b.reference;meta=b.meta;
-        measured=mncavFullObserverConfig();lever=measured.gnss.outputPoint.bodyOffset(:)-cfg.gnss.outputPoint.bodyOffset(:);yaw=reference(1,3)+cumtrapz(data.highRate.time,data.highRate.yawRate);
-        data.gnss.position=data.gnss.position+[cos(yaw)*lever(1)-sin(yaw)*lever(2),sin(yaw)*lever(1)+cos(yaw)*lever(2)];return
-    end
     if isfile(rawPath)
-        raw=load(rawPath,'data','lateral','reference','meta');data=raw.data;lateral=raw.lateral;reference=raw.reference;meta=raw.meta;if drive==2,[data,lateral,reference]=holdout(data,lateral,reference);end;return
+        raw=load(rawPath,'data','lateral','reference','meta');
+        if isfield(raw.data,'gnssHeading')
+            data=raw.data;lateral=raw.lateral;reference=raw.reference;meta=raw.meta;
+            if drive==2,[data,lateral,reference]=holdout(data,lateral,reference);end
+            return
+        end
     end
     if drive==1
+        [status,headingJson]=system('uv run --offline --quiet --with numpy --with rosbags --with pyproj python scripts/readMncavGnssHeading.py');
+        assert(status==0,'VehicleLocalization:MissingGnssHeading','Cannot read HEADING2: %s',headingJson);
         [p,meta]=prepareMncavMotionInputs("output/mncav_wheel_only_20260916/sensors");h=p.highRate;l=runLateralVelocityObserver(h,ld,lc);
         motion=struct('time',h.time,'longitudinalSpeed',h.longitudinalSpeed,'lateralVelocity',l.lateralVelocity,'yawRate',h.yawRate,'clockModelId',p.clockModelId,'velocityValid',l.velocityValid);
         cache=prepareMississippiLocalizationClouds(MotionInputs=motion);g=readtable('output/receiver_synchronized_inputs/bestpos.csv');native=readtable('output/receiver_reference/corrected_native_reference.csv');
         ref=interp1(native.time,[native.x,native.y,native.psi],cache.calls.timeSeconds,'linear');
     else
         folder=fullfile(tmp,'drive2');frameTable=readtable(fullfile(folder,'frames.csv'));poses=readFramePoseTable(fullfile(folder,'poses.csv'),1:height(frameTable));t=poses.receiver_time_sec;
+        headingJson=fileread(fullfile(folder,'heading.json'));
         clock=loadReceiverClock(fullfile(folder,'inspva.csv'));frames=readtable(fullfile(folder,'frames.csv'));start=receiverClockTime(clock,frames.stamp_sec(1));finish=receiverClockTime(clock,frames.stamp_sec(end));
         [h,~,meta]=prepareWheelMotionInputs(fullfile(folder,'sensors'),mncavReplayConfig(),clock,start,finish,InitialSpeed=0);l=runLateralVelocityObserver(h,ld,lc);
         ref=zeros(height(poses),3);for j=1:height(poses),ref(j,:)=localizationSupport.poseRowToPlanarPose(poses(j,:));end
@@ -126,6 +110,7 @@ function [data,lateral,reference,meta]=inputs(drive,tmp,ld,lc,cfg)
     end
     n=height(cache.calls);I=nan(2,2,height(g));for k=find(logical(g.valid)).',I(:,:,k)=[g.informationXX(k),g.informationXY(k);g.informationXY(k),g.informationYY(k)];end
     data=struct('highRate',h,'gnss',struct('time',g.time,'position',[g.x,g.y],'information',I,'valid',logical(g.valid),'delay',0),'lidarOverlap',struct('time',cache.calls.timeSeconds,'map',cache.fixed,'sources',{cache.sources},'valid',true(n,1),'config',overlapGradientConfig()));
+    data.gnssHeading=jsondecode(headingJson);
     [data,lateral]=localizationSupport.synchronizeLocalizationInputs(data,l,cfg);[ok,ids]=ismember(data.highRate.time,cache.calls.timeSeconds);assert(all(ok));reference=ref(ids,:);
     save(rawPath,'data','lateral','reference','meta','-v7.3');
     if drive==2,[data,lateral,reference]=holdout(data,lateral,reference);end
@@ -136,5 +121,5 @@ function out=slice(in,mask)
 end
 
 function [data,lateral,reference]=holdout(data,lateral,reference)
-    keep=data.highRate.time>=40;data.highRate=slice(data.highRate,keep);lateral=slice(lateral,keep);data.gnss=slice(data.gnss,keep);data.lidarOverlap.time=data.lidarOverlap.time(keep);data.lidarOverlap.sources=data.lidarOverlap.sources(keep);data.lidarOverlap.valid=data.lidarOverlap.valid(keep);reference=reference(keep,:);
+    keep=data.highRate.time>=40;data.highRate=slice(data.highRate,keep);lateral=slice(lateral,keep);data.gnss=slice(data.gnss,keep);data.gnssHeading=slice(data.gnssHeading,keep);data.lidarOverlap.time=data.lidarOverlap.time(keep);data.lidarOverlap.sources=data.lidarOverlap.sources(keep);data.lidarOverlap.valid=data.lidarOverlap.valid(keep);reference=reference(keep,:);
 end

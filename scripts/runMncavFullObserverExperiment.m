@@ -1,5 +1,5 @@
 function report=runMncavFullObserverExperiment(outputFolder,options)
-% runMncavFullObserverExperiment Current overlap-gradient localization scenarios.
+% runMncavFullObserverExperiment Replay the recorded BESTPOS, HEADING2, motion and LiDAR measurements.
 % Coarse source horizons are built from raw scans and measured wheel/gyro/lateral
 % motion. No registration replay, optimized pose or registration acceptance is
 % required. Historical motion caches without lateral validity are rejected.
@@ -68,33 +68,16 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     data.lidarOverlap=struct('map',sourceCache.fixed,'sources',{sourceClouds},'valid',true(n,1),'config',overlapConfig);
     native=readtable('output/receiver_reference/corrected_native_reference.csv');
     reference=interp1(native.time,[native.x,native.y,native.psi],t,'linear');
-    scenarios=["both","lidar_only","gnss_only","gnss_outage","lidar_outage","both_outage","alternating"];
-    runs=cell(numel(scenarios),1);rows=cell(0,12);
-    for k=1:numel(scenarios)
-        current=data;name=scenarios(k);
-        if name=="gnss_only",current=rmfield(current,'lidarOverlap');end
-        gnssAvailable=true(n,1);
-        if name=="lidar_only",gnssAvailable(:)=false;end
-        if ismember(name,["gnss_outage","both_outage"]),gnssAvailable(t>=40 & t<60)=false;end
-        if ismember(name,["lidar_outage","both_outage"]),current.lidarOverlap.valid(t>=40 & t<60)=false;end
-        if name=="alternating"
-            gnssAvailable=mod(floor(t),2)==0;
-            current.lidarOverlap.valid=mod(floor(t),2)==1;
-        end
-        current.gnss.valid=current.gnss.valid & gnssAvailable;
-        current.gnssHeading.valid=current.gnssHeading.valid & gnssAvailable;
-        timer=tic;estimate=runFullLocalizationObserver(current,cfg,LateralInputs=lateral);seconds=toc(timer);
-        gnssActive=estimate.diagnostics.gnssPositionValid | estimate.diagnostics.independentHeadingValid;
-        runs{k}=struct('scenario',name,'estimate',estimate,'seconds',seconds);
-        populations={"full",true(size(t));"outage_40_60",t>=40 & t<60;"recovery_60_70",t>=60 & t<70};
-        for j=1:size(populations,1)
-            mask=populations{j,2};metrics=score(estimate.pose(mask,:),reference(mask,:));
-            rows(end+1,:)=[{name,populations{j,1},nnz(mask)},num2cell(metrics), ...
-                {nnz(gnssActive(mask) & estimate.diagnostics.lidarValid(mask)),nnz(~gnssActive(mask) & ~estimate.diagnostics.lidarValid(mask)),seconds}]; %#ok<AGROW>
-        end
-        fprintf('%s: position %.5f m, heading %.4f deg, %.2f s.\n',name,rows{end-2,4},rows{end-2,9},seconds);
-    end
-    metrics=cell2table(rows,VariableNames={'scenario','population','samples','positionRmseM', ...
+    timer=tic;
+    estimate=runFullLocalizationObserver(data,cfg,LateralInputs=lateral);
+    seconds=toc(timer);
+    runs={struct('scenario',"both",'estimate',estimate,'seconds',seconds)};
+    d=estimate.diagnostics;
+    gnssActive=d.gnssPositionValid | d.independentHeadingValid;
+    errors=score(estimate.pose,reference);
+    metrics=cell2table([{"both","full",n},num2cell(errors), ...
+        {nnz(gnssActive & d.lidarValid),nnz(~gnssActive & ~d.lidarValid),seconds}], ...
+        VariableNames={'scenario','population','samples','positionRmseM', ...
         'positionMedianM','positionP95M','positionMaximumM','fractionAtMost10cm','headingRmseDeg', ...
         'bothActiveSamples','neitherActiveSamples','runtimeSeconds'});
     report=struct('metadata',struct('gnssSource',"BESTPOS position and available HEADING2 heading in UTM 15N", ...
@@ -136,17 +119,12 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     fid=fopen(fullfile(outputFolder,'summary.json'),'w');assert(fid>=0);cleanup=onCleanup(@()fclose(fid));
     fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
     fig=figure('Visible','off','Color','w','Position',[100,100,1250,800]);tiledlayout(2,1);
-    nexttile;hold on;names=["both","lidar_only","gnss_only"];
-    for k=1:3,plot(t,vecnorm(runs{k}.estimate.position-reference(:,1:2),2,2),DisplayName=names(k));end
-    ylabel('Position discrepancy (m)');xlabel('Receiver time (s)');grid on;
-    legend(Interpreter='none',FontName='DejaVu Sans',FontSize=9,NumColumns=1,Position=[.72,.77,.25,.15]);
-    title('Synchronized localization at native LiDAR frame times');
-    nexttile;hold on;
-    for k=4:6,plot(t,vecnorm(runs{k}.estimate.position-reference(:,1:2),2,2),DisplayName=scenarios(k));end
-    xline(40,'k:',HandleVisibility='off');xline(60,'k:',HandleVisibility='off');
-    ylabel('Position discrepancy (m)');xlabel('Receiver time (s)');
-    legend(Interpreter='none',FontName='DejaVu Sans',FontSize=9,NumColumns=1,Position=[.72,.28,.25,.12]);
-    grid on;title('Declared channel withdrawals from 40 to 60 seconds');
+    nexttile;plot(t,vecnorm(estimate.position-reference(:,1:2),2,2));
+    ylabel('Position discrepancy (m)');grid on;
+    title('Recorded GNSS, motion and LiDAR');
+    nexttile;angle=estimate.pose(:,3)-reference(:,3);
+    plot(t,rad2deg(atan2(sin(angle),cos(angle))));
+    ylabel('Heading discrepancy (deg)');xlabel('Receiver time (s)');grid on;
     exportgraphics(fig,fullfile(outputFolder,'comparison.png'),Resolution=160);close(fig);
     disp(metrics(metrics.population=="full",:));
 end

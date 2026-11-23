@@ -11,6 +11,7 @@ from rosbags.rosbag1 import Reader
 from rosbags.typesys import Stores, get_typestore, get_types_from_msg
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from extractGnssFromBag import bestpos_row, inspva_row, lidar_row, write_csv
+from readMncavGnssHeading import heading_packet
 from receiverClock import ensure_clock, convert_time, native_seconds
 from prepareInspvaMappingPoses import prepare
 from pyproj import Transformer, Geod
@@ -55,5 +56,7 @@ def main():
   I=np.linalg.inv(jacobian[i]@np.diag([max(sx,1e-6)**2,max(sy,1e-6)**2])@jacobian[i].T)
   out.append(dict(time=time[i],x=xy[0][i],y=xy[1][i],valid=int(valid),informationXX=I[0,0],informationXY=I[0,1],informationYY=I[1,1]))
  write_csv(a.output/'gnss.csv',out)
+ heading=heading_packet(a.bag,b[0]['gps_week'],b[0]['gps_seconds'],time,lon,lat,clock['modelId'])
+ (a.output/'heading.json').write_text(json.dumps(heading,allow_nan=False))
  print('PREPARED',len(rows['frames']),flush=True)
 if __name__=='__main__':main()

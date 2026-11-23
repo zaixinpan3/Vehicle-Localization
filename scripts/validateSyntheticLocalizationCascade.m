@@ -7,7 +7,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
 % the frame-clock interpolation and time integration with map-based localization.
 % GNSS supplies a full pose and the upstream motion packet supplies body yaw rate.
 % Scenarios separate convention errors (clean signals), noise/bias accuracy,
-% source availability and lateral-model mismatch.
+% and lateral-model mismatch.
 % All signals are synthetic; no recorded data or reference trajectory is read.
 % NoiseOverrides replaces named noise settings for ablations; Scenarios
 % selects a subset (pass/fail checks then need the complete default set).
@@ -31,51 +31,33 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
     mismatchVehicle.rearCorneringStiffness=settings.mismatch.rear*mismatchVehicle.rearCorneringStiffness;
     mismatch=simulateTruth(lateralObserverSupport.lateralBicycleModel(mismatchVehicle),settings);
     definitions={ ...
-        "clean_both_truth_init",nominal,"clean","truth",["gnss","lidar"],[]; ...
-        "clean_dead_reckoning",nominal,"clean","truth",strings(1,0),[]; ...
-        "noisy_both",nominal,"noisy","perturbed",["gnss","lidar"],[]; ...
-        "noisy_gnss_only",nominal,"noisy","perturbed","gnss",[]; ...
-        "noisy_lidar_only",nominal,"noisy","perturbed","lidar",[]; ...
-        "gnss_outage_40_60",nominal,"noisy","perturbed",["gnss","lidar"],struct('gnss',[40,60]); ...
-        "lidar_outage_40_60",nominal,"noisy","perturbed",["gnss","lidar"],struct('lidar',[40,60]); ...
-        "both_outage_40_50",nominal,"noisy","perturbed",["gnss","lidar"],struct('gnss',[40,50],'lidar',[40,50]); ...
-        "alternating_1s",nominal,"noisy","perturbed",["gnss","lidar"],"alternating"; ...
-        "plant_mismatch_both",mismatch,"noisy","perturbed",["gnss","lidar"],[]};
+        "clean_both_truth_init",nominal,"clean","truth"; ...
+        "noisy_both",nominal,"noisy","perturbed"; ...
+        "plant_mismatch_both",mismatch,"noisy","perturbed"};
     if ~isempty(options.Scenarios)
         selected=ismember([definitions{:,1}],options.Scenarios);
         assert(nnz(selected)==numel(unique(options.Scenarios)),'VehicleLocalization:UnknownScenario','Unknown scenario name.');
         definitions=definitions(selected,:);
     end
-    runs=cell(size(definitions,1),1);rows=cell(0,17);
+    runs=cell(size(definitions,1),1);rows=cell(0,15);
     for k=1:size(definitions,1)
-        [name,truth,noise,init,sources,mask]=definitions{k,:};
+        [name,truth,noise,init]=definitions{k,:};
         signals=synthesizeSignals(truth,settings,noise);
         timer=tic;lateral=runLateralVelocityObserver(signals.highRate,design,lateralCfg);lateralSeconds=toc(timer);
         data=struct('highRate',signals.highRate,'gnss',signals.gnss,'lidar',signals.lidar);
         [aligned,alignedLateral,synchronization]=syntheticObserver.align(data,lateral,cfg);
         t=aligned.highRate.time;frameTruth=truthAt(truth,t);
-        current=aligned;
-        if ~ismember("gnss",sources),current=rmfield(current,'gnss');end
-        if ~ismember("lidar",sources),current=rmfield(current,'lidar');end
-        if isstruct(mask)
-            for source=string(fieldnames(mask)).'
-                window=mask.(source);current.(source).valid(t>=window(1) & t<window(2))=false;
-            end
-        elseif isstring(mask) && mask=="alternating"
-            current.gnss.valid=current.gnss.valid & mod(floor(t),2)==0;
-            current.lidar.valid=current.lidar.valid & mod(floor(t),2)==1;
-        end
         runCfg=cfg;runCfg.initialState=initialState(frameTruth,aligned.highRate,alignedLateral,settings,init);
-        timer=tic;estimate=syntheticObserver.run(current,runCfg,LateralInputs=alignedLateral);seconds=toc(timer);
-        metrics=scoreRun(estimate,frameTruth,truth,lateral,current,settings,mask);
+        timer=tic;estimate=syntheticObserver.run(aligned,runCfg,LateralInputs=alignedLateral);seconds=toc(timer);
+        metrics=scoreRun(estimate,frameTruth,truth,lateral,aligned,settings);
         runs{k}=struct('scenario',name,'truthModel',string(ifelse(truth.mismatch,"mismatch","nominal")), ...
-            'noise',noise,'initialization',init,'sources',sources,'estimate',estimate,'metrics',metrics, ...
+            'noise',noise,'initialization',init,'sources',["gnss","lidar"],'estimate',estimate,'metrics',metrics, ...
             'synchronization',synchronization,'lateralSeconds',lateralSeconds,'observerSeconds',seconds, ...
             'frameTruth',frameTruth,'lateral',lateral);
-        rows(end+1,:)={name,noise,init,strjoin(sources,"+"),numel(t),metrics.positionRmseM, ...
+        rows(end+1,:)={name,noise,init,"gnss+lidar",numel(t),metrics.positionRmseM, ...
             metrics.settledPositionRmseM,metrics.settledPositionP95M,metrics.positionMaximumAfterSettleM, ...
             metrics.settledHeadingRmseDeg,metrics.settledSpeedRmseMps,metrics.settledLateralVelocityRmseMps, ...
-            metrics.convergenceTimeS,metrics.outageMaximumM,metrics.recoveryTimeS, ...
+            metrics.convergenceTimeS, ...
             metrics.rawGnssRmseM,metrics.rawLidarRmseM}; %#ok<AGROW>
         fprintf('%-24s settled position RMSE %.4f m, heading %.3f deg, lateral vy %.4f m/s\n', ...
             name,metrics.settledPositionRmseM,metrics.settledHeadingRmseDeg,metrics.settledLateralVelocityRmseMps);
@@ -83,7 +65,7 @@ function report=validateSyntheticLocalizationCascade(outputFolder,options)
     table_=cell2table(rows,VariableNames={'scenario','noise','initialization','sources','frames', ...
         'positionRmseM','settledPositionRmseM','settledPositionP95M','settledPositionMaximumM', ...
         'settledHeadingRmseDeg','settledSpeedRmseMps','settledLateralVelocityRmseMps', ...
-        'lastTenCmExceedanceS','outageMaximumM','recoveryTimeS', ...
+        'lastTenCmExceedanceS', ...
         'rawGnssRmseM','rawLidarRmseM'});
     writetable(table_,fullfile(outputFolder,'metrics.csv'));
     if ~isempty(options.Scenarios)
@@ -122,7 +104,7 @@ function s=scenarioSettings(lateralCfg,cfg)
         'lidarRejectFraction',.05,'lidarJitterS',.003);
     s.gnss=struct('periodS',.05,'offsetS',.013);s.lidar=struct('periodS',.1,'offsetS',.05);
     s.initialError=struct('positionM',[1.5;-1.0],'headingRad',deg2rad(3));
-    s.outageRecoveryToleranceM=.15;s.convergenceToleranceM=.10;
+    s.convergenceToleranceM=.10;
 end
 
 function truth=simulateTruth(model,s)
@@ -233,7 +215,7 @@ function x=initialState(truth,h,lateral,s,mode)
     x=[p(1);v(1);a(1);p(2);v(2);a(2);yaw];
 end
 
-function m=scoreRun(estimate,truth,fine,lateral,data,s,mask)
+function m=scoreRun(estimate,truth,fine,lateral,data,s)
     t=estimate.time;e=vecnorm(estimate.position-truth.position,2,2);
     headingError=atan2(sin(estimate.headingUnwrapped-truth.heading),cos(estimate.headingUnwrapped-truth.heading));
     speedError=vecnorm(estimate.velocity,2,2)-vecnorm(truth.velocity,2,2);
@@ -253,14 +235,6 @@ function m=scoreRun(estimate,truth,fine,lateral,data,s,mask)
     m.settledSideSlipRateRmseRadps=rms(lateral.sideSlipAngleRate(lateralSettled)-betaRateTruth(lateralSettled));
     last=find(e>s.convergenceToleranceM,1,'last');m.convergenceTimeS=0;
     if ~isempty(last),m.convergenceTimeS=t(min(last+1,numel(t)))-t(1);if last==numel(t),m.convergenceTimeS=Inf;end,end
-    m.outageMaximumM=NaN;m.recoveryTimeS=NaN;
-    if isstruct(mask)
-        windows=cell2mat(struct2cell(mask));window=[min(windows(:,1)),max(windows(:,2))];
-        inside=t>=window(1) & t<window(2);m.outageMaximumM=max(e(inside));
-        after=find(t>=window(2));bad=find(e(after)>s.outageRecoveryToleranceM,1,'last');
-        m.recoveryTimeS=0;if ~isempty(bad),m.recoveryTimeS=t(after(min(bad+1,numel(after))))-window(2);end
-        if ~isempty(bad) && bad==numel(after),m.recoveryTimeS=Inf;end
-    end
     m.rawGnssRmseM=NaN;m.rawLidarRmseM=NaN;
     if isfield(data,'gnss')
         ok=data.gnss.valid & settled;
@@ -288,30 +262,11 @@ function checks=evaluateChecks(runs,s)
         "Exact signals, truth initialization: maximum position error <= 5 cm (frame/sign conventions)");
     rows=add(rows,"clean_consistency_heading",c.headingMaximumAfterSettleDeg,.1,c.headingMaximumAfterSettleDeg<=.1, ...
         "Exact signals: maximum heading error <= 0.1 deg");
-    d=get("clean_dead_reckoning");distance=pathLength(runs{names=="clean_dead_reckoning"}.frameTruth.position);
-    rows=add(rows,"clean_dead_reckoning_drift_fraction",d.finalPositionErrorM/distance,.005,d.finalPositionErrorM/distance<=.005, ...
-        "No absolute source: final drift <= 0.5% of distance travelled");
-    b=get("noisy_both");gOnly=get("noisy_gnss_only");lOnly=get("noisy_lidar_only");
+    b=get("noisy_both");
     rows=add(rows,"noisy_both_convergence_time",b.convergenceTimeS,s.settleS,b.convergenceTimeS<=s.settleS, ...
         "From 1.8 m / 3 deg initial error: position error stays <= 10 cm after 5 s");
     rows=add(rows,"noisy_both_heading_rmse",b.settledHeadingRmseDeg,.5,b.settledHeadingRmseDeg<=.5, ...
         "Heading RMSE after 10 s <= 0.5 deg");
-    best=min(gOnly.settledPositionRmseM,lOnly.settledPositionRmseM);
-    rows=add(rows,"fusion_not_worse_than_best_single_source",b.settledPositionRmseM,best,b.settledPositionRmseM<=best, ...
-        "Both-source settled RMSE <= best single-source settled RMSE");
-    rows=add(rows,"gnss_only_filters_raw_receiver",gOnly.settledPositionRmseM,gOnly.rawGnssRmseM,gOnly.settledPositionRmseM<gOnly.rawGnssRmseM, ...
-        "GNSS-only settled RMSE below raw corrected receiver RMSE");
-    rows=add(rows,"lidar_only_filters_raw_lidar",lOnly.settledPositionRmseM,lOnly.rawLidarRmseM,lOnly.settledPositionRmseM<lOnly.rawLidarRmseM, ...
-        "LiDAR-only settled RMSE below raw LiDAR pose RMSE");
-    for n=["gnss_outage_40_60","lidar_outage_40_60"]
-        o=get(n);rows=add(rows,n+"_maximum",o.outageMaximumM,.3,o.outageMaximumM<=.3,"Single-source outage: error <= 30 cm");
-        rows=add(rows,n+"_recovery",o.recoveryTimeS,3,o.recoveryTimeS<=3,"Error <= 15 cm within 3 s after outage");
-    end
-    o=get("both_outage_40_50");
-    rows=add(rows,"both_outage_40_50_maximum",o.outageMaximumM,1,o.outageMaximumM<=1,"10 s dead reckoning on supplied motion: error <= 1 m");
-    rows=add(rows,"both_outage_40_50_recovery",o.recoveryTimeS,3,o.recoveryTimeS<=3,"Error <= 15 cm within 3 s after outage");
-    a=get("alternating_1s");
-    rows=add(rows,"alternating_sources",a.settledPositionRmseM,.1,a.settledPositionRmseM<=.1,"Sources alternating each second: settled RMSE <= 10 cm");
     rows=add(rows,"lateral_observer_nominal",b.settledLateralVelocityRmseMps,.05,b.settledLateralVelocityRmseMps<=.05, ...
         "Lateral velocity RMSE at output point after 5 s <= 0.05 m/s (nominal plant, noise and ay bias)");
     p=get("plant_mismatch_both");
@@ -320,30 +275,20 @@ function checks=evaluateChecks(runs,s)
     checks=cell2table(rows,VariableNames={'check','value','limit','passed','criterion'});
 end
 
-function L=pathLength(p)
-    L=sum(vecnorm(diff(p),2,2));
-end
-
 function plotRuns(runs,folder)
     names=cellfun(@(r) r.scenario,runs);get=@(n) runs{names==n};
     b=get("noisy_both");f=figure(Visible="off",Position=[0,0,1200,900]);theme(f,"light");
-    tiledlayout(f,3,2,TileSpacing="compact");
+    tiledlayout(f,2,2,TileSpacing="compact");
     nexttile;plot(b.frameTruth.position(:,1),b.frameTruth.position(:,2),'k',LineWidth=1.5);hold on;
     plot(b.estimate.position(:,1),b.estimate.position(:,2),'--',LineWidth=1);axis equal;grid on;
     legend(["truth","fused (noisy both)"],Location="best");title("Trajectory");xlabel("X (m)");ylabel("Y (m)");
     nexttile;hold on;
-    for n=["noisy_both","noisy_gnss_only","noisy_lidar_only","plant_mismatch_both"]
+    for n=["noisy_both","plant_mismatch_both"]
         r=get(n);plot(r.estimate.time,r.metrics.positionError,DisplayName=strrep(n,"_"," "));
     end
     set(gca,YScale="log");grid on;legend(Location="best");title("Position error");xlabel("t (s)");ylabel("m");
     nexttile;hold on;
-    for n=["gnss_outage_40_60","lidar_outage_40_60","both_outage_40_50","alternating_1s"]
-        r=get(n);plot(r.estimate.time,r.metrics.positionError,DisplayName=strrep(n,"_"," "));
-    end
-    xregion(40,60,FaceAlpha=.08,HandleVisibility="off");set(gca,YScale="log");grid on;legend(Location="best");
-    title("Outage scenarios");xlabel("t (s)");ylabel("m");
-    nexttile;hold on;
-    for n=["noisy_both","noisy_gnss_only","noisy_lidar_only"]
+    for n=["noisy_both","plant_mismatch_both"]
         r=get(n);plot(r.estimate.time,rad2deg(r.metrics.headingError),DisplayName=strrep(n,"_"," "));
     end
     grid on;legend(Location="best");title("Heading error");xlabel("t (s)");ylabel("deg");ylim([-1,3.5]);

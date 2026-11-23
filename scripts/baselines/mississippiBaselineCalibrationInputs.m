@@ -5,6 +5,9 @@ function [d,l,ref,cfg]=mississippiBaselineCalibrationInputs(tmp)
     keep=d.highRate.time<40;
     for name=string(fieldnames(d.highRate)).',d.highRate.(name)=d.highRate.(name)(keep,:);end
     for name=string(fieldnames(l)).',l.(name)=l.(name)(keep,:);end
+    for field=["time","heading","valid"]
+        d.gnssHeading.(field)=d.gnssHeading.(field)(keep);
+    end
     d.gnss.time=d.gnss.time(keep);d.gnss.position=d.gnss.position(keep,:);d.gnss.information=d.gnss.information(:,:,keep);d.gnss.valid=d.gnss.valid(keep);
     d.lidarOverlap.time=d.lidarOverlap.time(keep);d.lidarOverlap.sources=d.lidarOverlap.sources(keep);d.lidarOverlap.valid=d.lidarOverlap.valid(keep);ref=ref(keep,:);
     cfg=mncavSmallOffsetObserverConfig();measured=mncavFullObserverConfig();lever=measured.gnss.outputPoint.bodyOffset(:)-cfg.gnss.outputPoint.bodyOffset(:);t=d.highRate.time;

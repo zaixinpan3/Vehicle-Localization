@@ -2,25 +2,13 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
 % runMncavVdbLocalization Run a measurement-only sensor-to-pose cascade.
 % No reference pose, true velocity or semantic label is read by this runtime.
 % Use scoreMncavVdbLocalization in a separate step after saving estimates.
-% Every scenario starts fresh source history and evaluates overlap at its observer prediction.
-% Logical acquisition-time replay is not a real-time latency experiment.
-% Prepare the dataset with prepareMncavVdbMeasurements.py followed by
-% buildMncavVdbMeasurementClouds. The default t=8 s start follows stationary
-% IMU alignment and uses the measured GNSS position and available heading. Scenarios
-% named lidar_only/dead_reckoning withdraw GNSS only after that bootstrap.
-% gnss_only keeps GNSS and withdraws LiDAR: the same sensors as a GNSS and
-% vehicle-motion observer, for algorithm-level comparisons.
-% The current LiDAR channel is the
-% correspondence-free overlap gradient (overlapGradientConfig) against the same
-% projected map. Its source horizons are the matcher's: the same perception,
-% tilt, frame adapter, source window and odometry, built causally once before
-% the scenarios, because they do not depend on the pose estimate.
+% Replay the exported GNSS fixes, optional receiver heading, motion and scans
+% at their acquisition times. The default start follows stationary IMU alignment.
     arguments
         datasetFolder (1,1) string
         mapFile (1,1) string
         interfaceFile (1,1) string
         outputFolder (1,1) string
-        options.Scenarios (1,:) string=["fused","gnss_outage","lidar_only","dead_reckoning"]
         options.MaximumFrames (1,1) double=Inf
         options.StartTime (1,1) double=8
     end
@@ -40,7 +28,7 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     assert(metadata.outputPointForwardOffsetM==point.outputPoint.forwardOffsetM, ...
         'VehicleLocalization:StaleVdbCapture','Capture and observer output points differ.');
     if ~isfolder(outputFolder),mkdir(outputFolder);end
-    % One fresh lateral synthesis per experiment; scenarios share it in memory.
+    % Synthesize lateral gains once for this recording.
     fprintf('Fresh CARLA lateral gain synthesis and sensor preparation\n');
     inputs=prepareMncavVdbInputs(datasetFolder,interfaceFile);
     frameTable=readtable(fullfile(datasetFolder,'frames.csv'));
@@ -69,46 +57,34 @@ function report=runMncavVdbLocalization(datasetFolder,mapFile,interfaceFile,outp
     end
     [~,base]=synthesizeMncavInvariantDesign(base);
     initial=initializeMncavVdbFromGnss(inputs.sensorTable,inputs,t(1));base.initialState=initial.state;
-    s=inputs.sensorTable;timings=zeros(n,3);accepted=false(n,1);
-    summaries=cell(numel(options.Scenarios),1);
-    sources={};sourceTimings=zeros(n,1);
-    if any(~ismember(options.Scenarios,["dead_reckoning","gnss_only"])),[sources,sourceTimings]=buildSources();end
-    for scenarioIndex=1:numel(options.Scenarios)
-        scenario=options.Scenarios(scenarioIndex);timings(:)=0;accepted(:)=false;
-        data=struct('highRate',h);
-        if ismember(scenario,["fused","gnss_outage","gnss_only"])
-            valid=logical(s.gnssValid(idx));if scenario=="gnss_outage",valid(t>=35 & t<65)=false;end
-            data.gnss=struct('time',t,'position',[s.gnssX(idx),s.gnssY(idx)], ...
-                'valid',valid,'delay',0);
-            if ismember('gnssHeadingRad',s.Properties.VariableNames),data.gnss.heading=s.gnssHeadingRad(idx);end
-        else
-            assert(ismember(scenario,["lidar_only","dead_reckoning"]),'Unknown scenario.');
-        end
-        if ~ismember(scenario,["dead_reckoning","gnss_only"])
-            data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
-        end
-        runTimer=tic;estimate=runFullLocalizationObserver(data,base,LateralInputs=lateral);runtime=toc(runTimer);
-        if ~ismember(scenario,["dead_reckoning","gnss_only"])
-            accepted=estimate.diagnostics.lidarOverlap.available;
-            timings=[sourceTimings,estimate.diagnostics.lidarOverlap.seconds,sourceTimings+estimate.diagnostics.lidarOverlap.seconds];
-            timings(~isfinite(timings))=0;
-        end
-        row=struct('scenario',scenario,'lidarChannel',"overlapGradient",'frames',n,'durationSeconds',t(end)-t(1), ...
-            'referenceUsed',false,'completeGnssPosePackets',nnz(estimate.diagnostics.gnssPoseValid), ...
-            'accepted',nnz(accepted), ...
-            'medianPerceptionMs',median(timings(:,1))*1000,'medianOverlapMs',median(timings(:,2))*1000, ...
-            'medianFrameMs',median(timings(:,3))*1000,'runtimeSeconds',runtime, ...
-            'summedFrameProcessingSeconds',sum(timings(:,3)),'sampledSystemCertified',false);
-        row.sourcePreparationSeconds=sum(sourceTimings);
-        summaries{scenarioIndex}=row;disp(row);
-        trajectory=array2table([frames,t,estimate.pose,accepted,timings*1000], ...
-            'VariableNames',{'frame','time','x','y','yaw','accepted', ...
-            'perceptionMs','overlapMs','totalMs'});
-        writetable(trajectory,fullfile(outputFolder,scenario+"_trajectory.csv"));
-        save(fullfile(outputFolder,scenario+"_estimate.mat"),'estimate','row','base','-v7.3');
-        f=fopen(fullfile(outputFolder,scenario+"_summary.json"),'w');fprintf(f,'%s\n',jsonencode(row,PrettyPrint=true));fclose(f);
+    s=inputs.sensorTable;
+    [sources,sourceTimings]=buildSources();
+    data=struct('highRate',h,'gnss',struct('time',t,'position',[s.gnssX(idx),s.gnssY(idx)], ...
+        'valid',logical(s.gnssValid(idx)),'delay',0));
+    if ismember('gnssHeadingRad',s.Properties.VariableNames)
+        data.gnss.heading=s.gnssHeadingRad(idx);
     end
-    report=struct('scenarios',vertcat(summaries{:}),'lidarChannel',"overlapGradient",'envelope',envelope,'mapFile',mapFile,'datasetFolder',datasetFolder, ...
+    data.lidarOverlap=struct('map',map,'sources',{sources},'valid',true(n,1),'config',overlapGradientConfig());
+    runTimer=tic;estimate=runFullLocalizationObserver(data,base,LateralInputs=lateral);runtime=toc(runTimer);
+    accepted=estimate.diagnostics.lidarOverlap.available;
+    overlapSeconds=estimate.diagnostics.lidarOverlap.seconds;
+    timings=[sourceTimings,overlapSeconds,sourceTimings+overlapSeconds];
+    timings(~isfinite(timings))=0;
+    row=struct('scenario',"fused",'lidarChannel',"overlapGradient",'frames',n,'durationSeconds',t(end)-t(1), ...
+        'referenceUsed',false,'completeGnssPosePackets',nnz(estimate.diagnostics.gnssPoseValid), ...
+        'accepted',nnz(accepted), ...
+        'medianPerceptionMs',median(timings(:,1))*1000,'medianOverlapMs',median(timings(:,2))*1000, ...
+        'medianFrameMs',median(timings(:,3))*1000,'runtimeSeconds',runtime, ...
+        'summedFrameProcessingSeconds',sum(timings(:,3)),'sampledSystemCertified',false);
+    row.sourcePreparationSeconds=sum(sourceTimings);
+    disp(row);
+    trajectory=array2table([frames,t,estimate.pose,accepted,timings*1000], ...
+        'VariableNames',{'frame','time','x','y','yaw','accepted', ...
+        'perceptionMs','overlapMs','totalMs'});
+    writetable(trajectory,fullfile(outputFolder,"fused_trajectory.csv"));
+    save(fullfile(outputFolder,"fused_estimate.mat"),'estimate','row','base','-v7.3');
+    f=fopen(fullfile(outputFolder,"fused_summary.json"),'w');fprintf(f,'%s\n',jsonencode(row,PrettyPrint=true));fclose(f);
+    report=struct('scenarios',row,'lidarChannel',"overlapGradient",'envelope',envelope,'mapFile',mapFile,'datasetFolder',datasetFolder, ...
         'initialization',initial,'truthUsage',"None: scoring is a separate process", ...
         'timing',"Zero-delay synchronous acquisition-time replay; measured processing time is reported separately", ...
         'currentScanOnlyFrames',nnz(motionSegment==0), ...

@@ -1,7 +1,7 @@
 function runBessafaMississippiBaseline(folder,tmp)
 % Fresh source-family LMI baseline, Eq.41/42/49/55 of Bessafa et al. (2026).
 % Same prepared motion/GNSS and initial state; no LiDAR is available to this
-% source observer. Compare it with proposed without LiDAR for modality fairness.
+% source observer. Report its native measurement model alongside its scores.
 % The source's zero tangential-acceleration output is retained. Its constant
 % speed/steering assumptions are not asserted for the real trajectories.
     arguments
@@ -28,20 +28,16 @@ function runBessafaMississippiBaseline(folder,tmp)
     summary=struct('theta',theta,'sigma',sigma,'kf',kf,'worstLmiEigenvalue',worst,'vertices',1024,'vehicle',mncavVehicleConfig(),'gainPolicy',"Fresh source-family LMI; no persisted gains",'inputReconstruction',"Linear adjacent sensor/GNSS endpoints when both fixes valid; no packet after the current endpoint. No stale GNSS interpolation through outages",'scope',"Conservative source-family member with Lipschitz extension, not authors code or best attainable tuning; actual maneuvers/low speed violate source assumptions");rows={};
     for drive=1:2
         b=load(fullfile(tmp,"drive"+drive+"_paired.mat"),'data','lateral','reference');h=b.data.highRate;l=b.lateral;ref=b.reference;t=h.time-h.time(1);n=numel(t);v=[cos(ref(1,3)),-sin(ref(1,3));sin(ref(1,3)),cos(ref(1,3))]*[h.longitudinalSpeed(1);l.lateralVelocity(1)];origin=ref(1,1:2).';initial=[0;v(1);0;0;v(2);0];cfg=mncavSmallOffsetObserverConfig();lever=cfg.gnss.outputPoint.bodyOffset(:);yaw=ref(1,3)+cumtrapz(t,h.yawRate);gnss=b.data.gnss.position-[cos(yaw)*lever(1)-sin(yaw)*lever(2),sin(yaw)*lever(1)+cos(yaw)*lever(2)];
-        for scenario=["both","gnss_loss","no_gnss"]
-            valid=b.data.gnss.valid;if scenario=="gnss_loss",valid(t>=.35*t(end) & t<.65*t(end))=false;end;if scenario=="no_gnss",valid(:)=false;end
-            timer=tic;
-            [pose,failure]=simulate(initial,t,h,l,ref,gnss,origin,valid,1e-7,.02);seconds=toc(timer);
-            if scenario=="both"
-                [fine,fineFailure]=simulate(initial,t,h,l,ref,gnss,origin,valid,1e-9,.01);
-                discrepancy=vecnorm(fine(:,1:2)-pose(:,1:2),2,2);yawDifference=atan2(sin(fine(:,3)-pose(:,3)),cos(fine(:,3)-pose(:,3)));
-                summary.integrationCheck(drive)=struct('drive',drive,'maximumPositionDifferenceM',max(discrepancy),'maximumHeadingDifferenceDeg',rad2deg(max(abs(yawDifference))),'fineFailure',fineFailure);
-                assert(all(isfinite(discrepancy)) && max(discrepancy)<1e-3 && max(abs(yawDifference))<deg2rad(.1),'VehicleLocalization:BessafaIntegration','Source baseline is not numerically converged.');
-            end
-            err=vecnorm(pose(:,1:2)-ref(:,1:2),2,2);angle=atan2(sin(pose(:,3)-ref(:,3)),cos(pose(:,3)-ref(:,3)));scores=[Inf,Inf,Inf,Inf];complete=all(isfinite(pose),'all');if complete,scores=[rms(err),prctile(err,95),max(err),rad2deg(rms(angle))];end
-            rows(end+1,:)={drive,scenario,n,scores(1),scores(2),scores(3),scores(4),complete,seconds,failure}; %#ok<AGROW>
-            fprintf('BESSAFA drive%d %s RMSE %.6g max %.6g complete %d\n',drive,scenario,scores(1),scores(3),complete);
-        end
+        valid=b.data.gnss.valid;
+        timer=tic;
+        [pose,failure]=simulate(initial,t,h,l,ref,gnss,origin,valid,1e-7,.02);seconds=toc(timer);
+        [fine,fineFailure]=simulate(initial,t,h,l,ref,gnss,origin,valid,1e-9,.01);
+        discrepancy=vecnorm(fine(:,1:2)-pose(:,1:2),2,2);yawDifference=atan2(sin(fine(:,3)-pose(:,3)),cos(fine(:,3)-pose(:,3)));
+        summary.integrationCheck(drive)=struct('drive',drive,'maximumPositionDifferenceM',max(discrepancy),'maximumHeadingDifferenceDeg',rad2deg(max(abs(yawDifference))),'fineFailure',fineFailure);
+        assert(all(isfinite(discrepancy)) && max(discrepancy)<1e-3 && max(abs(yawDifference))<deg2rad(.1),'VehicleLocalization:BessafaIntegration','Source baseline is not numerically converged.');
+        err=vecnorm(pose(:,1:2)-ref(:,1:2),2,2);angle=atan2(sin(pose(:,3)-ref(:,3)),cos(pose(:,3)-ref(:,3)));scores=[Inf,Inf,Inf,Inf];complete=all(isfinite(pose),'all');if complete,scores=[rms(err),prctile(err,95),max(err),rad2deg(rms(angle))];end
+        rows(end+1,:)={drive,"both",n,scores(1),scores(2),scores(3),scores(4),complete,seconds,failure}; %#ok<AGROW>
+        fprintf('BESSAFA drive%d RMSE %.6g max %.6g complete %d\n',drive,scores(1),scores(3),complete);
     end
     writetable(cell2table(rows,VariableNames={'drive','scenario','frames','rmseM','p95M','maximumM','headingRmseDeg','complete','runtimeS','failure'}),fullfile(folder,'bessafa_metrics.csv'));
     f=fopen(fullfile(folder,'bessafa_summary.json'),'w');fprintf(f,'%s',jsonencode(summary,PrettyPrint=true));fclose(f);

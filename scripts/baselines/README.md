@@ -39,20 +39,12 @@ lateral gains. Reused temporary inputs never load gain fields. The moving-start
 second recording uses one initial reference tilt and subsequent raw IMU/wheel
 updates. No later reference attitude enters that runtime tilt update.
 
-The eight variants are proposed, overlap EKF, overlap iterated EKF (at most five
-iterations), GNSS-only EKF, proposed without LiDAR, proposed without acceleration
-outputs, proposed with zero lateral velocity/sideslip, and proposed without
-optional overlap evidence factors. The latter withdraws view/source evidence
-factors; it does not refit or equalize canonical map mixture masses. All
-ablations are empirical controls and do not inherit the complete ISS theorem.
-
-Availability scenarios include both sensors, a middle 30% GNSS blackout, the
-same LiDAR blackout, alternating two-second availability, no GNSS, and three
-80% GNSS dropout masks (seeds 20261031--20261033). Primary scoring includes every
-query frame with one exact initial reference pose and sensor-derived velocity;
-there is no trajectory alignment. Secondary windows expose initialization,
-withdrawal and recovery. Failure frames are retained and nonfinite runs score
-infinite error. Runtime includes each estimator entry call and its own validation, and excludes gain synthesis and common offline perception/map construction. Per-frame numbers are entry-call time divided by query count, not isolated kernel timings.
+The proposed observer, overlap EKF and iterated EKF receive the recorded
+GNSS position, available HEADING2 yaw, motion and LiDAR. The primary scores
+use all query frames. The secondary window starts two seconds later.
+Each estimator starts from the same reference pose. Report incomplete runs
+and include all frames in the primary discrepancy statistics.
+Filter timings exclude shared source preparation.
 
 Keep compact metrics, logs and figures. Delete temporary frame/map/state/gain
 arrays after collection. Historical Bessafa/registration results are not reused
@@ -66,22 +58,14 @@ preparation. No map correction or reference pose enters those horizons.
 The final calibration grid uses six overlap temperatures (0.001 to 100) and
 five process scales (0.1 to 1000). An initial smaller grid reached its boundary;
 only calibration-prefix scores informed this extension. The final grid version
-is required before test scoring. GNSS EKF tunes five process scales alone.
+is required before test scoring. The calibration grid minimizes nominal position RMSE on the independent prefix.
 
-Before test scoring, the best nominal process candidate at each temperature is
-also scored under middle-30% and complete GNSS loss on the same calibration
-prefix. Equal mean squared position errors across these three regimes select
-the final version-3 tuning. The GNSS-only process candidate is included.
-
-After the main replay, run `runMississippiNominalSensitivity`,
-`runBessafaMississippiBaseline`, and `runMississippiNdtBaseline` in MATLAB,
+Run `runBessafaMississippiBaseline` and `runMississippiNdtBaseline` in MATLAB,
 then `python scripts/baselines/summarizeMississippiBaselines.py`.
 
 The Bessafa control re-solves the source-family continuous LMI at sigma 160,
 with an explicit globally Lipschitz extension and a verified high-gain
-threshold. It uses the same GNSS/speed/sideslip/gyro and no LiDAR. Compare it
-with the proposed no-LiDAR control to avoid attributing a modality advantage
-to observer structure. Sign/dominance/conditioning restrictions select one
+threshold. It uses the same GNSS/speed/sideslip/gyro and no LiDAR. Its reported sensor set follows the published observer model. Sign/dominance/conditioning restrictions select one
 conservative source-family member; they are not necessary source-theorem
 conditions or a claim of the authors' best attainable implementation. A speed
 above 100 m/s stops a source replay and retains a failed result. Tightened

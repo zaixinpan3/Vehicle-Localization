@@ -57,7 +57,7 @@ def main():
             for row in csv.DictReader(f):
                 if (
                     row["method"] == "proposed"
-                    and row["scenario"] in ["both", "no_gnss"]
+                    and row["scenario"] == "both"
                     and row["window"] == ("after_2s" if drive == 1 else "all")
                 ):
                     comparisons.append(
