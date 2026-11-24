@@ -20,7 +20,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             C=E([1,4,7,8],:);Cp=C(1:3,:);A=E(:,7)*E(8,:);
             [value,H]=localizationSupport.outputs(x,f.cfg);
             Q=H*T;K=T\d.linearOutputGain;
-            y=[.8;0;0;0];ym=[64;0;0;0];yl=y(1:3);
+            y=[.8;0;0;0];ym=[8;0;0;0];yl=y(1:3);
             D=P*(K*C-T\A)*T+d.theta*(Q.'*Q+Cp.'*I*Cp);
             b=P*K*(y-C*x)+d.theta*Q.'*(ym-value)+Cp.'*I*(yl-Cp*x);
             expected=x+T*((P+h*D)\(h*b));

@@ -17,7 +17,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
             [~,J]=localizationSupport.outputs(x,c);
             testCase.verifyEqual(H,J,AbsTol=0);
             testCase.verifyTrue(all(isfinite([F(:);H(:);G(:)])));
-            testCase.verifyEqual(H(4,[2,5]),[0,1],AbsTol=0);
+            testCase.verifyEqual(H(2,[2,5]),[0,1],AbsTol=0);
         end
         function finiteSecantsTransformWithTheRotatingFrame(testCase)
             errors=rotationErrors(mncavFullObserverConfig());
@@ -29,9 +29,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantVectorIssTest
             p=localizationSupport.measurements(v(1),v(2),a(1),a(2),true,true,c);
             m=localizationSupport.measurements(v(1)+dv(1),v(2)+dv(2),a(1)+da(1),a(2)+da(2),true,true,c);
             testCase.verifyEqual(m.value-p.value,N*[dv;da],AbsTol=3e-13);
-            testCase.verifySize(N,[4,4]);
-            testCase.verifyEqual(N(4,:),[0,1,0,0],AbsTol=0);
-            testCase.verifyGreaterThan(norm(N(2:3,3:4)),0);
+            testCase.verifyEqual(N,eye(4));
         end
     end
 end

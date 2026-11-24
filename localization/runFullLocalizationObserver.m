@@ -8,8 +8,9 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % if absent, the entry solves them before the first observer update.
 % Supply aligned lateral estimates through LateralInputs; upstream synthesis is separate.
 % Missing/invalid measurements withdraw their own correction for that frame.
-% Optional highRate.bodyVelocityValid and bodyAccelerationValid masks also
-% withdraw unavailable motion-output feedback. Absent masks mean all valid.
+% highRate.bodyVelocityValid selects signed body velocity (m/s).
+% bodyAccelerationValid independently selects body-axis inertial acceleration
+% (m/s^2) at the same output point. Absent masks mean all valid.
 % LateralInputs.yawRate is the upstream yaw-rate observation in rad/s. Its
 % difference from the internal rate enters the first (linear) feedback term.
 % A finite value is active when yawRateValid is true (defaults to true).

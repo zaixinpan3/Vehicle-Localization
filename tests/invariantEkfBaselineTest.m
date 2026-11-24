@@ -9,9 +9,16 @@ function testStationaryAndWithdrawnMotion(testCase)
     d.gnss.valid(12:20)=false;e=runInvariantEkfBaseline(d,l,cfg);
     verifyTrue(testCase,all(isfinite(e.z),'all'));verifyLessThan(testCase,max(abs(e.z),[],'all'),.02);
 end
-function testSharedPrimitiveCovariance(testCase)
-    v=[5;1];a=[.2;.4];N=localizationSupport.measurementSecant(v,a,v,a);R=N*N.';
-    verifyGreaterThan(testCase,abs(R(1,2)),0);verifyGreaterThan(testCase,abs(R(1,3)),0);verifyEqual(testCase,R(1,4),2,'AbsTol',1e-12);verifyGreaterThan(testCase,min(eig(R)),0);
+function testMaskedVelocityKeepsAccelerationUpdate(testCase)
+    root=setupVehicleLocalization();addpath(fullfile(root,'scripts','baselines'));
+    cfg=mncavFullObserverConfig();cfg.initialState=zeros(8,1);
+    t=[0;.1];z=zeros(size(t));
+    h=struct('time',t,'longitudinalSpeed',nan(size(t)),'bodyVelocityValid',false(size(t)), ...
+        'longitudinalAcceleration',1+z,'lateralAcceleration',z);
+    l=struct('velocityValid',true(size(t)));
+    e=runInvariantEkfBaseline(struct('highRate',h),l,cfg);
+    verifyTrue(testCase,all(isfinite(e.z),'all'));
+    verifyGreaterThan(testCase,e.z(1,3),.9);
 end
 function testExternalPoseProviderWithoutMotion(testCase)
     root=setupVehicleLocalization();addpath(fullfile(root,'scripts','baselines'));cfg=mncavSmallOffsetObserverConfig();cfg.initialState=[.3;0;0;-.2;0;0;.05;0];

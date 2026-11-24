@@ -23,10 +23,10 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) motionResponseTest < m
             testCase.verifyTrue(d.continuousCertificate.verification.certified);
             testCase.verifyFalse(d.continuousCertificate.verification.allAuxiliaryOutputsRequired);
         end
-        function squaredSpeedCorrectionRotatesWithVelocity(testCase)
+        function longitudinalCorrectionRotatesWithHeading(testCase)
             c=freshObserverTestConfig();d=localizationSupport.runtime(c);
             a=[0;5;0;0;0;0;0;0];b=[0;0;0;0;5;0;pi/2;0];
-            packet=struct('value',[36;NaN;NaN;NaN],'valid',logical([1;0;0;0]));
+            packet=struct('value',[6;NaN;NaN;NaN],'valid',logical([1;0;0;0]));
             xa=localizationSupport.correct(a,packet,.1,d,c)-a;
             xb=localizationSupport.correct(b,packet,.1,d,c)-b;
             testCase.verifyGreaterThan(xa(2),0);

@@ -19,6 +19,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
         end
         function missingRateAndMotionLeaveOnlyIntrinsicRatePrediction(testCase)
             [d,l,c]=fixture();c.initialState(8)=.04;l.yawRate(:)=NaN;l.velocityValid=false(size(l.time));
+            d.highRate.bodyAccelerationValid=false(size(l.time));
             d.highRate.yawRate(:)=100;a=execute(d,l,c);
             l=rmfield(l,'yawRate');b=execute(d,l,c);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
@@ -29,6 +30,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
         function upstreamRateHasItsOwnAvailabilityAndResumesAfterAGap(testCase)
             [d,l,c]=fixture();
             t=[0;.03;.14;.23;.55;.81;1;1.05;1.2;1.6;2];
+            d.highRate.bodyAccelerationValid=false(size(t));
             d.highRate.time=t;l.time=t;l.yawRate(:)=.2;l.velocityValid=false(size(t));
             l.yawRateValid=true(size(t));l.yawRateValid(4:6)=false;l.yawRate(5)=1e6;
             l.yawRate(7)=NaN;
@@ -125,21 +127,21 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             testCase.verifyEqual(b.diagnostics.packetCounts.bodyVelocityValid,0);
             for k=1:numel(l.time)
                 testCase.verifyEqual(b.diagnostics.invariantOutputs{k}.valid, ...
-                    false(4,1));
+                    logical([0;0;1;1]));
             end
         end
         function invalidLateralMaskIsRejected(testCase)
             [d,l,c]=fixture();l.velocityValid=NaN(size(l.time));
             testCase.verifyError(@()execute(d,l,c),'VehicleLocalization:InvalidMotionValidity');
         end
-        function accelerationCannotActAloneWithoutVelocity(testCase)
+        function accelerationActsWithoutVelocity(testCase)
             [d,l,c]=fixture();l.velocityValid=false(size(l.time));a=execute(d,l,c);
             d.highRate.longitudinalAcceleration(:)=20;d.highRate.lateralAcceleration(:)=-30;
             b=execute(d,l,c);
-            testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);
-            testCase.verifyFalse(any(b.diagnostics.motionOutputValidity.bodyAcceleration));
+            testCase.verifyGreaterThan(norm(b.internalState(2,[3,6])-a.internalState(2,[3,6])),1);
+            testCase.verifyTrue(all(b.diagnostics.motionOutputValidity.bodyAcceleration));
             testCase.verifyEqual(b.diagnostics.invariantOutputNames, ...
-                ["speedSquared","velocityAccelerationDot","velocityAccelerationCross","bodyLateralVelocity"]);
+                ["bodyLongitudinalVelocity","bodyLateralVelocity","bodyLongitudinalAcceleration","bodyLateralAcceleration"]);
         end
         function validityRequiresOneBooleanPerFrame(testCase)
             [d,l,c]=fixture();d.highRate.bodyVelocityValid=[true;false];

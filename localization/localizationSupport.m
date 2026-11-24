@@ -160,24 +160,26 @@ classdef localizationSupport
             next=(eye(8)-dt*A)\state;
         end
 
-        function [value,H]=outputs(state,cfg)
-            v=state([2,5]);a=state([3,6]);
-            cross=v(1)*a(2)-v(2)*a(1);angle=state(7);
-            direction=[-sin(angle);cos(angle)];
-            % Four physical motion outputs in the units of the measurement packet.
-            value=[v.'*v;v.'*a;cross;direction.'*v];
+        function [value,H]=outputs(state,~)
+        % Real and imaginary parts of exp(-i*heading) times world velocity and acceleration.
+            angle=state(7);
+            worldToBody=[cos(angle),sin(angle);-sin(angle),cos(angle)];
+            velocity=worldToBody*state([2,5]);
+            acceleration=worldToBody*state([3,6]);
+            value=[velocity;acceleration];
             if nargout>1
-                [~,H]=localizationSupport.secants(state,state,cfg);
+                H=zeros(4,8);
+                H(1:2,[2,5])=worldToBody;
+                H(3:4,[3,6])=worldToBody;
+                H(:,7)=[velocity(2);-velocity(1);acceleration(2);-acceleration(1)];
             end
         end
 
         function packet=measurements(speed,vy,ax,ay,velocityValid,accelerationValid,~)
-        % Four additional motion outputs; no independent yaw-rate measurement.
-            value=zeros(4,1);valid=[velocityValid;velocityValid&&accelerationValid; ...
-                velocityValid&&accelerationValid;velocityValid];
-            if valid(1),value(1)=speed^2+vy^2;end
-            if valid(2),value(2)=speed*ax+vy*ay;value(3)=speed*ay-vy*ax;end
-            if valid(4),value(4)=vy;end
+        % Signed body components at the observer output point. Rate has its own row.
+            valid=logical([velocityValid;velocityValid;accelerationValid;accelerationValid]);
+            value=[speed;vy;ax;ay];
+            value(~valid)=0;
             packet=struct('value',value,'valid',valid);
         end
 
@@ -205,7 +207,7 @@ classdef localizationSupport
                 cfg.iss.minimumPositionStrength,cfg.iss.minimumHeadingStrength], ...
                 {'double'},{'real','finite','positive'});
             validateattributes([cfg.iss.maximumAcceleration,cfg.maximumBodyYawRate],{'double'},{'real','finite','nonnegative'});
-            inputs=struct('architecture',"common-pose-field-gram-v1",'theta',z.theta, ...
+            inputs=struct('architecture',"common-pose-field-gram-body-components-v2",'theta',z.theta, ...
                 'lambda',z.lambda,'margin',z.margin,'solver',z.solver, ...
                 'iss',cfg.iss,'bodyYawRateBound',cfg.maximumBodyYawRate);
         end
@@ -302,31 +304,26 @@ classdef localizationSupport
             J=[0,-1;1,0];half=e(7)/2;
             r=x(8);rh=xhat(8);rm=(r+rh)/2;
             cardinal=1;if half~=0,cardinal=sin(half)/half;end
-            c=cos(half);d=[cos(m(7));sin(m(7))];n=J*d;
             F=zeros(8);F(1,2)=1;F(2,3)=1;F(4,5)=1;F(5,6)=1;F(7,8)=1;
             F([3,6],[2,5])=(r^2+rh^2)/2*eye(2);
             F([3,6],[3,6])=2*rm*J;F([3,6],8)=2*rm*v+2*J*a;
-            H=zeros(4,8);H(1,[2,5])=2*v.';
-            H(2,[2,5])=a.';H(2,[3,6])=v.';
-            H(3,[2,5])=(-J*a).';H(3,[3,6])=(J*v).';
-            H(4,[2,5])=c*n.';H(4,7)=-cardinal*d.'*v;
+            % Exact symmetric product difference for R(-heading)*w.
+            [~,H]=localizationSupport.outputs(m,cfg);
+            H(:,[2,3,5,6])=cos(half)*H(:,[2,3,5,6]);
+            H(:,7)=cardinal*H(:,7);
             Hgnss=zeros(3,8);Hgnss(:,[1,4,7])=eye(3);
         end
 
         function N=measurementSecant(v,a,vm,am)
         % Exact packet increment from ONE primitive [dv(2); da(2)] vector.
-        % The lateral velocity error is shared with the quadratic outputs.
+        % Signed components pass primitive sensor errors through directly.
             arguments
                 v (2,1) double {mustBeReal,mustBeFinite}
                 a (2,1) double {mustBeReal,mustBeFinite}
                 vm (2,1) double {mustBeReal,mustBeFinite}
                 am (2,1) double {mustBeReal,mustBeFinite}
             end
-            v=(v+vm)/2;a=(a+am)/2;J=[0,-1;1,0];
-            N=zeros(4,4);N(1,1:2)=2*v.';
-            N(2,1:2)=a.';N(2,3:4)=v.';
-            N(3,1:2)=(-J*a).';N(3,3:4)=(J*v).';
-            N(4,2)=1;
+            N=eye(4);
         end
 
         %% Nominal fusion coefficient polytope

@@ -1,8 +1,7 @@
 function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
 % Same intrinsic state/predictor and four additional outputs, with covariance feedback.
 % LiDAR is a local quadratic overlap likelihood, not a Gaussian pose sensor.
-% Its temperature is a tunable empirical likelihood scale. Shared primitive
-% noise columns preserve squared-speed/dot/cross correlations.
+% Its temperature is a tunable empirical likelihood scale.
     arguments
         data struct
         lateral struct
@@ -12,16 +11,21 @@ function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
         options.Iterations double=1
         options.PoseProvider=[]
     end
-    t=data.highRate.time;n=numel(t);x=cfg.initialState(:);if numel(x)==7,x(8)=0;end
+    h=data.highRate;t=h.time;n=numel(t);
+    x=cfg.initialState(:);if numel(x)==7,x(8)=0;end
+    velocityValid=lateral.velocityValid(:);
+    if isfield(h,'bodyVelocityValid'),velocityValid=velocityValid & h.bodyVelocityValid(:);end
+    accelerationValid=true(n,1);
+    if isfield(h,'bodyAccelerationValid'),accelerationValid=h.bodyAccelerationValid(:);end
     P=diag([.5,.5,1,.5,.5,1,deg2rad(2),.02].^2);Z=nan(n,8);seconds=zeros(n,1);
     G=zeros(3,8);G(:,[1,4,7])=eye(3);
     % Nominal process and sensor scales of the comparison filter.
     noise=struct('jerkMps3',.05,'velocityMps',.256,'accelerationMps2',.233);
+    R=diag([noise.velocityMps^2*[1,1],noise.accelerationMps2^2*[1,1]]);
     receiver=jsondecode(fileread(which('mncavGnssHeading.json')));
     heading=localizationSupport.headingMeasurements(data,t,cfg);
     for k=1:n
         timer=tic;dt=0;if k>1,dt=t(k)-t(k-1);end
-        valid=lateral.velocityValid(k);
         old=x;x=localizationSupport.predict(old,dt,cfg);
         F=zeros(8);for j=1:8,d=1e-5*max(1,abs(old(j)));a=old;a(j)=a(j)+d;b=old;b(j)=b(j)-d;F(:,j)=(localizationSupport.predict(a,dt,cfg)-localizationSupport.predict(b,dt,cfg))/(2*d);end
         Q=diag([1e-6,1e-4,noise.jerkMps3^2,1e-6,1e-4,noise.jerkMps3^2,1e-7,.03^2]);
@@ -36,14 +40,15 @@ function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
             [z,I]=localizationSupport.correctGnssOutputPoint(data.gnss.position(k,:),data.gnss.information(:,:,k),antennaYaw,cfg.gnss.outputPoint);
             H=zeros(2,8);H(:,[1,4])=eye(2);[x,P]=update(x,P,z.'-H*x,H,I\eye(2));
         end
-        h=data.highRate;vy=0;if valid,vy=lateral.lateralVelocity(k);end
-        av=true;if isfield(h,'bodyAccelerationValid'),av=h.bodyAccelerationValid(k);end
-        packet=localizationSupport.measurements(h.longitudinalSpeed(k),vy,h.longitudinalAcceleration(k),h.lateralAcceleration(k),valid,av,cfg);
-        [v,H]=localizationSupport.outputs(x,cfg);
-        B=localizationSupport.measurementSecant([h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)],[h.longitudinalSpeed(k);vy],[h.longitudinalAcceleration(k);h.lateralAcceleration(k)]);
-        R=B*diag([noise.velocityMps^2*[1,1],noise.accelerationMps2^2*[1,1]])*B.';
-        R=R+1e-8*eye(4);ids=packet.valid;
-        [x,P]=update(x,P,packet.value(ids)-v(ids),H(ids,:),R(ids,ids));
+        vy=NaN;
+        if velocityValid(k),vy=lateral.lateralVelocity(k);end
+        packet=localizationSupport.measurements(h.longitudinalSpeed(k),vy, ...
+            h.longitudinalAcceleration(k),h.lateralAcceleration(k),velocityValid(k),accelerationValid(k),cfg);
+        active=packet.valid;
+        if any(active)
+            [predicted,H]=localizationSupport.outputs(x,cfg);
+            [x,P]=update(x,P,packet.value(active)-predicted(active),H(active,:),R(active,active));
+        end
         if ~isempty(options.PoseProvider) && dt>0
             measurement=options.PoseProvider(k,x([1,4,7]));
             if ~isempty(measurement)

@@ -81,7 +81,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             testCase.verifyFalse(isfield(l,'sideSlipAngle'));
             supplied=runFullLocalizationObserver(d,c,LateralInputs=l);
             first=supplied.diagnostics.invariantOutputs{1};
-            testCase.verifyEqual(first.predicted(4),-8*sin(c.initialState(7)),AbsTol=1e-12);
+            testCase.verifyEqual(first.predicted(2),-8*sin(c.initialState(7)),AbsTol=1e-12);
             testCase.verifyFalse(isfield(supplied.lateral,'sideSlipAngle'));
         end
         function stoppedPacketHasOnlyFourMotionOutputs(testCase)
