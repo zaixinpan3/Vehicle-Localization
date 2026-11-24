@@ -75,29 +75,72 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             costs=arrayfun(@(ch) -log(ch.similarity),result.channels);
             testCase.verifyEqual(result.similarity,exp(-mean(costs,'omitnan')),AbsTol=1e-12);
         end
-        function gaussNewtonMetricIsExactForOnePairAtAnyDistance(testCase)
-            % One sign in map and source: -log E is quadratic in translation
-            % with the exact pair precision inv(Sigma + R*Lambda*R'), so the
-            % translation Gauss-Newton step from any offset lands on the optimum.
-            % With one pair the 3-by-3 metric has rank two.
-            [map,source,truth]=scene();
-            map.components=selectComponents(map.components,6);source.components=selectComponents(source.components,6);
-            R=[cos(truth(3)) -sin(truth(3));sin(truth(3)) cos(truth(3))];
-            pair=map.components.covariance(:,:,1)+R*source.components.covariance(:,:,1)*R.';
-            precision=inv(pair);
-            offsets=[0.1 0;1 0;0 2;-3 1.5];
-            for k=1:size(offsets,1)
-                pose=truth(:);pose(1:2)=pose(1:2)+offsets(k,:).';
-                m=localizationSupport.evaluateOverlapGradient(map,source,pose);
-                testCase.verifyTrue(m.available);
-                testCase.verifyEqual(m.information(1:2,1:2),precision,RelTol=1e-8);
-                step=-m.information(1:2,1:2)\m.gradient(1:2);
-                testCase.verifyEqual(pose(1:2)+step,truth(1:2).',AbsTol=1e-8);
-                testCase.verifyEqual(rank(m.information,1e-9*norm(m.information)),2);
-            end
-            full=localizationSupport.evaluateOverlapGradient(map,source,(truth+[0.3,-0.2,deg2rad(3)]).');
-            testCase.verifyGreaterThanOrEqual(min(eig(full.information)),0);
-            testCase.verifyEqual(full.information,full.information.',AbsTol=1e-12);
+        function centeredEllipseSuppliesYawThroughItsCovariance(testCase)
+            [map,scan]=centeredEllipse();angle=.32;pose=[0;0;angle];
+            [m,pairPrecision]=localizationSupport.evaluateOverlapGradient(map,scan,pose);
+            testCase.verifyEqual(pairPrecision(:,3),zeros(3,1),AbsTol=1e-14);
+            R=[cos(angle),-sin(angle),0;sin(angle),cos(angle),0;0,0,1];
+            gamma=9/16;denominator=1+gamma*sin(angle)^2;
+            testCase.verifyEqual(m.similarity,1/sqrt(denominator),AbsTol=2e-15);
+            testCase.verifyEqual(m.gradient,[0;0;gamma*sin(angle)*cos(angle)/denominator],AbsTol=1e-14);
+            testCase.verifyEqual(m.information,R*diag([1/8,1/2,gamma])*R.'/m.similarity,AbsTol=1e-14);
+            scan.components.covariance=eye(2);map=scan;
+            isotropic=localizationSupport.evaluateOverlapGradient(map,scan,pose);
+            testCase.verifyEqual(isotropic.information(:,3),zeros(3,1),AbsTol=1e-14);
+            testCase.verifyEqual(isotropic.gradient,zeros(3,1),AbsTol=1e-14);
+        end
+        function tinyPositiveOverlapRetainsTheGradientAndSolvesTheStep(testCase)
+            [map,scan]=centeredEllipse();
+            scan.components.covariance=.01*eye(2);map.components=scan.components;
+            offset=2*sqrt(-.01*log(1e-307));pose=[offset;0;0];
+            m=localizationSupport.evaluateOverlapGradient(map,scan,pose);
+            testCase.verifyTrue(m.available);
+            testCase.verifyEqual(m.similarity,1e-307,RelTol=1e-11);
+            testCase.verifyEqual(m.gradient,[50*offset;0;0],RelTol=1e-12);
+            testCase.verifyEqual(m.information,diag([50,50,0]),AbsTol=2e-12);
+            testCase.verifyEqual(m.informationDenominator,m.similarity,RelTol=1e-12);
+            G=eye(3);design=struct('P',eye(3),'theta',1,'T',eye(3));step=.1;
+            delta=localizationSupport.computeLidarMatchedCorrection(m,pose,G,design,struct(), ...
+                StepSize=step,Discretization="implicit");
+            expected=-step*m.gradient*m.informationDenominator/(m.informationDenominator+step*50);
+            testCase.verifyEqual(delta(1)/expected(1),1,AbsTol=1e-12);
+            testCase.verifyEqual(delta(2:3),[0;0],AbsTol=0);
+            limit=localizationSupport.computeLidarMatchedCorrection(m,pose,G,design,struct(), ...
+                StepSize=1e308,Discretization="implicit");
+            testCase.verifyEqual(limit(1)/(-offset*m.informationDenominator),1,AbsTol=1e-12);
+        end
+        function overlappingMixtureGramMatchesAlignedCostHessian(testCase)
+            [~,scan,truth]=scene();
+            c=selectComponents(scan.components,1:3);
+            c.mean=[-.4,.1;.1,.7;.9,-.5];
+            c.covariance=cat(3,[.7,.25;.25,.5],[.2,-.04;-.04,.65],[.45,.16;.16,.3]);
+            c.mixtureWeight=[.1;.5;.4];scan.components=c;
+            map=scan;map.components=place(c,truth);
+            m=localizationSupport.evaluateOverlapGradient(map,scan,truth(:));
+            testCase.verifyEqual(m.information,alignedHessian(map,scan,truth(:)),AbsTol=2e-8);
+            testCase.verifyGreaterThan(abs(m.information(1,3)),.01);
+            pose=truth(:)+[.3;-.2;0];
+            away=localizationSupport.evaluateOverlapGradient(map,scan,pose);
+            testCase.verifyEqual(away.similarity*away.information,m.information,AbsTol=2e-12);
+            withBackground=localizationSupport.evaluateOverlapGradient(map,scan,pose,overlapGradientConfig(UniformBackground=true));
+            testCase.verifyEqual(withBackground.information,away.information*withBackground.channels.supportFraction,AbsTol=2e-12);
+        end
+        function jointImplicitStepRetainsShapeOnlyYaw(testCase)
+            [map,scan]=centeredEllipse();f=movingFixture(.1);
+            f.data.lidarOverlap=struct('map',map,'sources',{{scan;scan}});
+            f.data.highRate.longitudinalSpeed(:)=0;f.lateral.velocityValid=false(2,1);
+            f.cfg.initialState=zeros(8,1);f.cfg.initialState(7)=.32;
+            run=runFullLocalizationObserver(f.data,f.cfg,LateralInputs=f.lateral);
+            design=run.observer.continuousDesign;T=design.toPhysical;P=design.P;
+            E=eye(8);C=E([1,4,7],:);rate=E(8,:);dt=.1;
+            prior=f.cfg.initialState;
+            m=localizationSupport.evaluateOverlapGradient(map,scan,C*prior);
+            drift=design.theta*E(:,7)*rate;
+            normal=P+dt*(P*(T\design.linearOutputGain(:,4))*rate*T ...
+                +design.theta*C.'*m.information*C-P*drift);
+            expected=prior-T*(normal\(dt*C.'*m.gradient));
+            testCase.verifyEqual(run.internalState(2,:).',expected,AbsTol=1e-12);
+            testCase.verifyLessThan(abs(expected(7)),abs(prior(7)));
         end
         function exactAlignmentIsStationary(testCase)
             [map,source,truth]=scene();
@@ -153,19 +196,18 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyEqual(auditB.representation,"predictedPoseGradient");
             testCase.verifyTrue(auditB.jumpNonexpansive);
         end
-        function unsupportedGradientDirectionsReceiveNoCorrection(testCase)
+        function directGradientNeedsNoCurvatureForTheContinuousRate(testCase)
             design=fullObserverDesign();cfg=filterConfig();G=zeros(3,7);G(1,1)=1;G(2,4)=1;G(3,7)=1;
-            pose=[0;0;0];information=diag([5,0,40]);
-            m=struct('gradient',[1;2;3],'information',information,'linearizationPose',pose);
-            [delta,audit]=localizationSupport.computeLidarMatchedCorrection(m,pose,G,design,cfg, ...
-                StepSize=0.1,Discretization="implicit");
-            testCase.verifyEqual(delta(4),0,AbsTol=1e-15);
-            testCase.verifyLessThan(delta(1),0);testCase.verifyLessThan(delta(7),0);
-            testCase.verifyEqual(audit.unsupportedGradientNorm,2,AbsTol=1e-12);
-            projected=m;projected.gradient=[1;0;3];
-            [same,~]=localizationSupport.computeLidarMatchedCorrection(projected,pose,G,design,cfg, ...
-                StepSize=0.1,Discretization="implicit");
-            testCase.verifyEqual(delta,same,AbsTol=1e-15);
+            pose=zeros(3,1);m=struct('gradient',[1;2;3],'linearizationPose',pose);
+            expected=-(design.P\(G.'*m.gradient));
+            rate=localizationSupport.computeLidarMatchedCorrection(m,pose,G,design,cfg);
+            testCase.verifyEqual(rate,expected,AbsTol=1e-14);
+            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,pose,G,design,cfg, ...
+                Discretization="implicit"),'VehicleLocalization:MissingLidarGram');
+            m.information=diag([5,0,40]);step=.1;
+            numerical=localizationSupport.computeLidarMatchedCorrection(m,pose,G,design,cfg, ...
+                StepSize=step,Discretization="implicit");
+            testCase.verifyEqual(numerical,-step*((design.P+step*G.'*m.information*G)\(G.'*m.gradient)),AbsTol=2e-14);
         end
         function gradientModeRejectsStaleOrAmbiguousInput(testCase)
             design=fullObserverDesign();cfg=filterConfig();G=zeros(3,7);G(1,1)=1;G(2,4)=1;G(3,7)=1;
@@ -231,6 +273,22 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyError(@()runFullLocalizationObserver(ambiguous,f.cfg,LateralInputs=f.lateral), ...
                 'VehicleLocalization:AmbiguousLidarInput');
         end
+    end
+end
+
+function [map,scan]=centeredEllipse()
+    [~,scan]=scene();c=selectComponents(scan.components,1);
+    c.mean=[0,0];c.covariance=diag([4,1]);scan.components=c;map=scan;
+end
+
+function hessian=alignedHessian(map,scan,pose)
+    % Independent central difference of the analytic cost gradient.
+    hessian=zeros(3);step=1e-5;
+    for axis=1:3
+        delta=zeros(3,1);delta(axis)=step;
+        plus=localizationSupport.evaluateOverlapGradient(map,scan,pose+delta);
+        minus=localizationSupport.evaluateOverlapGradient(map,scan,pose-delta);
+        hessian(:,axis)=(plus.gradient-minus.gradient)/(2*step);
     end
 end
 

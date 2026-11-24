@@ -22,8 +22,8 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
             testCase.verifyEqual(norm(c.gnss.outputPoint.bodyOffset),.01,AbsTol=1e-14);
             testCase.verifyGreaterThan(norm(original.gnss.outputPoint.bodyOffset),1);
             testCase.verifyEqual(c.gnss.outputPoint.bodyCovariance,original.gnss.outputPoint.bodyCovariance);
-            testCase.verifyEqual(c.iss.lidarOperatorMismatch, ...
-                original.iss.lidarOperatorMismatch);
+            testCase.verifyEqual(c.iss.minimumPositionStrength,original.iss.minimumPositionStrength);
+            testCase.verifyEqual(c.iss.minimumHeadingStrength,original.iss.minimumHeadingStrength);
             testCase.verifyFalse(isfield(c,'invariantDesign'));
         end
         function commonCertificateCoversTheDeclaredMovingDomain(testCase)

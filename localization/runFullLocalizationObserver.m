@@ -27,7 +27,9 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % Optional LateralInputs.velocityValid gates the velocity-dependent innovations.
 % Low-speed wheel/gyro packets enter through the same motion innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
-% diagnostics.lidarPoseSupport reports local geometry, not alignment correctness.
+% The log-overlap gradient enters directly. The sampled step uses the scan
+% Jacobian Gram. diagnostics.poseWeight(:,:,k)/poseWeightDenominator(k)
+% gives the nominal pose Gram, and lidarPoseSupport describes its geometry.
     arguments
         data (1,1) struct
         cfg (1,1) struct=mncavFullObserverConfig()
