@@ -161,17 +161,18 @@ classdef localizationSupport
         end
 
         function [value,H]=outputs(state,~)
-        % Real and imaginary parts of exp(-i*heading) times world velocity and acceleration.
+        % Project world velocity and inertial acceleration into body axes with R(heading)'.
             angle=state(7);
             worldToBody=[cos(angle),sin(angle);-sin(angle),cos(angle)];
             velocity=worldToBody*state([2,5]);
             acceleration=worldToBody*state([3,6]);
             value=[velocity;acceleration];
             if nargout>1
+                J=[0,-1;1,0];
                 H=zeros(4,8);
                 H(1:2,[2,5])=worldToBody;
                 H(3:4,[3,6])=worldToBody;
-                H(:,7)=[velocity(2);-velocity(1);acceleration(2);-acceleration(1)];
+                H(:,7)=[-J*velocity;-J*acceleration];
             end
         end
 

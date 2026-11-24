@@ -92,8 +92,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             a=runFullLocalizationObserver(data,c,LateralInputs=l);
             actual=a.diagnostics.recoveredHeading;
             testCase.verifyTrue(isnan(actual(1)));
-            testCase.verifyEqual(angle(exp(1i*(actual(2:end)-truth(2:end)))),zeros(numel(truth)-1,1),AbsTol=1e-12);
-            testCase.verifyLessThan(abs(angle(exp(1i*(a.heading(end)-truth(end))))),.05);
+            testCase.verifyEqual(wrap(actual(2:end)-truth(2:end)),zeros(numel(truth)-1,1),AbsTol=1e-12);
+            testCase.verifyLessThan(abs(wrap(a.heading(end)-truth(end))),.05);
             testCase.verifyFalse(any(a.diagnostics.independentHeadingValid));
         end
         function delayedFixUsesOnlyDeliveredPositions(testCase)
@@ -101,10 +101,19 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) independentHeadingTest
             data.gnss.sourceRightTime=t+.01;
             a=runFullLocalizationObserver(data,c,LateralInputs=l);
             testCase.verifyTrue(all(isnan(a.diagnostics.recoveredHeading(1:2))));
-            testCase.verifyEqual(a.diagnostics.recoveredHeading(3),angle(exp(1i*truth(3))),AbsTol=1e-12);
+            testCase.verifyEqual(a.diagnostics.recoveredHeading(3),wrap(truth(3)),AbsTol=1e-12);
             data.gnss.position(3:end,1)=data.gnss.position(3:end,1)+.4;
             b=runFullLocalizationObserver(data,c,LateralInputs=l);
             testCase.verifyEqual(b.diagnostics.recoveredHeading(1:3),a.diagnostics.recoveredHeading(1:3));
+        end
+        function conflictingChordsUseTheAccumulatedRotation(testCase)
+            t=(0:4).';valid=true(size(t));
+            twist=[ones(size(t)),zeros(numel(t),2)];
+            fix=struct('values',[0,0;0,1;1,1;0,0;-1,0],'valid',valid,'availableAt',t);
+            yaw=observerInternal.displacementHeading(t,fix,false(size(t)),twist,valid,[0;0],0);
+            testCase.verifyEqual(isnan(yaw),[true;false;false;true;false]);
+            testCase.verifyEqual(yaw(2:3),[pi/2;pi/4],AbsTol=1e-14);
+            testCase.verifyEqual(abs(yaw(5)),pi,AbsTol=1e-14);
         end
         function missingRateBreaksTheDisplacementBaseline(testCase)
             [data,c,l]=reverseTurn();l.yawRateValid=true(size(l.time));l.yawRateValid(5)=false;
@@ -164,15 +173,22 @@ end
 function [data,c,l,truth]=reverseTurn()
     [data,c,l]=fixture(4);data=rmfield(data,'gnssHeading');t=l.time;
     offset=[1.2;-.4];yaw0=3;rate=.4;u=-8;vy=.6;
-    truth=yaw0+rate*t;rot=exp(1i*truth);
-    path=(rot-exp(1i*yaw0))*(u+1i*vy)/(1i*rate);
-    antenna=path+rot*complex(offset(1),offset(2));
-    data.gnss.position=[real(antenna),imag(antenna)];
+    truth=yaw0+rate*t;
+    R0=[cos(yaw0),-sin(yaw0);sin(yaw0),cos(yaw0)];J=[0,-1;1,0];
+    % The constant-twist trajectory rotates about a fixed turn center.
+    radius=-J*[u;vy]/rate;
+    for k=1:numel(t)
+        R=[cos(truth(k)),-sin(truth(k));sin(truth(k)),cos(truth(k))];
+        data.gnss.position(k,:)=(R*(radius+offset)-R0*radius).';
+    end
     c.gnss.outputPoint.bodyOffset=offset;c.gnss.positionStdM=.04;
-    velocity=exp(1i*yaw0)*(u+1i*vy);
-    c.initialState=[0;real(velocity);-rate*imag(velocity);0;imag(velocity);rate*real(velocity);yaw0+pi;rate];
+    velocity=R0*[u;vy];acceleration=rate*J*velocity;
+    c.initialState=[0;velocity(1);acceleration(1);0;velocity(2);acceleration(2);yaw0+pi;rate];
     data.highRate.longitudinalSpeed(:)=u;data.highRate.bodyVelocityValid(:)=true;
     l.lateralVelocity(:)=vy;l.yawRate=rate*ones(size(t));
+end
+function angle=wrap(angle)
+    angle=atan2(sin(angle),cos(angle));
 end
 function h=packet(t,heading)
     h=struct('time',t,'heading',heading,'valid',true(size(t)),'delay',0);

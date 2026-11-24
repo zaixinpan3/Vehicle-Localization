@@ -11,12 +11,9 @@ classdef fourInvariantOutputsTest < matlab.unittest.TestCase
     end
     methods (Test)
         function exactlyTheFourRequestedOutputsAreReturned(testCase)
-            c=mncavFullObserverConfig();x=[1;3;1;2;4;-2;.2;.3];
+            c=mncavFullObserverConfig();x=[1;3;1;2;4;-2;atan2(4,3);.3];
             [h,H]=localizationSupport.outputs(x,c);
-            rotation=exp(-1i*.2);
-            velocity=rotation*(3+4i);acceleration=rotation*(1-2i);
-            expected=[real(velocity);imag(velocity);real(acceleration);imag(acceleration)];
-            testCase.verifyEqual(h,expected,AbsTol=1e-13);
+            testCase.verifyEqual(h,[5;0;-1;-2],AbsTol=1e-13);
             testCase.verifySize(H,[4,8]);
             testCase.verifyEqual(H(:,[1,4]),zeros(4,2),AbsTol=0);
         end
@@ -30,9 +27,8 @@ classdef fourInvariantOutputsTest < matlab.unittest.TestCase
             c=mncavFullObserverConfig();speed=12;parallel=.6;normal=1.2;rate=.03;
             x=[0;speed;parallel;0;0;normal;-localAngle;rate];
             h=localizationSupport.outputs(x,c);
-            bodyVelocity=complex(h(1),h(2));bodyAcceleration=complex(h(3),h(4));
-            testCase.verifyEqual(bodyVelocity,speed*exp(1i*localAngle),AbsTol=2e-14);
-            testCase.verifyEqual(bodyAcceleration,(parallel+1i*normal)*exp(1i*localAngle),AbsTol=2e-14);
+            R=[cos(localAngle),-sin(localAngle);sin(localAngle),cos(localAngle)];
+            testCase.verifyEqual(h,[R*[speed;0];R*[parallel;normal]],AbsTol=2e-14);
         end
         function jacobianHasFourIndependentRowsAndTheRotationNullDirection(testCase)
             c=mncavFullObserverConfig();x=[1;12;.6;2;1;1.2;-.1;.03];

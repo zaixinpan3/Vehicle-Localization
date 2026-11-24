@@ -96,8 +96,10 @@ def validate(bag, output):
     sensor_rotation = rotation @ Rotation.from_quat(trajectory[:, 4:]).as_matrix()
     observed_yaw = np.arctan2(sensor_rotation[:, 1, 0], sensor_rotation[:, 0, 0])
     delta = observed_yaw - yaw_expected
-    mounting_offset = np.angle(np.mean(np.exp(1j * delta[training])))
-    yaw_error = np.angle(np.exp(1j * (delta - mounting_offset)))
+    training_delta = delta[training]
+    mounting_offset = np.arctan2(np.mean(np.sin(training_delta)), np.mean(np.cos(training_delta)))
+    residual_yaw = delta - mounting_offset
+    yaw_error = np.arctan2(np.sin(residual_yaw), np.cos(residual_yaw))
     diagnostics = []
     for i, pose in enumerate(trajectory):
         diagnostics.append(dict(native_time_sec=float(pose[0]), split="alignment" if training[i] else "withheld",
