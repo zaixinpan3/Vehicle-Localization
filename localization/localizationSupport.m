@@ -197,7 +197,7 @@ classdef localizationSupport
                 {'double'},{'real','finite','positive'});
             validateattributes([cfg.iss.maximumAcceleration,cfg.maximumBodyYawRate, ...
                 cfg.iss.lidarOperatorMismatch],{'double'},{'real','finite','nonnegative'});
-            inputs=struct('architecture',"physical-pose-unit-motion-v2",'theta',z.theta, ...
+            inputs=struct('architecture',"common-pose-unit-motion-v3",'theta',z.theta, ...
                 'lambda',z.lambda,'margin',z.margin,'solver',z.solver, ...
                 'iss',rmfield(cfg.iss,'lidarOperatorMismatch'),'bodyYawRateBound',cfg.maximumBodyYawRate);
         end
@@ -207,8 +207,9 @@ classdef localizationSupport
             inputs=localizationSupport.invariantInputs(cfg);z=cfg.invariantObserver;
             assert(exist('sdpvar','file')==2,'VehicleLocalization:MissingSolver','Add YALMIP and SeDuMi before synthesis.');
             yalmip('clear');
-            Pc=sdpvar(3,3);P=blkdiag(Pc,Pc,diag(sdpvar(2,1)));
-            blocks=localizationSupport.fusionBlocks(P,cfg,z.lambda+z.margin);
+            Pc=sdpvar(3,3);P=blkdiag(Pc,Pc,sdpvar(2,2));
+            [strengths,required]=localizationSupport.poseSourceBounds(cfg);
+            blocks=localizationSupport.fusionBlocks(P,cfg,z.lambda+z.margin,strengths(:,required));
             constraints=[P>=z.margin*eye(8)];
             for j=1:numel(blocks)
                 constraints=[constraints,blocks{j}<=0]; %#ok<AGROW>
@@ -217,7 +218,7 @@ classdef localizationSupport
             if z.solver=="sedumi",options.sedumi.stepdif=2;end
             result=optimize(constraints,[],options);
             assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleInvariantDesign', ...
-                'Four-vertex feasibility problem failed: %s.',result.info);
+                'Common pose-source feasibility problem failed: %s.',result.info);
             design=struct('P',value(P),'lambda',z.lambda, ...
                 'inputs',inputs,'solverStatus',result.problem,'solverInfo',string(result.info));
             design.verification=localizationSupport.verifyInvariantDesign(design,cfg);
@@ -230,39 +231,50 @@ classdef localizationSupport
         % Test the returned numerical matrices independently of the SDP status.
             validateattributes(design.P,{'double'},{'real','finite','size',[8,8]});
             P=design.P;z=cfg.invariantObserver;
-            expected=blkdiag(P(1:3,1:3),P(1:3,1:3),diag(diag(P(7:8,7:8))));
-            blocks=localizationSupport.fusionBlocks(P,cfg,z.lambda);
-            worst=sensorWorstEigenvalue(blocks);
+            expected=blkdiag(P(1:3,1:3),P(1:3,1:3),P(7:8,7:8));
+            [strengths,required]=localizationSupport.poseSourceBounds(cfg);
+            blocks=localizationSupport.fusionBlocks(P,cfg,z.lambda,strengths);
+            sourceWorst=zeros(1,size(blocks,2));
+            for k=1:numel(sourceWorst)
+                sourceWorst(k)=sensorWorstEigenvalue(blocks(:,k));
+            end
+            worst=max(sourceWorst);
+            vertices=size(blocks,1);count=vertices*numel(required);
             eigenvalues=eig((P+P.')/2);
             valid=min(eigenvalues)>0 && worst<0 && design.lambda==z.lambda ...
                 && isequal(P,P.') && isequal(P,expected);
-            scope="Local continuous-time certificate for the physical pose and motion outputs, conditional on sufficiently small disturbances, valid upstream rate, a compact operating set and the actual LiDAR field bound. The lateral design domain and the sampled observer require separate checks.";
+            yawRateGain=NaN;
+            if valid
+                angularColumn=P(7:8,7:8)\[0;1];
+                yawRateGain=z.theta^5*angularColumn(2);
+            end
+            scope="Local continuous-time certificate for the physical pose and motion outputs, conditional on small disturbances, a compact operating set and a total pose feedback bound supplied by complete GNSS, informative LiDAR, or their combination. The lateral design domain and the sampled observer require separate checks.";
             v=struct('certified',valid,'nominalFusionLmiVerified',valid,'worstVertexEigenvalue',worst, ...
-                'vertices',numel(blocks),'matrixInequalities',numel(blocks), ...
+                'vertices',vertices,'matrixInequalities',count, ...
                 'minimumEigenvalueP',min(eigenvalues),'maximumEigenvalueP',max(eigenvalues), ...
                 'intrinsicRateState',true,'zeroSpeedDivision',false,'zeroSpeedCertified',false, ...
                 'actualOverlapCertified',false,'operatingSet',struct('assumedInvariant',true, ...
                     'invarianceVerified',false,'speedInterval',[0,cfg.iss.maximumSpeed],'nonlinearConclusionConditional',true), ...
-                'nominalFusion',struct('certified',valid,'vertices',numel(blocks),'matrixInequalities',numel(blocks), ...
-                    'coversGnssAbsent',true,'completeGnssPose',true,'coversZeroLidarInformation',false), ...
+                'nominalFusion',struct('certified',valid,'vertices',vertices,'matrixInequalities',count, ...
+                    'coversGnssAbsent',valid,'completeGnssPose',true,'coversZeroLidarInformation',valid, ...
+                    'worstEigenvalue',struct('gnssOnly',sourceWorst(1),'lidarOnly',sourceWorst(2),'both',sourceWorst(3))), ...
                 'additionalOutputCount',4,'matchedAuxiliaryGain',true, ...
-                'yawRateGainPerSecond',z.theta^5/P(8,8),'independentYawRateCorrection',true, ...
-                'upstreamYawRateRequired',true,'allAuxiliaryOutputsRequired',false,'scope',scope);
+                'yawRateGainPerSecond',yawRateGain,'independentYawRateCorrection',true, ...
+                'upstreamYawRateRequired',false,'allAuxiliaryOutputsRequired',false,'scope',scope);
         end
 
         function runtime=runtime(cfg)
             h=cfg.invariantDesign;theta=cfg.invariantObserver.theta;
-            assert(isfield(h,'inputs') && isfield(h.inputs,'architecture') && ...
-                strcmp(h.inputs.architecture,"physical-pose-unit-motion-v2") && isequaln(h.inputs,localizationSupport.invariantInputs(cfg)), ...
+            assert(isfield(h,'inputs') && isequaln(h.inputs,localizationSupport.invariantInputs(cfg)), ...
                 'VehicleLocalization:StaleInvariantDesign','Temporary gains use different inputs; solve after configuring this run.');
             v=localizationSupport.verifyInvariantDesign(h,cfg);
             assert(v.certified,'VehicleLocalization:InfeasibleInvariantDesign','Temporary gains fail the four-vertex certificate.');
             toPhysical=diag(theta.^[1,2,3,1,2,3,1,2]);
-            E=eye(8);L=toPhysical*(h.P\E(:,[1,4,7]));
+            E=eye(8);L=toPhysical*(h.P\[E(:,[1,4,7]),theta^3*E(:,8)]);
             matched=struct('P',h.P,'T',toPhysical,'theta',theta,'scalingExponents',[1;2;3;1;2;3;1;2], ...
                 'metricSource',"Four-vertex feasibility LMI");
             runtime=struct('kind',cfg.kind,'P',h.P,'theta',theta,'toPhysical',toPhysical, ...
-                'linearOutputGain',[L,v.yawRateGainPerSecond*E(:,8)], ...
+                'linearOutputGain',L, ...
                 'lidarMatched',matched,'continuousCertificate',struct('design',h,'verification',v), ...
                 'nominalFusionLmiVerified',v.nominalFusionLmiVerified, ...
                 'designRoute',"Physical GNSS pose, unit motion weights and direct LiDAR information", ...
@@ -332,14 +344,28 @@ classdef localizationSupport
             A([3,6],8)=f(3:4).'/t^2;
         end
 
-        function blocks=fusionBlocks(P,cfg,margin)
+        function [strengths,required]=poseSourceBounds(cfg)
+        % Diagonal entries for complete GNSS, informative LiDAR and both.
+            lidar=[cfg.iss.minimumPositionStrength*[1;1];cfg.iss.minimumHeadingStrength];
+            gnss=ones(3,1);strengths=[gnss,lidar,gnss+lidar];
+            if all(lidar<=gnss)
+                required=2;
+            elseif all(gnss<=lidar)
+                required=1;
+            else
+                required=[1,2];
+            end
+        end
+
+        function blocks=fusionBlocks(P,cfg,margin,strengths)
             E=eye(8);C=E([1,4,7],:);
-            S=diag([cfg.iss.minimumPositionStrength*[1,1],cfg.iss.minimumHeadingStrength]);
-            sensor=-2*C.'*S*C-2*cfg.invariantObserver.theta^4*(E(:,8)*E(:,8).');
-            vertices=localizationSupport.fusionVertices(cfg);blocks=cell(1,size(vertices,1));
-            for j=1:numel(blocks)
-                A=localizationSupport.fusionMatrices(cfg,vertices(j,:));M=P*A;
-                blocks{j}=M+M.'+sensor+margin*eye(8);
+            vertices=localizationSupport.fusionVertices(cfg);
+            blocks=cell(size(vertices,1),size(strengths,2));
+            for j=1:size(vertices,1)
+                M=P*localizationSupport.fusionMatrices(cfg,vertices(j,:));
+                for k=1:size(strengths,2)
+                    blocks{j,k}=M+M.'+margin*eye(8)-2*C.'*diag(strengths(:,k))*C;
+                end
             end
         end
 

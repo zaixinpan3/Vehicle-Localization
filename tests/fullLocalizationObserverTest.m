@@ -48,8 +48,13 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
             f=fixture(4,"gnss");f.data.highRate.longitudinalSpeed(:)=0;
             f.data.gnss.position(:)=0;f.cfg.initialState(:)=0;f.cfg.initialState(7)=.2;
             r=run(f);
-            gain=f.cfg.invariantObserver.theta/f.cfg.invariantDesign.P(7,7);
-            testCase.verifyEqual(r.heading,.2*(1+gain*.1).^(-(0:numel(r.time)-1).'),AbsTol=1e-12);
+            K=r.observer.continuousDesign.linearOutputGain(7:8,3:4);
+            step=(eye(2)+.1*(K-[0,1;0,0]))\eye(2);
+            expected=[.2;0];
+            for j=2:numel(r.time)
+                expected(:,j)=step*expected(:,j-1);
+            end
+            testCase.verifyEqual([r.heading,r.yawRate],expected.',AbsTol=1e-12);
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end
         function publicEntryIsDeterministic(testCase)
@@ -65,7 +70,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullLocalizationObserv
         function upstreamRateStillCorrectsDuringAPoseOutage(testCase)
             f=fixture(8,"both");mask=f.data.lidar.time>=2 & f.data.lidar.time<4;
             f.data.lidar.valid(mask)=false;f.data.gnss.valid(mask)=false;
-            f.lateral.yawRate(f.data.highRate.time>=2 & f.data.highRate.time<4)=.02;r=run(f);
+            f.lateral.velocityValid=~mask;
+            f.lateral.yawRate(mask)=.02;r=run(f);
             outage=r.time>=2 & r.time<4;
             testCase.verifyEqual(r.diagnostics.gnssPoseValid(outage) | r.diagnostics.lidarValid(outage),false(nnz(outage),1));
             gain=f.cfg.invariantDesign.verification.yawRateGainPerSecond;

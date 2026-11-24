@@ -124,7 +124,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
             dt=[0;diff(l.time)];
             expected=.2*(1-cumprod(1./(1+c.invariantDesign.verification.yawRateGainPerSecond*dt)));
             testCase.verifyEqual(a.yawRate,expected,AbsTol=1e-12);
-            testCase.verifyEqual(a.headingUnwrapped,cumsum(dt.*expected),AbsTol=1e-12);
+            gain=a.observer.continuousDesign.linearOutputGain(7,4);
+            testCase.verifyEqual(a.headingUnwrapped,cumsum(dt.*(expected+gain*(.2-expected))),AbsTol=1e-12);
             testCase.verifyFalse(a.diagnostics.intrinsicPredictionUsesImu);
             testCase.verifyTrue(all(isfinite(a.internalState),'all'));
         end

@@ -17,8 +17,8 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverMotionAvai
             testCase.verifyEqual(a.internalState,omitted.internalState,AbsTol=0);
             testCase.verifyEqual(a.diagnostics.yawRateFeedbackSource,"upstreamMotionPacket");
         end
-        function missingAndNonfiniteUpstreamRateHoldTheInitialRate(testCase)
-            [d,l,c]=fixture();c.initialState(8)=.04;l.yawRate(:)=NaN;
+        function missingRateAndMotionLeaveOnlyIntrinsicRatePrediction(testCase)
+            [d,l,c]=fixture();c.initialState(8)=.04;l.yawRate(:)=NaN;l.velocityValid=false(size(l.time));
             d.highRate.yawRate(:)=100;a=execute(d,l,c);
             l=rmfield(l,'yawRate');b=execute(d,l,c);
             testCase.verifyEqual(a.internalState,b.internalState,AbsTol=0);

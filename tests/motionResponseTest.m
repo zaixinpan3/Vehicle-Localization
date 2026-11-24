@@ -88,8 +88,8 @@ function worst=globalAxisResidual(cfg)
         [F,H]=localizationSupport.secants(x,x,cfg);predictor=T\(F*T)/t;
         for mask=0:15
             Ct=H(logical(bitget(mask,1:4)),:)*T;
-            for gnss=[0,1]
-                W=d.P*predictor-Ct.'*Ct-gnss*(C.'*C)-C.'*S*C-t^4*E(:,8)*E(8,:);
+            for bound={eye(3),S,eye(3)+S}
+                W=d.P*predictor-Ct.'*Ct-C.'*bound{1}*C;
                 worst=max(worst,max(eig(W+W.'+d.lambda*eye(8))));
             end
         end

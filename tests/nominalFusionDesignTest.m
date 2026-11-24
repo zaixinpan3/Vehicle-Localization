@@ -14,16 +14,27 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             c=freshObserverTestConfig();d=c.invariantDesign;r=localizationSupport.runtime(c);
             E=eye(8);theta=r.theta;
             testCase.verifyEqual(r.linearOutputGain(:,1:3),r.toPhysical*(d.P\E(:,[1,4,7])),AbsTol=1e-13);
-            testCase.verifyEqual(r.linearOutputGain(:,4),theta^5/d.P(8,8)*E(:,8),AbsTol=1e-13);
+            testCase.verifyEqual(r.linearOutputGain(:,4),theta*r.toPhysical*(d.P\(r.toPhysical*E(:,8))),AbsTol=1e-13);
             testCase.verifyEqual(d.verification.matrixInequalities,4);
-            testCase.verifyGreaterThan(theta^4,d.lambda/2);
+            source=d.verification.nominalFusion.worstEigenvalue;
+            testCase.verifyLessThan([source.gnssOnly,source.lidarOnly,source.both],zeros(1,3));
         end
-        function excessiveDecayMarginFailsTheRateDiagonal(testCase)
-            c=freshObserverTestConfig();d=c.invariantDesign;c.invariantObserver.lambda=2*c.invariantObserver.theta^4;
+        function excessiveDecayMarginFailsThePoseBound(testCase)
+            c=freshObserverTestConfig();d=c.invariantDesign;c.invariantObserver.lambda=2*c.iss.minimumPositionStrength;
             d.lambda=c.invariantObserver.lambda;
             testCase.verifyFalse(localizationSupport.verifyInvariantDesign(d,c).certified);
         end
-        function downtownUsesTheNominalDesignDuringGnssWithdrawal(testCase)
+        function sourceOrderingDeterminesTheNumberOfConstraints(testCase)
+            c=mncavFullObserverConfig();
+            cases=[.25,1.1,8;1.1,1.2,4;1,1,4];
+            for j=1:size(cases,1)
+                c.iss.minimumPositionStrength=cases(j,1);c.iss.minimumHeadingStrength=cases(j,2);
+                cfg=freshObserverTestConfig(c);v=cfg.invariantDesign.verification;
+                testCase.verifyEqual(v.matrixInequalities,cases(j,3));
+                testCase.verifyLessThan(max(struct2array(v.nominalFusion.worstEigenvalue)),0);
+            end
+        end
+        function naturallyGnssFreeDowntownUsesTheCommonDesign(testCase)
             downtown=downtownReferenceReplayConfig();
             nominal=mncavFullObserverConfig();
             testCase.verifyEqual(localizationSupport.invariantInputs(downtown.observer), ...
@@ -37,7 +48,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
             testCase.verifyTrue(v.nominalFusion.coversGnssAbsent);
-            testCase.verifyFalse(v.nominalFusion.coversZeroLidarInformation);
+            testCase.verifyTrue(v.nominalFusion.coversZeroLidarInformation);
             testCase.verifyFalse(isfield(v,'regionalIss'));
         end
         function informativeLidarStillCorrectsAStationaryPose(testCase,dt)
@@ -50,15 +61,19 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             testCase.verifyLessThan(abs(e.heading(end)),.001);
             testCase.verifyFalse(e.diagnostics.allTheoremHypothesesVerified);
         end
-        function lidarHeadingInnovationLeavesTheUnavailableRateAlone(testCase)
+        function lidarHeadingInnovationCorrectsTheUnmeasuredRate(testCase)
             [data,lateral,c]=constantMotionFixture(0,.1,freshObserverTestConfig());
             lateral.velocityValid=false(size(lateral.time));lateral.yawRateValid=false(size(lateral.time));
             c.initialState=[0;0;0;0;0;0;.03;.05];
             estimate=syntheticObserver.run(data,c,LateralInputs=lateral);
-            testCase.verifyEqual(estimate.yawRate,.05*ones(size(lateral.time)),AbsTol=0);
+            gain=estimate.observer.continuousDesign.linearOutputGain(:,3);
+            predicted=estimate.diagnostics.preLidarState(2,7:8);
+            delta=estimate.internalState(2,7:8)-predicted;
+            testCase.verifyGreaterThan(abs(delta(1)),0);
+            testCase.verifyEqual(delta(2),gain(8)/gain(7)*delta(1),AbsTol=1e-12);
             testCase.verifyLessThan(abs(estimate.heading(end)),.03);
         end
-        function gnssOnlyRetainsAccuracyWithoutAnOutageCertificate(testCase,dt)
+        function completeGnssOnlyCorrectsThePose(testCase,dt)
             synthetic=mncavFullObserverConfig();
             [data,lateral,c]=constantMotionFixture(5,dt,freshObserverTestConfig(synthetic));
             data=rmfield(data,'lidar');n=numel(lateral.time);
@@ -69,7 +84,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             e=runFullLocalizationObserver(data,c,LateralInputs=lateral);
             testCase.verifyTrue(all(isfinite(e.internalState),'all'));
             testCase.verifyLessThan(norm(e.position(end,:)-[5*lateral.time(end),0]),.02);
-            % Retain the historical behavioral target without an outage theorem.
             fprintf('GNSS-ONLY 8 s: dt=%g, heading=%.9g rad (behavioral target .005)\n',dt,abs(e.heading(end)));
             testCase.verifyLessThan(abs(e.heading(end)),.005);
             testCase.verifyTrue(e.diagnostics.nominalFusionLmiVerified);

@@ -9,7 +9,7 @@ function [design,cfg]=synthesizeMncavInvariantDesign(cfg)
     addpath(genpath(fullfile(external,'YALMIP')));addpath(genpath(fullfile(external,'sedumi')));
     design=localizationSupport.synthesize(cfg);
     cfg.invariantDesign=design;cfg.gainSource="fresh-lmi";
-    fprintf('Four-vertex design: worst eigenvalue %.9g, GNSS heading %.9g/s, upstream rate %.9g/s.\n', ...
-        design.verification.worstVertexEigenvalue,cfg.invariantObserver.theta/design.P(7,7), ...
-        design.verification.yawRateGainPerSecond);
+    v=design.verification;s=v.nominalFusion.worstEigenvalue;
+    fprintf('Common metric, %d drift vertices, %d LMIs. Worst eigenvalues: GNSS %.9g, LiDAR %.9g, both %.9g.\n', ...
+        v.vertices,v.matrixInequalities,s.gnssOnly,s.lidarOnly,s.both);
 end
