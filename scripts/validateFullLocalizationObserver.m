@@ -4,6 +4,10 @@ function validation=validateFullLocalizationObserver(outputFolder)
         outputFolder (1,1) string="output/mncav_overlap_localization/observer"
     end
     setupVehicleLocalization();
+    stored=load(fullfile(outputFolder,'experiment.mat'));
+    current=mncavFullObserverConfig();
+    assert(isfield(stored,'cfg') && isfield(stored.cfg,'kind') && strcmp(stored.cfg.kind,current.kind), ...
+        'VehicleLocalization:StaleObserver','Regenerate the replay with the current observer interface.');
     files=["tests/fullLocalizationObserverTest.m","tests/fullObserverContinuousIssTest.m", ...
         "tests/lateralObserverTest.m", ...
         "tests/localizationMotionInputTest.m","tests/mncavVehicleConfigTest.m", ...
@@ -13,10 +17,9 @@ function validation=validateFullLocalizationObserver(outputFolder)
         "tests/localizationLidarInputTest.m"];
     results=runtests(cellstr(files));writetable(table(results),fullfile(outputFolder,'tests.csv'));
     assert(all([results.Passed]),'VehicleLocalization:RegressionFailure','Observer regression failed.');
-    stored=load(fullfile(outputFolder,'experiment.mat'));
     % Recorded settings are inputs only; never use their numerical gain snapshot.
     [~,cfg]=synthesizeMncavInvariantDesign(stored.cfg);
-    localizationSupport.designFullObserverGains(cfg); % Reject retired replay configurations.
+    localizationSupport.designFullObserverGains(cfg);
     assertMncavReplayCurrent(stored.report.metadata.inputMetadata.parameters);
     data=stored.data;lateral=stored.lateral;
     r=runFullLocalizationObserver(data,cfg,LateralInputs=lateral);
@@ -29,9 +32,9 @@ function validation=validateFullLocalizationObserver(outputFolder)
         isequal(r.diagnostics.independentHeadingValid(:),logical(data.gnssHeading.valid(:))), ...
         'VehicleLocalization:ReceiverReplayMismatch','Replay must preserve aligned receiver availability.');
     dt=[0;diff(r.time)];
-    residual=max(abs(r.position-r.diagnostics.preLidarState(:,[1,4])- ...
+    residual=max(abs(r.diagnostics.lidarIncrement(:,[1,4])- ...
         dt.*r.diagnostics.positionCorrection(:,3:4)),[],'all');
-    assert(residual<1e-7,'Reported LiDAR position increment must agree with the pre-LiDAR state change.');
+    assert(residual<1e-7,'LiDAR position attribution must agree with the integrated correction rate.');
     rows=cell(0,4);sourceFiles=["localization/+observerInternal/integrate.m","localization/+observerInternal/alignFrameClock.m", ...
         "localization/+observerInternal/frameBrackets.m","localization/localizationSupport.m","localization/runFullLocalizationObserver.m", ...
         "scripts/runMncavFullObserverExperiment.m", ...

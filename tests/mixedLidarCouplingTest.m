@@ -24,16 +24,16 @@ classdef mixedLidarCouplingTest < matlab.unittest.TestCase
             testCase.verifyLessThan(max(eig(S)),1);
             testCase.verifyLessThan(min(eig(S-diag([0,0,h]))),-.01);
         end
-        function productionFilterCanReturnAnAdmissibleCoupledCounterexample(testCase)
+        function coupledGramCanLeaveHeadingUnobservable(testCase)
             cfg=mncavFullObserverConfig();h=(1+cfg.iss.minimumHeadingStrength)/2;
             c=[.06;0];S=[c*c.'/h,c;c.',h];
-            filter=localizationSupport.filterLidarPoseInformation(S);
-            support=localizationSupport.lidarPoseSupport(filter,cfg);
-            testCase.verifyEqual(filter.S,S,AbsTol=5e-13);
-            testCase.verifyEqual(filter.rank,1);
-            testCase.verifyGreaterThan(filter.S(3,3),cfg.iss.minimumHeadingStrength);
-            testCase.verifyLessThan(norm(filter.S(1:2,3)),.06+1e-13);
-            testCase.verifyLessThan(min(eig(filter.S-diag([0,0,cfg.iss.minimumHeadingStrength]))),-.04);
+            gram=localizationSupport.decomposeLidarGram(S);
+            support=localizationSupport.lidarPoseSupport(gram,cfg);
+            testCase.verifyEqual(gram.matrix,S,AbsTol=5e-13);
+            testCase.verifyEqual(gram.rank,1);
+            testCase.verifyGreaterThan(gram.matrix(3,3),cfg.iss.minimumHeadingStrength);
+            testCase.verifyLessThan(norm(gram.matrix(1:2,3)),.06+1e-13);
+            testCase.verifyLessThan(min(eig(gram.matrix-diag([0,0,cfg.iss.minimumHeadingStrength]))),-.04);
             testCase.verifyFalse(support.headingSupported);
         end
     end

@@ -12,65 +12,65 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
     methods (Test)
         function idealCurbRetainsLongitudinalNullspace(testCase)
             f=fixture();m=curb([0;0;0]);
-            [c,a]=localizationSupport.computeLidarMatchedCorrection(m,[0;0;0],f.G,f.design,f.cfg);
-            testCase.verifyEqual(a.filter.S,diag([0,3,8]),AbsTol=1e-12);
-            testCase.verifyEqual(a.filter.rank,2);
+            [c,a]=localizationSupport.computeLidarMatchedCorrection(m,[0;0;0],f.G,f.design);
+            testCase.verifyEqual(a.gram.matrix,diag([0,3,8]),AbsTol=1e-12);
+            testCase.verifyEqual(a.gram.rank,2);
             testCase.verifyEqual(c,zeros(7,1),AbsTol=0);
-            testCase.verifyEqual(a.filter.S*[1;0;0],zeros(3,1),AbsTol=0);
+            testCase.verifyEqual(a.gram.matrix*[1;0;0],zeros(3,1),AbsTol=0);
         end
         function productionMetricGivesTheDirectPhysicalGain(testCase)
             cfg=freshObserverTestConfig();r=localizationSupport.runtime(cfg);
             G=eye(8);G=G([1,4,7],:);
-            m=struct('gradient',[.2;-.1;.04],'information',diag([3,2,.8]), ...
+            m=struct('gradient',[.2;-.1;.04],'gram',diag([3,2,.8]), ...
                 'linearizationPose',zeros(3,1));
-            [rate,a]=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,r.lidarMatched,cfg);
+            [rate,a]=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,r.lidarMatched);
             C=(G*r.toPhysical)/r.theta;
             expected=-r.toPhysical*(r.P\(C.'*m.gradient));
             testCase.verifyEqual(rate,expected,AbsTol=1e-10);
             stale=r.lidarMatched;stale.unknownOption=1;
-            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,stale,cfg), ...
+            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,stale), ...
                 'VehicleLocalization:StaleInvariantDesign');
         end
         function oneLeverArmRetainsLateralYawAmbiguity(testCase)
             f=fixture();m=localizationSupport.buildLidarLineMeasurement([3,0;3,0],[3,0;3,0], ...
                 [0,1;0,1],[0;0;0],ones(2,1));
-            [~,a]=localizationSupport.computeLidarMatchedCorrection(m,[0;0;0],f.G,f.design,f.cfg);
-            testCase.verifyEqual(a.filter.rank,1);
-            testCase.verifyEqual(a.filter.S*[0;-3;1],zeros(3,1),AbsTol=1e-12);
-            testCase.verifyGreaterThan(abs(a.filter.S(2,3)),0);
+            [~,a]=localizationSupport.computeLidarMatchedCorrection(m,[0;0;0],f.G,f.design);
+            testCase.verifyEqual(a.gram.rank,1);
+            testCase.verifyEqual(a.gram.matrix*[0;-3;1],zeros(3,1),AbsTol=1e-12);
+            testCase.verifyGreaterThan(abs(a.gram.matrix(2,3)),0);
         end
         function directPoseIsRejected(testCase)
             f=fixture();packet=struct('pose',zeros(3,1),'information',eye(3));
             testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(packet,[.7;.2;0], ...
-                f.G,f.design,f.cfg),'VehicleLocalization:InvalidLidarMeasurement');
+                f.G,f.design),'VehicleLocalization:InvalidLidarMeasurement');
         end
         function residualIsEvaluatedAtPrediction(testCase)
             f=fixture();pose=[0;.2;0];m=curb(pose);
-            c=localizationSupport.computeLidarMatchedCorrection(m,pose,f.G,f.design,f.cfg);
+            c=localizationSupport.computeLidarMatchedCorrection(m,pose,f.G,f.design);
             testCase.verifyLessThan(c(4),0);
             testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(curb(zeros(3,1)),pose, ...
-                f.G,f.design,f.cfg),'VehicleLocalization:StaleLidarLinearization');
+                f.G,f.design),'VehicleLocalization:StaleLidarLinearization');
         end
         function correlatedCopiesDoNotMultiplyInformation(testCase)
             f=fixture();single=struct('residual',.2,'jacobian',[0,1,0], ...
                 'weights',1,'linearizationPose',zeros(3,1));
             duplicate=struct('residual',[.2;.2],'jacobian',[0,1,0;0,1,0], ...
                 'weights',ones(2)/4,'linearizationPose',zeros(3,1));
-            [a,aa]=localizationSupport.computeLidarMatchedCorrection(single,zeros(3,1),f.G,f.design,f.cfg);
-            [b,bb]=localizationSupport.computeLidarMatchedCorrection(duplicate,zeros(3,1),f.G,f.design,f.cfg);
+            [a,aa]=localizationSupport.computeLidarMatchedCorrection(single,zeros(3,1),f.G,f.design);
+            [b,bb]=localizationSupport.computeLidarMatchedCorrection(duplicate,zeros(3,1),f.G,f.design);
             testCase.verifyEqual(a,b,AbsTol=1e-12);
-            testCase.verifyEqual(aa.filter.S,bb.filter.S,AbsTol=1e-12);
+            testCase.verifyEqual(aa.gram.matrix,bb.gram.matrix,AbsTol=1e-12);
         end
         function changingDirectionsDissipateInANondiagonalMetric(testCase,angle)
             f=rotatedFixture(angle);e=-(f.design.T\f.state);
-            [c,a]=localizationSupport.computeLidarMatchedCorrection(f.measurement,f.G*f.state,f.G,f.design,f.cfg);
+            [c,a]=localizationSupport.computeLidarMatchedCorrection(f.measurement,f.G*f.state,f.G,f.design);
             rate=-2*e.'*f.design.P*(f.design.T\c);
             testCase.verifyEqual(rate,-2*e.'*a.dissipationMatrix*e,AbsTol=1e-10);
             testCase.verifyLessThanOrEqual(rate,1e-12);
         end
         function implicitStepCannotIncreaseAffineEnergy(testCase,angle)
             f=rotatedFixture(angle);e=-(f.design.T\f.state);
-            [c,a]=localizationSupport.computeLidarMatchedCorrection(f.measurement,f.G*f.state,f.G,f.design,f.cfg, ...
+            [c,a]=localizationSupport.computeLidarMatchedCorrection(f.measurement,f.G*f.state,f.G,f.design, ...
                 StepSize=100,Discretization="implicit");
             after=e-f.design.T\c;
             testCase.verifyLessThanOrEqual(after.'*f.design.P*after,e.'*f.design.P*e+1e-10);
@@ -79,7 +79,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
         end
         function explicitStepEnforcesStrictSpectralMargin(testCase,angle)
             f=rotatedFixture(angle);e=-(f.design.T\f.state);
-            [c,a]=localizationSupport.computeLidarMatchedCorrection(f.measurement,f.G*f.state,f.G,f.design,f.cfg, ...
+            [c,a]=localizationSupport.computeLidarMatchedCorrection(f.measurement,f.G*f.state,f.G,f.design, ...
                 StepSize=100,Discretization="explicit");
             after=e-f.design.T\c;
             testCase.verifyEqual(a.explicitStepProduct,1.8,AbsTol=1e-12);
@@ -88,36 +88,35 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
         end
         function zeroInformationCannotCorrectInvisiblePose(testCase)
             f=fixture();m=struct('residual',10,'jacobian',zeros(1,3),'weights',1,'linearizationPose',zeros(3,1));
-            [c,a]=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),f.G,f.design,f.cfg, ...
+            [c,a]=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),f.G,f.design, ...
                 StepSize=1,Discretization="implicit");
             testCase.verifyEqual(c,zeros(7,1),AbsTol=0);
-            testCase.verifyEqual(a.filter.effectiveDimension,0,AbsTol=0);
-            testCase.verifyEqual(a.filter.rank,0);
+            testCase.verifyEqual(a.gram.effectiveDimension,0,AbsTol=0);
+            testCase.verifyEqual(a.gram.rank,0);
             testCase.verifyEqual(a.jumpMaximumEnergyRatio,1,AbsTol=1e-12);
         end
         function scalingTheResidualGramScalesTheNominalStrengthOnce(testCase)
             theta=.52;R=[cos(theta),0,-sin(theta);0,1,0;sin(theta),0,cos(theta)];
             gram=R*diag([0,3,8])*R.';
-            a=localizationSupport.filterLidarPoseInformation(gram);
-            b=localizationSupport.filterLidarPoseInformation(7*gram);
-            testCase.verifyEqual(a.S,gram,AbsTol=1e-14);
-            testCase.verifyEqual(b.S,7*a.S,AbsTol=1e-13);
-            testCase.verifyEqual(b.F,eye(3));
+            a=localizationSupport.decomposeLidarGram(gram);
+            b=localizationSupport.decomposeLidarGram(7*gram);
+            testCase.verifyEqual(a.matrix,gram,AbsTol=1e-14);
+            testCase.verifyEqual(b.matrix,7*a.matrix,AbsTol=1e-13);
         end
         function weakDirectionSurvivesAnisotropicGeometry(testCase)
             f=fixture();info=diag([0,1,1e12]);pose=zeros(3,1);
-            m=struct('gradient',[0;2;0],'information',info,'linearizationPose',pose);
-            [d,a]=localizationSupport.computeLidarMatchedCorrection(m,pose,f.G,f.design,f.cfg, ...
+            m=struct('gradient',[0;2;0],'gram',info,'linearizationPose',pose);
+            [d,a]=localizationSupport.computeLidarMatchedCorrection(m,pose,f.G,f.design, ...
                 StepSize=1,Discretization="implicit");
             testCase.verifyEqual(d(4),-8/5,AbsTol=1e-12);
             testCase.verifyEqual(d([1,7]),zeros(2,1),AbsTol=1e-12);
             testCase.verifyTrue(a.jumpNonexpansive);
         end
         function indefiniteInformationIsRejectedAndLargeGramsAreNotSquared(testCase)
-            testCase.verifyError(@()localizationSupport.filterLidarPoseInformation(diag([1,1,-.1])), ...
-                'VehicleLocalization:InvalidLidarInformation');
-            a=localizationSupport.filterLidarPoseInformation(1e170*eye(3));
-            testCase.verifyEqual(a.S,1e170*eye(3),RelTol=1e-15);
+            testCase.verifyError(@()localizationSupport.decomposeLidarGram(diag([1,1,-.1])), ...
+                'VehicleLocalization:InvalidLidarGram');
+            a=localizationSupport.decomposeLidarGram(1e170*eye(3));
+            testCase.verifyEqual(a.matrix,1e170*eye(3),RelTol=1e-15);
         end
         function currentDesignDoesNotInventBaselineYawCertificate(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.designFullObserverGains(cfg);
@@ -144,15 +143,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyLessThanOrEqual(max(changes),1e-10);
         end
         function indefiniteMetricCannotBeUsedAsACertificate(testCase)
-            f=fixture();f.design.P(7,7)=-1;m=struct('gradient',zeros(3,1),'linearizationPose',zeros(3,1),'information',eye(3));
-            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),f.G,f.design,f.cfg), ...
+            f=fixture();f.design.P(7,7)=-1;m=struct('gradient',zeros(3,1),'linearizationPose',zeros(3,1),'gram',eye(3));
+            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),f.G,f.design), ...
                 'VehicleLocalization:InvalidLidarMetric');
         end
     end
 end
 
 function f=fixture()
-    f.cfg=struct();
     f.design=struct('P',eye(7)/4,'T',eye(7),'theta',1);
     f.G=zeros(3,7);f.G(1,1)=1;f.G(2,4)=1;f.G(3,7)=1;
 end
@@ -163,7 +161,7 @@ function f=rotatedFixture(angle)
     U=[cos(angle),-sin(angle),0;sin(angle),cos(angle),0;0,0,1];
     f.state=[.3;.2;-.1;-.4;.1;.2;.05];
     information=U*diag([0,20,2])*U.';p=f.G*f.state;
-    f.measurement=struct('gradient',information*p,'linearizationPose',p,'information',information);
+    f.measurement=struct('gradient',information*p,'linearizationPose',p,'gram',information);
 end
 
 function m=curb(pose)
@@ -186,9 +184,9 @@ function changes=switchingEnergy()
     for k=1:numel(changes)
         [U,~]=qr(randn(3));values=10.^(-4+8*rand(3,1));values(1:mod(k,4))=0;
         p=f.G*state;information=U*diag(values)*U.';
-        m=struct('gradient',information*p,'linearizationPose',p,'information',information);
+        m=struct('gradient',information*p,'linearizationPose',p,'gram',information);
         before=f.design.T\state;
-        delta=localizationSupport.computeLidarMatchedCorrection(m,f.G*state,f.G,f.design,f.cfg, ...
+        delta=localizationSupport.computeLidarMatchedCorrection(m,f.G*state,f.G,f.design, ...
             StepSize=.01+rand,Discretization="implicit");
         state=state+delta;after=f.design.T\state;
         changes(k)=after.'*f.design.P*after-before.'*f.design.P*before;

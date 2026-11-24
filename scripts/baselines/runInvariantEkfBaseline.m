@@ -53,9 +53,9 @@ function estimate=runInvariantEkfBaseline(data,lateral,cfg,options)
         elseif isfield(data,'lidarOverlap') && data.lidarOverlap.valid(k) && dt>0
             prior=x;Pi=P\eye(8);current=x;measurement=[];
             for it=1:options.Iterations
-                [measurement,pairPrecision]=localizationSupport.evaluateOverlapGradient(data.lidarOverlap.map,data.lidarOverlap.sources{k},current([1,4,7]),data.lidarOverlap.config);
+                measurement=localizationSupport.evaluateRegistrationOverlap(data.lidarOverlap.map,data.lidarOverlap.sources{k},current([1,4,7]),data.lidarOverlap.config);
                 if ~measurement.available,break;end
-                Hq=pairPrecision/options.LidarTemperature;g=measurement.gradient/options.LidarTemperature;
+                Hq=measurement.pairPrecision/options.LidarTemperature;g=measurement.gradient/options.LidarTemperature;
                 next=current-(Pi+G.'*Hq*G)\(Pi*(current-prior)+G.'*g);
                 % Bound iteration size, preserving local tracking initialization.
                 delta=next-current;ratio=max([1,norm(delta([1,4]))/1,abs(delta(7))/.1]);next=current+delta/ratio;

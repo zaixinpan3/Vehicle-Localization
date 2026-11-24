@@ -67,8 +67,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             c.initialState=[0;0;0;0;0;0;.03;.05];
             estimate=syntheticObserver.run(data,c,LateralInputs=lateral);
             gain=estimate.observer.continuousDesign.linearOutputGain(:,3);
-            predicted=estimate.diagnostics.preLidarState(2,7:8);
-            delta=estimate.internalState(2,7:8)-predicted;
+            delta=estimate.diagnostics.lidarIncrement(2,7:8);
             testCase.verifyGreaterThan(abs(delta(1)),0);
             testCase.verifyEqual(delta(2),gain(8)/gain(7)*delta(1),AbsTol=1e-12);
             testCase.verifyLessThan(abs(estimate.heading(end)),.03);

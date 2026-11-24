@@ -49,7 +49,7 @@ classdef localizationSupport
             end
         end
 
-        function support=lidarPoseSupport(filter,cfg)
+        function support=lidarPoseSupport(gram,cfg)
         % lidarPoseSupport Local normalized pose support of admitted LiDAR alone.
         % Inspect the numerical rank of the field or residual Gram matrix.
         % A positive yaw diagonal can constrain only a position/yaw combination.
@@ -61,15 +61,14 @@ classdef localizationSupport
         % Strengths above 1e-10 count as numerical support. sectorQualified also
         % requires the full nominal pose Gram lower bound in cfg.iss.
             arguments
-                filter (1,1) struct
+                gram (1,1) struct
                 cfg (1,1) struct
             end
-            denominator=1;
-            if isfield(filter,'informationDenominator'),denominator=filter.informationDenominator;end
-            kept=4-filter.rank:3;
-            strengths=filter.strengths(kept);threshold=1e-10;
+            denominator=gram.denominator;
+            kept=4-gram.rank:3;
+            strengths=gram.eigenvalues(kept);threshold=1e-10;
             active=strengths>threshold*denominator;dimension=nnz(active);
-            B=diag(sqrt(strengths(active)))*filter.eigenvectors(:,kept(active)).';
+            B=diag(sqrt(strengths(active)))*gram.eigenvectors(:,kept(active)).';
             admitted=B.'*B;
             minimumStrength=0;
             if dimension==3,minimumStrength=min(strengths)/denominator;end
@@ -379,20 +378,20 @@ classdef localizationSupport
         end
 
         %% LiDAR measurement and correction
-        function filter=filterLidarPoseInformation(information,denominator)
-        % The nominal residual Gram is S/informationDenominator. Ordinary
+        function gram=decomposeLidarGram(matrix,denominator)
+        % The nominal residual Gram is matrix/denominator. Ordinary
         % packets have denominator one. The eigensystem is of the numerator.
             arguments
-                information (3,3) double {mustBeReal,mustBeFinite}
+                matrix (3,3) double {mustBeReal,mustBeFinite}
                 denominator (1,1) double {mustBeReal,mustBeFinite,mustBePositive}=1
             end
-            assert(norm(information-information.','fro')<=1e-10*max(1,norm(information,'fro')), ...
-                'VehicleLocalization:InvalidLidarInformation','Information must be symmetric.');
-            I=information/2+information.'/2;
+            assert(norm(matrix-matrix.','fro')<=1e-10*max(1,norm(matrix,'fro')), ...
+                'VehicleLocalization:InvalidLidarGram','The LiDAR Gram must be symmetric.');
+            I=matrix/2+matrix.'/2;
             [U,E]=eig(I);[values,order]=sort(diag(E));U=U(:,order);
             tolerance=1e-10*max(denominator,max(abs(values)));
-            assert(min(values)>=-tolerance,'VehicleLocalization:InvalidLidarInformation', ...
-                'Information must be positive semidefinite.');
+            assert(min(values)>=-tolerance,'VehicleLocalization:InvalidLidarGram', ...
+                'The LiDAR Gram must be positive semidefinite.');
             values=max(values,0); % Remove negative roundoff only; do not fill nullspaces.
             S=U*diag(values)*U.';
             informationTrace=sum(values);dimension=0;condition=Inf;
@@ -401,20 +400,19 @@ classdef localizationSupport
                 dimension=sum(relative)^2/sum(relative.^2);
                 if values(1)>0,condition=values(end)/values(1);end
             end
-            filter=struct('F',eye(3),'S',S/2+S.'/2, ...
+            gram=struct('matrix',S/2+S.'/2, ...
                 'eigenvectors',U,'eigenvalues',values, ...
-                'strengths',values,'informationDenominator',denominator,'rank',nnz(values>tolerance), ...
+                'denominator',denominator,'rank',nnz(values>tolerance), ...
                 'trace',informationTrace/denominator,'minimumEigenvalue',values(1)/denominator, ...
-                'conditionNumber',condition,'effectiveDimension',dimension, ...
-                'informationInterpretation',"Nominal output Jacobian Gram in physical pose coordinates");
+                'conditionNumber',condition,'effectiveDimension',dimension);
         end
 
-        function [correction,audit,scaledLoss] = computeLidarMatchedCorrection(measurement,pose,G,design,cfg,options)
+        function [correction,audit,scaledLoss] = computeLidarMatchedCorrection(measurement,pose,G,design,options)
         % computeLidarMatchedCorrection Continuous LiDAR injection and its discretization.
         % The physical pose selector is G*T/theta in high-gain coordinates.
         % A predicted-pose packet supplies either a cost gradient, or residuals
         % with their Jacobian and PSD precision. The continuous injection uses
-        % the gradient directly. The optional information field is the nominal
+        % the gradient directly. The optional gram field is the nominal
         % residual Gram for diagnostics and discretization. A gradient alone
         % suffices for the continuous rate. The frozen implicit transition is
         % nonexpansive in P for any nonnegative step.
@@ -423,7 +421,6 @@ classdef localizationSupport
                 pose (3,1) double {mustBeReal,mustBeFinite}
                 G double {mustBeReal,mustBeFinite}
                 design (1,1) struct
-                cfg (1,1) struct
                 options.StepSize (1,1) double {mustBeReal,mustBeFinite,mustBeNonnegative} = 0
                 options.Discretization (1,1) string {mustBeMember(options.Discretization,["continuous","implicit","explicit"])} = "continuous"
             end
@@ -440,6 +437,10 @@ classdef localizationSupport
                 'VehicleLocalization:InvalidLidarMetric','Require SPD P, nonsingular fixed T and a 3-by-n pose Jacobian.');
             validateattributes(theta,{'numeric'},{'real','finite','positive','scalar'});
             residualMode=isfield(measurement,'residual');gradientMode=isfield(measurement,'gradient');
+            if residualMode || gradientMode
+                assert(~any(isfield(measurement,{'information','pairPrecision'})), ...
+                    'VehicleLocalization:AmbiguousLidarMeasurement','Supply the nominal residual Gram for a sampled gradient packet.');
+            end
             assert(~(residualMode && gradientMode),'VehicleLocalization:AmbiguousLidarMeasurement', ...
                 'Choose residual or gradient input.');
             if gradientMode
@@ -452,10 +453,10 @@ classdef localizationSupport
                 representation="predictedPoseGradient";
                 assert(numel(gradient)==3 && isreal(gradient) && all(isfinite(gradient)), ...
                     'VehicleLocalization:InvalidLidarGradient','The pose gradient must contain three finite values.');
-                if isfield(measurement,'information'),information=measurement.information;end
+                if isfield(measurement,'gram'),matrix=measurement.gram;end
             elseif residualMode
-                assert(~isfield(measurement,'pose') && ~isfield(measurement,'information'), ...
-                    'VehicleLocalization:AmbiguousLidarMeasurement','Supply residual weights and Jacobian without a pose or information field.');
+                assert(~isfield(measurement,'pose') && ~isfield(measurement,'gram'), ...
+                    'VehicleLocalization:AmbiguousLidarMeasurement','Supply residual weights and Jacobian without a pose or separate Gram.');
                 assert(isfield(measurement,'linearizationPose') && ...
                     isequal(measurement.linearizationPose(:),pose), ...
                     'VehicleLocalization:StaleLidarLinearization','Evaluate scan residuals at the supplied predicted pose.');
@@ -475,7 +476,7 @@ classdef localizationSupport
                         'VehicleLocalization:InvalidLidarResidual','Precision must be PSD.');
                     W=V*diag(max(ev,0))*V.';WJ=W*J;Wr=W*r;
                 end
-                information=J.'*WJ;gradient=J.'*Wr;
+                matrix=J.'*WJ;gradient=J.'*Wr;
                 representation="predictedPoseResidual";
             else
                 error('VehicleLocalization:InvalidLidarMeasurement', ...
@@ -484,25 +485,25 @@ classdef localizationSupport
             C=G*T;
             force=-(C.'*gradient)/theta;
             rate=T*(L.'\(L\force));
-            if gradientMode && ~isfield(measurement,'information')
+            if gradientMode && ~isfield(measurement,'gram')
                 assert(options.Discretization=="continuous", ...
                     'VehicleLocalization:MissingLidarGram','A sampled correction requires the nominal pose Gram.');
                 correction=rate;
                 audit=struct('representation',representation,'continuousCorrection',rate, ...
-                    'jumpCertificateApplies',false,'filter',[],'dissipationMatrix',[]);
+                    'jumpCertificateApplies',false,'gram',[],'dissipationMatrix',[]);
                 scaledLoss=[];
                 return
             end
             denominator=1;
-            if gradientMode && isfield(measurement,'informationDenominator')
-                denominator=measurement.informationDenominator;
+            if gradientMode && isfield(measurement,'gramDenominator')
+                denominator=measurement.gramDenominator;
             end
-            filter=localizationSupport.filterLidarPoseInformation(information,denominator);
+            gram=localizationSupport.decomposeLidarGram(matrix,denominator);
             % Work in the at-most-three-dimensional pose subspace of whitened
             % state space. The SVD attenuates each component of the raw force,
             % including a unit response along a zero-curvature direction.
             [basis,R]=qr((C/L.').','econ');
-            factor=(sqrt(filter.eigenvalues).*filter.eigenvectors.')*R.'/sqrt(theta);
+            factor=(sqrt(gram.eigenvalues).*gram.eigenvectors.')*R.'/sqrt(theta);
             [~,singular,V]=svd(factor,'econ','vector');
             directions=basis*V;
             singular=singular/sqrt(denominator);
@@ -525,20 +526,18 @@ classdef localizationSupport
                 scaledLoss=L.'\(loss*L.');
             end
             energyRatio=norm(eye(n)-loss,2)^2;
-            audit=struct('filter',filter,'C',C,'dissipationMatrix',C.'*(filter.S/theta)*C, ...
+            audit=struct('gram',gram,'C',C,'dissipationMatrix',C.'*(gram.matrix/theta)*C, ...
                 'dissipationDenominator',denominator,'continuousCorrection',rate, ...
-                'effectiveStrengths',(filter.strengths/theta)/denominator, ...
                 'maximumDissipationEigenvalue',peak^2,'requestedStep',options.StepSize, ...
                 'appliedStep',step,'explicitStepProduct',(sqrt(step)*peak)^2, ...
                 'jumpMaximumEnergyRatio',energyRatio, ...
                 'jumpNonexpansive',energyRatio<=1+1e-10, ...
                 'jumpCertificateApplies',options.Discretization~="continuous", ...
-                'residualNoiseCoefficientBound',1/theta,'representation',representation, ...
-                'unsupportedGradientNorm',norm(filter.eigenvectors(:,filter.eigenvalues==0).'*gradient), ...
+                'representation',representation, ...
                 'scope',"Fixed-metric locally affine LiDAR channel only; no full-system or outage ISS claim");
         end
 
-        function [measurement,registrationInformation]=evaluateOverlapGradient(fixedCloud,movingCloud,pose,cfg)
+        function measurement=evaluateOverlapGradient(fixedCloud,movingCloud,pose,cfg)
         % evaluateOverlapGradient Correspondence-free LiDAR gradient at the observer prediction.
         % Crop the local map, condition its moments on view, and weight map and
         % source masses by available view reliability and temporal stability.
@@ -547,25 +546,42 @@ classdef localizationSupport
         % semantic channels. Similarity is the geometric mean of normalized
         % class overlaps. Optional uniform background reduces the influence of
         % an unsupported class using the spatial density of the map crop.
-        % information/informationDenominator is the nominal field Gram. Its
+        % gram/gramDenominator is the nominal field Gram. Its
         % denominator is one unless the unscaled matrix is extremely large.
-        % The optional second output preserves the pair-center quadratic model
-        % of the registration-based EKF comparison.
             arguments
                 fixedCloud (1,1) struct
                 movingCloud (1,1) struct
                 pose (3,1) double {mustBeReal,mustBeFinite}
                 cfg (1,1) struct = overlapGradientConfig()
             end
-            timer=tic;linearization=pose;pose=pose(:).';registrationInformation=zeros(3);
+            [measurement,matrix,denominator]=localizationSupport.semanticOverlapPacket(fixedCloud,movingCloud,pose,cfg,false);
+            measurement.gram=matrix;measurement.gramDenominator=denominator;
+        end
+
+        function measurement=evaluateRegistrationOverlap(fixedCloud,movingCloud,pose,cfg)
+        % Registration EKF quadratic model in physical pose coordinates.
+            arguments
+                fixedCloud (1,1) struct
+                movingCloud (1,1) struct
+                pose (3,1) double {mustBeReal,mustBeFinite}
+                cfg (1,1) struct = overlapGradientConfig()
+            end
+            [packet,matrix,denominator]=localizationSupport.semanticOverlapPacket(fixedCloud,movingCloud,pose,cfg,true);
+            measurement=struct('available',packet.available,'gradient',packet.gradient,'pairPrecision',matrix/denominator);
+        end
+    end
+
+    methods (Static, Access=private)
+        function [measurement,matrix,modelDenominator]=semanticOverlapPacket(fixedCloud,movingCloud,pose,cfg,registration)
+            timer=tic;matrix=zeros(3);modelDenominator=1;linearization=pose;pose=pose(:).';
             assert(isequal(string(cfg.geometry.heightMode),"xy"),'VehicleLocalization:PlanarOverlapRequired', ...
                 'Feature-channel feedback requires the XY marginal.');
-            measurement=struct('gradient',zeros(3,1),'information',zeros(3),'linearizationPose',linearization, ...
-                'available',false,'similarity',0,'minimumInformation',NaN,'informationDenominator',1, ...
+            measurement=struct('gradient',zeros(3,1),'linearizationPose',linearization, ...
+                'available',false,'similarity',0,'minimumGramEigenvalue',NaN, ...
                 'mapComponents',0,'sourceComponents',0, ...
-                'sharedClasses',strings(1,0),'informationCalibrated',false,'seconds',0, ...
+                'sharedClasses',strings(1,0),'seconds',0, ...
                 'geometrySource',"per-feature-channel exact semantic overlap at the observer prediction");
-            measurement.channels=struct('name',{},'similarity',{},'rawSimilarity',{},'supportFraction',{},'gradient',{},'information',{},'informationDenominator',{});
+            measurement.channels=struct('name',{},'similarity',{},'rawSimilarity',{},'supportFraction',{},'gradient',{},'gram',{},'gramDenominator',{});
             local=localizationSupport.selectLocalProbabilityCloud(fixedCloud,pose,cfg.localMapRadius);
             if local.components.numComponents==0 || movingCloud.components.numComponents==0
                 measurement.seconds=toc(timer);return;
@@ -580,7 +596,7 @@ classdef localizationSupport
             end
             measurement.mapComponents=f.numComponents;measurement.sourceComponents=m.numComponents;
             f.mean(:,1:2)=f.mean(:,1:2)-pose(1:2);
-            origin=[0,0,pose(3)];gradient=zeros(3,1);information=zeros(3);
+            origin=[0,0,pose(3)];gradient=zeros(3,1);modelSum=zeros(3);
             cYaw=cos(pose(3));sYaw=sin(pose(3));
             toWorld=[cYaw,-sYaw,0;sYaw,cYaw,0;0,0,1];
             shared=intersect(f.semanticName(f.mixtureWeight>0),m.semanticName(m.mixtureWeight>0));
@@ -592,13 +608,14 @@ classdef localizationSupport
             logScore=0;count=0;hasSupport=false;commonDenominator=1;
             for c=1:numel(shared)
                 measurement.channels(c)=struct('name',shared(c),'similarity',NaN,'rawSimilarity',NaN,'supportFraction',0, ...
-                    'gradient',nan(3,1),'information',nan(3,3),'informationDenominator',1);
+                    'gradient',nan(3,1),'gram',nan(3,3),'gramDenominator',1);
                 fixedClass=overlapClassComponents(f,shared(c));
                 movingClass=overlapClassComponents(m,shared(c));
-                [fixedClass,movingClass,bodyGram]=localizationSupport.balanceSemanticDistributions(fixedClass,movingClass);
-                if nargout>1
+                if registration
+                    [fixedClass,movingClass]=localizationSupport.balanceSemanticDistributions(fixedClass,movingClass);
                     [energy,ascent,pairPrecision]=localizationSupport.semanticGaussianOverlap(fixedClass,movingClass,origin);
                 else
+                    [fixedClass,movingClass,bodyGram]=localizationSupport.balanceSemanticDistributions(fixedClass,movingClass);
                     [energy,ascent]=localizationSupport.semanticGaussianOverlap(fixedClass,movingClass,origin);
                 end
                 % The balanced fields have unit L2 norm. Their L1 masses
@@ -611,22 +628,25 @@ classdef localizationSupport
                 if ~(denominator>realmin),continue;end
                 score=min(energy,1);
                 fraction=energy/denominator;
-                if nargout>1
-                    registrationInformation=registrationInformation+fraction*pairPrecision;
-                end
                 g=-ascent(:)/denominator;
                 similarity=(score+background)/(1+background);
                 measurement.channels(c).rawSimilarity=score;
                 measurement.channels(c).similarity=similarity;
                 measurement.channels(c).supportFraction=fraction;
                 measurement.channels(c).gradient=g;
-                worldGram=toWorld*bodyGram*toWorld.';
-                [measurement.channels(c).information,measurement.channels(c).informationDenominator]= ...
-                    representFieldGram(worldGram,denominator);
+                if registration
+                    classMatrix=fraction*pairPrecision;
+                    classDenominator=1;
+                else
+                    classMatrix=toWorld*bodyGram*toWorld.';
+                    classDenominator=denominator;
+                    [measurement.channels(c).gram,measurement.channels(c).gramDenominator]= ...
+                        representFieldGram(classMatrix,denominator);
+                end
                 % Sum Gram fractions with multipliers at most one. Even a
                 % near-underflowing positive overlap retains its full gradient.
-                nextDenominator=min(commonDenominator,denominator);
-                information=information*(nextDenominator/commonDenominator)+worldGram*(nextDenominator/denominator);
+                nextDenominator=min(commonDenominator,classDenominator);
+                modelSum=modelSum*(nextDenominator/commonDenominator)+classMatrix*(nextDenominator/classDenominator);
                 commonDenominator=nextDenominator;
                 logScore=logScore+log(similarity);
                 gradient=gradient+g;
@@ -635,17 +655,19 @@ classdef localizationSupport
             end
             if count>0
                 gradient=gradient/count;
-                information=information/count;
-                information=information/2+information.'/2;
-                registrationInformation=registrationInformation/count;
+                modelSum=modelSum/count;
+                modelSum=modelSum/2+modelSum.'/2;
                 measurement.gradient=gradient;
-                [measurement.information,measurement.informationDenominator]=representFieldGram(information,commonDenominator);
+                [matrix,modelDenominator]=representFieldGram(modelSum,commonDenominator);
                 measurement.similarity=exp(logScore/count);
-                measurement.minimumInformation=min(eig(information))/commonDenominator;
+                if ~registration,measurement.minimumGramEigenvalue=min(eig(modelSum))/commonDenominator;end
                 measurement.available=hasSupport;
             end
             measurement.seconds=toc(timer);
         end
+    end
+
+    methods (Static)
 
         function measurement = buildLidarLineMeasurement(points,mapPoints,normals,pose,weights)
         % buildLidarLineMeasurement Frozen planar point-to-line residuals at prediction.
@@ -839,7 +861,7 @@ classdef localizationSupport
         % positive semidefinite. Its translation block is exact for one pair.
         % Inputs are component structs already validated at the API boundary.
             assert(nargout<3 || size(fixed.mean,2)==2,'VehicleLocalization:MetricRequiresXY', ...
-                'The Gauss-Newton overlap metric is defined for the XY marginal only.');
+                'The pair-center registration precision requires the XY marginal.');
             if size(fixed.mean,2)==3
                 if nargout > 1
                     [energy,gradient]=geometrySpatialGaussianOverlap(fixed,moving,pose);

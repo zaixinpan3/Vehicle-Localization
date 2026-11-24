@@ -37,7 +37,7 @@ function estimate=integrate(data,cfg,lateral,L)
     heading=localizationSupport.headingMeasurements(data,t,cfg);
     poseValid=G.valid & heading.valid;
     overlapDiagnostics=struct('evaluated',false(n,1),'available',false(n,1),'similarity',nan(n,1), ...
-        'minimumInformation',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3), ...
+        'minimumGramEigenvalue',nan(n,1),'seconds',nan(n,1),'gradient',nan(n,3), ...
         'channels',{cell(n,1)});
     alignment=struct('bodyOffset',[0;0],'bodyCovariance',zeros(2),'headingStdRad',0);
     if isfield(cfg.gnss,'outputPoint'),alignment=cfg.gnss.outputPoint;end
@@ -76,9 +76,9 @@ function estimate=integrate(data,cfg,lateral,L)
     headingInnovation=nan(n,1);
     rateInnovation=nan(n,1);
     lidarStrength=nan(n,1);maximumRate=0;
-    lidarAudits=cell(n,1);poseWeights=zeros(3,3,n);preLidarStates=zeros(n,stateCount);
+    lidarAudits=cell(n,1);poseGrams=zeros(3,3,n);lidarIncrements=zeros(n,stateCount);
     intrinsicStates=zeros(n,stateCount);invariantAudits=cell(n,1);
-    informationBounds=nan(n,3);poseWeightDenominator=ones(n,1);
+    gramBounds=nan(n,3);poseGramDenominator=ones(n,1);
     lidarPoseSupport=struct('rank',zeros(n,1),'minimumStrength',zeros(n,1), ...
         'fullPoseSupported',false(n,1),'headingStrengthAfterPosition',zeros(n,1), ...
         'headingSupported',false(n,1),'sectorQualified',false(n,1), ...
@@ -121,7 +121,7 @@ function estimate=integrate(data,cfg,lateral,L)
             if isfield(measurement,'similarity') && isfield(measurement,'channels')
                 overlapDiagnostics.evaluated(k)=true;overlapDiagnostics.available(k)=measurement.available;
                 overlapDiagnostics.similarity(k)=measurement.similarity;overlapDiagnostics.seconds(k)=measurement.seconds;
-                overlapDiagnostics.minimumInformation(k)=measurement.minimumInformation;
+                overlapDiagnostics.minimumGramEigenvalue(k)=measurement.minimumGramEigenvalue;
                 overlapDiagnostics.gradient(k,:)=measurement.gradient.';
                 overlapDiagnostics.channels{k}=measurement.channels;
                 L.valid(k)=measurement.available;
@@ -129,31 +129,31 @@ function estimate=integrate(data,cfg,lateral,L)
         end
         if L.valid(k)
             [lidarStep,audit,lidarLoss]=localizationSupport.computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
-                lidarInjection,cfg,StepSize=dt,Discretization="implicit");
+                lidarInjection,StepSize=dt,Discretization="implicit");
             assert(audit.jumpNonexpansive,'VehicleLocalization:LidarJumpCertificateFailed', ...
                 'The numerical LiDAR jump failed its fixed-metric energy check.');
-            lidarAudits{k}=audit;poseWeights(:,:,k)=audit.filter.S;
-            S=audit.filter.S;poseWeightDenominator(k)=audit.filter.informationDenominator;
-            informationBounds(k,:)=[min(eig(S(1:2,1:2))),S(3,3),norm(S(1:2,3))]/poseWeightDenominator(k);
-            support=localizationSupport.lidarPoseSupport(audit.filter,cfg);
+            lidarAudits{k}=audit;poseGrams(:,:,k)=audit.gram.matrix;
+            S=audit.gram.matrix;poseGramDenominator(k)=audit.gram.denominator;
+            gramBounds(k,:)=[min(eig(S(1:2,1:2))),S(3,3),norm(S(1:2,3))]/poseGramDenominator(k);
+            support=localizationSupport.lidarPoseSupport(audit.gram,cfg);
             for name=string(fieldnames(support)).'
                 lidarPoseSupport.(name)(k)=support.(name);
             end
             lidarPoseSupport.correctionApplied(k)=support.rank>0 && dt>0;
-            lidarStrength(k)=audit.filter.minimumEigenvalue;
+            lidarStrength(k)=audit.gram.minimumEigenvalue;
         end
         % One implicit increment couples all innovations at the prediction.
         % Apply the frozen LiDAR resolvent using its thin SVD.
         lidarTransition=eye(stateCount)-lidarLoss;
         delta=(eye(stateCount)+dt*lidarTransition*B)\(T\lidarStep+dt*lidarTransition*b);
         onboard=dt*(b-B*delta);
-        % Attribution at the joint solution, before adding the LiDAR contribution.
-        preLidarStates(k,:)=(x+T*onboard).';
         x=x+T*delta;
         gnssRate=Kg([1,4],:)*(linearResidual-(Cg*T)*delta);
         motionAudit.normalizedCorrection=dt*motionGain*(motionResidual-Q*delta);
         invariantAudits{k}=motionAudit;
         if L.valid(k)
+            % Attribute the physical increment at the common implicit solution.
+            lidarIncrements(k,:)=(T*(delta-onboard)).';
             rateCorrection=audit.continuousCorrection;
             if dt>0,rateCorrection=(lidarStep-T*(lidarLoss*onboard))/dt;end
             correction(k,3:4)=rateCorrection([1,4]).';yawCorrection(k)=rateCorrection(7);
@@ -173,9 +173,9 @@ function estimate=integrate(data,cfg,lateral,L)
     estimate.diagnostics=struct('gnssPoseValid',poseValid,'lidarValid',logical(L.valid(:)),'positionCorrection',correction, ...
         'gnssPositionAtObserverPoint',gnssPosition, ...
         'yawCorrection',yawCorrection, ...
-        'lidarMatched',{lidarAudits},'poseWeight',poseWeights,'poseWeightDenominator',poseWeightDenominator, ...
-        'preLidarState',preLidarStates, ...
-        'lidarInformationBounds',informationBounds, ...
+        'lidarMatched',{lidarAudits},'poseGram',poseGrams,'poseGramDenominator',poseGramDenominator, ...
+        'lidarIncrement',lidarIncrements, ...
+        'lidarGramBounds',gramBounds, ...
         'independentHeadingValid',heading.valid, ...
         'independentHeadingInnovation',measuredInnovation,'recoveredHeading',recoveredHeading, ...
         'observedMotionEnvelopeSatisfied', ...

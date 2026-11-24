@@ -28,8 +28,10 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % Low-speed wheel/gyro packets enter through the same motion innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
 % The log-overlap gradient enters directly. The sampled step uses the scan
-% Jacobian Gram. diagnostics.poseWeight(:,:,k)/poseWeightDenominator(k)
+% Jacobian Gram. diagnostics.poseGram(:,:,k)/poseGramDenominator(k)
 % gives the nominal pose Gram, and lidarPoseSupport describes its geometry.
+% diagnostics.lidarIncrement is the physical state increment attributable to
+% LiDAR at the joint solution, with one row per epoch.
     arguments
         data (1,1) struct
         cfg (1,1) struct=mncavFullObserverConfig()

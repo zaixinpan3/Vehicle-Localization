@@ -38,7 +38,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) fullObserverContinuous
             r=syntheticObserver.run(data,c,LateralInputs=lat);
             testCase.verifyTrue(r.diagnostics.nominalFusionLmiVerified);
             testCase.verifyFalse(any(r.diagnostics.lidarPoseSupport.sectorQualified));
-            testCase.verifyEqual(r.diagnostics.poseWeight,zeros(3,3,2));
+            testCase.verifyEqual(r.diagnostics.poseGram,zeros(3,3,2));
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
         end
     end

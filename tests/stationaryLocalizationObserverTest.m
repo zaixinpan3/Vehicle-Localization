@@ -47,32 +47,32 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
         end
         function supportRespectsCouplingAndRawAdmission(testCase,supportCase)
             cfg=mncavFullObserverConfig();
-            filter=informationFilter(supportCase.information);
-            s=localizationSupport.lidarPoseSupport(filter,cfg);
+            gram=localizationSupport.decomposeLidarGram(supportCase.information);
+            s=localizationSupport.lidarPoseSupport(gram,cfg);
             testCase.verifyEqual(s.rank,supportCase.rank);
             testCase.verifyEqual(s.fullPoseSupported,supportCase.rank==3);
             testCase.verifyEqual(s.headingSupported,supportCase.heading);
-            testCase.verifyLessThanOrEqual(s.rank,filter.rank);
+            testCase.verifyLessThanOrEqual(s.rank,gram.rank);
         end
         function coupledYawDiagonalIsNotIndependentHeading(testCase)
             f=fixture();
             f.data.lidar.information=repmat([1e6,0,1e6;0,2e6,0;1e6,0,1e6],1,1,numel(f.lateral.time));
             r=execute(f);s=r.diagnostics.lidarPoseSupport;
-            testCase.verifyGreaterThan(min(squeeze(r.diagnostics.poseWeight(3,3,:))),0);
+            testCase.verifyGreaterThan(min(squeeze(r.diagnostics.poseGram(3,3,:))),0);
             testCase.verifyFalse(any(s.headingSupported));
             testCase.verifyFalse(any(s.sectorQualified));
             testCase.verifyLessThan(max(s.headingStrengthAfterPosition),1e-20);
         end
         function headingStrengthMatchesMarginalInformation(testCase)
             cfg=mncavFullObserverConfig();I=[8,2,3;2,7,-1;3,-1,6]*1e3;
-            filter=informationFilter(I);S=filter.S;s=localizationSupport.lidarPoseSupport(filter,cfg);
+            gram=localizationSupport.decomposeLidarGram(I);S=gram.matrix;s=localizationSupport.lidarPoseSupport(gram,cfg);
             expected=S(3,3)-S(3,1:2)*(S(1:2,1:2)\S(1:2,3));
             testCase.verifyEqual(s.headingStrengthAfterPosition,expected,RelTol=5e-14);
             testCase.verifyGreaterThan(s.minimumStrength,0);
         end
         function numericallyFullPoseCanFailConfiguredSector(testCase)
-            cfg=mncavFullObserverConfig();filter=informationFilter(.5*eye(3));
-            s=localizationSupport.lidarPoseSupport(filter,cfg);
+            cfg=mncavFullObserverConfig();gram=localizationSupport.decomposeLidarGram(.5*eye(3));
+            s=localizationSupport.lidarPoseSupport(gram,cfg);
             testCase.verifyTrue(s.fullPoseSupported);
             testCase.verifyFalse(s.sectorQualified);
         end
@@ -131,10 +131,6 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) stationaryLocalization
             testCase.verifyTrue(all(isfinite(r.internalState),'all'));
         end
     end
-end
-
-function filter=informationFilter(normalized)
-    filter=localizationSupport.filterLidarPoseInformation(normalized);
 end
 
 function f=fixture(duration)

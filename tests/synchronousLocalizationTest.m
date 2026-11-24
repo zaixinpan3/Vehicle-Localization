@@ -66,14 +66,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             testCase.verifyEqual(r.position(:,1)-plain.position(:,1),2*ones(size(r.time)),AbsTol=1e-11);
             testCase.verifyEqual(r.velocity,plain.velocity,AbsTol=1e-12);
             testCase.verifyLessThan(abs(r.position(end,2)),.002);
-            testCase.verifyEqual(r.diagnostics.lidarMatched{end}.filter.rank,2);
+            testCase.verifyEqual(r.diagnostics.lidarMatched{end}.gram.rank,2);
         end
         function translationYawCrossTermsReachTheRuntime(testCase)
             f=fixture();f.data=rmfield(f.data,'gnss');f.cfg.initialState(1)=.2;
             f.data.lidar.information=repmat([100,0,20;0,100,0;20,0,100],1,1,21);
             r=run(f);
             testCase.verifyLessThan(r.headingUnwrapped(2),0);
-            testCase.verifyGreaterThan(abs(r.diagnostics.poseWeight(1,3,2)),0);
+            testCase.verifyGreaterThan(abs(r.diagnostics.poseGram(1,3,2)),0);
             testCase.verifyTrue(r.diagnostics.lidarMatched{2}.jumpNonexpansive);
         end
         function zeroInformationIsAValidZeroCorrection(testCase)
