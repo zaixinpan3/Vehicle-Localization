@@ -176,17 +176,21 @@ classdef localizationSupport
             packet=struct('value',value,'valid',valid);
         end
 
-        function [next,audit]=correct(state,packet,dt,design,cfg)
+        function [Q,residual,audit]=linearizeMotion(state,packet,design,cfg)
             [value,H]=localizationSupport.outputs(state,cfg);
             active=logical(packet.valid);
-            C=H(active,:)*design.toPhysical;
+            Q=H(active,:)*design.toPhysical;
             residual=packet.value(active)-value(active);
-            % Unit weights on the four physical motion outputs, Eq. (53).
-            step=dt*design.theta;
-            delta=(design.P+step*(C.'*C))\(step*C.'*residual);
-            next=state+design.toPhysical*delta;
             audit=struct('innovation',packet.value-value,'valid',active, ...
-                'allAuxiliaryOutputsAvailable',all(active),'predicted',value,'normalizedCorrection',delta);
+                'allAuxiliaryOutputsAvailable',all(active),'predicted',value);
+        end
+
+        function [next,audit]=correct(state,packet,dt,design,cfg)
+            [Q,residual,audit]=localizationSupport.linearizeMotion(state,packet,design,cfg);
+            step=dt*design.theta;
+            delta=(design.P+step*(Q.'*Q))\(step*Q.'*residual);
+            next=state+design.toPhysical*delta;
+            audit.normalizedCorrection=delta;
         end
 
         function inputs=invariantInputs(cfg)
@@ -401,7 +405,7 @@ classdef localizationSupport
                 'informationInterpretation',"Weighted geometric surrogate; not calibrated covariance");
         end
 
-        function [correction,audit] = computeLidarMatchedCorrection(measurement,pose,G,design,cfg,options)
+        function [correction,audit,scaledLoss] = computeLidarMatchedCorrection(measurement,pose,G,design,cfg,options)
         % computeLidarMatchedCorrection Continuous LiDAR injection and its discretization.
         % The scaled pose Jacobian G*T is theta times the pose selector
         % in N=T*(P\C')*F. The physical-time gradient uses this selector.
@@ -501,7 +505,7 @@ classdef localizationSupport
             v=L.'\whitened;Q=(B*L.').'*(B*L.');
             largest=max(singular)^2;step=options.StepSize;
             gainBound=max(filter.eigenvalues)/theta;
-            contraction=eye(n);
+            loss=zeros(n);
             if options.Discretization=="continuous"
                 correction=T*v;
             elseif options.Discretization=="implicit"
@@ -510,13 +514,17 @@ classdef localizationSupport
                 response=sqrt(step)*(h./hypot(1,h))./hypot(1,h);
                 delta=right*(response.*(left.'*y));
                 correction=T*(L.'\delta);
-                contraction=contraction-right*diag(attenuation)*right.';
+                loss=right*diag(attenuation)*right.';
             else
                 if largest>0,step=min(step,1.8/largest);end
                 correction=T*(step*v);
-                contraction=contraction-right*diag(step*singular.^2)*right.';
+                loss=right*diag(step*singular.^2)*right.';
             end
-            energyRatio=norm(contraction,2)^2;
+            if nargout>2
+                % I minus the frozen-channel transition in scaled coordinates.
+                scaledLoss=L.'\(loss*L.');
+            end
+            energyRatio=norm(eye(n)-loss,2)^2;
             audit=struct('filter',filter,'C',C,'dissipationMatrix',Q, ...
                 'continuousCorrection',T*v,'effectiveStrengths',filter.strengths/theta, ...
                 'maximumDissipationEigenvalue',largest,'requestedStep',options.StepSize, ...

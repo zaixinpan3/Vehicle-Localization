@@ -61,8 +61,9 @@ function estimate=integrate(data,cfg,lateral,L)
     linearOutput=zeros(4,stateCount);
     linearOutput(1:3,:)=poseJacobian;
     linearOutput(4,8)=1;
-    headingKinematics=zeros(stateCount);headingKinematics(7,8)=1;
-    design=struct('kind',"nominal-fusion-implicit",'continuousDesign',continuous, ...
+    T=continuous.toPhysical;theta=continuous.theta;P=continuous.P;
+    scaledHeadingDrift=zeros(stateCount);scaledHeadingDrift(7,8)=theta;
+    design=struct('kind',"nominal-fusion-joint-implicit",'continuousDesign',continuous, ...
         'lidarMatched',lidarInjection,'lidarJumpCertificate',"Implicit locally affine fixed-metric contraction", ...
         'designRoute',continuous.designRoute, ...
         'sampledSystemCertified',false);
@@ -105,14 +106,14 @@ function estimate=integrate(data,cfg,lateral,L)
         end
         rows=[G.valid(k),G.valid(k),angularValid(k),rateValid(k)];
         Kg=continuous.linearOutputGain(:,rows);Cg=linearOutput(rows,:);observation=observation(rows);
-        % The empty packet contributes a zero right-hand side to the same solve.
-        x=x+(eye(8)+dt*(Kg*Cg-headingKinematics))\(dt*Kg*(observation-Cg*x));
-        gnssRate=Kg([1,4],:)*(observation-Cg*x);
+        linearResidual=observation-Cg*x;
         packet=localizationSupport.measurements(speed,vy,h.longitudinalAcceleration(k), ...
-            h.lateralAcceleration(k), ...
-            velocityValid(k),accelerationValid(k),cfg);
-        [x,invariantAudits{k}]=localizationSupport.correct(x,packet,dt,continuous,cfg);
-        preLidarStates(k,:)=x.';
+            h.lateralAcceleration(k),velocityValid(k),accelerationValid(k),cfg);
+        [Q,motionResidual,motionAudit]=localizationSupport.linearizeMotion(x,packet,continuous,cfg);
+        K=T\Kg;motionGain=theta*(P\Q.');
+        B=K*(Cg*T)+motionGain*Q-scaledHeadingDrift;
+        b=K*linearResidual+motionGain*motionResidual;
+        lidarStep=zeros(stateCount,1);lidarLoss=zeros(stateCount);
         if L.valid(k)
             measurement=L.evaluate(k,x([1,4,7]));
             assert(~isfield(measurement,'pose') && (isfield(measurement,'gradient') || isfield(measurement,'residual')), ...
@@ -127,11 +128,11 @@ function estimate=integrate(data,cfg,lateral,L)
             end
         end
         if L.valid(k)
-            [delta,audit]=localizationSupport.computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
+            [lidarStep,audit,lidarLoss]=localizationSupport.computeLidarMatchedCorrection(measurement,x([1,4,7]),poseJacobian, ...
                 lidarInjection,cfg,StepSize=dt,Discretization="implicit");
             assert(audit.jumpNonexpansive,'VehicleLocalization:LidarJumpCertificateFailed', ...
                 'The numerical LiDAR jump failed its fixed-metric energy check.');
-            x=x+delta;lidarAudits{k}=audit;poseWeights(:,:,k)=audit.filter.S;
+            lidarAudits{k}=audit;poseWeights(:,:,k)=audit.filter.S;
             S=audit.filter.S;
             informationBounds(k,:)=[min(eig(S(1:2,1:2))),S(3,3),norm(S(1:2,3))];
             support=localizationSupport.lidarPoseSupport(audit.filter,cfg);
@@ -139,10 +140,23 @@ function estimate=integrate(data,cfg,lateral,L)
                 lidarPoseSupport.(name)(k)=support.(name);
             end
             lidarPoseSupport.correctionApplied(k)=support.rank>0 && dt>0;
-            rateCorrection=audit.continuousCorrection;
-            if dt>0,rateCorrection=delta/dt;end
-            correction(k,3:4)=rateCorrection([1,4]).';yawCorrection(k)=rateCorrection(7);
             lidarStrength(k)=min(audit.filter.strengths);
+        end
+        % One implicit increment couples all innovations at the prediction.
+        % Apply the frozen LiDAR resolvent using its thin SVD.
+        lidarTransition=eye(stateCount)-lidarLoss;
+        delta=(eye(stateCount)+dt*lidarTransition*B)\(T\lidarStep+dt*lidarTransition*b);
+        onboard=dt*(b-B*delta);
+        % Attribution at the joint solution, before adding the LiDAR contribution.
+        preLidarStates(k,:)=(x+T*onboard).';
+        x=x+T*delta;
+        gnssRate=Kg([1,4],:)*(linearResidual-(Cg*T)*delta);
+        motionAudit.normalizedCorrection=dt*motionGain*(motionResidual-Q*delta);
+        invariantAudits{k}=motionAudit;
+        if L.valid(k)
+            rateCorrection=audit.continuousCorrection;
+            if dt>0,rateCorrection=(lidarStep-T*(lidarLoss*onboard))/dt;end
+            correction(k,3:4)=rateCorrection([1,4]).';yawCorrection(k)=rateCorrection(7);
         end
         assert(all(isfinite(x)),'VehicleLocalization:NonfiniteObserver','Synchronous update became nonfinite.');
         correction(k,1:2)=gnssRate.';

@@ -12,6 +12,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             testCase.verifyEqual(r.position,[8*r.time,zeros(size(r.time))],AbsTol=1e-10);
             testCase.verifyEqual(r.diagnostics.localizationUpdates,numel(r.time)-1);
         end
+        function allInnovationsSolveOneFrozenEquation(testCase)
+            f=fixture(.1);f.cfg.initialState=[.1;5;0;-.2;1;0;.15;.1];
+            I=[4,0,1;0,3,0;1,0,2];f.data.lidar.information=repmat(I,1,1,2);
+            r=run(f);x=r.diagnostics.intrinsicPrediction(2,:).';
+            d=r.observer.continuousDesign;T=d.toPhysical;P=d.P;h=.1;E=eye(8);
+            C=E([1,4,7,8],:);Cp=C(1:3,:);A=E(:,7)*E(8,:);
+            [value,H]=localizationSupport.outputs(x,f.cfg);
+            Q=H*T;K=T\d.linearOutputGain;
+            y=[.8;0;0;0];ym=[64;0;0;0];yl=y(1:3);
+            D=P*(K*C-T\A)*T+d.theta*(Q.'*Q+Cp.'*(I^2)*Cp);
+            b=P*K*(y-C*x)+d.theta*Q.'*(ym-value)+Cp.'*(I^2)*(yl-Cp*x);
+            expected=x+T*((P+h*D)\(h*b));
+            testCase.verifyEqual(r.internalState(2,:).',expected,AbsTol=1e-9);
+        end
         function asynchronousSourceIsRejected(testCase)
             f=fixture();f.data.gnss.time(2)=.11;
             testCase.verifyError(@()run(f),'VehicleLocalization:SynchronousInputsRequired');
@@ -67,7 +81,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             f.data=rmfield(f.data,'lidar');b=run(f);
             testCase.verifyEqual(a.z,b.z,AbsTol=0);
         end
-        function runtimeResidualProviderUsesPostBaselinePrediction(testCase)
+        function runtimeResidualProviderUsesTheIntrinsicPrediction(testCase)
             f=fixture(5);f.cfg.initialState(4)=.2;
             f.data.lidar.evaluateResidual=@lineResidual;
             r=run(f);
