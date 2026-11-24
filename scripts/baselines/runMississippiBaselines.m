@@ -33,7 +33,8 @@ function runMississippiBaselines(outputFolder,options)
     tuningFile=fullfile(outputFolder,'ekf_tuning.json');
     assert(isfile(tuningFile),'VehicleLocalization:BaselineTuningRequired','Run tuneMississippiEkf on the declared calibration prefix before test replays.');
     tuning=jsondecode(fileread(tuningFile));
-    if ~isfield(tuning,'gridVersion') || tuning.gridVersion~=4
+    if ~isfield(tuning,'gridVersion') || tuning.gridVersion~=4 ...
+            || ~isfield(tuning,'observerArchitecture') || string(tuning.observerArchitecture)~=cfg.kind
         tuneMississippiEkf(outputFolder,options.TemporaryFolder);tuning=jsondecode(fileread(tuningFile));
     end
     meta.ekfTuning=tuning;

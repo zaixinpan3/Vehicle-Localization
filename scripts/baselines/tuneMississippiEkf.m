@@ -21,6 +21,7 @@ function tuneMississippiEkf(folder,tmp)
         end
     end
     tuning.gridVersion=4;
+    tuning.observerArchitecture=cfg.kind;
     tuning.protocol="Drive2 prefix t<40 s only; original reference; squared position loss; frozen before final test replay";
     fid=fopen(fullfile(folder,'ekf_tuning.json'),'w');fprintf(fid,'%s',jsonencode(tuning,PrettyPrint=true));fclose(fid);
 end
