@@ -13,8 +13,8 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % LateralInputs.yawRate is the upstream yaw-rate observation in rad/s. Its
 % difference from the internal rate enters the first (linear) feedback term.
 % A finite value is active when yawRateValid is true (defaults to true).
-% Missing or invalid rate holds the previous rate while heading integrates it.
-% Motion, LiDAR and GNSS have zero gain into the rate state.
+% During upstream-rate gaps, heading propagates with the internal rate.
+% The common angular metric lets other available innovations update that rate.
 % gnss.valid enables position feedback. Optional gnss.heading is in radians
 % on that packet's clock; NaN means heading is unavailable. A separate
 % data.gnssHeading stream can instead supply its own time, valid and delay=0.
