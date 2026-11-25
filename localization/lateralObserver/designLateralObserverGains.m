@@ -38,7 +38,7 @@ function design = designLateralObserverGains(cfg)
     design.model = model;
     design.polytope = polytope;
     design.certificateDomain = domain;
-    design.certificateMethod = "column-affine-expanded-iss-free-distributed-v11";
+    design.certificateMethod = "column-affine-expanded-iss-free-distributed-v12";
     design.gainRecoveryMatrix = value(variables.X);
     design.gainBasis = struct('accelerationReciprocal', value(variables.basis.accelerationReciprocal), ...
         'yawConstant', value(variables.basis.yawConstant), 'yawSpeed', value(variables.basis.yawSpeed));
@@ -135,8 +135,8 @@ function [constraints, blocks, noiseMatrices] = certificateConstraints( ...
         speedColumn = variables.basis.accelerationReciprocal;
         S = [-sigma(1)*speedColumn, -sigma(2)*Y(:, 2)];
         noiseMatrices{idx} = S;
-        % The physical acceleration feedthrough gives a speed-independent process block.
-        processInjection = (X - [speedColumn, zeros(2,1)])*double(cfg.processDistribution)*processScale;
+        % Process disturbance enters only the state dynamics without output feedthrough.
+        processInjection = X*double(cfg.processDistribution)*processScale;
         inputBlock = [processInjection, S];
         constraints = [constraints, P >= (1 + margin)*eye(2)]; %#ok<AGROW>
         if isfinite(cfg.pCeiling)
