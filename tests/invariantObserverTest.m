@@ -30,9 +30,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) invariantObserverTest 
         end
         function temporaryIntrinsicCertificateIsRecomputed(testCase)
             cfg=freshObserverTestConfig();d=localizationSupport.runtime(cfg);v=d.continuousCertificate.verification;
-            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,4);
+            testCase.verifyTrue(v.certified);testCase.verifyEqual(v.vertices,2);
             testCase.verifyLessThan(v.worstVertexEigenvalue,0);testCase.verifyFalse(v.actualOverlapCertified);
-            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,4);
+            testCase.verifyTrue(v.nominalFusionLmiVerified);testCase.verifyEqual(v.nominalFusion.vertices,2);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
             testCase.verifyFalse(v.operatingSet.invarianceVerified);
             testCase.verifySize(d.P,[8,8]);

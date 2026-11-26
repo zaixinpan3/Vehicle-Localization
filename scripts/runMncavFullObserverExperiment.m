@@ -111,7 +111,7 @@ function report=runMncavFullObserverExperiment(outputFolder,options)
     end
     report.alignmentControls=cell2table(controlRows,VariableNames={'method','positionRmseM', ...
         'positionMedianM','positionP95M','positionMaximumM','fractionAtMost10cm','headingRmseDeg','acceptedPositionRmseM'});
-    report.alignmentControlGainPolicy="One four-vertex design shared by all receiver geometry controls";
+    report.alignmentControlGainPolicy="One Hermitian endpoint design shared by all receiver geometry controls";
     writetable(report.alignmentControls,fullfile(outputFolder,'alignment_controls.csv'));
     wheel=prepared.wheelVelocity;
     save(fullfile(outputFolder,'experiment.mat'),'data','lateral','lateralDesign','cfg','runs','reference','wheel','report','bestpos','-v7.3');
