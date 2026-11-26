@@ -21,8 +21,9 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) synchronousLocalizatio
             [value,H]=localizationSupport.outputs(x,f.cfg);
             Q=H*T;K=T\d.linearOutputGain;
             y=[.8;0;0;0];ym=[8;0;0;0];yl=y(1:3);
-            D=P*(K*C-T\A)*T+d.theta*(Q.'*Q+Cp.'*I*Cp);
-            b=P*K*(y-C*x)+d.theta*Q.'*(ym-value)+Cp.'*I*(yl-Cp*x);
+            S=diag(d.lidarMatched.poseStrengthFloor);feedbackGram=2*S*((I+S)\I);
+            D=P*(K*C-T\A)*T+d.theta*(Q.'*Q+Cp.'*feedbackGram*Cp);
+            b=P*K*(y-C*x)+d.theta*Q.'*(ym-value)+Cp.'*feedbackGram*(yl-Cp*x);
             expected=x+T*((P+h*D)\(h*b));
             testCase.verifyEqual(r.internalState(2,:).',expected,AbsTol=1e-9);
         end

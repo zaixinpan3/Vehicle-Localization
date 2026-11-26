@@ -208,7 +208,7 @@ classdef localizationSupport
                 cfg.iss.minimumPositionStrength,cfg.iss.minimumHeadingStrength], ...
                 {'double'},{'real','finite','positive'});
             validateattributes([cfg.iss.maximumAcceleration,cfg.maximumBodyYawRate],{'double'},{'real','finite','nonnegative'});
-            inputs=struct('architecture',"common-pose-field-gram-body-components-v2",'theta',z.theta, ...
+            inputs=struct('architecture',"common-pose-field-gram-body-components-v3",'theta',z.theta, ...
                 'lambda',z.lambda,'margin',z.margin,'solver',z.solver, ...
                 'iss',cfg.iss,'bodyYawRateBound',cfg.maximumBodyYawRate);
         end
@@ -282,13 +282,14 @@ classdef localizationSupport
             assert(v.certified,'VehicleLocalization:InfeasibleInvariantDesign','Temporary gains fail the four-vertex certificate.');
             toPhysical=diag(theta.^[1,2,3,1,2,3,1,2]);
             E=eye(8);L=toPhysical*(h.P\[E(:,[1,4,7]),theta^3*E(:,8)]);
+            strengths=localizationSupport.poseSourceBounds(cfg);
             matched=struct('P',h.P,'T',toPhysical,'theta',theta,'scalingExponents',[1;2;3;1;2;3;1;2], ...
-                'metricSource',"Four-vertex feasibility LMI");
+                'poseStrengthFloor',strengths(:,2),'metricSource',"Four-vertex feasibility LMI");
             runtime=struct('kind',cfg.kind,'P',h.P,'theta',theta,'toPhysical',toPhysical, ...
                 'linearOutputGain',L, ...
                 'lidarMatched',matched,'continuousCertificate',struct('design',h,'verification',v), ...
                 'nominalFusionLmiVerified',v.nominalFusionLmiVerified, ...
-                'designRoute',"Physical GNSS pose, unit motion weights and direct log-overlap gradient", ...
+                'designRoute',"Physical GNSS pose, unit motion weights and Gram-weighted log-overlap gradient", ...
                 'actualOverlapCertified',false,'sampledSystemCertified',false,'scope',v.scope);
         end
 
@@ -405,39 +406,37 @@ classdef localizationSupport
                 'conditionNumber',condition,'effectiveDimension',dimension);
         end
 
-        function [correction,audit,scaledLoss] = computeLidarMatchedCorrection(measurement,pose,G,design,options)
+        function [correction,audit,scaledLoss] = computeLidarMatchedCorrection(measurement,pose,poseJacobian,design,options)
         % computeLidarMatchedCorrection Continuous LiDAR injection and its discretization.
-        % The physical pose selector is G*T/theta in high-gain coordinates.
-        % A predicted-pose packet supplies either a cost gradient, or residuals
-        % with their Jacobian and PSD precision. The continuous injection uses
-        % the gradient directly. The optional gram field is the nominal
-        % residual Gram for diagnostics and discretization. A gradient alone
-        % suffices for the continuous rate. The frozen implicit transition is
-        % nonexpansive in P for any nonnegative step.
+        % A predicted-pose packet supplies the cost gradient and its Gram G,
+        % or residuals with their Jacobian and PSD precision. With pose gain L
+        % and design floor S, inject -2*L*S*((G+S)\gradient). The frozen
+        % sampled step uses the same multiplier on G.
             arguments
                 measurement (1,1) struct
                 pose (3,1) double {mustBeReal,mustBeFinite}
-                G double {mustBeReal,mustBeFinite}
+                poseJacobian double {mustBeReal,mustBeFinite}
                 design (1,1) struct
                 options.StepSize (1,1) double {mustBeReal,mustBeFinite,mustBeNonnegative} = 0
                 options.Discretization (1,1) string {mustBeMember(options.Discretization,["continuous","implicit","explicit"])} = "continuous"
             end
-            assert(isfield(design,'theta') && all(ismember(fieldnames(design), ...
-                {'P','T','theta','scalingExponents','metricSource'})), ...
-                'VehicleLocalization:StaleInvariantDesign','Regenerate the LiDAR-normalized metric.');
+            assert(all(isfield(design,{'P','T','theta','poseStrengthFloor'})) && all(ismember(fieldnames(design), ...
+                {'P','T','theta','poseStrengthFloor','scalingExponents','metricSource'})), ...
+                'VehicleLocalization:StaleInvariantDesign','Supply the current metric and LiDAR pose-strength floor.');
+            validateattributes(design.poseStrengthFloor,{'double'},{'real','finite','positive','size',[3,1]});
             P=design.P;T=design.T;theta=design.theta;n=size(P,1);
             assert(isreal(P) && isequal(size(P),[n,n]) && all(isfinite(P),'all') && ...
                 norm(P-P.','fro')<=1e-12*max(1,norm(P,'fro')), ...
                 'VehicleLocalization:InvalidLidarMetric','P must be finite symmetric positive definite.');
-            [L,flag]=chol((P+P.')/2,'lower');
+            [metricFactor,flag]=chol((P+P.')/2,'lower');
             assert(flag==0 && isequal(size(T),[n,n]) && isreal(T) && all(isfinite(T),'all') ...
-                && rcond(T)>eps && isequal(size(G),[3,n]), ...
+                && rcond(T)>eps && isequal(size(poseJacobian),[3,n]), ...
                 'VehicleLocalization:InvalidLidarMetric','Require SPD P, nonsingular fixed T and a 3-by-n pose Jacobian.');
             validateattributes(theta,{'numeric'},{'real','finite','positive','scalar'});
             residualMode=isfield(measurement,'residual');gradientMode=isfield(measurement,'gradient');
             if residualMode || gradientMode
                 assert(~any(isfield(measurement,{'information','pairPrecision'})), ...
-                    'VehicleLocalization:AmbiguousLidarMeasurement','Supply the nominal residual Gram for a sampled gradient packet.');
+                    'VehicleLocalization:AmbiguousLidarMeasurement','Supply the nominal residual Gram with the cost gradient.');
             end
             assert(~(residualMode && gradientMode),'VehicleLocalization:AmbiguousLidarMeasurement', ...
                 'Choose residual or gradient input.');
@@ -451,7 +450,9 @@ classdef localizationSupport
                 representation="predictedPoseGradient";
                 assert(numel(gradient)==3 && isreal(gradient) && all(isfinite(gradient)), ...
                     'VehicleLocalization:InvalidLidarGradient','The pose gradient must contain three finite values.');
-                if isfield(measurement,'gram'),matrix=measurement.gram;end
+                assert(isfield(measurement,'gram'),'VehicleLocalization:MissingLidarGram', ...
+                    'The LiDAR feedback requires the nominal Gram at the predicted pose.');
+                matrix=measurement.gram;
             elseif residualMode
                 assert(~isfield(measurement,'pose') && ~isfield(measurement,'gram'), ...
                     'VehicleLocalization:AmbiguousLidarMeasurement','Supply residual weights and Jacobian without a pose or separate Gram.');
@@ -480,39 +481,30 @@ classdef localizationSupport
                 error('VehicleLocalization:InvalidLidarMeasurement', ...
                     'Supply a cost gradient or geometric residual evaluated at the predicted pose.');
             end
-            C=G*T;
-            force=-(C.'*gradient)/theta;
-            rate=T*(L.'\(L\force));
-            if gradientMode && ~isfield(measurement,'gram')
-                assert(options.Discretization=="continuous", ...
-                    'VehicleLocalization:MissingLidarGram','A sampled correction requires the nominal pose Gram.');
-                correction=rate;
-                audit=struct('representation',representation,'continuousCorrection',rate, ...
-                    'jumpCertificateApplies',false,'gram',[],'dissipationMatrix',[]);
-                scaledLoss=[];
-                return
-            end
             denominator=1;
             if gradientMode && isfield(measurement,'gramDenominator')
                 denominator=measurement.gramDenominator;
             end
             gram=localizationSupport.decomposeLidarGram(matrix,denominator);
+            [weightedAscent,feedbackFactor]=conditionLidarGradient(-gradient,gram,design.poseStrengthFloor);
+            feedbackGram=feedbackFactor.'*feedbackFactor;
+            C=poseJacobian*T;
+            force=(C.'*weightedAscent)/theta;
+            rate=T*(metricFactor.'\(metricFactor\force));
             % Work in the at-most-three-dimensional pose subspace of whitened
-            % state space. The SVD attenuates each component of the raw force,
-            % including a unit response along a zero-curvature direction.
-            [basis,R]=qr((C/L.').','econ');
-            factor=(sqrt(gram.eigenvalues).*gram.eigenvectors.')*R.'/sqrt(theta);
+            % state space to apply the frozen effective Gram implicitly.
+            [basis,R]=qr((C/metricFactor.').','econ');
+            factor=feedbackFactor*R.'/sqrt(theta);
             [~,singular,V]=svd(factor,'econ','vector');
             directions=basis*V;
-            singular=singular/sqrt(denominator);
             peak=max(singular);step=options.StepSize;
             loss=zeros(n);
             if options.Discretization=="continuous"
                 correction=rate;
             elseif options.Discretization=="implicit"
                 scale=hypot(1/sqrt(step),singular);
-                coefficients=-(V.'*(R*gradient))/theta;
-                correction=T*(L.'\(directions*((coefficients./scale)./scale)));
+                coefficients=(V.'*(R*weightedAscent))/theta;
+                correction=T*(metricFactor.'\(directions*((coefficients./scale)./scale)));
                 loss=directions*diag((singular./scale).^2)*directions.';
             else
                 if peak>0,step=min(step,(1.8/peak)/peak);end
@@ -521,11 +513,11 @@ classdef localizationSupport
             end
             if nargout>2
                 % I minus the frozen-channel transition in scaled coordinates.
-                scaledLoss=L.'\(loss*L.');
+                scaledLoss=metricFactor.'\(loss*metricFactor.');
             end
             energyRatio=norm(eye(n)-loss,2)^2;
-            audit=struct('gram',gram,'C',C,'dissipationMatrix',C.'*(gram.matrix/theta)*C, ...
-                'dissipationDenominator',denominator,'continuousCorrection',rate, ...
+            audit=struct('gram',gram,'feedbackGram',feedbackGram,'C',C,'dissipationMatrix',C.'*(feedbackGram/theta)*C, ...
+                'dissipationDenominator',1,'continuousCorrection',rate, ...
                 'maximumDissipationEigenvalue',peak^2,'requestedStep',options.StepSize, ...
                 'appliedStep',step,'explicitStepProduct',(sqrt(step)*peak)^2, ...
                 'jumpMaximumEnergyRatio',energyRatio, ...
@@ -1675,6 +1667,24 @@ function value=sensorWorstEigenvalue(matrices)
 end
 
 % LiDAR measurement and correction: local helpers
+function [weightedAscent,feedbackFactor]=conditionLidarGradient(ascent,gram,floorDiagonal)
+% For D=sqrt(S), diagonalize D^-1 G D^-1 using a square root of the Gram
+% numerator. Keep its denominator separate even when G would overflow.
+    D=diag(sqrt(floorDiagonal));
+    scanFactor=(sqrt(gram.eigenvalues).*gram.eigenvectors.')/D;
+    [~,sigma,U]=svd(scanFactor,'vector');
+    sigma(nnz(gram.eigenvalues)+1:end)=0; % Preserve exact null directions of the numerator.
+    rootDenominator=sqrt(gram.denominator);
+    scale=hypot(rootDenominator,sigma);
+    attenuation=rootDenominator./scale;
+    % 2 S (G+S)^-1 on the ascent gradient, and a square root of 2 S (G+S)^-1 G.
+    % Split the attenuation across the projection so a large raw gradient
+    % can have a finite response even when D\ascent alone would overflow.
+    modes=((attenuation.*U.')/D)*ascent;
+    weightedAscent=2*D*(U*(attenuation.*modes));
+    feedbackFactor=(sqrt(2)*(sigma./scale)).*(U.'*D);
+end
+
 function [gram,denominator]=representFieldGram(numerator,denominator)
 % Return ordinary Gram entries when they leave headroom for matrix products.
 % Otherwise retain the same matrix as a numerator and positive denominator.

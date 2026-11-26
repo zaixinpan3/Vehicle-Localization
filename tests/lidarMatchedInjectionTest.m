@@ -18,18 +18,34 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             testCase.verifyEqual(c,zeros(7,1),AbsTol=0);
             testCase.verifyEqual(a.gram.matrix*[1;0;0],zeros(3,1),AbsTol=0);
         end
-        function productionMetricGivesTheDirectPhysicalGain(testCase)
-            cfg=freshObserverTestConfig();r=localizationSupport.runtime(cfg);
-            G=eye(8);G=G([1,4,7],:);
-            m=struct('gradient',[.2;-.1;.04],'gram',diag([3,2,.8]), ...
-                'linearizationPose',zeros(3,1));
-            [rate,a]=localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,r.lidarMatched);
-            C=(G*r.toPhysical)/r.theta;
-            expected=-r.toPhysical*(r.P\(C.'*m.gradient));
+        function coupledGramUsesTheConfiguredFloorOnTheLeft(testCase)
+            cfg=mncavFullObserverConfig();
+            cfg.iss.minimumPositionStrength=.42;cfg.iss.minimumHeadingStrength=.8;
+            cfg=freshObserverTestConfig(cfg);r=localizationSupport.runtime(cfg);
+            C=eye(8);C=C([1,4,7],:);S=diag([.42,.42,.8]);
+            G=[3,.4,1.2;.4,1.1,-.3;1.2,-.3,1.8];pose=zeros(3,1);
+            m=struct('gradient',[.2;-.1;.04],'gram',.3*G,'gramDenominator',.3,'linearizationPose',pose);
+            [rate,a]=localizationSupport.computeLidarMatchedCorrection(m,pose,C,r.lidarMatched);
+            expected=-2*r.linearOutputGain(:,1:3)*S*((G+S)\m.gradient);
             testCase.verifyEqual(rate,expected,AbsTol=1e-10);
+            testCase.verifyEqual(a.feedbackGram,2*S*((G+S)\G),AbsTol=1e-13);
             stale=r.lidarMatched;stale.unknownOption=1;
-            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,zeros(3,1),G,stale), ...
+            testCase.verifyError(@()localizationSupport.computeLidarMatchedCorrection(m,pose,C,stale), ...
                 'VehicleLocalization:StaleInvariantDesign');
+        end
+        function gramAtTheFloorGivesUnitGradientWeight(testCase)
+            f=fixture();f.design.poseStrengthFloor=[.4;.4;.9];S=diag(f.design.poseStrengthFloor);
+            pose=zeros(3,1);m=struct('gradient',[1;.5;-.2],'gram',S,'linearizationPose',pose);
+            [rate,a]=localizationSupport.computeLidarMatchedCorrection(m,pose,f.G,f.design);
+            testCase.verifyEqual(rate,-(f.design.P\(f.G.'*m.gradient)),AbsTol=1e-13);
+            testCase.verifyEqual(a.feedbackGram,S,AbsTol=1e-14);
+        end
+        function largeFiniteGradientAndGramGiveABoundedRate(testCase)
+            f=fixture();f.design.poseStrengthFloor=[.25;.25;.97];pose=zeros(3,1);
+            m=struct('gradient',[1e308;0;0],'gram',diag([1e308,0,0]),'linearizationPose',pose);
+            [rate,a]=localizationSupport.computeLidarMatchedCorrection(m,pose,f.G,f.design);
+            testCase.verifyEqual(rate,-(f.design.P\(f.G.'*[.5;0;0])),AbsTol=1e-13);
+            testCase.verifyEqual(a.feedbackGram,diag([.5,0,0]),AbsTol=1e-14);
         end
         function oneLeverArmRetainsLateralYawAmbiguity(testCase)
             f=fixture();m=localizationSupport.buildLidarLineMeasurement([3,0;3,0],[3,0;3,0], ...
@@ -37,6 +53,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
             [~,a]=localizationSupport.computeLidarMatchedCorrection(m,[0;0;0],f.G,f.design);
             testCase.verifyEqual(a.gram.rank,1);
             testCase.verifyEqual(a.gram.matrix*[0;-3;1],zeros(3,1),AbsTol=1e-12);
+            testCase.verifyEqual(a.feedbackGram*[0;-3;1],zeros(3,1),AbsTol=1e-12);
             testCase.verifyGreaterThan(abs(a.gram.matrix(2,3)),0);
         end
         function directPoseIsRejected(testCase)
@@ -151,7 +168,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) lidarMatchedInjectionT
 end
 
 function f=fixture()
-    f.design=struct('P',eye(7)/4,'T',eye(7),'theta',1);
+    f.design=struct('P',eye(7)/4,'T',eye(7),'theta',1,'poseStrengthFloor',ones(3,1));
     f.G=zeros(3,7);f.G(1,1)=1;f.G(2,4)=1;f.G(3,7)=1;
 end
 

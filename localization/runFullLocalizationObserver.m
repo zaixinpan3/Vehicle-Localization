@@ -28,9 +28,10 @@ function estimate=runFullLocalizationObserver(data,cfg,options)
 % Optional LateralInputs.velocityValid gates the velocity-dependent innovations.
 % Low-speed wheel/gyro packets enter through the same motion innovations.
 % LiDAR remains available without velocity aiding, including at standstill.
-% The log-overlap gradient enters directly. The sampled step uses the scan
-% Jacobian Gram. diagnostics.poseGram(:,:,k)/poseGramDenominator(k)
-% gives the nominal pose Gram, and lidarPoseSupport describes its geometry.
+% The LiDAR term is 2*L*S*((G+S)\g), where g is the log-overlap ascent
+% gradient and S is the configured pose-strength floor. The raw field Gram
+% G is diagnostics.poseGram(:,:,k)/diagnostics.poseGramDenominator(k).
+% diagnostics.lidarMatched{k}.feedbackGram is the effective Gram of the step.
 % diagnostics.lidarIncrement is the physical state increment attributable to
 % LiDAR at the joint solution, with one row per epoch.
     arguments
