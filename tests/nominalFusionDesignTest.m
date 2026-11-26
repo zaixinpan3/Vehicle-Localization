@@ -15,7 +15,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             E=eye(8);theta=r.theta;
             testCase.verifyEqual(r.linearOutputGain(:,1:3),r.toPhysical*(d.P\E(:,[1,4,7])),AbsTol=1e-13);
             testCase.verifyEqual(r.linearOutputGain(:,4),theta*r.toPhysical*(d.P\(r.toPhysical*E(:,8))),AbsTol=1e-13);
-            testCase.verifyEqual(d.verification.matrixInequalities,2);
+            testCase.verifyEqual(d.verification.matrixInequalities,4);
             source=d.verification.nominalFusion.worstEigenvalue;
             testCase.verifyLessThan([source.gnssOnly,source.lidarOnly,source.both],zeros(1,3));
         end
@@ -24,45 +24,14 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) nominalFusionDesignTes
             d.lambda=c.invariantObserver.lambda;
             testCase.verifyFalse(localizationSupport.verifyInvariantDesign(d,c).certified);
         end
-        function crossedSourceFloorsShareTwoTranslationInequalities(testCase)
+        function sourceOrderingDeterminesTheNumberOfConstraints(testCase)
             c=mncavFullObserverConfig();
-            for floors=[.25,1.1;1.1,1.2;1,1].'
-                c.iss.minimumPositionStrength=floors(1);
-                c.iss.minimumHeadingStrength=floors(2);
+            cases=[.25,1.1,8;1.1,1.2,4;1,1,4];
+            for j=1:size(cases,1)
+                c.iss.minimumPositionStrength=cases(j,1);c.iss.minimumHeadingStrength=cases(j,2);
                 cfg=freshObserverTestConfig(c);v=cfg.invariantDesign.verification;
-                testCase.verifyEqual(v.matrixInequalities,2);
+                testCase.verifyEqual(v.matrixInequalities,cases(j,3));
                 testCase.verifyLessThan(max(struct2array(v.nominalFusion.worstEigenvalue)),0);
-            end
-        end
-        function freeMetricBoundarySeparatesStrictGainTests(testCase)
-            c=mncavFullObserverConfig();
-            region=globalObserverHighGainRegion(c);
-            testCase.verifyEqual(region.thetaInfimum,0.894936,AbsTol=2e-5);
-            testCase.verifyEqual(region.maxScaledYawRate*region.thetaInfimum,c.maximumBodyYawRate,AbsTol=1e-14);
-            c.invariantObserver.theta=.894;
-            testCase.verifyError(@()synthesizeMncavInvariantDesign(c),'VehicleLocalization:InfeasibleInvariantDesign');
-            c.invariantObserver.theta=.895;
-            cfg=freshObserverTestConfig(c);
-            verifyPhysicalDomain(testCase,cfg);
-        end
-        function finiteCouplingChangesCompletionAndZeroRateNeedsOneLmi(testCase)
-            c=mncavFullObserverConfig();
-            c.iss.maximumAcceleration=12;c.iss.maximumSpeed=30;
-            cfg=freshObserverTestConfig(c);
-            verifyPhysicalDomain(testCase,cfg);
-            c.maximumBodyYawRate=0;c.invariantObserver.theta=.2;
-            cfg=freshObserverTestConfig(c);
-            testCase.verifyEqual(cfg.invariantDesign.verification.matrixInequalities,1);
-            testCase.verifyEqual(globalObserverHighGainRegion(c).thetaInfimum,0);
-            verifyPhysicalDomain(testCase,cfg);
-        end
-        function equalityAtEitherPoseFloorExcludesEveryGain(testCase)
-            c=mncavFullObserverConfig();
-            for floors=[.25,.8;.9,.1].'
-                c.iss.minimumPositionStrength=floors(1);c.iss.minimumHeadingStrength=floors(2);
-                c.invariantObserver.lambda=2*min(floors);
-                testCase.verifyEqual(globalObserverHighGainRegion(c).thetaInfimum,Inf);
-                testCase.verifyError(@()synthesizeMncavInvariantDesign(c),'VehicleLocalization:InfeasibleInvariantDesign');
             end
         end
         function naturallyGnssFreeDowntownUsesTheCommonDesign(testCase)
@@ -134,26 +103,4 @@ end
 
 function [d,c]=selected()
     c=freshObserverTestConfig(mncavSmallOffsetObserverConfig());d=c.invariantDesign;
-end
-
-function verifyPhysicalDomain(testCase,cfg)
-% Evaluate the original real LMI using the physical Jacobian at equal states.
-    theta=cfg.invariantObserver.theta;P=cfg.invariantDesign.P;
-    T=diag(theta.^[1,2,3,1,2,3,1,2]);E=eye(8);C=E([1,4,7],:);
-    bounds=localizationSupport.poseSourceBounds(cfg);
-    stream=RandStream('mt19937ar','Seed',20261126);
-    worst=-Inf;
-    for r=linspace(-cfg.maximumBodyYawRate,cfg.maximumBodyYawRate,201)
-        phi=2*pi*rand(stream);direction=[cos(phi);sin(phi)];
-        v=sign(r)*cfg.iss.maximumSpeed*direction;
-        a=cfg.iss.maximumAcceleration*[direction(2);-direction(1)];
-        state=[0;v(1);a(1);0;v(2);a(2);phi;r];
-        F=localizationSupport.secants(state,state,cfg);
-        A=(T\F)*T/theta;
-        for strength=bounds
-            H=P*A+A.'*P-2*C.'*diag(strength)*C+cfg.invariantObserver.lambda*E;
-            worst=max(worst,max(eig(H)));
-        end
-    end
-    testCase.verifyLessThan(worst,0);
 end

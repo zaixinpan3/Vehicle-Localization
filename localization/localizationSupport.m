@@ -208,66 +208,33 @@ classdef localizationSupport
                 cfg.iss.minimumPositionStrength,cfg.iss.minimumHeadingStrength], ...
                 {'double'},{'real','finite','positive'});
             validateattributes([cfg.iss.maximumAcceleration,cfg.maximumBodyYawRate],{'double'},{'real','finite','nonnegative'});
-            inputs=struct('architecture',"common-pose-hermitian-endpoints-v1",'theta',z.theta, ...
+            inputs=struct('architecture',"common-pose-field-gram-body-components-v3",'theta',z.theta, ...
                 'lambda',z.lambda,'margin',z.margin,'solver',z.solver, ...
                 'iss',cfg.iss,'bodyYawRateBound',cfg.maximumBodyYawRate);
         end
 
         function design=synthesize(cfg)
-        % Solve the two translation endpoint LMIs, then complete the yaw metric.
-            inputs=localizationSupport.invariantInputs(cfg);
-            z=cfg.invariantObserver;
-            floors=min(localizationSupport.poseSourceBounds(cfg),[],2);
-            assert(z.lambda<2*min(floors),'VehicleLocalization:InfeasibleInvariantDesign', ...
-                'The prescribed margin must be strictly below twice each pose strength.');
-            options=observerInternal.globalSolverOptions(z.solver);
+        % A single feasibility problem in the manuscript metric.
+            inputs=localizationSupport.invariantInputs(cfg);z=cfg.invariantObserver;
+            assert(exist('sdpvar','file')==2,'VehicleLocalization:MissingSolver','Add YALMIP and SeDuMi before synthesis.');
             yalmip('clear');
-            % Balance strict slack against the metric entry along the jerk
-            % input. With Y=t*Pp and t=1/(1+Pp(3,3)), every strict witness
-            % admits positive slack, including arbitrarily close to the boundary.
-            Y=sdpvar(3,3,'symmetric');
-            t=sdpvar(1);slack=sdpvar(1);
-            rates=unique([0,cfg.maximumBodyYawRate/z.theta]);
-            targetSlack=max(z.margin,z.lambda/2);
-            constraints=[t>=0,Y(3,3)+t==1,0<=slack,slack<=targetSlack*t,Y>=slack*eye(3)];
-            poseReserve=diag([2*floors(1),0,0])-z.lambda*eye(3);
-            for x=rates
-                H=t*poseReserve-observerInternal.translationDriftForm(Y,x);
-                constraints=[constraints,H>=slack*eye(3)]; %#ok<AGROW>
+            Pc=sdpvar(3,3);P=blkdiag(Pc,Pc,sdpvar(2,2));
+            [strengths,required]=localizationSupport.poseSourceBounds(cfg);
+            blocks=localizationSupport.fusionBlocks(P,cfg,z.lambda+z.margin,strengths(:,required));
+            constraints=[P>=z.margin*eye(8)];
+            for j=1:numel(blocks)
+                constraints=[constraints,blocks{j}<=0]; %#ok<AGROW>
             end
-            result=optimize(constraints,-slack,options);
-            assert(ismember(result.problem,[0,4]) && value(t)>0,'VehicleLocalization:InfeasibleInvariantDesign', ...
-                'Translation endpoint solve failed: %s.',result.info);
-            Pp=value(Y)/value(t);
-            assert(all(isfinite(Pp),'all') && min(eig(Pp))>0, ...
-                'VehicleLocalization:InfeasibleInvariantDesign','Invalid translation metric.');
-            % Reserve half the endpoint and heading slack for the full inequality.
-            G=cell(size(rates));
-            reserve=2*floors(3)-z.lambda;
-            for j=1:numel(rates)
-                G{j}=poseReserve-observerInternal.translationDriftForm(Pp,rates(j));
-                reserve=min(reserve,min(eig(G{j})));
-            end
-            assert(reserve>0,'VehicleLocalization:InfeasibleInvariantDesign', ...
-                'The returned translation metric fails a strict endpoint inequality.');
-            shift=z.lambda+reserve/2;
-            q=Pp(:,3);
-            compliance=0;
-            for j=1:numel(G)
-                compliance=max(compliance,real(q'*((G{j}-reserve/2*eye(3))\q)));
-            end
-            coupling=2*(cfg.iss.maximumAcceleration+cfg.maximumBodyYawRate*cfg.iss.maximumSpeed)/z.theta^2;
-            headingSlack=2*floors(3)-shift;
-            % Reserve half the heading pivot for its first metric diagonal.
-            % The last diagonal minimizes cond(Ppsi) for the chosen a,b.
-            a=headingSlack/2;
-            b=-(shift+a^2/headingSlack+coupling^2*compliance)/2;
-            Ppsi=[a,b;b,a+2*b^2/a];
-            design=struct('P',blkdiag(Pp,Pp,Ppsi),'lambda',z.lambda, ...
+            options=sdpsettings('solver',char(z.solver),'verbose',0);
+            if z.solver=="sedumi",options.sedumi.stepdif=2;end
+            result=optimize(constraints,[],options);
+            assert(ismember(result.problem,[0,4]),'VehicleLocalization:InfeasibleInvariantDesign', ...
+                'Common pose-source feasibility problem failed: %s.',result.info);
+            design=struct('P',value(P),'lambda',z.lambda, ...
                 'inputs',inputs,'solverStatus',result.problem,'solverInfo',string(result.info));
             design.verification=localizationSupport.verifyInvariantDesign(design,cfg);
             assert(design.verification.certified,'VehicleLocalization:InfeasibleInvariantDesign', ...
-                'Recovered full metric fails the coupling check (upper bound %.9g).', ...
+                'Computed design fails the strict vertex inequalities (worst eigenvalue %.9g).', ...
                 design.verification.worstVertexEigenvalue);
         end
 
@@ -276,25 +243,14 @@ classdef localizationSupport
             validateattributes(design.P,{'double'},{'real','finite','size',[8,8]});
             P=design.P;z=cfg.invariantObserver;
             expected=blkdiag(P(1:3,1:3),P(1:3,1:3),P(7:8,7:8));
-            strengths=localizationSupport.poseSourceBounds(cfg);
-            % At the maximum column norm, the translation Schur complement
-            % is concave in squared rate. These two full matrices bound every
-            % physical coupling, including intermediate rates and directions.
-            rates=unique([0,cfg.maximumBodyYawRate]);
-            coupling=2*(cfg.iss.maximumAcceleration+cfg.maximumBodyYawRate*cfg.iss.maximumSpeed);
-            sourceWorst=-inf(1,size(strengths,2));
-            for r=rates
-                A=localizationSupport.fusionMatrices(cfg,[r,r^2,coupling,0]);
-                M=P*A+A.'*P+z.lambda*eye(8);
-                for k=1:numel(sourceWorst)
-                    bound=M;
-                    ix=[1,4,7];
-                    bound(ix,ix)=bound(ix,ix)-2*diag(strengths(:,k));
-                    sourceWorst(k)=max(sourceWorst(k),max(eig((bound+bound.')/2)));
-                end
+            [strengths,required]=localizationSupport.poseSourceBounds(cfg);
+            blocks=localizationSupport.fusionBlocks(P,cfg,z.lambda,strengths);
+            sourceWorst=zeros(1,size(blocks,2));
+            for k=1:numel(sourceWorst)
+                sourceWorst(k)=sensorWorstEigenvalue(blocks(:,k));
             end
             worst=max(sourceWorst);
-            vertices=numel(rates);count=vertices;
+            vertices=size(blocks,1);count=vertices*numel(required);
             eigenvalues=eig((P+P.')/2);
             valid=min(eigenvalues)>0 && worst<0 && design.lambda==z.lambda ...
                 && isequal(P,P.') && isequal(P,expected);
@@ -323,12 +279,12 @@ classdef localizationSupport
             assert(isfield(h,'inputs') && isequaln(h.inputs,localizationSupport.invariantInputs(cfg)), ...
                 'VehicleLocalization:StaleInvariantDesign','Temporary gains use different inputs; solve after configuring this run.');
             v=localizationSupport.verifyInvariantDesign(h,cfg);
-            assert(v.certified,'VehicleLocalization:InfeasibleInvariantDesign','Temporary gains fail the recovered-metric certificate.');
+            assert(v.certified,'VehicleLocalization:InfeasibleInvariantDesign','Temporary gains fail the four-vertex certificate.');
             toPhysical=diag(theta.^[1,2,3,1,2,3,1,2]);
             E=eye(8);L=toPhysical*(h.P\[E(:,[1,4,7]),theta^3*E(:,8)]);
             strengths=localizationSupport.poseSourceBounds(cfg);
             matched=struct('P',h.P,'T',toPhysical,'theta',theta,'scalingExponents',[1;2;3;1;2;3;1;2], ...
-                'poseStrengthFloor',strengths(:,2),'metricSource',"Hermitian translation endpoint LMIs with yaw completion");
+                'poseStrengthFloor',strengths(:,2),'metricSource',"Four-vertex feasibility LMI");
             runtime=struct('kind',cfg.kind,'P',h.P,'theta',theta,'toPhysical',toPhysical, ...
                 'linearOutputGain',L, ...
                 'lidarMatched',matched,'continuousCertificate',struct('design',h,'verification',v), ...
@@ -1698,6 +1654,15 @@ classdef localizationSupport
             f.mean(:,1:2)=f.mean(:,1:2)-pose(1:2);
             model=struct('fixed',f,'moving',m,'height',height,'origin',pose(1:2));
         end
+    end
+end
+
+% Intrinsic observer and gain synthesis: local helpers
+% Common sensor certificate: local helpers
+function value=sensorWorstEigenvalue(matrices)
+    value=-Inf;
+    for k=1:numel(matrices)
+        M=matrices{k};value=max(value,max(eig((M+M.')/2)));
     end
 end
 
