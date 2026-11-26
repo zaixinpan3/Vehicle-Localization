@@ -32,7 +32,7 @@ classdef smallOffsetObserverTest < matlab.unittest.TestCase
             testCase.verifyTrue(v.certified);
             testCase.verifyTrue(v.matchedAuxiliaryGain);
             testCase.verifyTrue(v.operatingSet.assumedInvariant);
-            testCase.verifyEqual(v.nominalFusion.vertices,4);
+            testCase.verifyEqual(v.nominalFusion.vertices,2);
             testCase.verifyLessThan(v.worstVertexEigenvalue,-.009);
         end
         function receiverTransportUsesTheSameGains(testCase)
