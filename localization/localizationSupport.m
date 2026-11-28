@@ -59,7 +59,7 @@ classdef localizationSupport
         % may absorb yaw when translation is free. These are local geometric
         % diagnostics; neither source freshness nor correct alignment is tested.
         % Strengths above 1e-10 count as numerical support. sectorQualified also
-        % requires the full nominal pose Gram lower bound in cfg.iss.
+        % requires the supplied Gram to meet the pose floor in cfg.iss.
             arguments
                 gram (1,1) struct
                 cfg (1,1) struct
@@ -454,8 +454,9 @@ classdef localizationSupport
         % computeLidarMatchedCorrection Continuous LiDAR injection and its discretization.
         % A predicted-pose packet supplies the cost gradient and its Gram G,
         % or residuals with their Jacobian and PSD precision. With pose gain L
-        % and design floor S, inject -2*L*S*((G+S)\gradient). The frozen
-        % sampled step uses the same multiplier on G.
+        % and design floor S, each scale contributes -2*L*S*((G+S)\gradient).
+        % A two-scale packet averages these contributions. The frozen step
+        % uses the same average of the individually weighted Grams.
             arguments
                 measurement (1,1) struct
                 pose (3,1) double {mustBeReal,mustBeFinite}
@@ -531,6 +532,17 @@ classdef localizationSupport
             end
             gram=localizationSupport.decomposeLidarGram(matrix,denominator);
             [weightedAscent,feedbackFactor]=conditionLidarGradient(-gradient,gram,design.poseStrengthFloor);
+            if isfield(measurement,'broadScale')
+                broad=measurement.broadScale;
+                assert(gradientMode && isequal(broad.linearizationPose(:),pose), ...
+                    'VehicleLocalization:StaleLidarLinearization','Both scales must use the predicted pose.');
+                validateattributes(broad.gradient,{'double'},{'real','finite','size',[3,1]});
+                broadGram=localizationSupport.decomposeLidarGram(broad.gram,broad.gramDenominator);
+                [broadAscent,broadFactor]=conditionLidarGradient(-broad.gradient,broadGram,design.poseStrengthFloor);
+                weightedAscent=weightedAscent/2+broadAscent/2;
+                feedbackFactor=[feedbackFactor;broadFactor]/sqrt(2);
+                representation="twoScalePoseGradient";
+            end
             feedbackGram=feedbackFactor.'*feedbackFactor;
             C=poseJacobian*T;
             force=(C.'*weightedAscent)/theta;
@@ -560,7 +572,7 @@ classdef localizationSupport
                 scaledLoss=metricFactor.'\(loss*metricFactor.');
             end
             energyRatio=norm(eye(n)-loss,2)^2;
-            audit=struct('gram',gram,'feedbackGram',feedbackGram,'C',C,'dissipationMatrix',C.'*(feedbackGram/theta)*C, ...
+            audit=struct('gram',gram,'feedbackGram',feedbackGram,'weightedAscent',weightedAscent,'C',C,'dissipationMatrix',C.'*(feedbackGram/theta)*C, ...
                 'dissipationDenominator',1,'continuousCorrection',rate, ...
                 'maximumDissipationEigenvalue',peak^2,'requestedStep',options.StepSize, ...
                 'appliedStep',step,'explicitStepProduct',(sqrt(step)*peak)^2, ...
@@ -571,7 +583,7 @@ classdef localizationSupport
                 'scope',"Fixed-metric locally affine LiDAR channel only; no full-system or outage ISS claim");
         end
 
-        function measurement=evaluateOverlapGradient(fixedCloud,movingCloud,pose,cfg)
+        function measurement=evaluateOverlapGradient(fixedCloud,movingCloud,pose,cfg,positionStrength)
         % evaluateOverlapGradient Correspondence-free LiDAR gradient at the observer prediction.
         % Crop the local map, condition its moments on view, and weight map and
         % source masses by available view reliability and temporal stability.
@@ -580,15 +592,24 @@ classdef localizationSupport
         % semantic channels. Similarity is the geometric mean of normalized
         % class overlaps. Optional uniform background reduces the influence of
         % an unsupported class using the spatial density of the map crop.
-        % gram/gramDenominator is the nominal field Gram. Its
+        % With positionStrength, also evaluate a broad field with added variance
+        % 1/(2*positionStrength) per axis after preparing the same components.
+        % gram/gramDenominator is the native field Gram. Its
         % denominator is one unless the unscaled matrix is extremely large.
             arguments
                 fixedCloud (1,1) struct
                 movingCloud (1,1) struct
                 pose (3,1) double {mustBeReal,mustBeFinite}
                 cfg (1,1) struct = overlapGradientConfig()
+                positionStrength double = []
             end
-            [measurement,matrix,denominator]=localizationSupport.semanticOverlapPacket(fixedCloud,movingCloud,pose,cfg,false);
+            broadVariance=0;
+            if ~isempty(positionStrength)
+                validateattributes(positionStrength,{'double'},{'real','finite','positive','scalar'});
+                broadVariance=0.5/positionStrength;
+            end
+            [measurement,matrix,denominator]=localizationSupport.semanticOverlapPacket( ...
+                fixedCloud,movingCloud,pose,cfg,false,broadVariance);
             measurement.gram=matrix;measurement.gramDenominator=denominator;
         end
 
@@ -600,13 +621,13 @@ classdef localizationSupport
                 pose (3,1) double {mustBeReal,mustBeFinite}
                 cfg (1,1) struct = overlapGradientConfig()
             end
-            [packet,matrix,denominator]=localizationSupport.semanticOverlapPacket(fixedCloud,movingCloud,pose,cfg,true);
+            [packet,matrix,denominator]=localizationSupport.semanticOverlapPacket(fixedCloud,movingCloud,pose,cfg,true,0);
             measurement=struct('available',packet.available,'gradient',packet.gradient,'pairPrecision',matrix/denominator);
         end
     end
 
     methods (Static, Access=private)
-        function [measurement,matrix,modelDenominator]=semanticOverlapPacket(fixedCloud,movingCloud,pose,cfg,registration)
+        function [measurement,matrix,modelDenominator]=semanticOverlapPacket(fixedCloud,movingCloud,pose,cfg,registration,broadVariance)
             timer=tic;matrix=zeros(3);modelDenominator=1;linearization=pose;pose=pose(:).';
             assert(isequal(string(cfg.geometry.heightMode),"xy"),'VehicleLocalization:PlanarOverlapRequired', ...
                 'Feature-channel feedback requires the XY marginal.');
@@ -630,6 +651,24 @@ classdef localizationSupport
             end
             measurement.mapComponents=f.numComponents;measurement.sourceComponents=m.numComponents;
             f.mean(:,1:2)=f.mean(:,1:2)-pose(1:2);
+            template=measurement;
+            [measurement,matrix,modelDenominator]=localizationSupport.evaluateScale( ...
+                measurement,f,m,pose,cfg,registration);
+            if broadVariance>0
+                f.covariance=f.covariance+broadVariance*eye(2);
+                m.covariance=m.covariance+broadVariance*eye(2);
+                [broad,broadGram,broadDenominator]=localizationSupport.evaluateScale( ...
+                    template,f,m,pose,cfg,false);
+                broad.gram=broadGram;
+                broad.gramDenominator=broadDenominator;
+                measurement.broadScale=broad;
+                measurement.available=measurement.available || broad.available;
+            end
+            measurement.seconds=toc(timer);
+        end
+
+        function [measurement,matrix,modelDenominator]=evaluateScale(measurement,f,m,pose,cfg,registration)
+            matrix=zeros(3);modelDenominator=1;
             origin=[0,0,pose(3)];gradient=zeros(3,1);modelSum=zeros(3);
             cYaw=cos(pose(3));sYaw=sin(pose(3));
             toWorld=[cYaw,-sYaw,0;sYaw,cYaw,0;0,0,1];
@@ -697,7 +736,6 @@ classdef localizationSupport
                 if ~registration,measurement.minimumGramEigenvalue=min(eig(modelSum))/commonDenominator;end
                 measurement.available=hasSupport;
             end
-            measurement.seconds=toc(timer);
         end
     end
 

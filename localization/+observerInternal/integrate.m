@@ -135,12 +135,16 @@ function estimate=integrate(data,cfg,lateral,L)
             lidarAudits{k}=audit;poseGrams(:,:,k)=audit.gram.matrix;
             S=audit.gram.matrix;poseGramDenominator(k)=audit.gram.denominator;
             gramBounds(k,:)=[min(eig(S(1:2,1:2))),S(3,3),norm(S(1:2,3))]/poseGramDenominator(k);
-            support=localizationSupport.lidarPoseSupport(audit.gram,cfg);
+            supportGram=audit.gram;
+            if isfield(measurement,'broadScale')
+                supportGram=localizationSupport.decomposeLidarGram(audit.feedbackGram);
+            end
+            support=localizationSupport.lidarPoseSupport(supportGram,cfg);
             for name=string(fieldnames(support)).'
                 lidarPoseSupport.(name)(k)=support.(name);
             end
             lidarPoseSupport.correctionApplied(k)=support.rank>0 && dt>0;
-            lidarStrength(k)=audit.gram.minimumEigenvalue;
+            lidarStrength(k)=supportGram.minimumEigenvalue;
         end
         % One implicit increment couples all innovations at the prediction.
         % Apply the frozen LiDAR resolvent using its thin SVD.

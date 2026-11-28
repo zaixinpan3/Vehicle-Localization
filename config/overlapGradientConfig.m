@@ -1,7 +1,7 @@
 function cfg=overlapGradientConfig(options)
 % overlapGradientConfig Correspondence-free LiDAR channel from semanticGaussianOverlap.
 % At the observer prediction, each shared feature channel evaluates its exact
-% single-scale Cauchy-Schwarz divergence (negative log L2 overlap) and
+% Cauchy-Schwarz divergence (negative log L2 overlap) at each requested scale and
 % intrinsic scan Jacobian Gram, averaged across evaluable semantic classes.
 % UniformBackground mixes each class with uniform spatial density over the map crop.
     arguments

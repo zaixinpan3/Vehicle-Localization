@@ -117,6 +117,25 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
                 StepSize=1e308,Discretization="implicit");
             testCase.verifyEqual(limit(1)/(-offset*m.gramDenominator),1,AbsTol=1e-12);
         end
+        function broadFieldProvidesFeedbackWhenNativeOverlapUnderflows(testCase)
+            [map,scan]=centeredEllipse();
+            scan.components.covariance=.01*eye(2);
+            map.components=scan.components;
+            pose=[6;0;0];
+            sp=.25;
+            packet=localizationSupport.evaluateOverlapGradient(map,scan,pose,overlapGradientConfig(),sp);
+            testCase.verifyEqual(packet.similarity,0);
+            testCase.verifyTrue(packet.available && packet.broadScale.available);
+            design=struct('P',eye(3),'theta',1,'T',eye(3),'poseStrengthFloor',[sp;sp;1]);
+            [delta,audit]=localizationSupport.computeLidarMatchedCorrection(packet,pose,eye(3),design);
+            variance=.01+1/(2*sp);
+            overlap=exp(-pose(1)^2/(4*variance));
+            gram=1/(2*variance*overlap);
+            weight=2*sp/(sp+gram);
+            testCase.verifyEqual(packet.broadScale.similarity,overlap,AbsTol=1e-12);
+            testCase.verifyEqual(delta,-weight*pose/(4*variance),AbsTol=1e-12);
+            testCase.verifyEqual(audit.feedbackGram,weight*diag([gram,gram,0])/2,AbsTol=1e-12);
+        end
         function overlappingMixtureGramMatchesAlignedCostHessian(testCase)
             [~,scan,truth]=scene();
             c=selectComponents(scan.components,1:3);
@@ -145,10 +164,20 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             m=localizationSupport.evaluateOverlapGradient(map,scan,C*prior);
             S=diag(design.lidarMatched.poseStrengthFloor);
             weight=2*S/(m.gram+S);
+            variance=1/(2*S(1,1));
+            map.components.covariance=map.components.covariance+variance*eye(2);
+            scan.components.covariance=scan.components.covariance+variance*eye(2);
+            broad=localizationSupport.evaluateOverlapGradient(map,scan,C*prior);
+            broadWeight=2*S/(broad.gram+S);
+            effective=(weight*m.gram+broadWeight*broad.gram)/2;
+            costSignal=(weight*m.gradient+broadWeight*broad.gradient)/2;
+            audit=run.diagnostics.lidarMatched{2};
+            testCase.verifyEqual(audit.feedbackGram,effective,AbsTol=1e-12);
+            testCase.verifyEqual(audit.weightedAscent,-costSignal,AbsTol=1e-12);
             drift=design.theta*E(:,7)*rate;
             normal=P+dt*(P*(T\design.linearOutputGain(:,4))*rate*T ...
-                +design.theta*C.'*weight*m.gram*C-P*drift);
-            expected=prior-T*(normal\(dt*C.'*weight*m.gradient));
+                +design.theta*C.'*effective*C-P*drift);
+            expected=prior-T*(normal\(dt*C.'*costSignal));
             testCase.verifyEqual(run.internalState(2,:).',expected,AbsTol=1e-12);
             testCase.verifyLessThan(abs(expected(7)),abs(prior(7)));
         end
@@ -247,7 +276,7 @@ classdef (SharedTestFixtures={freshObserverGainsFixture}) overlapGradientChannel
             testCase.verifyLessThan(abs(error(end,3)),.1*abs(error(1,3)));
             testCase.verifyTrue(all(r.diagnostics.observedSpeedWithinIssDomain));
             testCase.verifyFalse(r.diagnostics.allTheoremHypothesesVerified);
-            testCase.verifyEqual(r.diagnostics.lidarMatched{end}.representation,"predictedPoseGradient");
+            testCase.verifyEqual(r.diagnostics.lidarMatched{end}.representation,"twoScalePoseGradient");
         end
         function unavailableFramesWithdrawOnlyTheLidarCorrection(testCase)
             f=movingFixture(2);f.data.lidarOverlap.valid=true(numel(f.data.highRate.time),1);
